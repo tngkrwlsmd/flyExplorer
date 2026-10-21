@@ -156,6 +156,18 @@ B의 좌우 닫기 범위, F6·목록 Tab 왕복·주소/검색·메뉴 복귀·
   이유로 재요청하거나 자동 차단 조건으로 등록하지 않는다. 다른 승인된 검증(G07 등)은
   실제 시험한 범위만 기록한다. 사용자 제외 항목을 검증 완료로 주장하지 않는다.
 
+## 2026-10-21 EP10/F08 한 단계 폴더 ZIP 생성·해제 — 코드 반영, 미검증
+
+선택한 로컬 고정 드라이브 폴더 1개의 직접 자식 일반 파일
+2~8개/총 원본 8MiB를 `<폴더명>.flyExplorer-folder.zip`으로
+저장하는 안전 경로를 추가했다. ZIP 내부는 단일 공통 root의
+`root/leaf` 이름이며 복수 root/중첩/링크/빈 디렉터리는
+거부한다. 배치 해제는 모든 CRC와 크기를 검증한 뒤
+`flyExplorer-selection-unpacked/root/leaf`를 임시 영역에
+전부 만들고 마지막에 non-replace rename한다. 기본 Store/
+Deflate 혼합·취소·원래 탭 문맥 정책 유지.
+**NOT TESTED: 빌드·네이티브/소스 테스트·GUI·시각 검증 미실행.**
+
 ## 2026-10-21 EP10/F08 다중 파일 Deflate ZIP 생성 — 코드 반영, 미검증
 
 기존 다중 Store ZIP 생성기에서 명시적 DeflatePreferred 모드를

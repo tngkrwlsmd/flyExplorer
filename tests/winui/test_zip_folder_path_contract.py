@@ -29,5 +29,26 @@ class SingleRootZipContracts(unittest.TestCase):
         self.assertLess(c.index("crc32(member.content)!=checksum"),
                         c.index("GetTempFileNameW(parent.c_str()"))
         self.assertNotIn("std::filesystem::remove_all(",c)
+
+    def test_folder_zip_ui_exact_origin_and_cancel(self):
+        u=source("app/winui/m22_transfers.cpp")
+        h=source("app/winui/MainWindow.xaml.h")
+        method=u.split("void MainWindow::CreateSelectedFolderZip(int side)",1)[1].split(
+            "void MainWindow::CreateSelectedBatchZip(int side,bool preferDeflate)",1)[0]
+        for t in (
+            "view.SelectedItems().Size()!=1",
+            "!item->isFolder()",
+            "createFolder(",
+            "mZipBatchCreationBusy=true",
+            "mZipBatchCancel=cancel",
+            "active.identity!=identity",
+            "pane.routeIds[tab]!=route",
+            "pane.filesystemPaths[tab]!=folder",
+            "NavigationAction::Refresh",
+        ):
+            self.assertIn(t,method)
+        self.assertIn("const bool canCreateFolderZip=",u)
+        self.assertIn('make(L"폴더 ZIP으로 묶기 (한 단계, 2~8개 파일)"',u)
+        self.assertIn("void CreateSelectedFolderZip(int side);",h)
 if __name__=="__main__":
     unittest.main()

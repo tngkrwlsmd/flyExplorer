@@ -156,6 +156,95 @@ void MainWindow::OpenSelectedWith(int side){
  else
   StatusText().Text(L"이 파일은 연결 프로그램으로 열 수 없습니다.");
 }
+void MainWindow::CreateSelectedFolderZip(int side){
+ if(mClosing||mZipDeflateCreationBusy||mZipBatchCreationBusy||
+    mZipBatchExtractionBusy||mZipCreationBusy||mZipInspectionBusy||
+    mZipExtractionBusy||side<0||side>1||
+    ActiveWindowTab().model.activePane!=side||mFileOperations.busy())return;
+ const auto& workspace=ActiveWindowTab();
+ const auto& pane=workspace.model.panes[side];
+ if(pane.active>=pane.tabs.size()||pane.active>=pane.pending.size()||
+    pane.pending[pane.active]||pane.active>=pane.routeIds.size()||
+    pane.active>=pane.filesystemPaths.size()||
+    pane.filesystemPaths[pane.active].empty())return;
+ const auto tab=pane.active;
+ const auto route=pane.routeIds[tab];
+ const auto& visible=workspace.fileLists[side];
+ if(visible.visibleRoute!=route||visible.visibleTab!=tab)return;
+ auto view=side==0?LeftFiles():RightFiles();
+ if(view.SelectedItems().Size()!=1)return;
+ auto row=view.SelectedItem().try_as<ListViewItem>();
+ if(!row||!row.Tag())return;
+ std::uint64_t logical=0;
+ try{logical=unbox_value<std::uint64_t>(row.Tag());}catch(...){return;}
+ const auto* item=pane.tabs[tab].indexedItem(
+     static_cast<std::size_t>(logical));
+ if(!item||!item->isFileSystem()||!item->isFolder()||
+    item->parsingName.empty())return;
+ const auto source=item->parsingName;
+ const auto identity=workspace.identity;
+ const auto folder=pane.filesystemPaths[tab];
+ if(!fxfile::zipinspect::detail::same(
+      std::filesystem::path(source).parent_path().native(),folder))return;
+ auto weak=get_weak();
+ auto dispatch=DispatcherQueue();
+ mZipBatchCreationBusy=true;
+ StatusText().Text(L"한 단계 폴더 ZIP 생성 중입니다. 하위 폴더는 지원하지 않으며 취소할 수 있습니다.");
+ try{
+  auto cancel=std::make_shared<std::atomic_bool>(false);
+  mZipBatchCancel=cancel;
+  fileBar()->CancelButton().IsEnabled(true);
+  std::thread([weak,dispatch,source,identity,side,tab,route,folder,cancel]{
+   const auto result=fxfile::zipbatch::createFolder(
+       source,cancel.get(),fxfile::zipbatch::Compression::DeflatePreferred);
+   dispatch.TryEnqueue([weak,result,identity,side,tab,route,folder]{
+    auto ui=weak.get();
+    if(!ui||ui->mClosing)return;
+    ui->mZipBatchCreationBusy=false;
+    ui->mZipBatchCancel.reset();
+    ui->fileBar()->CancelButton().IsEnabled(ui->mFileOperations.cancellable());
+    const auto& active=ui->ActiveWindowTab();
+    if(active.identity!=identity||active.model.activePane!=side)return;
+    const auto& pane=active.model.panes[side];
+    if(pane.active!=tab||pane.active>=pane.routeIds.size()||
+       pane.routeIds[tab]!=route||
+       pane.active>=pane.filesystemPaths.size()||
+       pane.filesystemPaths[tab]!=folder)return;
+    using Status=fxfile::zipbatch::Status;
+    if(result.status==Status::Created){
+     ui->StatusText().Text(
+       L"폴더 ZIP 생성 완료. 원본 폴더는 유지하고 구조를 보존했습니다.");
+     const auto& snap=pane.tabs[tab].snapshot();
+     if(snap.folder.valid())
+      ui->QueuePidl(side,fxfile::shellnav::Location(snap.folder),
+                    fxfile::shellnav::NavigationAction::Refresh);
+    }else{
+     ui->StatusText().Text(
+      result.status==Status::AlreadyExists?
+       L"폴더 ZIP이 이미 있습니다. 기존 파일을 덮어쓰지 않았습니다.":
+      result.status==Status::Cancelled?
+       L"폴더 ZIP 생성을 취소했습니다. 최종 ZIP을 공개하지 않았습니다.":
+      result.status==Status::TooLarge?
+       L"폴더는 일반 파일 2~8개 및 총 8MiB까지만 지원합니다.":
+      result.status==Status::InvalidSource?
+       L"하위 폴더·링크 없이 안전한 일반 파일만 든 폴더가 필요합니다.":
+      result.status==Status::DuplicateName?
+       L"중복 파일명으로 ZIP을 만들지 않았습니다.":
+      result.status==Status::CannotRead?
+       L"폴더 안의 파일을 읽을 수 없습니다.":
+      result.status==Status::CompressionFailed?
+       L"Deflate 압축 및 복원 확인에 실패했습니다.":
+       L"폴더 ZIP 생성에 실패했습니다. 원본 폴더는 보존했습니다.");
+    }
+   });
+  }).detach();
+ }catch(...){
+  mZipBatchCreationBusy=false;
+  mZipBatchCancel.reset();
+  fileBar()->CancelButton().IsEnabled(mFileOperations.cancellable());
+  StatusText().Text(L"폴더 ZIP 생성 작업자를 시작하지 못했습니다.");
+ }
+}
 void MainWindow::CreateSelectedBatchZip(int side,bool preferDeflate){
  if(mClosing||mZipDeflateCreationBusy||mZipBatchCreationBusy||mZipBatchExtractionBusy||mZipCreationBusy||
     mZipInspectionBusy||mZipExtractionBusy||side<0||side>1||
@@ -471,7 +560,7 @@ void MainWindow::ExtractSelectedBatchZip(int side){
        pane.filesystemPaths[tab]!=folder)return;
     using Status=fxfile::zipbatchextract::Status;
     if(report.status==Status::Extracted){
-     ui->StatusText().Text(L"ZIP Store/Deflate 다중 파일 해제 완료. flyExplorer-selection-unpacked 폴더에 저장했습니다.");
+     ui->StatusText().Text(L"ZIP 다중 파일 해제 완료. 평면/단일 하위 폴더 구조를 보존했습니다.");
      const auto& snap=pane.tabs[tab].snapshot();
      if(snap.folder.valid())
       ui->QueuePidl(side,fxfile::shellnav::Location(snap.folder),
@@ -804,6 +893,8 @@ void MainWindow::ShowAppFileContextMenu(
  const bool canCreateBatchZip=localSelection&&allRegularFilesystemFiles&&
      count>=fxfile::zipbatch::kMinFiles&&
      count<=fxfile::zipbatch::kMaxFiles&&zipIdle;
+ const bool canCreateFolderZip=localSelection&&count==1&&
+     isFolder&&!folderPath.empty()&&zipIdle;
  if(localSelection&&count==1&&!isFolder){
   auto const* item=pane.tabs[tab].indexedItem(
       static_cast<std::size_t>((*expected)[0]));
@@ -890,6 +981,9 @@ void MainWindow::ShowAppFileContextMenu(
  menu.Items().Append(make(L"선택한 파일 ZIP으로 묶기 (2~8개, Deflate)",L"\uE8B7",
                           canCreateBatchZip,
      [side](MainWindow& ui){ui.CreateSelectedBatchZip(side,true);}));
+ menu.Items().Append(make(L"폴더 ZIP으로 묶기 (한 단계, 2~8개 파일)",L"\uE8B7",
+                          canCreateFolderZip,
+     [side](MainWindow& ui){ui.CreateSelectedFolderZip(side);}));
  menu.Items().Append(make(L"ZIP 해제 (Store/Deflate, 한 파일)",L"\uE8B7",
                           canInspectZip,
      [side](MainWindow& ui){ui.ExtractSelectedZip(side);}));

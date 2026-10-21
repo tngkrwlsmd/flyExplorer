@@ -1,5 +1,39 @@
 # flyExplorer 작업 인계 — 2026-10-19 L08 커서 OPEN, G01 코드·빌드 PASS
 
+## 2026-10-21 EP10/F08 — 단일 폴더의 바로 아래 2~8개 파일 ZIP 생성·해제 (코드 반영, 미검증)
+
+- 기준 main `71e69845`. 기존 다중 ZIP 해제기에 **공통 상위 폴더
+  하나를 공유하는 `폴더명/파일명` 구조**를 추가했다.
+  평면 `파일명` ZIP도 유지한다. 경로 형태 혼합, 두 번째
+  슬래시, `.`/`..`, 빈 요소, 예약 이름, 다중 root, 링크,
+  디렉터리-only ZIP 항목, 중복 파일명은 거부한다.
+  로컬·중앙 헤더·CRC·총 출력 8MiB를 전부 확인한 뒤 임시
+  디렉터리 및 **자체 생성한 중첩 디렉터리**에만 파일을 기록하고
+  마지막에 출력 전체를 non-replace rename한다.
+- 기존 `src/base/zip_store_batch_writer.h`에
+  `createFolder(folder,cancel,DeflatePreferred)`를 추가했다.
+  명시적으로 선택한 로컬 고정 드라이브 **폴더 1개**의 직계
+  일반 파일 **2~8개, 전체 8MiB 이하**만 열거한다.
+  하위 폴더, reparse/링크, 위험한 파일명, 다른 원본 폴더는
+  모두 거부하고 recursion은 없다. ZIP 이름은 원본 폴더와
+  나란한 `<폴더명>.flyExplorer-folder.zip`이며, 내부 항목은
+  `<폴더명>/<파일명>`이다. 기존 압축·CRC 확인·개별 Store
+  fallback·취소·같은 폴더 스테이징·기존 대상 미교체를 재사용한다.
+- WinUI에 **폴더 ZIP으로 묶기 (한 단계, 2~8개 파일)** 메뉴를
+  추가하고 기존 mZipBatchCreationBusy·mZipBatchCancel 상태,
+  사용자 선택·WindowTab/PaneTab/route/폴더 신원을 재검증한다.
+  현재 다중 해제 명령은 새 폴더 구조도 받아들일 수 있다.
+- **남은 제약/위험:** 빈 폴더·폴더만 ZIP/다단계 중첩/복수
+  root/ZIP64/descriptor/암호화/파일 주석은 미지원.
+  이름·원본 폴더와 임시 출력의 외부 동시 치환(TOCTOU)/
+  junction, 갑작스러운 종료 후 임시 잔류, 취소의 최종 rename
+  직전 경합, Windows 실제 컴파일/파일 I/O 수용은 미확인.
+  출력 경로가 외부에 의해 바뀌었으면 재귀적으로 청소하지 않고
+  임시 잔류를 허용하는 제한적 실패 정책이다.
+- 코드·소스 계약 작성만 했으며 **빌드·테스트 실행·GUI·
+  시각 검증 미실행 / NOT TESTED**. G01 OPEN,
+  G07 사용자 중단, G03~G05 제외 유지.
+
 ## 2026-10-21 EP10/F08 — 다중 파일 Deflate ZIP 생성 (코드 반영, 미검증)
 
 - 기준 main `e2fccbf2`. `src/base/zip_store_batch_writer.h`에

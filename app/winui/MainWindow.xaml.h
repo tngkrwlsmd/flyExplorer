@@ -420,6 +420,7 @@ namespace winrt::FlyExplorer::implementation
         void CreateSelectedZip(int side);
         void CreateSelectedDeflateZip(int side);
         void CreateSelectedBatchZip(int side, bool preferDeflate=false);
+        void CreateSelectedFolderZip(int side);
         void ExtractSelectedBatchZip(int side);
         void ExtractSelectedZip(int side);
         void OnCloseZipInspection(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);

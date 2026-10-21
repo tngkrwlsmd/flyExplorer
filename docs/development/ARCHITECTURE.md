@@ -163,6 +163,23 @@ default, cooperative cancellation, no-replace publication and
 WindowTab/PaneTab/route ownership stay intact. Native execution
 and Windows GUI acceptance remain NOT TESTED.
 
+F08 single-root directory archive support is intentionally bounded:
+`zipbatch::createFolder` enumerates exactly one selected local
+fixed-drive directory and admits only 2-8 direct, regular, non-reparse
+children (<=8MiB total). A sibling deterministic ZIP file contains
+only `rootName/leafName` records; no recursion or directory entries.
+The existing batch Store/Deflate writer applies its CRC/size/ratio
+checks, per-file codec roundtrip and cancellable non-replace staging.
+The batch extractor accepts either entirely flat entries or exactly
+one shared `root/leaf` shape, rejects mixed/multiple/deeper roots,
+validates every member/CRC before I/O, creates the single nested
+directory inside owned staging, and publishes the outer directory
+only when complete. Cleanup never recursively removes arbitrary
+folders. MainWindow shares the ZIP batch busy/cancel state and exact
+origin WindowTab/PaneTab/route/folder protection.
+NOT TESTED: actual Windows compile, GUI, ZIP I/O and adversarial
+filesystem races remain unverified.
+
 Regular-document activation belongs to `app/winui/file_open_controller.h`.
 It owns one asynchronous Windows StorageFile/Launcher request, deadline and
 close cancellation. MainWindow supplies weak presentation callbacks and checks
