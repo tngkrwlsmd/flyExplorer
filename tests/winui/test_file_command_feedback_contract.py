@@ -30,5 +30,20 @@ class FileCommandFeedbackContract(unittest.TestCase):
         ):
             self.assertIn(required,completion)
 
+class TransferFeedbackContract(unittest.TestCase):
+    def test_confirmation_cancel_and_partial_cancel_have_feedback(self):
+        body=(APP/"m22_transfers.cpp").read_text(encoding="utf-8-sig")
+        start=body.split("void MainWindow::ApplyTransferStartStatus(",1)[1].split(
+            "void MainWindow::StartTransfer(",1)[0]
+        completion=body.split("void MainWindow::OnTransferCompleted(",1)[1].split(
+            "void MainWindow::OnWindowsCopy(",1)[0]
+        self.assertIn("status==Start::Cancelled",start)
+        self.assertIn("파일 작업 확인을 취소했습니다.",start)
+        self.assertIn("completion.report.aborted",completion)
+        self.assertIn("completion.report.error==ERROR_CANCELLED",completion)
+        self.assertIn("일부 항목이 처리됐을 수 있습니다.",completion)
+        self.assertIn("mTransferFailureNotice=detail;",completion)
+        self.assertIn("completion.touchedFolders",completion)
+
 if __name__=="__main__":
     unittest.main()
