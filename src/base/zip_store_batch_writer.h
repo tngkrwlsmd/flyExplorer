@@ -205,6 +205,7 @@ inline Result createMany(std::vector<std::wstring> const& paths) noexcept {
             if(writer.h!=INVALID_HANDLE_VALUE){
                 BY_HANDLE_FILE_INFORMATION info{};
                 if(::GetFileInformationByHandle(writer.h,&info)&&
+                   info.nNumberOfLinks==1&&
                    !(info.dwFileAttributes&FILE_ATTRIBUTE_REPARSE_POINT)&&
                    fxfile::zipstore::detail::writeAll(writer.h,zip))
                     flushed=true;

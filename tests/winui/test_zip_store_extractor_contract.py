@@ -28,6 +28,7 @@ class ZipStoreExtractorContracts(unittest.TestCase):
             "GetTempFileNameW(parent.c_str(),L\"fxe\"",
             "detail::Staging staging",
             "staging.owned=true",
+            "information.nNumberOfLinks==1",
             "zipstore::detail::writeAll(writer.h,payload)",
             "MoveFileExW(staging.path,target.c_str()",
             "MOVEFILE_WRITE_THROUGH",
@@ -63,8 +64,9 @@ class ZipStoreExtractorContracts(unittest.TestCase):
         self.assertIn("bool mZipExtractionBusy=false;",h)
         self.assertIn("void ExtractSelectedZip(int side);",h)
         self.assertIn('make(L"ZIP 해제 (Store, 한 파일만)"',ui)
-        self.assertIn("canInspectZip=suffix==L\".zip\"&&!mZipExtractionBusy",ui)
-        self.assertIn("!mZipCreationBusy&&!mZipInspectionBusy&&!mZipExtractionBusy",ui)
+        self.assertIn('canInspectZip=suffix==L".zip"&&zipIdle;',ui)
+        self.assertIn('const bool zipIdle=!mZipCreationBusy&&!mZipInspectionBusy&&',ui)
+        self.assertIn('!mZipExtractionBusy&&!mZipBatchCreationBusy;',ui)
 
 if __name__=="__main__":
     unittest.main()

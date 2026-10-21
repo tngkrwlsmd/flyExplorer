@@ -193,6 +193,7 @@ inline Result createOne(std::wstring const& source) noexcept {
             if(writer.h!=INVALID_HANDLE_VALUE){
                 BY_HANDLE_FILE_INFORMATION attributes{};
                 if(::GetFileInformationByHandle(writer.h,&attributes)&&
+                   attributes.nNumberOfLinks==1&&
                    !(attributes.dwFileAttributes&FILE_ATTRIBUTE_REPARSE_POINT)&&
                    detail::writeAll(writer.h,zip))
                     complete=true;

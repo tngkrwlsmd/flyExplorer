@@ -25,6 +25,7 @@ class ZipStoreBatchContracts(unittest.TestCase):
             "member.localOffset",
             "GetTempFileNameW(directory.c_str()",
             "zipstore::detail::Staging staging",
+            "info.nNumberOfLinks==1",
             "zipstore::detail::writeAll(writer.h,zip)",
             "::MoveFileExW(staging.path,target.c_str()",
             "MOVEFILE_WRITE_THROUGH",

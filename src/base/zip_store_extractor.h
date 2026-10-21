@@ -188,6 +188,7 @@ inline Result extractOne(std::wstring const& source) noexcept {
             if(writer.h!=INVALID_HANDLE_VALUE){
                 BY_HANDLE_FILE_INFORMATION information{};
                 if(::GetFileInformationByHandle(writer.h,&information)&&
+                   information.nNumberOfLinks==1&&
                    !(information.dwFileAttributes&FILE_ATTRIBUTE_REPARSE_POINT)&&
                    fxfile::zipstore::detail::writeAll(writer.h,payload))
                     written=true;

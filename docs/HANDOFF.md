@@ -13,7 +13,9 @@
   다른 원본 폴더를 거부한다. ZIP 각 로컬 헤더·중앙 디렉터리
   UTF-8 이름/CRC32/실제 오프셋과 EOCD를 작성한다.
   같은 폴더에 예약한 임시 파일을 flush 후, 덮어쓰기 옵션 없이
-  rename한다. 실패/예외는 소유 임시 파일만 RAII 정리한다.
+  rename한다. 기존 F08 단일 생성/해제 임시 출력과 함께
+  링크 수가 1인지 확인해 타 파일의 hardlink로 바뀐 임시 경로를
+  통한 변경을 거부한다. 실패/예외는 소유 임시 파일만 RAII 정리한다.
 - 기존 `MainWindow::ShowAppFileContextMenu`의 원본 선택 논리 ID,
   WindowTab/PaneTab/route 검사 위에 새 항목을 연결했다.
   `CreateSelectedBatchZip`는 실제 작업 전 다중 선택을 재검증하고
