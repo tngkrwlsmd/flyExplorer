@@ -66,6 +66,14 @@ context action owns an opt-in worker and suppresses stale WindowTab/PaneTab
 results. A preflight acceptance does not certify data integrity or authorize
 archive extraction.
 
+The first F08 writer is `src/base/zip_store_writer.h`: a one-file,
+bounded ZIP/Store-only creator. It owns CRC/header generation and
+same-folder staged publishing without overwrite. Archive extraction and
+Deflate are not implemented. `MainWindow::CreateSelectedZip` only dispatches
+validated selection into a short-lived worker and applies UI refresh to the
+origin WindowTab/PaneTab. Do not treat unexecuted code contracts as native
+ZIP acceptance.
+
 Regular-document activation belongs to `app/winui/file_open_controller.h`.
 It owns one asynchronous Windows StorageFile/Launcher request, deadline and
 close cancellation. MainWindow supplies weak presentation callbacks and checks

@@ -2,6 +2,7 @@
 #include "MainWindow.xaml.h"
 #include "../../src/base/shell_context_core.h"
 #include "../../src/base/zip_inspection.h"
+#include "../../src/base/zip_store_writer.h"
 #include "../../src/base/shell_isolation_wire.h"
 #include <winrt/Microsoft.UI.Xaml.Input.h>
 #include <winrt/Microsoft.UI.Xaml.Media.h>
@@ -142,6 +143,80 @@ void MainWindow::OpenSelectedWith(int side){
   StatusText().Text(L"이전 파일 열기 요청을 처리 중입니다.");
  else
   StatusText().Text(L"이 파일은 연결 프로그램으로 열 수 없습니다.");
+}
+void MainWindow::CreateSelectedZip(int side){
+ if(mClosing||mZipCreationBusy||mZipInspectionBusy||
+    side<0||side>1||ActiveWindowTab().model.activePane!=side||
+    mFileOperations.busy())return;
+ const auto& workspace=ActiveWindowTab();
+ const auto& pane=workspace.model.panes[side];
+ if(pane.active>=pane.tabs.size()||pane.active>=pane.pending.size()||
+    pane.pending[pane.active]||pane.active>=pane.routeIds.size()||
+    pane.active>=pane.filesystemPaths.size()||
+    pane.filesystemPaths[pane.active].empty())return;
+ const auto tab=pane.active;
+ const auto route=pane.routeIds[tab];
+ const auto& visible=workspace.fileLists[side];
+ if(visible.visibleTab!=tab||visible.visibleRoute!=route)return;
+ auto view=side==0?LeftFiles():RightFiles();
+ if(view.SelectedItems().Size()!=1)return;
+ auto row=view.SelectedItem().try_as<ListViewItem>();
+ if(!row||!row.Tag())return;
+ std::uint64_t logical=0;
+ try{logical=unbox_value<std::uint64_t>(row.Tag());}
+ catch(...){return;}
+ const auto* selected=pane.tabs[tab].indexedItem(
+    static_cast<std::size_t>(logical));
+ if(!selected||!selected->isFileSystem()||selected->isFolder()||
+    selected->parsingName.empty())return;
+ const auto source=selected->parsingName;
+ const auto origin=workspace.identity;
+ const auto folder=pane.filesystemPaths[tab];
+ auto weak=get_weak();
+ auto dispatch=DispatcherQueue();
+ mZipCreationBusy=true;
+ StatusText().Text(
+     L"선택한 파일 하나를 ZIP(Store/무압축)으로 묶는 중입니다. 기존 파일은 덮어쓰지 않습니다.");
+ try{
+  std::thread([weak,dispatch,source,origin,side,tab,route,folder]{
+   const auto report=fxfile::zipstore::createOne(source);
+   dispatch.TryEnqueue([weak,report,origin,side,tab,route,folder]{
+    auto ui=weak.get();
+    if(!ui||ui->mClosing)return;
+    ui->mZipCreationBusy=false;
+    const auto& current=ui->ActiveWindowTab();
+    if(current.identity!=origin||current.model.activePane!=side)return;
+    const auto& pane=current.model.panes[side];
+    if(pane.active!=tab||pane.active>=pane.routeIds.size()||
+       pane.routeIds[tab]!=route||
+       pane.active>=pane.filesystemPaths.size()||
+       pane.filesystemPaths[tab]!=folder)return;
+    using Status=fxfile::zipstore::Status;
+    if(report.status==Status::Created){
+     ui->StatusText().Text(
+         L"ZIP(Store/무압축)을 생성했습니다. 원본 파일은 유지했습니다.");
+     auto const& snap=pane.tabs[tab].snapshot();
+     if(snap.folder.valid())
+      ui->QueuePidl(side,fxfile::shellnav::Location(snap.folder),
+        fxfile::shellnav::NavigationAction::Refresh);
+    }else{
+     ui->StatusText().Text(
+       report.status==Status::AlreadyExists?
+        L"같은 이름의 ZIP이 이미 있습니다. 덮어쓰지 않았습니다.":
+       report.status==Status::TooLarge?
+        L"ZIP 생성 입력은 최대 8 MiB까지 지원합니다.":
+       report.status==Status::InvalidSource?
+        L"일반 로컬 고정 드라이브의 안전한 파일만 ZIP으로 묶을 수 있습니다.":
+       report.status==Status::CannotRead?
+        L"원본 파일을 안전하게 읽을 수 없습니다.":
+        L"ZIP 생성에 실패했습니다. 기존 원본은 변경하지 않았습니다.");
+    }
+   });
+  }).detach();
+ }catch(...){
+  mZipCreationBusy=false;
+  StatusText().Text(L"ZIP 생성 작업자를 시작할 수 없습니다.");
+ }
 }
 void MainWindow::InspectSelectedZip(int side){
  if(mClosing||mZipInspectionBusy||side<0||side>1||
@@ -349,6 +424,8 @@ void MainWindow::ShowAppFileContextMenu(
  const bool canExternal=localSelection&&
   count<=fxfile::shellcontext::kMaxContextSelection;
  bool canInspectZip=false;
+ const bool canCreateZip=localSelection&&count==1&&!isFolder&&
+     !mZipCreationBusy&&!mZipInspectionBusy;
  if(localSelection&&count==1&&!isFolder){
   auto const* item=pane.tabs[tab].indexedItem(
       static_cast<std::size_t>((*expected)[0]));
@@ -423,6 +500,9 @@ void MainWindow::ShowAppFileContextMenu(
  menu.Items().Append(make(L"ZIP 내부 항목 검사 (읽기 전용)",L"\uE8B7",
                           canInspectZip,
      [side](MainWindow& ui){ui.InspectSelectedZip(side);}));
+ menu.Items().Append(make(L"ZIP으로 묶기 (무압축, 한 파일)",L"\uE8B7",
+                          canCreateZip,
+     [side](MainWindow& ui){ui.CreateSelectedZip(side);}));
  if(count==1&&isFolder&&!folderPath.empty()){
   menu.Items().Append(make(L"새 폴더 탭에서 열기",L"\uE8B7",ready,
      [side,path=std::move(folderPath)](MainWindow& ui){
