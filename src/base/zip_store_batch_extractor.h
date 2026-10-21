@@ -1,7 +1,7 @@
 // F08/EP10: bounded Store/Deflate, 2-8 flat or single-root members.
 // Validate every local/central record and CRC before any output. Publish a
 // single owned staging directory by rename; never publish partial entries.
-// No ZIP64, extra/comment, symlinks, multiple roots, >1 child dir or overwrite.
+// No ZIP64, extra/comment, symlinks, multiple roots, >3 child dirs or overwrite.
 // Untested on Windows: hostile concurrent directory replacement remains a risk.
 #pragma once
 #include "zip_store_batch_writer.h"
@@ -41,31 +41,31 @@ struct StagedDirectory final {
     std::wstring path;
     std::vector<std::wstring> files;
     std::wstring nestedRoot;
-    std::wstring nestedChild;
+    std::vector<std::wstring> nestedChildren;
+    std::size_t createdChildren=0;
     bool owned=false;
     bool nestedOwned=false;
-    bool childOwned=false;
     ~StagedDirectory() noexcept {
         if(!owned)return;
         const DWORD root=::GetFileAttributesW(path.c_str());
         if(root==INVALID_FILE_ATTRIBUTES||
            !(root&FILE_ATTRIBUTE_DIRECTORY)||
            (root&FILE_ATTRIBUTE_REPARSE_POINT))return;
-        // Never descend into an externally replaced junction/reparse root.
         if(!nestedRoot.empty()){
-            // A child we did not exclusively create must not be traversed.
-            if(!nestedOwned)return;
+            if(!nestedOwned){
+                ::RemoveDirectoryW(path.c_str());
+                return;
+            }
             const DWORD child=::GetFileAttributesW(nestedRoot.c_str());
             if(child==INVALID_FILE_ATTRIBUTES||
                !(child&FILE_ATTRIBUTE_DIRECTORY)||
                (child&FILE_ATTRIBUTE_REPARSE_POINT))return;
         }
-        if(!nestedChild.empty()){
-            if(!childOwned)return;
-            const DWORD grandchild=::GetFileAttributesW(nestedChild.c_str());
-            if(grandchild==INVALID_FILE_ATTRIBUTES||
-               !(grandchild&FILE_ATTRIBUTE_DIRECTORY)||
-               (grandchild&FILE_ATTRIBUTE_REPARSE_POINT))return;
+        for(std::size_t i=0;i<createdChildren;++i){
+            const DWORD attr=::GetFileAttributesW(nestedChildren[i].c_str());
+            if(attr==INVALID_FILE_ATTRIBUTES||
+               !(attr&FILE_ATTRIBUTE_DIRECTORY)||
+               (attr&FILE_ATTRIBUTE_REPARSE_POINT))return;
         }
         for(auto const& name:files){
             const DWORD attr=::GetFileAttributesW(name.c_str());
@@ -73,8 +73,9 @@ struct StagedDirectory final {
                !(attr&(FILE_ATTRIBUTE_DIRECTORY|FILE_ATTRIBUTE_REPARSE_POINT)))
                 ::DeleteFileW(name.c_str());
         }
-        if(!nestedChild.empty())::RemoveDirectoryW(nestedChild.c_str());
-        if(!nestedRoot.empty())::RemoveDirectoryW(nestedRoot.c_str());
+        for(std::size_t i=createdChildren;i>0;--i)
+            ::RemoveDirectoryW(nestedChildren[i-1].c_str());
+        if(nestedOwned)::RemoveDirectoryW(nestedRoot.c_str());
         ::RemoveDirectoryW(path.c_str());
     }
     StagedDirectory()=default;
@@ -197,7 +198,8 @@ inline Result extractMany(std::wstring const& source,
         std::vector<detail::Member> members;
         members.reserve(count);
         std::wstring archiveRoot;
-        std::wstring archiveChild;
+        std::vector<std::wstring> archiveChildren;
+        archiveChildren.reserve(fxfile::zipbatch::kMaxChildFolders);
         bool rootMode=false;
         for(std::size_t i=0;i<count;++i){
             if(fxfile::zipstore::detail::cancelled(cancellation)){
@@ -282,13 +284,36 @@ inline Result extractMany(std::wstring const& source,
                 result.status=Status::UnsafeEntry;return result;
             }
             if(!entryChild.empty()){
-                if(archiveChild.empty())archiveChild=entryChild;
-                else if(!fxfile::zipinspect::detail::same(
-                            archiveChild,entryChild)){
-                    result.status=Status::UnsafeEntry;return result;
+                const auto matched=std::find_if(
+                    archiveChildren.begin(),archiveChildren.end(),
+                    [&](std::wstring const& existing){
+                        return fxfile::zipinspect::detail::same(existing,entryChild);
+                    });
+                if(matched!=archiveChildren.end()){
+                    entryChild=*matched;
+                }else{
+                    if(archiveChildren.size()>=
+                       fxfile::zipbatch::kMaxChildFolders){
+                        result.status=Status::UnsafeEntry;return result;
+                    }
+                    archiveChildren.push_back(entryChild);
                 }
             }
+            // A root-level file must not be the same path component
+            // as any owned child directory (case-insensitively).
+            if(entryChild.empty()&&rootMode&&std::any_of(
+                   archiveChildren.begin(),archiveChildren.end(),
+                   [&](std::wstring const& folder){
+                       return fxfile::zipinspect::detail::same(folder,entryLeaf);
+                   })){
+                result.status=Status::UnsafeEntry;return result;
+            }
             for(auto const& previous:members){
+                if(previous.child.empty()&&!entryChild.empty()&&
+                   fxfile::zipinspect::detail::same(
+                       previous.name,entryChild)){
+                    result.status=Status::UnsafeEntry;return result;
+                }
                 if(fxfile::zipinspect::detail::same(
                        previous.child,entryChild)&&
                    fxfile::zipinspect::detail::same(
@@ -356,17 +381,19 @@ inline Result extractMany(std::wstring const& source,
             if(staging.nestedRoot.size()>240u){
                 result.status=Status::InvalidSource;return result;
             }
-            if(!archiveChild.empty()){
-                staging.nestedChild=(std::filesystem::path(staging.nestedRoot)/
-                                     archiveChild).native();
-                if(staging.nestedChild.size()>240u){
+            staging.nestedChildren.reserve(archiveChildren.size());
+            for(auto const& child:archiveChildren){
+                const auto childPath=(std::filesystem::path(staging.nestedRoot)/
+                                      child).native();
+                if(childPath.size()>240u){
                     result.status=Status::InvalidSource;return result;
                 }
+                staging.nestedChildren.push_back(childPath);
             }
         }
         for(auto const& member:members){
             const auto base=!member.child.empty()?
-                std::filesystem::path(staging.nestedChild):
+                std::filesystem::path(staging.nestedRoot)/member.child:
                 rootMode?std::filesystem::path(staging.nestedRoot):
                          std::filesystem::path(staging.path);
             const auto staged=(base/member.name).native();
@@ -384,11 +411,14 @@ inline Result extractMany(std::wstring const& source,
                 result.status=Status::CannotWrite;return result;
             }
             staging.nestedOwned=true;
-            if(!staging.nestedChild.empty()){
-                if(!::CreateDirectoryW(staging.nestedChild.c_str(),nullptr)){
+            for(auto const& childPath:staging.nestedChildren){
+                if(fxfile::zipstore::detail::cancelled(cancellation)){
+                    result.status=Status::Cancelled;return result;
+                }
+                if(!::CreateDirectoryW(childPath.c_str(),nullptr)){
                     result.status=Status::CannotWrite;return result;
                 }
-                staging.childOwned=true;
+                ++staging.createdChildren;
             }
         }
         for(std::size_t i=0;i<members.size();++i){

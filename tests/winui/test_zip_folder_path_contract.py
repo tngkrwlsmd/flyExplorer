@@ -16,18 +16,20 @@ class SingleRootZipContracts(unittest.TestCase):
             "flatName(root)&&flatName(child)&&flatName(leaf)",
             "rootMode!=!entryRoot.empty()",
             "archiveRoot,entryRoot",
-            "archiveChild,entryChild",
+            "archiveChildren.push_back(entryChild)",
+            "archiveChildren.size()>=",
+            "previous.name,entryChild",
             "previous.child,entryChild",
             "previous.name,entryLeaf",
             "staging.nestedRoot",
-            "staging.nestedChild",
+            "staging.nestedChildren",
             "staging.nestedOwned=true;",
-            "staging.childOwned=true;",
+            "++staging.createdChildren;",
             "if(!nestedOwned)return;",
-            "if(!childOwned)return;",
+            "for(std::size_t i=0;i<createdChildren;++i)",
             "CreateDirectoryW(staging.nestedRoot.c_str(),nullptr)",
-            "CreateDirectoryW(staging.nestedChild.c_str(),nullptr)",
-            "RemoveDirectoryW(nestedChild.c_str())",
+            "CreateDirectoryW(childPath.c_str(),nullptr)",
+            "RemoveDirectoryW(nestedChildren[i-1].c_str())",
             "RemoveDirectoryW(nestedRoot.c_str())",
             "MoveFileExW(staging.path.c_str(),target.c_str()",
         )
@@ -42,10 +44,12 @@ class SingleRootZipContracts(unittest.TestCase):
     def test_writer_explicit_single_child_enumeration(self):
         w=source("src/base/zip_store_batch_writer.h")
         checks=(
-            "std::wstring allowedChild",
+            "std::vector<std::wstring> allowedChildren",
+            "kMaxChildFolders=3",
             "prior.child,child",
-            "std::wstring childFolder",
-            "if(!childFolder.empty())",
+            "std::vector<std::wstring> childFolders",
+            "childFolders.size()>=kMaxChildFolders",
+            "for(auto const& childFolder:childFolders)",
             "FindFirstFileW(searchChild.c_str()",
             "nested.dwFileAttributes&",
             "childCount",
@@ -78,7 +82,7 @@ class SingleRootZipContracts(unittest.TestCase):
         ):
             self.assertIn(token,method)
         self.assertIn("const bool canCreateFolderZip=",ui)
-        self.assertIn('make(L"폴더 ZIP으로 묶기 (하위 폴더 1개 이하, 2~8개 파일)"',ui)
+        self.assertIn('make(L"폴더 ZIP으로 묶기 (하위 폴더 최대 3개, 파일 2~8개)"',ui)
         self.assertIn("void CreateSelectedFolderZip(int side);",hdr)
 
 if __name__=="__main__":
