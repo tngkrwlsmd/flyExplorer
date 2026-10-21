@@ -1,5 +1,5 @@
-// F08/EP10: bounded one-file, flat-path ZIP Store extraction.
-// This is intentionally NOT a general ZIP extractor: no Deflate, ZIP64,
+// F08/EP10: bounded one-file, flat-path ZIP Store/Deflate extraction.
+// This is intentionally NOT a general ZIP extractor: no ZIP64,
 // encryption, data descriptors, directories, symlinks or multi-entry archives.
 // One held source handle, CRC verified before any output, staged no-overwrite
 // publication, and cleanup of only our temporary file.
@@ -81,7 +81,7 @@ inline Result extractOne(std::wstring const& source) noexcept {
            after.QuadPart!=length.QuadPart){
             answer.status=Status::CannotRead;return answer;
         }
-        // Strict single Store member. Reject archive prefixes, trailing
+        // Strict single Store/Deflate member. Reject archive prefixes, trailing
         // data, all extra fields/comments, and non-exact central placement.
         const std::size_t eocd=total-22;
         if(u32(archiveBytes,eocd)!=0x06054b50u){

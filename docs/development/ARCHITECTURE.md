@@ -130,7 +130,14 @@ and an explicit include adaptation. The decoder has NO filesystem or
 ZIP path authority; it has a bounded allocation and validates exact
 input consumption/output count. `zip_store_extractor.h` alone owns
 method 8 ZIP metadata, CRC32, path restrictions and non-replace staging.
-Batch ZIP and Deflate writer remain Store-only. All new code is NOT TESTED.
+The bounded batch extractor also permits a flat 2-8-member mix
+of Store (0) and raw Deflate (8) using the same pinned native
+`zip_raw_deflate` decoder. It gates each decompression on declared
+output size, compression ratio, exact input/output count and CRC
+before constructing the owned staging directory; the original
+whole-directory non-replace publish and cancellation policy remains.
+The batch ZIP writer still emits only Store files. A one-shot tinfl
+call is not preemptible mid-call. All new code is NOT TESTED.
 
 Regular-document activation belongs to `app/winui/file_open_controller.h`.
 It owns one asynchronous Windows StorageFile/Launcher request, deadline and

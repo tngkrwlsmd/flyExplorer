@@ -1,5 +1,32 @@
 # flyExplorer 작업 인계 — 2026-10-19 L08 커서 OPEN, G01 코드·빌드 PASS
 
+## 2026-10-21 EP10/F08 — 2~8개 ZIP Store/Deflate 혼합 해제 (코드 반영, 미검증)
+
+- 기준 main `473827e0`. 기존 `zip_store_batch_extractor.h`를
+  **2~8개 평면 일반 파일 ZIP의 Store(0)·raw Deflate(8) 혼합**
+  해제로 확장했다. 로컬/중앙 헤더 method·flags·시각·크기·CRC·
+  파일명·오프셋을 상호 검증하며 Deflate versionNeeded는 20이다.
+  ZIP64, data descriptor, 암호화, extra/comment, 중첩 경로,
+  링크, 비ASCII 레거시 인코딩 및 다른 메서드는 거부한다.
+- 입력 최대 16MiB, 항목/전체 출력 최대 8MiB, Deflate 확장률
+  최대 100:1을 적용한다. Deflate는 기존 miniz 3.1.2의
+  `ziprawdeflate::inflateExact`로 정확한 소비/출력 바이트를
+  확인한 뒤 실제 CRC32를 계산한다. Store는 packed==unpacked를
+  계속 강제한다. 총량은 **압축 전 크기 합계**로 제한한다.
+  **모든 항목**의 CRC를 검증한 다음에야 임시 파일을 만든다.
+- 기존 `flyExplorer-selection-unpacked` 임시 디렉터리·완료 후
+  전체 비대체(rename) 공개·원본 및 기존 대상 보존·RAII 실패
+  정리·취소·WindowTab/PaneTab/route 확인을 유지했다.
+  각 Deflate 호출 앞뒤에는 취소 검사하지만 단일 저수준
+  inflate 호출 *진행 중* 선점 취소는 아직 구현하지 않았다.
+  공개 rename이 이미 성공하면 취소 요청으로 롤백하지 않는다.
+- WinUI 다중 해제 메뉴/완료·지원 형식 안내 문구와 소스 계약을
+  갱신했다. 기존 ZIP Store **생성**은 무압축 방식 그대로다.
+- **NOT TESTED:** 빌드, 네이티브/소스 테스트, 정상·손상 ZIP,
+  CRC·zip bomb·경합·취소, GUI·시각 검증 전부 미실행.
+  신규 miniz 통합의 C/C++ 링크도 아직 미검증 상태다.
+  G01 OPEN, G07 중단, G03~G05 제외 유지.
+
 ## 2026-10-21 EP10/F08 — raw Deflate 단일 ZIP 항목 해제 (코드 반영, 미검증)
 
 - 기준 main `f0824a32`. miniz v3.1.2의 low-level `tinfl`만

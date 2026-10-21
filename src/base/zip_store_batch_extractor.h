@@ -1,11 +1,12 @@
-// F08/EP10: strict bounded Store-only, 2-8 regular flat ZIP members.
+// F08/EP10: strict bounded Store/Deflate, 2-8 regular flat ZIP members.
 // Validate every local/central record and CRC before any output. Publish a
 // single owned staging directory by rename; never publish partial entries.
-// No Deflate, ZIP64, extra/comment, symlinks, nested paths or overwrite.
+// No ZIP64, extra/comment, symlinks, nested paths or overwrite.
 // Untested on Windows: hostile concurrent directory replacement remains a risk.
 #pragma once
 #include "zip_store_batch_writer.h"
 #include "zip_store_compat.h"
+#include "zip_raw_deflate.h"
 #include <windows.h>
 #include <algorithm>
 #include <cstddef>
@@ -162,6 +163,7 @@ inline Result extractMany(std::wstring const& source,
             const auto nameLength=std::size_t(u16(bytes,localCursor+26));
             const auto versionNeeded=u16(bytes,directoryCursor+6);
             const auto flags=u16(bytes,directoryCursor+8);
+            const auto method=u16(bytes,directoryCursor+10);
             const auto packed=std::size_t(u32(bytes,localCursor+18));
             const auto unpacked=std::size_t(u32(bytes,localCursor+22));
             const auto checksum=u32(bytes,localCursor+14);
@@ -170,13 +172,14 @@ inline Result extractMany(std::wstring const& source,
                !fxfile::zipstorecompat::supportedDosVersion(
                     u16(bytes,directoryCursor+4))||
                !fxfile::zipstorecompat::supportedFlags(flags)||
+               (method!=0&&method!=8)||
+               (method==8&&versionNeeded!=20)||
                u16(bytes,localCursor+4)!=versionNeeded||
                u16(bytes,localCursor+6)!=flags||
-               u16(bytes,localCursor+8)!=0||
+               u16(bytes,localCursor+8)!=method||
                !fxfile::zipstorecompat::sameDosTime(
                     bytes,localCursor,directoryCursor)||
                u16(bytes,localCursor+28)!=0||
-               u16(bytes,directoryCursor+10)!=0||
                u16(bytes,directoryCursor+30)!=0||
                u16(bytes,directoryCursor+32)!=0||
                u16(bytes,directoryCursor+34)!=0||
@@ -189,9 +192,15 @@ inline Result extractMany(std::wstring const& source,
                nameLengthCentral!=nameLength||
                !span(localCursor+30u,nameLength,central)||
                !span(directoryCursor+46u,nameLength,eocd)||
-               packed!=unpacked||
-               packed>fxfile::zipstore::kMaxInputBytes||
-               packed>fxfile::zipbatch::kMaxTotalBytes-uncompressedTotal){
+               unpacked>fxfile::zipbatch::kMaxTotalBytes-uncompressedTotal||
+               unpacked>fxfile::ziprawdeflate::kMaxOutputBytes||
+               packed>fxfile::ziprawdeflate::kMaxPackedBytes||
+               (method==0&&packed!=unpacked)||
+               (method==8&&(!packed||
+                             (unpacked>0&&
+                              std::uint64_t(unpacked)>
+                              std::uint64_t(packed)*
+                              fxfile::ziprawdeflate::kMaxRatio)))){
                 result.status=Status::TooLarge;return result;
             }
             const auto dataStart=localCursor+30u+nameLength;
@@ -217,15 +226,33 @@ inline Result extractMany(std::wstring const& source,
                     result.status=Status::UnsafeEntry;return result;
                 }
             }
+            // Validate the entire member before staging any output.
             detail::Member member{};
             member.name=std::move(name);
-            member.content.assign(bytes.begin()+dataStart,
-                                  bytes.begin()+dataStart+packed);
-            if(fxfile::zipstore::detail::crc32(member.content)!=checksum){
+            if(method==0){
+                member.content.assign(bytes.begin()+dataStart,
+                                      bytes.begin()+dataStart+packed);
+            }else{
+                if(fxfile::zipstore::detail::cancelled(cancellation)){
+                    result.status=Status::Cancelled;return result;
+                }
+                if(!fxfile::ziprawdeflate::inflateExact(
+                       bytes.data()+dataStart,packed,unpacked,
+                       member.content,cancellation)){
+                    result.status=fxfile::zipstore::detail::cancelled(cancellation)?
+                        Status::Cancelled:Status::Corrupt;
+                    return result;
+                }
+            }
+            if(fxfile::zipstore::detail::cancelled(cancellation)){
+                result.status=Status::Cancelled;return result;
+            }
+            if(member.content.size()!=unpacked||
+               fxfile::zipstore::detail::crc32(member.content)!=checksum){
                 result.status=Status::Corrupt;return result;
             }
             members.push_back(std::move(member));
-            uncompressedTotal+=packed;
+            uncompressedTotal+=unpacked;
             localCursor=dataStart+packed;
             directoryCursor+=46u+nameLength;
         }

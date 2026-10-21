@@ -1,5 +1,5 @@
 // F08/EP10: raw RFC1951 DEFLATE only. This is NOT a ZIP parser.
-// zip_store_extractor.h owns strict metadata and path/CRC validation.
+// Both ZIP extractors own strict metadata and path/CRC validation.
 // Decoder must consume exactly the declared compressed range.
 #pragma once
 #include <atomic>

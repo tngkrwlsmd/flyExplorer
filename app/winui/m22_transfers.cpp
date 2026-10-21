@@ -359,7 +359,7 @@ void MainWindow::ExtractSelectedBatchZip(int side){
  auto weak=get_weak();
  const auto dispatch=DispatcherQueue();
  mZipBatchExtractionBusy=true;
- StatusText().Text(L"다중 ZIP 해제 중입니다. 취소 버튼을 사용할 수 있습니다.");
+ StatusText().Text(L"다중 ZIP Store/Deflate 해제 중입니다. 취소 버튼을 사용할 수 있습니다.");
  try{
   auto cancel=std::make_shared<std::atomic_bool>(false);
   mZipBatchCancel=cancel;
@@ -381,7 +381,7 @@ void MainWindow::ExtractSelectedBatchZip(int side){
        pane.filesystemPaths[tab]!=folder)return;
     using Status=fxfile::zipbatchextract::Status;
     if(report.status==Status::Extracted){
-     ui->StatusText().Text(L"ZIP Store 다중 파일 해제 완료. flyExplorer-selection-unpacked 폴더에 저장했습니다.");
+     ui->StatusText().Text(L"ZIP Store/Deflate 다중 파일 해제 완료. flyExplorer-selection-unpacked 폴더에 저장했습니다.");
      const auto& snap=pane.tabs[tab].snapshot();
      if(snap.folder.valid())
       ui->QueuePidl(side,fxfile::shellnav::Location(snap.folder),
@@ -395,7 +395,7 @@ void MainWindow::ExtractSelectedBatchZip(int side){
       report.status==Status::TooLarge?
        L"ZIP 또는 내부 총 용량이 허용 상한을 초과합니다.":
       report.status==Status::Unsupported?
-       L"ZIP Store 평면 파일 2~8개 형식만 지원합니다.":
+       L"ZIP Store/Deflate 평면 파일 2~8개 형식만 지원합니다.":
       report.status==Status::UnsafeEntry?
        L"위험하거나 중복된 ZIP 내부 파일명으로 해제하지 않았습니다.":
       report.status==Status::Corrupt?
@@ -796,7 +796,7 @@ void MainWindow::ShowAppFileContextMenu(
  menu.Items().Append(make(L"ZIP 해제 (Store/Deflate, 한 파일)",L"\uE8B7",
                           canInspectZip,
      [side](MainWindow& ui){ui.ExtractSelectedZip(side);}));
- menu.Items().Append(make(L"ZIP 여러 파일 해제 (Store, 2~8개)",L"\uE8B7",
+ menu.Items().Append(make(L"ZIP 여러 파일 해제 (Store/Deflate, 2~8개)",L"\uE8B7",
                           canInspectZip,
      [side](MainWindow& ui){ui.ExtractSelectedBatchZip(side);}));
  if(count==1&&isFolder&&!folderPath.empty()){

@@ -1,4 +1,4 @@
-"""F08 bounded multi-entry ZIP Store extraction source contracts; NOT EXECUTED."""
+"""F08 bounded multi-entry ZIP Store/Deflate extraction source contracts; NOT EXECUTED."""
 from pathlib import Path
 import unittest
 
@@ -19,7 +19,16 @@ class ZipStoreBatchExtractorContracts(unittest.TestCase):
             "u32(bytes,directoryCursor)!=0x02014b50u",
             "central+centralBytes!=eocd",
             "u32(bytes,directoryCursor+42)!=localCursor",
-            "packed!=unpacked",
+            "(method!=0&&method!=8)",
+            "(method==8&&versionNeeded!=20)",
+            "u16(bytes,localCursor+8)!=method",
+            "(method==0&&packed!=unpacked)",
+            "unpacked>fxfile::zipbatch::kMaxTotalBytes-uncompressedTotal",
+            "fxfile::ziprawdeflate::kMaxPackedBytes",
+            "fxfile::ziprawdeflate::kMaxRatio",
+            "ziprawdeflate::inflateExact(",
+            "uncompressedTotal+=unpacked",
+            "member.content.size()!=unpacked",
             "localCursor!=central||directoryCursor!=eocd",
             "u16(bytes,localCursor+6)!=flags",
             "fxfile::zipstorecompat::supportedFlags(flags)",
@@ -47,6 +56,8 @@ class ZipStoreBatchExtractorContracts(unittest.TestCase):
             self.assertIn(token,s)
         self.assertLess(s.index("zipstore::detail::crc32(member.content)!=checksum"),
                         s.index("GetTempFileNameW(parent.c_str()"))
+        self.assertLess(s.index("ziprawdeflate::inflateExact("),
+                        s.index("GetTempFileNameW(parent.c_str()"))
         self.assertLess(s.index("result.output=target;"),
                         s.index("::MoveFileExW(staging.path.c_str()"))
         for forbidden in ("MOVEFILE_REPLACE_EXISTING|", "CREATE_ALWAYS",
@@ -61,13 +72,12 @@ class ZipStoreBatchExtractorContracts(unittest.TestCase):
         for x in ("view.SelectedItems().Size()!=1", "mZipBatchExtractionBusy=true;",
                   "mZipBatchCancel=cancel;",
                   "zipbatchextract::extractMany(source,cancel.get())",
-                  "zipbatchextract::extractMany(source,cancel.get())",
                   "active.identity!=identity",
                   "pane.routeIds[tab]!=route",
                   "pane.filesystemPaths[tab]!=folder",
                   "NavigationAction::Refresh"):
             self.assertIn(x,body)
-        self.assertIn('make(L"ZIP 여러 파일 해제 (Store, 2~8개)"',ui)
+        self.assertIn('make(L"ZIP 여러 파일 해제 (Store/Deflate, 2~8개)"',ui)
         self.assertIn("void ExtractSelectedBatchZip(int side);",header)
         self.assertIn("bool mZipBatchExtractionBusy=false;",header)
         self.assertIn("!mZipBatchExtractionBusy;",ui)
