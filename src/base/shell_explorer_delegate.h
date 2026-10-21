@@ -5,6 +5,7 @@
 #pragma once
 #include <windows.h>
 #include <shlobj.h>
+#include <shellapi.h>
 #include <objbase.h>
 #include <algorithm>
 #include <filesystem>
@@ -29,6 +30,34 @@ struct Pidls final {
 inline bool equal(std::wstring const& a,std::wstring const& b) noexcept {
     return ::CompareStringOrdinal(a.c_str(),-1,b.c_str(),-1,TRUE)==CSTR_EQUAL;
 }
+}
+// Open an explicit, existing filesystem folder in the native Explorer.
+// This delegates UI only; new/archive/share actions require further user
+// interaction in Explorer and are never invoked by this helper.
+inline HRESULT openFolder(std::wstring const& folder) noexcept {
+    try {
+        if(folder.empty()||folder.size()>1024||
+           folder.find(L'\0')!=std::wstring::npos)return E_INVALIDARG;
+        const std::filesystem::path path(folder);
+        if(!path.is_absolute()||
+           path.lexically_normal().native()!=folder)return E_INVALIDARG;
+        const DWORD attrs=::GetFileAttributesW(folder.c_str());
+        if(attrs==INVALID_FILE_ATTRIBUTES||
+           !(attrs&FILE_ATTRIBUTE_DIRECTORY))return E_INVALIDARG;
+        const HRESULT apartment=::CoInitializeEx(
+            nullptr,COINIT_APARTMENTTHREADED|COINIT_DISABLE_OLE1DDE);
+        if(FAILED(apartment))return apartment;
+        detail::Apartment lifetime{true};
+        SHELLEXECUTEINFOW request{};
+        request.cbSize=sizeof(request);
+        request.fMask=SEE_MASK_FLAG_NO_UI|SEE_MASK_NOASYNC;
+        request.lpVerb=L"explore";
+        request.lpFile=folder.c_str();
+        request.nShow=SW_SHOWNORMAL;
+        if(::ShellExecuteExW(&request))return S_OK;
+        const DWORD error=::GetLastError();
+        return error?HRESULT_FROM_WIN32(error):E_FAIL;
+    }catch(...){return E_FAIL;}
 }
 // Only filesystem siblings can be represented by child PIDLs of one parent.
 // Validation is read-only; Explorer owns the actual operation, conflicts,

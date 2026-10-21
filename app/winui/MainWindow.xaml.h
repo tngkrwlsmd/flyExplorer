@@ -405,6 +405,7 @@ namespace winrt::FlyExplorer::implementation
         void ApplyDetailColumnLayout(int side);
         void ShowExternalWindowsContextMenu(int side);
         void RevealSelectedInWindowsExplorer(int side);
+        void OpenCurrentFolderInWindowsExplorer(int side);
         void UpdateViewPresentation(int side);
         void UpdateSortPresentation(int side);
         void UpdateBreadcrumb(std::wstring const& address);

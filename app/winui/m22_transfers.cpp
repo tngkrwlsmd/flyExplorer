@@ -1074,6 +1074,10 @@ void MainWindow::ShowAppBackgroundContextMenu(
                     fxfile::shellnav::NavigationAction::Refresh);
       }else ui.StatusText().Text(L"현재 위치를 새로 고칠 수 없습니다.");
      }));
+ // Delegate Windows-native New/archive/background actions to Explorer.
+ menu.Items().Append(make(L"Windows 탐색기에서 현재 폴더 열기",L"\uE8B7",
+                          localFolder,
+     [side](MainWindow& ui){ui.OpenCurrentFolderInWindowsExplorer(side);}));
  menu.Items().Append(MenuFlyoutSeparator{});
  menu.Items().Append(make(L"붙여넣기",L"\uE77F",localFolder,
      [](MainWindow& ui){ui.PasteFromWindowsClipboard();}));
@@ -1687,6 +1691,47 @@ void MainWindow::OnWindowsCut(IInspectable const&,RoutedEventArgs const&){
 }
 void MainWindow::OnWindowsPaste(IInspectable const&,RoutedEventArgs const&){
  PasteFromWindowsClipboard();
+}
+void MainWindow::OpenCurrentFolderInWindowsExplorer(int side){
+ if(mClosing||side<0||side>1||mFileOperations.busy()||
+    ActiveWindowTab().model.activePane!=side)return;
+ const auto& workspace=ActiveWindowTab();
+ const auto& pane=workspace.model.panes[side];
+ if(pane.active>=pane.tabs.size()||pane.active>=pane.pending.size()||
+    pane.pending[pane.active]||pane.active>=pane.routeIds.size()||
+    pane.active>=pane.filesystemPaths.size())return;
+ const auto tab=pane.active;
+ const auto route=pane.routeIds[tab];
+ const auto& visible=workspace.fileLists[side];
+ if(visible.visibleRoute!=route||visible.visibleTab!=tab)return;
+ const auto folder=pane.filesystemPaths[tab];
+ if(folder.empty())return;
+ const auto identity=workspace.identity;
+ auto weak=get_weak();
+ auto dispatch=DispatcherQueue();
+ StatusText().Text(L"현재 폴더를 Windows 탐색기로 열고 있습니다.");
+ try{
+  std::thread([weak,dispatch,folder,identity,side,tab,route]{
+   const auto result=fxfile::shellexplorer::openFolder(folder);
+   dispatch.TryEnqueue([weak,result,folder,identity,side,tab,route]{
+    auto ui=weak.get();
+    if(!ui||ui->mClosing)return;
+    const auto& workspace=ui->ActiveWindowTab();
+    if(workspace.identity!=identity||
+       workspace.model.activePane!=side)return;
+    const auto& pane=workspace.model.panes[side];
+    if(pane.active!=tab||tab>=pane.routeIds.size()||
+       pane.routeIds[tab]!=route||
+       tab>=pane.filesystemPaths.size()||
+       pane.filesystemPaths[tab]!=folder)return;
+    ui->StatusText().Text(SUCCEEDED(result)?
+     L"Windows 탐색기에서 현재 폴더를 열었습니다. Windows 기본 메뉴를 이용하세요.":
+     L"Windows 탐색기에서 현재 폴더를 열지 못했습니다.");
+   });
+  }).detach();
+ }catch(...){
+  StatusText().Text(L"Windows 탐색기 연결 작업을 시작할 수 없습니다.");
+ }
 }
 void MainWindow::RevealSelectedInWindowsExplorer(int side){
  if(mClosing||side<0||side>1||mFileOperations.busy()||
