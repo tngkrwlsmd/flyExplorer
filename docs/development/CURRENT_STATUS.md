@@ -1,4 +1,30 @@
-# flyExplorer current status — 2026-10-22 Release C3773 coroutine fix; G01 open
+# flyExplorer current status — 2026-10-22 WinUI context menu route hardening; G01 open
+
+## 2026-10-22 — exact-SHA Release accepted; deferred context menu bug isolated
+
+- Central Windows Release
+  [39685083488](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39685083488)
+  **PASS** on `c5de0c96b26f3958ee21be84c3a911354ee79e34`: runner-health, policy, source,
+  Release build. This does not accept GUI/native Explorer handoff.
+- Source review found an independent race in file/background context
+  menu click callbacks: a captured PaneTab index could be out of bounds
+  after tab removal, and navigation inside the same PaneTab can preserve
+  its route identity while replacing the underlying folder. An old
+  menu action could therefore target an unrelated current selection.
+- Bind both original Shell parsing folder and filesystem folder at
+  menu creation; reject any click when WindowTab/PaneTab, bounds, route,
+  current folder or file-operation state no longer matches. Preserve
+  exact selected logical IDs for file menus. No mutation command is
+  dispatched after failed context checks. Added a focused static
+  regression guard.
+- **NOT YET ACCEPTED:** this new source change needs matching-SHA
+  Release and GUI verification. Previous `c5de0c96b26f3958ee21be84c3a911354ee79e34` GUI
+  [39693531282](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39693531282)
+  was submitted before this change and must be scoped to its exact SHA.
+  No claim of native Explorer runtime acceptance. G01 open,
+  G03-G05 excluded, G07 user-stopped.
+
+## 2026-10-22 — actual Release compilation isolated C3773
 
 ## 2026-10-22 — actual Release compilation isolated C3773
 

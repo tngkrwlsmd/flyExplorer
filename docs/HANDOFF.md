@@ -1,4 +1,26 @@
-# flyExplorer 작업 인계 — 2026-10-22 Release C3773 수정 및 검증 재개
+# flyExplorer 작업 인계 — 2026-10-22 P0/EP05 메뉴 클릭 소유 경계 및 GUI 검증
+
+## 2026-10-22 — 폴더 탭 변경 후 이전 우클릭 메뉴 실행 차단
+
+- 정확한 `c5de0c96b26f3958ee21be84c3a911354ee79e34`에서 Windows Release 빌드/소스 계약
+  [39685083488](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39685083488)
+  PASS를 확인했다. GUI는 동일 SHA로 별도 요청 후 결과 확인
+  중이며 새 코드 수용 근거로 사용할 수 없다.
+- 파일과 빈 영역 메뉴의 나중 클릭은 생성 당시의 WindowTab,
+  PaneTab, route만 비교했다. 메뉴 생성 뒤 PaneTab 삭제 시
+  저장된 인덱스가 범위를 벗어나거나, 동일 route의 다른 폴더에
+  명령을 전달할 수 있어 실제 Shell 폴더와 파일시스템 경로를
+  양쪽 모두 캡처·재검증하도록 보강했다.
+- 선택한 논리 항목의 정체성 확인과 기존 파일 전송·Shell 위임
+  구현은 유지했다. 최소 소스 계약을 추가했으나 **새 SHA의
+  빌드/실행/GUI 수용은 미검증**이다.
+- 다음 단계는 실행 중인 이전 SHA GUI 결과 확인 및 신규 SHA의
+  소스/Release/관련 GUI 확인이다. G01 재현 없이는
+  종료 문제 추측 수정을 하지 않는다.
+- G03-G05 제외, G07 중단 유지. 보류 ZIP 소스 삭제는
+  native Explorer 위임의 실제 수용 후 검토한다.
+
+## 2026-10-22 — Windows Release 컴파일 C3773 수정
 
 ## 2026-10-22 — Windows Release 컴파일 C3773 수정
 

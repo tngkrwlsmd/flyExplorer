@@ -206,6 +206,9 @@ void MainWindow::ShowAppFileContextMenu(
  const bool localSelection=ready&&boundedSources&&
   localSource&&allFilesystem;
  const auto& sourceSnapshot=pane.tabs[tab].snapshot();
+ // Route IDs identify a PaneTab, not its current folder. Bind both.
+ const auto sourceShellFolder=sourceSnapshot.parsingName;
+ const auto sourceFilesystemFolder=pane.filesystemPaths[tab];
  const bool canProviderSource=ready&&boundedSources&&!localSource&&
   sourceSnapshot.folder.valid()&&!sourceSnapshot.parsingName.empty()&&
   sourceSnapshot.parsingName.size()<=
@@ -255,6 +258,7 @@ void MainWindow::ShowAppFileContextMenu(
    item.Icon(icon);
   }
   item.Click([weak,side,identity,tab,route,expected,
+              sourceShellFolder,sourceFilesystemFolder,
               action=std::move(action)](IInspectable const&,
                                        RoutedEventArgs const&){
    auto ui=weak.get();
@@ -262,9 +266,12 @@ void MainWindow::ShowAppFileContextMenu(
    const auto& state=ui->ActiveWindowTab();
    const auto& pane=state.model.panes[side];
    if(state.identity!=identity||state.model.activePane!=side||
-      pane.active!=tab||pane.active>=pane.tabs.size()||
-      pane.active>=pane.pending.size()||pane.pending[pane.active]||
-      pane.active>=pane.routeIds.size()||pane.routeIds[tab]!=route||
+      pane.active!=tab||tab>=pane.tabs.size()||
+      tab>=pane.pending.size()||pane.pending[tab]||
+      tab>=pane.routeIds.size()||pane.routeIds[tab]!=route||
+      tab>=pane.filesystemPaths.size()||
+      pane.tabs[tab].snapshot().parsingName!=sourceShellFolder||
+      pane.filesystemPaths[tab]!=sourceFilesystemFolder||
       ui->mFileOperations.busy()){
     ui->StatusText().Text(
      L"파일 메뉴를 연 뒤 창이나 작업 상태가 변경됐습니다. 다시 선택하세요.");
@@ -353,6 +360,10 @@ void MainWindow::ShowAppBackgroundContextMenu(
  const auto identity=state.identity;
  const auto tab=pane.active;
  const auto route=pane.routeIds[tab];
+ // A navigation inside one PaneTab preserves its route; remember the
+ // actual folder before building a deferred background menu.
+ const auto sourceShellFolder=pane.tabs[tab].snapshot().parsingName;
+ const auto sourceFilesystemFolder=pane.filesystemPaths[tab];
  const bool ready=!mFileOperations.busy();
  const bool localFolder=ready&&!pane.filesystemPaths[tab].empty();
  const int viewMode=static_cast<int>(state.fileLists[side].viewMode);
@@ -360,9 +371,11 @@ void MainWindow::ShowAppBackgroundContextMenu(
  auto weak=get_weak();
  // Share the same route/WindowTab guard for ordinary commands and checked
  // view/sort items. A delayed menu click cannot change a different pane.
- auto guarded=[weak,side,identity,tab,route](
+ auto guarded=[weak,side,identity,tab,route,
+               sourceShellFolder,sourceFilesystemFolder](
      std::function<void(MainWindow&)> action){
   return [weak,side,identity,tab,route,
+          sourceShellFolder,sourceFilesystemFolder,
           action=std::move(action)](IInspectable const&,
                                    RoutedEventArgs const&){
    auto ui=weak.get();
@@ -372,7 +385,10 @@ void MainWindow::ShowAppBackgroundContextMenu(
    const auto& pane=state.model.panes[side];
    if(pane.active!=tab||tab>=pane.tabs.size()||
       tab>=pane.routeIds.size()||tab>=pane.pending.size()||
-      pane.pending[tab]||pane.routeIds[tab]!=route){
+      tab>=pane.filesystemPaths.size()||
+      pane.pending[tab]||pane.routeIds[tab]!=route||
+      pane.tabs[tab].snapshot().parsingName!=sourceShellFolder||
+      pane.filesystemPaths[tab]!=sourceFilesystemFolder){
     ui->StatusText().Text(L"폴더가 변경됐습니다. 메뉴를 다시 여세요.");
     return;
    }

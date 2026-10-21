@@ -60,6 +60,32 @@ class WindowsExplorerDelegationContracts(unittest.TestCase):
         ):
             self.assertIn(token,ui)
 
+    def test_deferred_context_menus_reject_closed_tabs_and_retargeted_folders(self):
+        ui=source("app/winui/m22_transfers.cpp")
+        file_menu=ui.split("void MainWindow::ShowAppFileContextMenu(",1)[1].split(
+            "void MainWindow::ShowAppBackgroundContextMenu(",1)[0]
+        background=ui.split("void MainWindow::ShowAppBackgroundContextMenu(",1)[1].split(
+            "void MainWindow::OnFileRightTapped(",1)[0]
+        for body in (file_menu,background):
+            for token in (
+                "const auto sourceShellFolder=",
+                "const auto sourceFilesystemFolder=",
+                "pane.active!=tab",
+                "tab>=pane.tabs.size()",
+                "tab>=pane.pending.size()",
+                "tab>=pane.routeIds.size()",
+                "tab>=pane.filesystemPaths.size()",
+                "pane.tabs[tab].snapshot().parsingName!=sourceShellFolder",
+                "pane.filesystemPaths[tab]!=sourceFilesystemFolder",
+            ):
+                self.assertIn(token,body)
+            # A saved PaneTab route alone is insufficient after navigation.
+            self.assertLess(
+                body.index("pane.tabs[tab].snapshot().parsingName!=sourceShellFolder"),
+                body.index("action(*ui);"))
+        self.assertIn("actual!=*expected",file_menu)
+        self.assertIn("ui->mFileOperations.busy()",file_menu)
+
     def test_native_folder_handoff_is_explicit_and_read_only(self):
         h=source("src/base/shell_explorer_delegate.h")
         for token in (
