@@ -15,7 +15,7 @@ namespace fxfile::previewops {
 // asynchronous lookup/launch; no Shell extension runs synchronously in XAML.
 class FileOpenController final {
 public:
-    enum class Result { Opened, Failed, TimedOut };
+    enum class Result { Opened, NoAssociation, AppUnavailable, Failed, TimedOut };
     enum class Start { Started, Busy, Invalid };
     FileOpenController() : state_(std::make_shared<State>()) {}
     ~FileOpenController() { prepareForClose(); }
@@ -97,6 +97,39 @@ private:
             auto file=co_await lookup;
             // A tab switch/close during resolution must not open a stale file.
             if(!live(s,ticket)) {
+                finish(s,ticket,Result::Failed);
+                co_return;
+            }
+            // Query only the Windows association broker; no Shell extension
+            // or external command is run while resolving the handler.
+            // Unknown/query failures keep the existing default launch path.
+            try {
+                auto query=winrt::Windows::System::Launcher::QueryFileSupportAsync(file);
+                s->pending=query;
+                const auto support=co_await query;
+                if(!live(s,ticket)){
+                    finish(s,ticket,Result::Failed);
+                    co_return;
+                }
+                using Support=winrt::Windows::System::LaunchQuerySupportStatus;
+                if(support==Support::AppNotInstalled||
+                   support==Support::NotSupported){
+                    finish(s,ticket,Result::NoAssociation);
+                    co_return;
+                }
+                if(support==Support::AppUnavailable){
+                    finish(s,ticket,Result::AppUnavailable);
+                    co_return;
+                }
+            }catch(...){
+                if(!live(s,ticket)){
+                    finish(s,ticket,Result::Failed);
+                    co_return;
+                }
+                // On transient association-query errors let LaunchFileAsync
+                // return its original reliable success/failure result.
+            }
+            if(!live(s,ticket)){
                 finish(s,ticket,Result::Failed);
                 co_return;
             }
