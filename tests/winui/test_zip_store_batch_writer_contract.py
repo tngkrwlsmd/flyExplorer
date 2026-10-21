@@ -55,7 +55,7 @@ class ZipStoreBatchContracts(unittest.TestCase):
             "SelectedItems().Size()", "visible.visibleRoute!=route",
             "selectedPaths.push_back(item->parsingName)",
             "std::adjacent_find(ids.begin(),ids.end())",
-            "fxfile::zipbatch::createMany(paths)",
+            "fxfile::zipbatch::createMany(paths,cancel.get())",
             "mZipBatchCreationBusy=true",
             "mZipBatchCancel=cancel",
             "zipbatch::createMany(paths,cancel.get())",

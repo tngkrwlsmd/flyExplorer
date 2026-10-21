@@ -73,8 +73,8 @@ class ZipStoreExtractorContracts(unittest.TestCase):
         self.assertIn("void ExtractSelectedZip(int side);",h)
         self.assertIn('make(L"ZIP 해제 (Store/Deflate, 한 파일)"',ui)
         self.assertIn('canInspectZip=suffix==L".zip"&&zipIdle;',ui)
-        self.assertIn('const bool zipIdle=!mZipCreationBusy&&!mZipInspectionBusy&&',ui)
-        self.assertIn('!mZipExtractionBusy&&!mZipBatchCreationBusy;',ui)
+        self.assertIn('const bool zipIdle=!mZipCreationBusy&&!mZipDeflateCreationBusy&&',ui)
+        self.assertIn('!mZipBatchExtractionBusy;',ui)
 
 if __name__=="__main__":
     unittest.main()

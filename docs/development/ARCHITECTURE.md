@@ -68,8 +68,8 @@ archive extraction.
 
 The first F08 writer is `src/base/zip_store_writer.h`: a one-file,
 bounded ZIP/Store-only creator. It owns CRC/header generation and
-same-folder staged publishing without overwrite. Archive extraction and
-Deflate are not implemented. `MainWindow::CreateSelectedZip` only dispatches
+same-folder staged publishing without overwrite. Strict Store/Deflate
+extraction and single-file Deflate creation live in separate F08 modules. `MainWindow::CreateSelectedZip` only dispatches
 validated selection into a short-lived worker and applies UI refresh to the
 origin WindowTab/PaneTab. Do not treat unexecuted code contracts as native
 ZIP acceptance.
@@ -80,8 +80,8 @@ header/offset/name verification and actual CRC32 calculation before output.
 It uses the ZIP writer's owned staging and flush helper to publish one
 flat extracted file without replacing existing content. The WinUI
 `ExtractSelectedZip` action dispatches it off the UI thread and gates
-feedback/refresh by exact workspace origin. There is no ZIP general
-extraction/Deflate engine or cancellation guarantee.
+feedback/refresh by exact workspace origin. The single-member action
+has no cancellation guarantee and is not a general ZIP extractor.
 
 Additional F08 flat multi-file Store creation is implemented in
 `src/base/zip_store_batch_writer.h`. It takes only 2-8 explicitly selected
@@ -90,8 +90,8 @@ publishing a deterministic `flyExplorer-selection.zip` through owned
 temporary staging without overwrite. Its ZIP headers carry one CRC32/name
 and local offset per file. The WinUI dispatcher owns an exact WindowTab/
 PaneTab/route origin and separate in-flight flag. The single-member
-extractor intentionally rejects its multi-entry output; Deflate and folder
-archives remain unsupported.
+extractor intentionally rejects its multi-entry output. The batch
+writer still emits only Store files and cannot archive directories.
 
 F08 bounded multi-file extraction lives in `src/base/zip_store_batch_extractor.h`.
 It checks every flat Store entry's local and central record and CRC32
@@ -99,8 +99,8 @@ against a single read-only snapshot before any file is written. An owned
 staging directory holds only the new files; the whole directory is
 published once without replacement as `flyExplorer-selection-unpacked`.
 Failed staging cleans only known staging entries; no recursive directory
-delete, no rollback of a user destination, and no general ZIP/Deflate
-support. MainWindow gates the background completion on the origin
+delete, no rollback of a user destination, and no general ZIP support
+beyond strict Store/Deflate entries. MainWindow gates the background completion on the origin
 WindowTab/PaneTab/route and has a separate ZIP-batch-extraction busy bit.
 
 F08 batch ZIP Store creation/extraction now accept an optional
@@ -116,19 +116,17 @@ The F08 Store metadata compatibility policy lives in
 Store extractors. It permits DOS version 1.0/2.0 and matching DOS
 timestamps and strict UTF-8 or unflagged ASCII-only names while
 continuing to reject all extra/comment/data-descriptor/ZIP64/encryption
-features. No third-party codec is bundled and Windows MSZIP must
-not be treated as ZIP method-8 raw Deflate. A future raw Deflate
-decoder requires reviewed pinned dependencies and separate bounded
-output/CRC/cancel handling.
+features. Pinned miniz 3.1.2 tinfl/tdefl codecs are now bundled,
+while Windows MSZIP must not be treated as ZIP method-8 raw Deflate.
 
 F08 single-member raw DEFLATE decoder is
 `src/base/zip_raw_deflate.cpp` (paired `.h`). The native project
-template compiles this as a separate no-PCH translation unit. Only
-the miniz v3.1.2 `tinfl` inflater is vendored under
+template compiles this as a separate no-PCH translation unit. Pinned
+miniz v3.1.2 `tinfl` and `tdefl` are vendored under
 `src/base/third_party/miniz_3_1_2`, with upstream copyright/license
 and an explicit include adaptation. The decoder has NO filesystem or
 ZIP path authority; it has a bounded allocation and validates exact
-input consumption/output count. `zip_store_extractor.h` alone owns
+input consumption/output count. both ZIP extractors own
 method 8 ZIP metadata, CRC32, path restrictions and non-replace staging.
 The bounded batch extractor also permits a flat 2-8-member mix
 of Store (0) and raw Deflate (8) using the same pinned native
