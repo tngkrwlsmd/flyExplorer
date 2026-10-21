@@ -83,6 +83,16 @@ flat extracted file without replacing existing content. The WinUI
 feedback/refresh by exact workspace origin. There is no ZIP general
 extraction/Deflate engine or cancellation guarantee.
 
+Additional F08 flat multi-file Store creation is implemented in
+`src/base/zip_store_batch_writer.h`. It takes only 2-8 explicitly selected
+ordinary fixed-drive sibling files (total <=8 MiB), checks each file before
+publishing a deterministic `flyExplorer-selection.zip` through owned
+temporary staging without overwrite. Its ZIP headers carry one CRC32/name
+and local offset per file. The WinUI dispatcher owns an exact WindowTab/
+PaneTab/route origin and separate in-flight flag. The single-member
+extractor intentionally rejects its multi-entry output; Deflate and folder
+archives remain unsupported.
+
 Regular-document activation belongs to `app/winui/file_open_controller.h`.
 It owns one asynchronous Windows StorageFile/Launcher request, deadline and
 close cancellation. MainWindow supplies weak presentation callbacks and checks
