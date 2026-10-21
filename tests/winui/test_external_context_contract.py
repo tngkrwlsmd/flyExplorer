@@ -43,7 +43,7 @@ class ContextContract(unittest.TestCase):
       "bool boundedSources=true;",
       "fxfile::shelltransfer::kMaxSourcePathUnits-sourceUnits",
       "const bool localSelection=ready&&boundedSources&&",
-      "const bool canProviderSource=ready&&boundedSources&&!localSelection&&",
+      "const bool canProviderSource=ready&&boundedSources&&!localSource&&",
       "const bool canRename=localSelection&&count==1;",
       "other.active<other.pending.size()",
       "!other.pending[other.active]",
