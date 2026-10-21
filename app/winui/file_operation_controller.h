@@ -13,6 +13,9 @@ namespace fxfile::previewops {
 class FileOperationController final {
 public:
     struct Context final {
+        // Prevent an async result from targeting a different top-level
+        // workspace even if its active pane, route and folder match.
+        std::uint64_t windowTabIdentity=0;
         int side=-1;
         std::size_t tab=0;
         std::uint64_t route=0;
