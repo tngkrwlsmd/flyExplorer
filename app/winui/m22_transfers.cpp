@@ -79,7 +79,9 @@ void MainWindow::ShowAppFileContextMenu(
  const auto& workspace=ActiveWindowTab();
  const auto& pane=workspace.model.panes[side];
  if(pane.active>=pane.tabs.size()||pane.active>=pane.pending.size()||
-    pane.active>=pane.routeIds.size()||pane.pending[pane.active])return;
+    pane.active>=pane.routeIds.size()||
+    pane.active>=pane.filesystemPaths.size()||
+    pane.pending[pane.active])return;
  const auto tab=pane.active;
  const auto route=pane.routeIds[tab];
  const auto& visible=workspace.fileLists[side];
@@ -124,10 +126,34 @@ void MainWindow::ShowAppFileContextMenu(
  const auto identity=workspace.identity;
  const bool ready=!mFileOperations.busy();
  const bool selectedFilesystem=ready&&allFilesystem;
- const bool canRename=selectedFilesystem&&count==1;
- const bool canOpposite=ready&&workspace.model.split;
- const bool canOppositeMove=canOpposite&&allFilesystem;
- const bool canExternal=selectedFilesystem&&
+ const bool localSource=!pane.filesystemPaths[tab].empty();
+ const bool canRename=selectedFilesystem&&localSource&&count==1;
+ // Derive availability from the destination's current tab and route,
+ // rather than offering an operation we already know cannot start.
+ bool destinationFilesystem=false;
+ bool destinationProvider=false;
+ if(ready&&workspace.model.split){
+  auto const& other=workspace.model.panes[1-side];
+  if(other.active<other.tabs.size()&&
+     other.active<other.pending.size()&&
+     other.active<other.routeIds.size()&&
+     other.active<other.filesystemPaths.size()&&
+     !other.pending[other.active]){
+   destinationFilesystem=!other.filesystemPaths[other.active].empty();
+   if(!destinationFilesystem){
+    auto const& target=other.tabs[other.active].snapshot();
+    destinationProvider=target.folder.valid()&&
+        !target.parsingName.empty()&&
+        target.parsingName.size()<=
+            fxfile::shelltransfer::kMaxProviderParsingUnits;
+   }
+  }
+ }
+ const bool canOppositeCopy=ready&&
+     (destinationFilesystem||(allFilesystem&&destinationProvider));
+ const bool canOppositeMove=selectedFilesystem&&
+     destinationFilesystem;
+ const bool canExternal=selectedFilesystem&&localSource&&
   count<=fxfile::shellcontext::kMaxContextSelection;
 
  auto weak=get_weak();
@@ -205,8 +231,8 @@ void MainWindow::ShowAppFileContextMenu(
  menu.Items().Append(MenuFlyoutSeparator{});
  MenuFlyoutSubItem sendTo;
  sendTo.Text(L"반대쪽 패널로 보내기");
- sendTo.IsEnabled(canOpposite);
- sendTo.Items().Append(make(L"복사",L"\uE8C8",canOpposite,
+ sendTo.IsEnabled(canOppositeCopy||canOppositeMove);
+ sendTo.Items().Append(make(L"복사",L"\uE8C8",canOppositeCopy,
      [](MainWindow& ui){ui.RunTransfer(fxfile::shelltransfer::Kind::Copy);}));
  sendTo.Items().Append(make(L"이동",L"\uE8C6",canOppositeMove,
      [](MainWindow& ui){ui.RunTransfer(fxfile::shelltransfer::Kind::Move);}));
