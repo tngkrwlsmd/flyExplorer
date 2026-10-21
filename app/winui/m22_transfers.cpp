@@ -185,9 +185,9 @@ void MainWindow::InspectSelectedZip(int side){
  ZipInspectionItems().Items().Clear();
  EnsureExpandedPanelFits();
  try{
-  std::thread([weak,dispatch,path,identity,side,tab,route]{
+  std::thread([weak,dispatch,path,identity,side,tab,route,logical]{
    auto report=fxfile::zipinspect::inspect(path);
-   dispatch.TryEnqueue([weak,identity,side,tab,route,
+   dispatch.TryEnqueue([weak,identity,side,tab,route,logical,path,
                         report=std::move(report)]() mutable {
     auto ui=weak.get();
     if(!ui||ui->mClosing)return;
@@ -198,6 +198,29 @@ void MainWindow::InspectSelectedZip(int side){
     if(pane.active!=tab||pane.active>=pane.routeIds.size()||
        pane.routeIds[tab]!=route)return;
     if(ui->ZipInspectionPanel().Visibility()!=Visibility::Visible)return;
+    // The same route may now render another selection. Never show the
+    // previous archive's entries after a user selection change.
+    auto view=side==0?ui->LeftFiles():ui->RightFiles();
+    auto const& shown=current.fileLists[side];
+    if(shown.visibleRoute!=route||shown.visibleTab!=tab||
+       view.SelectedItems().Size()!=1){
+     ui->ZipInspectionSummary().Text(
+      L"목록 또는 파일 선택이 변경되어 ZIP 검사 결과를 폐기했습니다.");
+     return;
+    }
+    auto row=view.SelectedItem().try_as<ListViewItem>();
+    if(!row||!row.Tag())return;
+    std::uint64_t currentLogical=0;
+    try{currentLogical=unbox_value<std::uint64_t>(row.Tag());}
+    catch(...){return;}
+    const auto* indexed=pane.tabs[tab].indexedItem(
+        static_cast<std::size_t>(currentLogical));
+    if(currentLogical!=logical||!indexed||
+       indexed->parsingName!=path){
+     ui->ZipInspectionSummary().Text(
+      L"선택 파일이 변경되어 이전 ZIP 검사 결과를 표시하지 않았습니다.");
+     return;
+    }
     using Status=fxfile::zipinspect::Result::Status;
     const wchar_t* error=
       report.status==Status::InvalidPath?L"로컬 고정 드라이브의 일반 ZIP만 검사합니다.":

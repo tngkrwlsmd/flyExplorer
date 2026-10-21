@@ -2,7 +2,6 @@
 // No decompression or archive extraction: a valid inspection is NOT proof
 // that uncompressed file content or its CRC is safe/correct.
 #pragma once
-#define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <algorithm>
 #include <cstddef>
@@ -99,7 +98,9 @@ inline bool reserved(std::wstring segment){
        segment==L"NUL"||segment==L"CLOCK$")return true;
     if(segment.size()==4&&(segment.substr(0,3)==L"COM"||
                            segment.substr(0,3)==L"LPT")&&
-       segment[3]>=L'1'&&segment[3]<=L'9')return true;
+       ((segment[3]>=L'0'&&segment[3]<=L'9')||
+        segment[3]==L'\u00b9'||segment[3]==L'\u00b2'||
+        segment[3]==L'\u00b3'))return true;
     return false;
 }
 inline bool safeName(std::wstring const& name,bool& directory){
