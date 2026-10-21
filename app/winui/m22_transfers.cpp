@@ -691,6 +691,9 @@ winrt::fire_and_forget MainWindow::ConfirmCollision(
   if(status==FileOperationController::StartStatus::Started)
    StatusText().Text(hstring(L"충돌 항목 "+std::to_wstring(skipped)+
        L"개를 건너뛰었습니다. 나머지를 처리 중입니다."));
+  else if(status==FileOperationController::StartStatus::AllSkipped)
+   StatusText().Text(hstring(L"충돌한 "+std::to_wstring(skipped)+
+       L"개 항목을 모두 건너뛰었습니다. 파일을 변경하지 않았습니다."));
   return;
  }
  const auto status=mFileOperations.confirmCollision(
@@ -754,20 +757,28 @@ void MainWindow::OnTransferCompleted(
   }else detail=errorInKorean(completion.report.error).c_str();
   // queued counts accepted requests, NOT completed items. Never invent
   // a success/skip count from aggregate IFileOperation progress.
-  detail=L"요청 "+std::to_wstring(completion.request.sources.size())+
+  detail=L"요청 "+std::to_wstring(completion.request.sources.size()+
+                                 completion.skippedCollisions)+
          L"개: "+detail;
+  if(completion.skippedCollisions)
+   detail+=L" 충돌 "+std::to_wstring(completion.skippedCollisions)+
+           L"개는 건너뛰었습니다.";
   detail+=L" 일부 항목이 처리됐을 수 있습니다. 원본·대상을 확인하세요.";
   mTransferFailureNotice=detail;
   StatusText().Text(hstring(detail));
   return;
  }
  const auto count=std::to_wstring(completion.request.sources.size());
- StatusText().Text(hstring(
+ std::wstring message=
   completion.request.kind==fxfile::shelltransfer::Kind::Copy?
     count+L"개 항목의 복사를 완료했습니다.":
   completion.request.kind==fxfile::shelltransfer::Kind::Move?
     count+L"개 항목의 이동을 완료했습니다.":
-    count+L"개 항목의 휴지통 이동을 완료했습니다."));
+    count+L"개 항목의 휴지통 이동을 완료했습니다.";
+ if(completion.skippedCollisions)
+  message+=L" 충돌 "+std::to_wstring(completion.skippedCollisions)+
+           L"개는 건너뛰고 기존 항목을 유지했습니다.";
+ StatusText().Text(hstring(message));
 
 
 }
