@@ -370,6 +370,9 @@ void MainWindow::ApplyTransferStartStatus(
   StatusText().Text(L"현재 창이 원본이나 대상 폴더와 일치하지 않습니다.");
  else if(status==Start::StaleConfirmation)
   StatusText().Text(L"확인하는 동안 원본 또는 대상 폴더가 변경됐습니다. 다시 선택하세요.");
+ else if(status==Start::Cancelled)
+  StatusText().Text(
+   L"파일 작업 확인을 취소했습니다. 앞서 처리된 항목이 있다면 원본·대상에서 확인하세요.");
  else if(status==Start::ThreadStartFailed){
   SetFileButtonsBusy(false,false);
   StatusText().Text(L"별도 Shell 파일 작업 스레드를 시작하지 못했습니다.");
@@ -417,7 +420,8 @@ winrt::fire_and_forget MainWindow::ConfirmCollision(){
  dialog.Title(winrt::box_value(hstring(L"동일한 이름이 이미 존재합니다")));
  dialog.Content(winrt::box_value(hstring(
     L"대상 폴더에 같은 이름이 있습니다. 기존 항목을 덮어쓰지 않고 "
-    L"새 항목의 이름을 자동으로 바꿔 둘 다 유지할까요?")));
+    L"새 항목의 이름을 자동으로 바꿔 둘 다 유지할까요? "
+    L"앞서 처리된 항목은 취소해도 되돌아가지 않을 수 있습니다.")));
  dialog.PrimaryButtonText(L"이름 변경 후 계속");
  dialog.CloseButtonText(L"취소");
  dialog.DefaultButton(ContentDialogButton::Close);
@@ -476,6 +480,9 @@ void MainWindow::OnTransferCompleted(
    detail=L"이 이동식 드라이브의 Windows 휴지통으로 이동을 완료하지 못했습니다. "
           L"영구 삭제로 전환하지 않았습니다. 오류: "+
           std::to_wstring(completion.report.error);
+  }else if(completion.report.aborted||
+           completion.report.error==ERROR_CANCELLED){
+   detail=L"파일 작업이 취소됐습니다.";
   }else detail=errorInKorean(completion.report.error).c_str();
   // IFileOperation batches are not transactional. Earlier items may have
   // succeeded even when the aggregate failed or was canceled.
