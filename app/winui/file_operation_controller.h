@@ -51,6 +51,7 @@ public:
         Context context{};
         fxfile::shelltransfer::Request request{};
         fxfile::shelltransfer::Report report{};
+        std::size_t skippedCollisions=0; // exact preflight-only skip count
         std::vector<std::wstring> touchedFolders{};
     };
 
@@ -109,7 +110,8 @@ private:
         fxfile::shelltransfer::Request const&,Context const&) noexcept;
     StartStatus launchTransfer(
         fxfile::shelltransfer::Request request,Context context,
-        Post post,TransferCallback completion);
+        Post post,TransferCallback completion,
+        std::size_t skippedCollisions=0);
 };
 
 } // namespace fxfile::previewops
