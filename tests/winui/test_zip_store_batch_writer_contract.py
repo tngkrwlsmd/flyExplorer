@@ -18,7 +18,7 @@ class ZipStoreBatchContracts(unittest.TestCase):
             "Status::CompressionFailed",
             "member.originalSize",
             "std::wstring const& folderRoot={}",
-            "member.name.insert(0,prefix)",
+            "member.name.insert(0,entryPrefix)",
             "rootLeaf.size()+1u+innerUnits+",
             "member.child=std::move(child)",
             "std::wstring allowedChild",

@@ -1,41 +1,71 @@
-"""F08 one-root ZIP path containment source contracts. NOT EXECUTED."""
+"""F08 bounded one-root/one-child ZIP path containment contracts.
+Source-only expectations; NOT EXECUTED in this change.
+"""
 import unittest
 from pathlib import Path
+
 R=Path(__file__).resolve().parents[2]
-def source(p):
-    return (R/p).read_text(encoding="utf-8-sig")
+def source(path):
+    return (R/path).read_text(encoding="utf-8-sig")
+
 class SingleRootZipContracts(unittest.TestCase):
-    def test_only_one_root_and_one_leaf(self):
+    def test_bounded_member_path_and_nonrecursive_staging(self):
         c=source("src/base/zip_store_batch_extractor.h")
-        for token in (
-            "value.find(L'/',slash+1)",
-            "flatName(root)&&flatName(leaf)",
+        checks=(
+            "value.find(L'/',second+1)",
+            "flatName(root)&&flatName(child)&&flatName(leaf)",
             "rootMode!=!entryRoot.empty()",
             "archiveRoot,entryRoot",
-            "zipinspect::detail::same(previous.name,entryLeaf)",
+            "archiveChild,entryChild",
+            "previous.child,entryChild",
+            "previous.name,entryLeaf",
             "staging.nestedRoot",
+            "staging.nestedChild",
             "staging.nestedOwned=true;",
+            "staging.childOwned=true;",
             "if(!nestedOwned)return;",
+            "if(!childOwned)return;",
             "CreateDirectoryW(staging.nestedRoot.c_str(),nullptr)",
-            "if(!nestedRoot.empty())::RemoveDirectoryW(nestedRoot.c_str())",
-            "!(child&FILE_ATTRIBUTE_DIRECTORY)",
-            "(child&FILE_ATTRIBUTE_REPARSE_POINT)",
-            "CreateDirectoryW(staging.path.c_str(),nullptr)",
+            "CreateDirectoryW(staging.nestedChild.c_str(),nullptr)",
+            "RemoveDirectoryW(nestedChild.c_str())",
+            "RemoveDirectoryW(nestedRoot.c_str())",
             "MoveFileExW(staging.path.c_str(),target.c_str()",
-        ):
+        )
+        for token in checks:
             self.assertIn(token,c)
-        self.assertLess(c.index("detail::memberPath(name,entryRoot,entryLeaf)"),
+        self.assertLess(c.index("detail::memberPath("),
                         c.index("GetTempFileNameW(parent.c_str()"))
         self.assertLess(c.index("crc32(member.content)!=checksum"),
                         c.index("GetTempFileNameW(parent.c_str()"))
         self.assertNotIn("std::filesystem::remove_all(",c)
 
-    def test_folder_zip_ui_exact_origin_and_cancel(self):
-        u=source("app/winui/m22_transfers.cpp")
-        h=source("app/winui/MainWindow.xaml.h")
-        method=u.split("void MainWindow::CreateSelectedFolderZip(int side)",1)[1].split(
+    def test_writer_explicit_single_child_enumeration(self):
+        w=source("src/base/zip_store_batch_writer.h")
+        checks=(
+            "std::wstring allowedChild",
+            "prior.child,child",
+            "std::wstring childFolder",
+            "if(!childFolder.empty())",
+            "FindFirstFileW(searchChild.c_str()",
+            "nested.dwFileAttributes&",
+            "childCount",
+            "member.child=std::move(child)",
+            "entryPrefix.push_back('/')",
+            "member.name.insert(0,entryPrefix)",
+            "rootLeaf.size()+1u+innerUnits+",
+            "return createMany(files,cancellation,mode,folder)",
+        )
+        for token in checks:
+            self.assertIn(token,w)
+        self.assertLess(w.index("FindFirstFileW(searchChild.c_str()"),
+                        w.index("return createMany(files,cancellation,mode,folder)"))
+
+    def test_folder_ui_exact_origin_and_cancel(self):
+        ui=source("app/winui/m22_transfers.cpp")
+        hdr=source("app/winui/MainWindow.xaml.h")
+        method=ui.split("void MainWindow::CreateSelectedFolderZip(int side)",1)[1].split(
             "void MainWindow::CreateSelectedBatchZip(int side,bool preferDeflate)",1)[0]
-        for t in (
+        for token in (
             "view.SelectedItems().Size()!=1",
             "!item->isFolder()",
             "createFolder(",
@@ -46,9 +76,10 @@ class SingleRootZipContracts(unittest.TestCase):
             "pane.filesystemPaths[tab]!=folder",
             "NavigationAction::Refresh",
         ):
-            self.assertIn(t,method)
-        self.assertIn("const bool canCreateFolderZip=",u)
-        self.assertIn('make(L"폴더 ZIP으로 묶기 (하위 폴더 1개 이하, 2~8개 파일)"',u)
-        self.assertIn("void CreateSelectedFolderZip(int side);",h)
+            self.assertIn(token,method)
+        self.assertIn("const bool canCreateFolderZip=",ui)
+        self.assertIn('make(L"폴더 ZIP으로 묶기 (하위 폴더 1개 이하, 2~8개 파일)"',ui)
+        self.assertIn("void CreateSelectedFolderZip(int side);",hdr)
+
 if __name__=="__main__":
     unittest.main()
