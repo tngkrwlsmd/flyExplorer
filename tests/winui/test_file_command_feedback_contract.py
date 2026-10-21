@@ -45,6 +45,18 @@ class TransferFeedbackContract(unittest.TestCase):
         self.assertIn("mTransferFailureNotice=detail;",completion)
         self.assertIn("completion.touchedFolders",completion)
 
+class AsyncWindowTabOwnershipContract(unittest.TestCase):
+    def test_file_operations_reject_other_window_tab_results(self):
+        header=(APP/"file_operation_controller.h").read_text(encoding="utf-8-sig")
+        controller=(APP/"file_operation_controller.cpp").read_text(encoding="utf-8-sig")
+        ui=(APP/"m22_transfers.cpp").read_text(encoding="utf-8-sig")
+        self.assertIn("std::uint64_t windowTabIdentity=0;",header)
+        self.assertIn("a.windowTabIdentity==b.windowTabIdentity",controller)
+        self.assertIn("context.windowTabIdentity=ActiveWindowTab().identity;",ui)
+        self.assertIn("sameContext(completion.context,liveContext)",controller)
+        self.assertIn("sameContext(pending.context,liveContext)",controller)
+
+
 class SkipExistingTransferContract(unittest.TestCase):
     def test_skip_is_local_preflight_only_and_revalidates_remaining(self):
         header=(APP/"file_operation_controller.h").read_text(encoding="utf-8-sig")
@@ -79,6 +91,8 @@ class SkipExistingTransferContract(unittest.TestCase):
         self.assertIn("std::size_t skippedCollisions=0;",controller)
         self.assertIn("completion.report.collisions,completion.skippedCollisions",controller)
         self.assertIn("pending.skippedCollisions+skipped",controller)
+        self.assertIn("skipped=totalSkipped;",controller)
+        self.assertIn("return StartStatus::AllSkipped;",controller)
         self.assertIn("std::move(completion),totalSkipped",controller)
         self.assertIn("std::move(completion),pending.skippedCollisions",controller)
 
