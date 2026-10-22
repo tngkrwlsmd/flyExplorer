@@ -26,14 +26,32 @@ def run(*,win,element,safe_click,focus,eventually,left,right):
   little=next((i for i,s in enumerate(titles) if "작은.txt" in s),None)
   return big is not None and little is not None and big<little
  eventually(size_sorted,"real size sorting did not order files descending",10)
- # Windows' registered friendly type is localized and may not equal the
- # static fallback "txt 파일". Require the actual OS-backed metadata below,
- # not an English/Korean suffix string from one machine image.
- # App-owned icon/column UI must preserve the UIA accessible name while
- # the independent helper returns the actual OS-registered friendly type.
+ # The registered type is localized and has no artificial
+ # "Windows 유형:" prefix in the actual product row. Query the same
+ # Windows association API used by the isolated native worker instead
+ # of accepting a generic extension fallback or an invented UI label.
+ import ctypes
+ from ctypes import wintypes as WIN
+ class SHFILEINFOW(ctypes.Structure):
+  _fields_=[("hIcon",WIN.HANDLE),("iIcon",ctypes.c_int),
+            ("dwAttributes",WIN.DWORD),
+            ("szDisplayName",WIN.WCHAR*260),
+            ("szTypeName",WIN.WCHAR*80)]
+ native_type=SHFILEINFOW()
+ shell32=ctypes.windll.shell32
+ shell32.SHGetFileInfoW.argtypes=[
+     WIN.LPCWSTR,WIN.DWORD,ctypes.POINTER(SHFILEINFOW),
+     WIN.UINT,WIN.UINT]
+ shell32.SHGetFileInfoW.restype=ctypes.c_size_t
+ returned=shell32.SHGetFileInfoW(
+     ".txt",0x80,ctypes.byref(native_type),
+     ctypes.sizeof(native_type),0x0010|0x0400)
+ registered_type=native_type.szTypeName.strip()
+ assert returned and registered_type,(
+     "Windows could not provide the registered .txt type baseline")
  eventually(lambda:row("Left","큰.txt") is not None and
-            "Windows 유형:" in row("Left","큰.txt").window_text(),
-            "isolated registered Windows type missing from real file row",12)
+            registered_type in row("Left","큰.txt").window_text(),
+            "Windows registered .txt type was not displayed in file row",12)
  for control in ("LeftNameWidthSlider","RightNameWidthSlider"):
   assert element(control).exists(timeout=3),control
  width=element("LeftNameWidthSlider").wrapper_object()
@@ -41,7 +59,7 @@ def run(*,win,element,safe_click,focus,eventually,left,right):
  eventually(lambda:abs(
      element("LeftNameWidthSlider").wrapper_object().iface_range_value.CurrentValue
      -216.0)<1 and row("Left","큰.txt") is not None and
-     "Windows 유형:" in row("Left","큰.txt").window_text(),
+     registered_type in row("Left","큰.txt").window_text(),
      "real pane column resize lost accessible name/type",12)
  print("REAL_M23_OS_REGISTERED_TYPE_AND_ACCESSIBLE_RESIZABLE_COLUMNS",True,flush=True)
  # WinUI Image must originate from actual isolated, registered

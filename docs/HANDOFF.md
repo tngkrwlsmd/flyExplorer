@@ -1,4 +1,27 @@
-# flyExplorer 작업 인계 — 2026-10-22 Windows GUI M22 회귀 검사 정리
+# flyExplorer 작업 인계 — 2026-10-22 Windows 등록 형식 비교 및 GUI 재검증
+
+## 2026-10-22 — Windows UIA 파일 형식 검사를 실제 OS 계약으로 교체
+
+- Windows `9ec2ebc` 소스 346개, Release 빌드 및 네 가지
+  집중 GUI는 통과했으나 전체
+  [39696540702](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39696540702)
+  의 M22 파일 형식 접두어 검사는 실패했다.
+- `file_detail_controller.cpp`는 Windows의 실제 등록
+  파일 형식 명칭(`Visual.label`)을 표시하고 UI 목록도 해당
+  내용을 직접 렌더링한다. `Windows 유형:`이라는 고정 접두어는
+  제품 코드에 없다. 이 검사를 단순히 제외하지 않고
+  테스트가 직접 `SHGetFileInfoW(.txt)`로 취득한 형식 명칭을
+  실제 UIA 행·열 너비 변경 후 행에 요구하게 했다.
+- 이전 동일 SHA 시작 GUI에 주소란 공백이 관찰됐지만 소유
+  startup-only 진단 `39696013338`은 성공했다.
+  간헐 startup/G01 미해결과 F08 ZIP 보존 범위는 그대로 유지한다.
+- **NOT VERIFIED on new SHA:** Windows source, Release, GUI,
+  현재 폴더/선택 항목의 native Explorer 위임 실사용.
+  다음에는 먼저 정확한 SHA의 source/GUI 결과를 확인하고,
+  M22 후속 파일 작업을 별도로 수용한다.
+  G03-G05 사용자 제외, G07 중단 유지.
+
+## 2026-10-22 — 실제 GUI 실패와 후속 시험 계약 보정
 
 ## 2026-10-22 — 실제 GUI 실패와 후속 시험 계약 보정
 

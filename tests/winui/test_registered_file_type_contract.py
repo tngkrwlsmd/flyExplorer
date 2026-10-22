@@ -47,6 +47,14 @@ class FileTypeContract(unittest.TestCase):
   self.assertIn("request.viewMode==FileViewMode::LargeIcons",worker)
   project=source("app/winui/flyExplorer.project-template.xml")
   self.assertIn('shell_assoc_type_core.cpp',project)
+ def test_owned_gui_compares_exact_windows_type_not_synthetic_prefix(self):
+  test=source("tests/winui/test_m22_gui.py")
+  self.assertIn("shell32.SHGetFileInfoW(",test)
+  self.assertIn("0x0010|0x0400",test)
+  self.assertIn("registered_type=native_type.szTypeName.strip()",test)
+  self.assertIn('registered_type in row("Left","큰.txt").window_text()',test)
+  self.assertNotIn('"Windows 유형:" in row',test)
+  self.assertIn("SHFILEINFOW(ctypes.Structure)",test)
 class RealFileListColumnContract(unittest.TestCase):
  def test_name_type_size_date_columns_and_icon_do_not_break_uia(self):
   xml=(A/"MainWindow.xaml").read_text(encoding="utf-8")

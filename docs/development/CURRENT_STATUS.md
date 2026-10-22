@@ -1,4 +1,36 @@
-# flyExplorer current status — 2026-10-22 Windows GUI first failure investigated; G01 open
+# flyExplorer current status — 2026-10-22 Windows API type-baseline GUI correction; G01 open
+
+## 2026-10-22 — exact-SHA GUI repeat isolated unsupported type-prefix check
+
+- Product main `9ec2ebc522b13b0763975c57f4810e4252d583e7` passed central source (4 structure, 261
+  product, 51 harness, 30 infra) on
+  [39694954167](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39694954167)
+  and Release build in
+  [39696540702](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39696540702).
+  The GUI run passed window-tabs, shortcuts, filter-preset, folder-tree,
+  but `gui-all` failed at an assertion requiring the literal prefix
+  `Windows 유형:` inside a file row. The product's type column only
+  renders `FileDetail.typeLabel`, either OS `SHGetFileInfoW` friendly
+  label or bounded fallback; source contains no such prefix.
+- An earlier GUI attempt
+  [39695119767](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39695119767)
+  failed once with an empty startup address; the exact same revision
+  later passed the scoped diagnostic GUI startup
+  [39696013338](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39696013338).
+  This intermittent startup risk is not closed by a passing probe.
+- Revised `test_m22_gui.py` to obtain the host's actual registered
+  `.txt` friendly type using `SHGetFileInfoW` with the same
+  `SHGFI_USEFILEATTRIBUTES|SHGFI_TYPENAME` contract used by the
+  isolated helper, and require that non-empty Windows result within
+  the app row before/after column resize. This is a stronger
+  OS-grounded assertion than the obsolete prefix; no C++ app changes.
+- Added one source regression contract for the OS baseline and retained
+  the exact file-copy/move, collision/cancel, icon and user-data
+  preservation assertions after this checkpoint. **NOT YET RUN** on
+  the new revision; Windows GUI and native Explorer handoff remain
+  unaccepted. G01 remains open; G03-G05 excluded and G07 stopped.
+
+## 2026-10-22 — owned Windows GUI failure bounded to M22 type-label assertion
 
 ## 2026-10-22 — owned Windows GUI failure bounded to M22 type-label assertion
 
