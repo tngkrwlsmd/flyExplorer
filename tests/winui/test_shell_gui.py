@@ -8,7 +8,7 @@ from pywinauto import Desktop
 from PIL import ImageGrab
 from profile_guard import (assert_legacy_profile_unchanged, present_count,
                            snapshot_legacy_profile)
-from gui_failure_evidence import capture_failure
+from gui_failure_evidence import capture_failure, _startup_status_category
 from owned_process_dump import capture_owned_dump
 
 # Read-only original user profile sentinel: the preview has NO permission
@@ -252,11 +252,32 @@ try:
            eventually=eventually,left=left,right=right)
   print("F04_OWNED_TREE_ONLY_GUI_PASS=True",flush=True)
   raise SystemExit(0)
- startup_status=element("StatusText").window_text().lower()
+ # G01: piggyback on the existing bounded startup poll. No extra retry,
+ # disk writes, arbitrary path/status logging or native deadline changes.
+ # Only categorical transitions enter failure-only evidence.
+ startup_started=time.monotonic()
+ startup_samples=[]
+ def startup_ready():
+  value=str(element("AddressBox").get_value() or "")
+  matched=str(left).casefold() in value.casefold()
+  try:
+   status=_startup_status_category(element("StatusText").window_text())
+  except Exception:
+   status="unavailable"
+  sample={"elapsed_bucket":min(36,int((time.monotonic()-startup_started)//2)*2),
+          "address":"owned-left" if matched else ("empty" if not value else "other"),
+          "status":status}
+  if not startup_samples or sample["status"]!=startup_samples[-1]["status"] or \
+      sample["address"]!=startup_samples[-1]["address"] or \
+      sample["elapsed_bucket"]!=startup_samples[-1]["elapsed_bucket"]:
+   startup_samples.append(sample)
+   if len(startup_samples)>16:
+    startup_samples.pop(3)  # Retain the first three and most recent states.
+  return matched
  # The isolated supervisor permits two bounded 4.5-second attempts. Leave
  # room for that recovery budget plus process/UIA publication without
  # changing the product's native deadline.
- eventually(lambda:str(left).lower() in element("AddressBox").get_value().lower(),
+ eventually(startup_ready,
             "UI-independent native core/helper was not active at startup",18)
  assert "?? ?????" not in element("StatusText").window_text(),(
    "native helper committed the owned route but left an error status",
@@ -751,7 +772,8 @@ except Exception as failure:
  try:
   evidence_dir = capture_failure(base=base, owned=owned, left=left, right=right,
                                  win=locals().get("win"), hwnd=hwnd,
-                                 pid=p.pid if p else None, error=failure)
+                                 pid=p.pid if p else None, error=failure,
+                                 startup_samples=locals().get("startup_samples"))
   print("GUI_FAILURE_EVIDENCE_DIR", evidence_dir, flush=True)
  except Exception as capture_error:
   print("GUI_FAILURE_EVIDENCE_ERROR", type(capture_error).__name__, flush=True)
