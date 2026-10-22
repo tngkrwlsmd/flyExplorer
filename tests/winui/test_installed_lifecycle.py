@@ -289,6 +289,16 @@ def main():
         unrelated.parent.mkdir(parents=True,exist_ok=True)
         unrelated.write_text("not flyExplorer",encoding="utf-8")
         uninstaller=root/"flyExplorerUninstall.exe"
+        # The installed uninstaller must also refuse a false-success
+        # removal when user-added files are present under the install root.
+        unexpected=root/"unmanaged-installed-file.txt"
+        unexpected.write_text("test-owned untracked",encoding="utf-8")
+        refused=subprocess.run([str(uninstaller),"/UNINSTALL","/S",f"/TESTROOT={root}"],
+                               cwd=root,timeout=45)
+        assert refused.returncode!=0
+        assert unexpected.is_file() and settings.is_file() and reg_exists()
+        unexpected.unlink()
+        print("OWNED_INSTALLER_SELF_RESIDUAL_REFUSED",True,flush=True)
         result=subprocess.run([str(uninstaller),"/UNINSTALL","/S",f"/TESTROOT={root}"],
                               cwd=root,timeout=45)
         assert result.returncode==0,result.returncode
