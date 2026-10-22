@@ -53,8 +53,6 @@ consumer core; this PROJECT.md remains project-owned across bundle refreshes.
 - Orchestration: tools/winui/run_checks.py.
 - Generated output: ignored out/; package cache: ignored .cache/nuget/;
   local evidence: ignored logs/.
-- Retired MFC product is absent from the working tree; exact historical recovery
-  starts from Git revision cbffb48.
 
 ## Current Windows operations override (2026-10-10)
 
