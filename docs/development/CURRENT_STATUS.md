@@ -1,3 +1,47 @@
+# flyExplorer current status — 2026-10-22 owned Windows installer lifecycle PASS
+
+- On the **interactive Windows user desktop** of `DESKTOP-FJM09OG`,
+  fresh exact source SHA `76559b0fd8499b866350d8b63e8980373f7792b7`
+  was cloned into a new `C:\dev\flyExplorer-installer-owned-76559b0f`
+  test-owned workspace. The original `C:\dev\flyExplorer` checkout,
+  prior SYSTEM-only workspace and user files were not modified.
+- Canonical `fly.bat package` performed a fresh Windows Release build,
+  regenerated/checked exact runtime provenance and built the **unsigned**
+  private installer `flyExplorer-Setup-x64.exe`: 124,923,392 bytes,
+  SHA-256 `4d3d877121b7b78a23ddcb0d5977e75b395c096306e02dbb24a0a54a2ab3266a`.
+- The real `tests/winui/test_installed_lifecycle.py` **ran and exited 0**,
+  using that exact setup, exclusively within a unique `/TESTROOT`
+  fixture and its dedicated HKCU test registration. The installation,
+  installed WinUI app launch and owned-folder navigation, per-file
+  runtime SHA-256, same-version repair/obsolete-file cleanup, test
+  `1.0.0.1` display-version update/launch, `1.0.0.0` rollback/launch,
+  uninstall and settings-preservation sentinel all passed.
+  **The simulated display-version update/rollback reused the same
+  current binary payload, not two independently signed versions.**
+  Application HWND close, process exit and owned helper settlement
+  also passed at each checked launch.
+- Post-test verification: installer-specific HKCU key absent, temporary
+  installer/profile directories absent, original development checkout
+  unchanged, and the relevant installer unit contracts passed
+  **7/7** under Windows Python 3.14.
+- Deterministic source ZIP `flyExplorer-source-76559b0f….zip`
+  contains 543 tracked blobs; SHA-256
+  `518af07865386fc7a13ca9f76d411c900df2d9cac87e720a8a546e9700fbdf7f`.
+  `release_identity.py --write` and `--check` both **PASS** against
+  this exact setup/ZIP; runtime manifest SHA-256
+  `979fbb3440b323b8c31ece58669c3d85092a89f59f6e5dcc8c5d109549a5dd65`.
+  These private assets remain on the connected Windows device and
+  are **not** a public or durable GitHub release artifact.
+- `Get-AuthenticodeSignature` returned `NotSigned`.
+  Clean-machine Program Files/HKLM lifecycle, production signing,
+  rightsholder authority, public GPL source delivery and independent
+  pixel/visual QA remain unverified. G01 root cause stays OPEN;
+  G03–G05 USER-EXCLUDED and G07 stopped.
+  This is a bounded **private install lifecycle acceptance**, not
+  signed/public release clearance.
+
+---
+
 # flyExplorer current status — 2026-10-22 exact-SHA integrated Windows GUI verified, G01 remains open
 
 - At exact SHA `74bd0f3376d34b934f059b093c014fa469447606`,
