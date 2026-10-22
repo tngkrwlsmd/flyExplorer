@@ -1,9 +1,7 @@
 # flyExplorer development documentation
 
-This directory contains only documentation that is still useful for the
-canonical WinUI 3 product on main. Dated migration, MFC, Phase5 and early
-M1.x-M2.x checkpoint reports were removed from the working tree on 2026-10-02.
-Their exact content remains available through Git history.
+This directory contains documentation relevant to the canonical WinUI 3
+application and its current engineering requirements.
 
 ## Current documents
 
