@@ -376,6 +376,7 @@ def gui_command(area, configuration, env):
     for key in OWNED_FLAGS + FAULT_FLAGS + (
         "FLY_V7_WINDOW_TABS_ONLY",
         "FLY_M19_OWNED_FEATURES_ONLY",
+        "FLY_G01_INTEGRATED_STARTUP_ONLY",
     ):
         gui_env.pop(key, None)
 
@@ -499,6 +500,17 @@ def run_gui(area, configuration, env, tag):
     cmd, gui_env, timeout = gui_command(area, configuration, env)
     label = f"gui-{area}-{configuration}"
     rc = execute(label, cmd, timeout, gui_env, tag)
+    if not rc and area == "startup-integrated":
+        # A Python early exit is not proof of native startup success.
+        # Require the positive marker emitted only after the real left-pane
+        # test-owned fixture and canonical startup address are visible.
+        body = (LOGS / (tag + "-" + label + ".log")).read_text(
+            encoding="utf-8", errors="replace"
+        )
+        if ("G01_INTEGRATED_STARTUP_GUI_PASS=True" not in set(body.splitlines())
+                or "Traceback (most recent call last)" in body):
+            print("G01_INTEGRATED_STARTUP_MARKER_MISSING", flush=True)
+            rc = 1
     if not rc and area == "column-resize":
         # A Windows wrapper previously reported exit=0 despite a Python
         # traceback. Require positive, independent owned-GUI evidence.
