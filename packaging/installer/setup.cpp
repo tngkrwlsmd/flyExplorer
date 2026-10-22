@@ -23,7 +23,7 @@
 namespace fs=std::filesystem;
 namespace {
 constexpr wchar_t kDisplayName[]=L"flyExplorer";
-constexpr wchar_t kPublisher[]=L"Leon Lee";
+constexpr wchar_t kPublisher[]=L"flyExplorer";
 constexpr wchar_t kUninstallKey[]=L"Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\flyExplorer";
 constexpr wchar_t kTestUninstallKey[]=L"Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\flyExplorer-InstallerTest";
 constexpr wchar_t kUninstaller[]=L"flyExplorerUninstall.exe";
