@@ -8,8 +8,6 @@ This directory is the canonical test surface for app/winui.
 - helper/: isolated Shell helper contracts.
 - m19/ through m23/: retained native fixture directory names; the names are
   historical labels but the fixtures still validate current shared code.
-- historical_mfc.py: read-only Git-object access to retired revision cbffb48;
-  no MFC working-tree copy is retained.
 
 Default source contracts:
 
