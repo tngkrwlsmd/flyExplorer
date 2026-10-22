@@ -1,3 +1,19 @@
+# flyExplorer 작업 인계 — 2026-10-22 EP05 소유 파일 행 안전 클릭 수정
+
+## 2026-10-22 — 우클릭 메뉴 시험의 실제 화면 안쪽 좌표 사용
+
+- `7cce76daf465aa08a04939098d5f78b22e762f13` [Windows #39705815312](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39705815312)
+  의 source·Release는 PASS였으나, 실제 메뉴 시험은
+  UIA 메뉴 0개·대상 선택 없음으로 FAIL. 앱 기존 파일 작업
+  및 사용자 설정 보호는 PASS.
+- 기존에 검증된 소유 컨텍스트 메뉴 시험처럼 ListViewItem
+  행 사각형과 실제 ListView 영역의 교집합을 계산해
+  교집합 안쪽에만 마우스 우클릭을 수행한다. 클릭 전
+  파일 선택 상태를 재조회한다. 실사용 파일은 건드리지 않는다.
+- **미검증:** 새 GUI 좌표 로직/Windows Explorer 실제
+  선택 파일·현재 폴더 위임. 최신 SHA의 Windows source/Release/GUI
+  실행 필요. ZIP 코드와 G01 종료 보류. G03-G05 제외·G07 중단 유지.
+
 # flyExplorer 작업 인계 — 2026-10-22 EP05 기존 RightTapped 검사 정정
 
 ## 2026-10-22 — 새 WinUI 이벤트 연결에 맞춘 기존 소스 계약

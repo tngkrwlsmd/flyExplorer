@@ -1,3 +1,28 @@
+# flyExplorer current status — 2026-10-22 EP05 owned GUI click bounds correction
+
+## 2026-10-22 — diagnose native Explorer menu fixture click outside owned list
+
+- Central Windows GUI
+  [39705815312](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39705815312)
+  at exact source `7cce76daf465aa08a04939098d5f78b22e762f13`: runner/policy/source/Release build PASS;
+  functional GUI FAIL after previous owned M22 file-operation passes.
+  App-only diagnostic: `EP05_OWNED_MENU_UIA 1 []`,
+  `EP05_MENU_ANCHOR_STATUS source-not-selected`.
+  This did not invoke the Explorer delegation; user settings remained
+  SHA256-identical and disposable test files were removed.
+- The new EP05 GUI test used the center of a `ListViewItem`
+  for `click_input(button="right")`, but row bounding rectangles can
+  extend beyond the physically clipped `ListView` viewport.
+  Existing `test_owned_context_menu_gui.py` already verifies an
+  owned in-viewport intersection before a physical right click.
+  Reuse that approach; explicitly establish selected row, require
+  the clicked point to be inside both row and owned pane.
+- Extend the native Explorer delegation source contract for the
+  intersection guard. This is **test-only**; product right-tap fix
+  remains present but not yet native handoff accepted.
+  New SHA Windows source/build/GUI pending. Do not delete ZIP core;
+  G01 open; G03-G05 excluded, G07 stopped.
+
 # flyExplorer current status — 2026-10-22 EP05 prior RightTapped source contract corrected
 
 ## 2026-10-22 — source contract fixed after moving handled menu routing

@@ -138,6 +138,12 @@ class WindowsExplorerDelegationContracts(unittest.TestCase):
             "owner.value == owned_pid",
             'if peer.element_info.control_type not in ("MenuItem", "Button", "Text")',
             "EP05_OWNED_MENU_UIA",
+            "left_edge=max(item.left,area.left)",
+            "right_edge=min(item.right,area.right)",
+            "top_edge=max(item.top,area.top)",
+            "bottom_edge=min(item.bottom,area.bottom)",
+            'mouse.click(button="right",coords=click)',
+            "eventually(select_owned_file,",
         ):
             self.assertIn(command,test)
         self.assertIn('if os.environ.get("FLY_EP05_EXPLORER_HANDOFF")=="YES":',harness)

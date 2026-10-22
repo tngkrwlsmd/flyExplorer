@@ -11,7 +11,7 @@ from ctypes import wintypes as W
 from pathlib import Path
 
 import psutil
-from pywinauto import Desktop
+from pywinauto import Desktop, mouse
 
 
 def run(*,win,element,focus,eventually,left,right,owned_pid):
@@ -124,9 +124,34 @@ def run(*,win,element,focus,eventually,left,right,owned_pid):
             return next((peer for peer in element("LeftFiles").descendants()
                 if peer.element_info.control_type == "ListItem" and
                    "복사본.txt" in peer.window_text()), None)
-        row = eventually(file_row, "owned source file missing", 12)
+        eventually(lambda: file_row() is not None,
+                   "owned source file missing", 12)
+        def select_owned_file():
+            target = file_row()
+            if target is None:
+                return False
+            focus()
+            target.select()
+            current = file_row()
+            return current is not None and current.is_selected()
+        eventually(select_owned_file, "owned file selection did not stabilize", 10)
+        # A ListViewItem can report its entire content-width bounding box,
+        # extending outside the physically clipped file-list viewport.
+        # Use only the row/list intersection, as in the existing
+        # test_owned_context_menu_gui.py acceptance harness.
+        item = file_row().rectangle()
+        area = element("LeftFiles").rectangle()
+        left_edge=max(item.left,area.left)
+        right_edge=min(item.right,area.right)
+        top_edge=max(item.top,area.top)
+        bottom_edge=min(item.bottom,area.bottom)
+        assert right_edge-left_edge>30 and bottom_edge-top_edge>5, (
+            "test-owned selected row is not physically visible in file list")
+        click=(left_edge+min(50,(right_edge-left_edge)//2),
+               (top_edge+bottom_edge)//2)
+        assert area.left<click[0]<area.right and area.top<click[1]<area.bottom
         focus()
-        row.click_input(button="right")
+        mouse.click(button="right",coords=click)
         menu_diagnostic("Windows 탐색기에서 선택 열기")
         menu_click("Windows 탐색기에서 선택 열기")
         eventually(lambda: "Windows 탐색기에서 항목을 선택했습니다" in
