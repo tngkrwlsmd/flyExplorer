@@ -1,4 +1,4 @@
-# flyExplorer current status — 2026-10-22 P1 inactive F08 archive source cleanup
+# flyExplorer current status — 2026-10-22 P1 inactive F08 source cleanup Windows accepted
 
 - Preserved P0 Windows native Explorer handoff acceptance: exact product
   `1a5aece2df3fe9a6b548a511e949a62469d107d1`, central GUI
@@ -16,9 +16,19 @@
   absence from active build input, no duplicate archive UI, and retained
   source-bundle tooling. Registered that contract under the file-operations
   source suite in `tools/winui/run_checks.py`.
-- This source cleanup is **NOT Windows Release build/GUI/visual verified**.
-  The prior EP05 Windows PASS does not certify this new source commit.
-  No public build, signing, installation, release, or provenance refresh.
+- **P1 cleanup source commit verified on Windows:** exact
+  `79b039453de5e56677e3f57f170ffc8817e1890f`, central
+  [CI #39728188652](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39728188652)
+  finished `success` and wrote `central-ci/windows-gui=success` for this
+  source SHA. Runner health, GUI dependencies, policy, source contracts,
+  Windows Release build, and functional GUI all reported `PASS`, exit 0.
+  Focused GUI stages for window tabs, shortcuts, filter presets and folder
+  tree, plus integrated `gui-all-Release` (exit 0), completed.
+- This exact-SHA acceptance **does not** certify separate pixel/visual
+  review, a clean signed/public package, setup install/update/rollback,
+  unchanged third-party Windows providers, or the root cause of G01.
+  Historical `RELEASE_IDENTITY`, GPL source bundle and licensing
+  provenance were not regenerated for a published `79b03945` release.
 - G01 intermittent startup/exit root cause remains open; G03/G04/G05
   USER-EXCLUDED and G07 stopped. Older sections below describe earlier
   snapshots and may refer to then-retained ZIP sources.

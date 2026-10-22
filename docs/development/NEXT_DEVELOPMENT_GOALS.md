@@ -27,9 +27,15 @@ Windows 11 탐색기 기능 호환의 구체적인 개발 계약·관련 파일�
   `packaging/source_bundle.py` 기반 배포 소스 ZIP은 유지한다.
 - Explorer 위임의 기존 존재 의존 검사를 ZIP 코드 비노출·비컴파일·비존재
   회귀 보호로 교체하고 기본 file-operations 소스 계약 목록에 연결했다.
-- 이 P1 소스 변경의 **새로운 Windows Release 빌드, GUI, 시각 검증은 수행하지 않았다.**
-  기존 EP05 실측을 새로운 소스 SHA의 제품 빌드 PASS로 확대하지 않는다.
-  과거 패키지/출처 SHA는 변경하지 않으며 새 배포 전에 별도 검증한다.
+- **P1 소스 정리 Windows 수용 완료:** 정확한
+  `79b039453de5e56677e3f57f170ffc8817e1890f`의
+  [중앙 CI #39728188652](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39728188652)
+  에서 정책·전체 소스 계약·Release 빌드·기능 GUI(`gui-all-Release`
+  포함) 모두 PASS, 종료 0. `central-ci/windows-gui=success` 확인.
+  G01의 예전 간헐 종료 원인은 이 정상 실행만으로 해결되지 않는다.
+- 독립 픽셀/시각 확인과 공개 배포·서명·설치 수명주기·정확한
+  패키지/출처 SHA 생성은 **별도 미완료**다. 과거 릴리스의
+  메타데이터와 기존 증거를 소급 변경하지 않는다.
 - 아래 이전 F08 '소스 보존/삭제 보류' 문구는 작성 시점의 역사적 기록이며
   이 절의 정리 완료 상태를 뒤집지 않는다. G01 근본 원인 미확정,
   G03~G05 사용자 제외, G07 중단은 계속 유지한다.

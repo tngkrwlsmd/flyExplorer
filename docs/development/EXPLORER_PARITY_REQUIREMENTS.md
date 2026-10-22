@@ -6,7 +6,7 @@
 이 문서는 요구사항이며, 아래 기능의 구현 완료나 새로운 GUI 수용을 뜻하지 않는다.
 기존 `NEXT_DEVELOPMENT_GOALS.md`의 G01~G08 및 F01~F18 비교 ID를 재사용한다.
 
-## 2026-10-22 선택 항목·빈 배경 양쪽 Explorer 위임 — 코드 반영, 미검증
+## 2026-10-22 선택 항목·빈 배경 양쪽 Explorer 위임 — 실제 Windows GUI 수용
 
 선택 항목 우클릭은 공식 Shell PIDL API로 해당 항목을
 Explorer에서 선택해 열고, 폴더 목록의 **빈 배경 우클릭**은
@@ -14,7 +14,10 @@ Explorer에서 선택해 열고, 폴더 목록의 **빈 배경 우클릭**은
 확장했다. 파일 생성/압축/해제와 확장 Shell 동작은 열린
 Windows Explorer에서 사용자가 추가 선택한다. Windows 11
 메뉴를 WinUI 안으로 그대로 복제하는 것은 아니며,
-OS별 지원 및 실제 Windows 동작은 NOT TESTED로 유지한다.
+실제 Windows 소유 픽스처에서 선택 파일과 현재 폴더를 각각 새 Explorer
+창으로 넘기는 동작은 `1a5aece2`의 [실측 증거 #39721385267](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39721385267)로 확인했다.
+후속 ZIP 소스 정리 `79b03945`도 [소스·Release·GUI #39728188652](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39728188652)
+PASS다. 다른 Windows 빌드/타사 제공자의 동작 및 별도 시각 수용은 미검증이다.
 
 ## Windows 기본 기능 우선 재사용 원칙 (2026-10-21)
 
@@ -31,8 +34,10 @@ OS별 지원 및 실제 Windows 동작은 NOT TESTED로 유지한다.
   PaneTab/상태와 작업 문맥, 두 패널 간 명시적 전송)은 보존한다.
   자체 ZIP 엔진·배포 의존성의 제거는 Windows 기본 경로의
   실제 검증 이후 별도 변경으로 취급한다.
-- 현재 코드는 WinUI 메뉴 위임·F08 기본 메뉴 비노출만
-  작성된 상태이며 **빌드·테스트·GUI 검증 미실행**.
+- 최신 `79b03945`는 WinUI 위임과 자체 ZIP 메뉴 비노출,
+  F08 엔진·전용 테스트 29개 파일 제거를 반영했다.
+  전체 소스 계약·Release·기능 GUI는 [중앙 CI #39728188652](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39728188652)
+  PASS다. 이 기록은 새로운 전체 화면 픽셀 검토나 공개 배포 승인 아님.
 
 ## 적용 원칙
 

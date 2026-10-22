@@ -9,7 +9,11 @@ After the separately accepted native Windows Explorer handoff (product
 implementation and its pinned miniz 3.1.2 sources were removed from the
 current source tree together with the nine ZIP-specific source-only tests.
 No custom F08 codec remains in the active WinUI compile template. The
-historical miniz version, original upstream
+source-removal SHA `79b039453de5e56677e3f57f170ffc8817e1890f`
+passed Windows source contracts, canonical Release build and owned functional
+GUI in [central CI #39728188652](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39728188652).
+This is not a new published source/binary package or license clearance.
+The historical miniz version, original upstream
 [richgel999/miniz](https://github.com/richgel999/miniz), MIT-style upstream
 license, local `miniz_tinfl.c` / `miniz_tdef.c` include adaptations and
 `miniz_tdef_compat.h` shim remain documented in Git history, including

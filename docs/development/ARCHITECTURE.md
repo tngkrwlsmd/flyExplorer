@@ -84,7 +84,10 @@ menus. For an actual filesystem PaneTab, the explicit `Windows
 archive verb or modifies files. Virtual locations are not exposed
 as filesystem folders, and stale WindowTab/PaneTab/route results
 are ignored. Explorer-native background creation and archive
-choices remain user-initiated in Explorer (NOT TESTED).
+choices remain user-initiated in Explorer. The selected-file and current-folder
+Windows handoff paths passed owned GUI checks on exact SHA `1a5aece2` and
+remained in the broader GUI PASS on cleanup SHA `79b03945`; independent
+behavior across other Windows builds/providers is not certified.
 
 The F08 ZIP UI has been retired from WinUI: there are no archive
 creation/extraction/inspection menu commands, MainWindow archive workers,
@@ -101,13 +104,16 @@ and its vendor attribution. No custom ZIP parser, encoder or decoder remains
 as a product compile input. The active M22 Shell file operations, file
 selection/folder Explorer handoffs and cancellation remain unchanged.
 
-This is **not** new native build/GUI or public-release acceptance for the
-source-removal commit. The Python standard-library-based deterministic
+The source-removal commit `79b039453de5e56677e3f57f170ffc8817e1890f`
+has **Windows source-contract, Release-build and functional-GUI acceptance**
+from [central CI #39728188652](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39728188652).
+This is not a new standalone pixel/visual or public-release acceptance.
+The Python standard-library-based deterministic
 `packaging/source_bundle.py` ZIP generator is a separate release/source
 delivery requirement and remains intact. Historical exact-release provenance,
-third-party notices and license-gate records must not be rewritten to match
-an unbuilt source change. A new Release package must regenerate exact-SHA
-binary/source provenance before distribution.
+third-party notices and license-gate records must not be retroactively
+rewritten. A future Release package must regenerate exact-SHA binary/source
+provenance before distribution.
 
 Regular-document activation belongs to `app/winui/file_open_controller.h`.
 It owns one asynchronous Windows StorageFile/Launcher request, deadline and
