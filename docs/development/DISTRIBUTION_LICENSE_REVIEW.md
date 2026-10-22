@@ -2,6 +2,34 @@
 
 This document records engineering evidence, not legal advice.
 
+## 2026-10-22 test-owned private setup / corresponding-source identity accepted
+
+An isolated, interactive Windows user session generated an **unsigned**
+setup from exact source commit `76559b0fd8499b866350d8b63e8980373f7792b7`,
+then executed `tests/winui/test_installed_lifecycle.py` to successful
+completion with exit 0. This verified `/TESTROOT` install,
+owned-folder GUI launch, runtime-file provenance, same-version repair,
+test display-version update/rollback using the same binary bytes,
+uninstall, and preservation of an owned settings sentinel. The
+dedicated HKCU test registration and temp installation folders were
+absent after cleanup; seven Windows installer unit contracts also PASS.
+
+The exact new setup was 124,923,392 bytes, SHA-256
+`4d3d877121b7b78a23ddcb0d5977e75b395c096306e02dbb24a0a54a2ab3266a`.
+Matching deterministic 543-file source ZIP SHA-256
+`518af07865386fc7a13ca9f76d411c900df2d9cac87e720a8a546e9700fbdf7f`
+and runtime manifest SHA-256
+`979fbb3440b323b8c31ece58669c3d85092a89f59f6e5dcc8c5d109549a5dd65`
+passed `release_identity.py --write/--check` together. Concrete
+candidate files reside in a private test-owned Windows workspace, not
+a published release. The setup reports Authenticode `NotSigned`.
+
+**Public distribution remains NOT CLEARED.** A true clean-machine
+Program Files/HKLM lifecycle, signed binaries and setup, the
+rightsholder/license grants, immutable release assets and publicly
+available corresponding source require separate acceptance. No
+production publication/tag was created.
+
 ## 2026-10-22 F08 legacy ZIP source retirement (not release clearance)
 
 After the separately accepted native Windows Explorer handoff (product
