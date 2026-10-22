@@ -126,6 +126,84 @@ def _screenshot_app_window(win, hwnd: int, pid: int, destination: Path):
         return "failed: " + type(exc).__name__
 
 
+def _startup_status_category(value):
+    """Fixed status enums only; never store arbitrary app/status text."""
+    if value is None:
+        return "unavailable"
+    for prefix, category in (
+        ("독립 Shell 탐색 준비 중", "native-initializing"),
+        ("폴더를 불러오는 중입니다.", "loading"),
+        ("폴더를 불러왔습니다.", "loaded"),
+        ("응답 지연 후 폴더를 불러왔습니다.", "recovered"),
+        ("Shell 폴더가 4.5초씩 두 번", "helper-timeout"),
+        ("Shell 폴더를 열지 못했습니다.", "shell-failed"),
+        ("네트워크 폴더에 접근할 수 없거나", "network-failed"),
+        ("이 위치로 이동할 수 없습니다.", "submit-failed"),
+        ("기본 파일 작업 엔진을 연결하지 못했습니다.", "native-link-failed"),
+    ):
+        if value.startswith(prefix):
+            return category
+    return "other"
+
+
+def _owned_startup_summary(win, ui: dict, left: Path, right: Path) -> dict:
+    """Bounded, failure-only UIA categories for the synthetic startup route.
+
+    Never emit raw StatusText/ActivePaneText or paths outside the owned fixture.
+    This differentiates a still-loading route, failed route, wrong active pane,
+    and the presence of known test-only child entries without native logging.
+    """
+    value = ui.get("AddressBox", {}).get("value")
+    if not value:
+        address = "empty" if value == "" else "unavailable"
+    elif value == "[outside test-owned scope]":
+        address = "outside-owned"
+    else:
+        normalized = os.path.normcase(os.path.normpath(str(value))).casefold()
+        if normalized == os.path.normcase(os.path.normpath(str(left))).casefold():
+            address = "owned-left"
+        elif normalized == os.path.normcase(os.path.normpath(str(right))).casefold():
+            address = "owned-right"
+        else:
+            address = "other-owned"
+    observed = {}
+    for control in ("StatusText", "ActivePaneText"):
+        observed[control] = None
+        if win is None:
+            continue
+        try:
+            spec = win.child_window(auto_id=control)
+            if spec.exists(timeout=0.25):
+                observed[control] = str(spec.window_text())
+        except Exception:
+            pass
+    active = {"활성: 왼쪽": "left", "활성: 오른쪽": "right"}.get(
+        observed["ActivePaneText"], "other" if observed["ActivePaneText"] is not None
+        else "unavailable"
+    )
+    def fixture_visible(pane: str, label: str) -> bool:
+        return any(
+            node.get("type") == "ListItem" and
+            (node.get("name") == label or node.get("name", "").startswith(label + " "))
+            for node in ui.get(pane, {}).get("nodes", [])
+        )
+    return {
+        "address_route": address,
+        "active_pane": active,
+        "status_category": _startup_status_category(observed["StatusText"]),
+        "left_expected_child_visible": fixture_visible("LeftFiles", "Nested"),
+        "right_expected_child_visible": fixture_visible("RightFiles", "Secondary"),
+        "left_uia_list_items": sum(
+            node.get("type") == "ListItem"
+            for node in ui.get("LeftFiles", {}).get("nodes", [])
+        ),
+        "right_uia_list_items": sum(
+            node.get("type") == "ListItem"
+            for node in ui.get("RightFiles", {}).get("nodes", [])
+        ),
+    }
+
+
 def capture_failure(*, base: Path, owned: Path, left: Path, right: Path,
                     win, hwnd: int | None, pid: int | None, error: Exception):
     """Return evidence directory. A missing app/UIA peer is an evidence fact."""
@@ -156,6 +234,7 @@ def capture_failure(*, base: Path, owned: Path, left: Path, right: Path,
                         "value": _safe_address(spec.get_value(), owned)}
             except Exception as exc:
                 ui["AddressBox"] = {"error_type": type(exc).__name__}
+        ui["Startup"] = _owned_startup_summary(win, ui, left, right)
         (output / "panes.json").write_text(json.dumps(ui, ensure_ascii=False, indent=2),
                                              encoding="utf-8")
         disk = {"left": {"path": _safe_address(left, owned),
