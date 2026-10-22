@@ -1,3 +1,50 @@
+# flyExplorer current status — 2026-10-22 explicit full uninstall implementation and Windows test acceptance
+
+- Exact source SHA `266a271f70da86da8be2bda0607ba29195cb8be6` adds
+  an opt-in **complete uninstall** with an unchecked interactive verification
+  checkbox and explicit `/UNINSTALL /S /PURGEUSERDATA` for unattended runs.
+  Ordinary uninstall keeps current-user `%LOCALAPPDATA%\\flyExplorer`;
+  explicit purge removes only that flyExplorer-owned data tree, rejecting
+  reparse points. In `/TESTROOT` mode it targets only the matching synthetic
+  `installer-profile-<token>/localappdata/flyExplorer`, never real settings.
+- Uninstall now checks installed-manifest and shortcut removal errors,
+  refuses to report success while untracked residual files remain in the
+  install root (including the self-uninstaller path), and preserves user
+  data/registration on the tested incomplete-removal boundary. The in-use
+  installed uninstaller still defers deleting its own executable/manifest;
+  test acceptance waits until the install directory disappears.
+- An isolated interactive Windows desktop workspace
+  `C:\dev\flyExplorer-uninstall-final-owned-266a271f` clean-built
+  the canonical `fly.bat package` at that **exact** Git revision.
+  Unsigned x64 setup size **124,933,120** bytes, SHA-256
+  `c1d7d4248050aff56659cbb34ecee27f9407f488574c56739d8fff92c231f102`.
+  The owned `test_installed_lifecycle.py` **actually ran and exited 0**
+  (51.91 seconds): install/app launch, binary runtime provenance,
+  same-version repair, test-version update/rollback, normal uninstall
+  preserving settings, implicit purge refusal, explicit complete purge,
+  unrelated-user-data preservation, unmanaged-file failure/retry via both
+  installed and external uninstallers. Logs include
+  `OWNED_INSTALLER_SELF_RESIDUAL_REFUSED True`,
+  `OWNED_INSTALLER_NORMAL_REMOVE_PRESERVES_SETTINGS True`,
+  `OWNED_INSTALLER_UNTRACKED_FILE_BLOCKED_PURGE True`,
+  `OWNED_INSTALLER_EXPLICIT_PURGE_REMOVES_ONLY_OWNED_DATA True`
+  and `FINAL_UNINSTALLER_LIFECYCLE=PASS`.
+- Installer source contract tests **9/9 PASS** on Windows;
+  post-run HKCU installer-test key, temporary installation and isolated
+  profile directories **ABSENT**, original `C:\dev\flyExplorer` untouched.
+  Matching 543-file deterministic source ZIP SHA-256
+  `07ceacb5d823b6d9056fe8beabbc34f84fbfe6c177b3473bbfa27b2e4d311a10`,
+  runtime manifest SHA-256
+  `f0feca329fbc889800ffd36ddfb16b8d0798175c370f84a4cbd78604a016e1b2`,
+  `release_identity.py --write/--check` **PASS**.
+- `Get-AuthenticodeSignature` status **NotSigned**. This is a private
+  `/TESTROOT` test, **not** clean-machine Program Files/HKLM, elevated
+  multi-user profile deletion, production signing, public distribution,
+  or GUI pixel acceptance. G01 intermittent startup/shutdown root cause
+  remains OPEN. G03-G05 USER-EXCLUDED; G07 stopped.
+
+---
+
 # flyExplorer current status — 2026-10-22 owned Windows installer lifecycle PASS
 
 - On the **interactive Windows user desktop** of `DESKTOP-FJM09OG`,
