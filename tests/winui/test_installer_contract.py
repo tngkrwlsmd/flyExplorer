@@ -1,5 +1,7 @@
 """M2.7 installer ownership, uninstall and elevation contracts."""
 from pathlib import Path
+import importlib.util
+import os
 import unittest
 
 ROOT=Path(__file__).resolve().parents[2]
@@ -125,6 +127,39 @@ class InstallerContract(unittest.TestCase):
         ):
             self.assertIn(marker,body)
         self.assertIn("assert unrelated.is_file() and sentinel.is_file()",body)
+
+    def test_installer_resources_are_losslessly_compressed(self):
+        script=(ROOT/"packaging/package.py").read_text(encoding="utf-8")
+        installer=SETUP.read_text(encoding="utf-8")
+        self.assertIn("COMPRESS_ALGORITHM_XPRESS_HUFF",script)
+        self.assertIn("WindowsPayloadCompression",script)
+        self.assertIn("codec.decode(packed,raw_size)!=raw",script)
+        self.assertIn("PAYLOAD_RESOURCE_STORED_BYTES=",script)
+        self.assertIn("file.storedBytes",installer)
+        self.assertIn("CreateDecompressor(",installer)
+        self.assertIn("Decompress(decoder,",installer)
+        self.assertIn("decoded!=file.bytes",installer)
+        self.assertIn('cabinet.lib',installer)
+
+    @unittest.skipUnless(os.name=="nt","Windows built-in Cabinet compression only")
+    def test_native_compression_codec_roundtrip(self):
+        path=ROOT/"packaging/package.py"
+        spec=importlib.util.spec_from_file_location("fly_package_codec",path)
+        self.assertIsNotNone(spec)
+        module=importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        with module.WindowsPayloadCompression() as codec:
+            for source in (
+                b"A"*8192,
+                bytes(range(256))*200,
+                b"flyExplorer"*2048,
+                b"",
+            ):
+                packed=codec.encode(source)
+                if source:
+                    self.assertEqual(source,codec.decode(packed,len(source)))
+                else:
+                    self.assertEqual(b"",packed)
 
     def test_msbuild_discovery_is_shared_and_not_edition_locked(self):
         resolver=(ROOT/"tools/winui/resolve_msbuild.py").read_text(encoding="utf-8")
