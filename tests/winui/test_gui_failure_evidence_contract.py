@@ -160,7 +160,8 @@ class GuiFailureEvidenceContract(unittest.TestCase):
             timeline = json.loads(raw)["Startup"]["sampled_transitions"]
             self.assertEqual(16, len(timeline))
             self.assertEqual(
-                {"elapsed_bucket": 36, "status": "other", "address": "other"},
+                {"elapsed_bucket": 36, "status": "other", "address": "other",
+                 "left_fixture_visible": False},
                 timeline[-1])
             self.assertNotIn(sensitive, raw)
             non_startup = capture_failure(

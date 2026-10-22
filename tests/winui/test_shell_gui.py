@@ -17,6 +17,22 @@ REAL_CONF,ORIGINAL_PROFILE=snapshot_legacy_profile()
 ORIGINAL_PROFILE_PRESENT=present_count(ORIGINAL_PROFILE)
 
 HERE=APP
+# This diagnostic must use exactly the integrated fixture/feature setup,
+# never change the user's desktop profile, or activate unrelated GUI suites.
+G01_INTEGRATED_STARTUP_ONLY=os.environ.get(
+    "FLY_G01_INTEGRATED_STARTUP_ONLY")=="YES"
+if G01_INTEGRATED_STARTUP_ONLY:
+ for flag in ("FLY_V7_WINDOW_TABS","FLY_V7_WINDOW_TABS_SESSION",
+              "FLY_M19_OWNED_FEATURES","FLY_M20_OWNED_SHELL",
+              "FLY_M21_OWNED_FEATURES","FLY_M22_OWNED_FEATURES",
+              "FLY_M23_OWNED_FEATURES",
+              "FLY_M20_OWNED_COLLAPSE_M19_PANELS"):
+  assert os.environ.get(flag)=="YES",("missing G01 integrated profile",flag)
+ for flag in ("FLY_M18_OWNED_COM_HANG","FLY_M18_EXHAUST_TIMEOUT",
+              "FLY_M18_OWNED_SHELL_NOTIFY","FLY_M18_LOOPBACK_UNC",
+              "FLY_F05_VISUAL_CAPTURE","FLY_F04_TREE_ONLY"):
+  assert os.environ.get(flag)!="YES",("forbidden G01 side effect",flag)
+
 CONFIG=os.environ.get("FLY_MIGRATION_CONFIGURATION","Debug")
 assert CONFIG in ("Debug","Release")
 EXE=app_exe(CONFIG)
@@ -264,16 +280,22 @@ try:
    status=_startup_status_category(element("StatusText").window_text())
   except Exception:
    status="unavailable"
+  left_visible=False
+  if G01_INTEGRATED_STARTUP_ONLY:
+   left_visible=any("Nested" in row.window_text()
+       for row in element("LeftFiles").descendants())
   sample={"elapsed_bucket":min(36,int((time.monotonic()-startup_started)//2)*2),
           "address":"owned-left" if matched else ("empty" if not value else "other"),
-          "status":status}
+          "status":status,
+          "left_fixture_visible":left_visible}
   if not startup_samples or sample["status"]!=startup_samples[-1]["status"] or \
       sample["address"]!=startup_samples[-1]["address"] or \
-      sample["elapsed_bucket"]!=startup_samples[-1]["elapsed_bucket"]:
+      sample["elapsed_bucket"]!=startup_samples[-1]["elapsed_bucket"] or \
+      sample["left_fixture_visible"]!=startup_samples[-1]["left_fixture_visible"]:
    startup_samples.append(sample)
    if len(startup_samples)>16:
     startup_samples.pop(3)  # Retain the first three and most recent states.
-  return matched
+  return matched and (not G01_INTEGRATED_STARTUP_ONLY or left_visible)
  # The isolated supervisor permits two bounded 4.5-second attempts. Leave
  # room for that recovery budget plus process/UIA publication without
  # changing the product's native deadline.
@@ -283,6 +305,9 @@ try:
    "native helper committed the owned route but left an error status",
    element("StatusText").window_text())
  print("ACTUAL_CPP_NATIVE_CORE_NULL_CONTRACT_LINKED",True,flush=True)
+ if G01_INTEGRATED_STARTUP_ONLY:
+  print("G01_INTEGRATED_STARTUP_GUI_PASS=True",flush=True)
+  raise SystemExit(0)
  if owned_block or owned_com:
   eventually(lambda:any("Nested" in e.window_text()
       for e in element("RightFiles").descendants()),

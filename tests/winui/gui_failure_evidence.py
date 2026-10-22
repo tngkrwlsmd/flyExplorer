@@ -171,6 +171,7 @@ def _safe_startup_samples(samples):
             "elapsed_bucket": bucket,
             "status": status if isinstance(status, str) and status in _STARTUP_STATUSES else "other",
             "address": address if isinstance(address, str) and address in _STARTUP_ADDRESSES else "other",
+            "left_fixture_visible": row.get("left_fixture_visible") is True,
         })
     return safe
 

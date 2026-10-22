@@ -131,6 +131,7 @@ FAULT_FLAGS = (
 )
 GUI_AREAS = (
     "core",
+    "startup-integrated",
     "shortcuts",
     "shell",
     "search",
@@ -430,6 +431,7 @@ def gui_command(area, configuration, env):
 
     flags = {
         "core": ("FLY_M20_OWNED_SHELL",),
+        "startup-integrated": OWNED_FLAGS,
         "shell": ("FLY_M20_OWNED_SHELL",),
         "search": ("FLY_M19_OWNED_FEATURES", "FLY_M19_OWNED_FEATURES_ONLY"),
         "file-operations": ("FLY_M21_OWNED_FEATURES", "FLY_M22_OWNED_FEATURES"),
@@ -442,7 +444,7 @@ def gui_command(area, configuration, env):
     }[area]
     for key in flags:
         gui_env[key] = "YES"
-    if area == "all":
+    if area in ("all", "startup-integrated"):
         # M19 leaves test-owned Search/Workspace panels expanded. Restore
         # native file-list visibility before M20 retemplates its WinUI peers.
         # Keep the handoff scoped to the chained complete GUI profile.
@@ -450,6 +452,10 @@ def gui_command(area, configuration, env):
         # Explicit P0 acceptance: only the test-owned synthetic folder
         # can spawn new native Explorer HWNDs. Previous user windows untouched.
         gui_env["FLY_EP05_EXPLORER_HANDOFF"] = "YES"
+    if area == "startup-integrated":
+        # Exactly the all-profile startup configuration, without replaying
+        # already accepted GUI interactions after initial route observation.
+        gui_env["FLY_G01_INTEGRATED_STARTUP_ONLY"] = "YES"
     return [sys.executable, "-u", str(TESTS / "test_shell_gui.py")], gui_env, 260
 
 
