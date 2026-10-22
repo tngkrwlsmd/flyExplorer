@@ -279,13 +279,42 @@ def main():
         launch_installed(root,profile,"rollback")
         print("OWNED_INSTALLER_ROLLBACK_LAUNCH_PASS",True,flush=True)
 
+        # A normal uninstall must remove owned binaries but preserve
+        # flyExplorer-specific settings under this isolated user profile.
+        user_data=profile/"localappdata"/"flyExplorer"
+        user_data.mkdir(parents=True,exist_ok=True)
+        settings=user_data/"bookmarks-v1.txt"
+        settings.write_text("owned fixture",encoding="utf-8")
+        unrelated=profile/"localappdata"/"other-app"/"preserve.txt"
+        unrelated.parent.mkdir(parents=True,exist_ok=True)
+        unrelated.write_text("not flyExplorer",encoding="utf-8")
         uninstaller=root/"flyExplorerUninstall.exe"
         result=subprocess.run([str(uninstaller),"/UNINSTALL","/S",f"/TESTROOT={root}"],
                               cwd=root,timeout=45)
         assert result.returncode==0,result.returncode
         assert wait_absent(root),root
         assert not reg_exists()
+        assert settings.is_file()
         assert sentinel.is_file()
+        print("OWNED_INSTALLER_NORMAL_REMOVE_PRESERVES_SETTINGS",True,flush=True)
+
+        # Reinstall and require an explicit silent purge flag. This is still
+        # entirely within test-owned /TESTROOT and the matching profile.
+        run(["/S",f"/TESTROOT={root}","/TESTDISPLAYVERSION=1.0.0.0"])
+        assert reg_exists() and settings.is_file()
+        invalid=subprocess.run([str(SETUP),"/PURGEUSERDATA","/S",
+                                f"/TESTROOT={root}"],cwd=SETUP.parent,timeout=45)
+        assert invalid.returncode!=0
+        assert settings.is_file() and reg_exists()
+        print("OWNED_INSTALLER_IMPLICIT_PURGE_REJECTED",True,flush=True)
+        result=subprocess.run([str(SETUP),"/UNINSTALL","/PURGEUSERDATA","/S",
+                               f"/TESTROOT={root}"],cwd=SETUP.parent,timeout=45)
+        assert result.returncode==0,result.returncode
+        assert wait_absent(root),root
+        assert not reg_exists()
+        assert not user_data.exists()
+        assert unrelated.is_file() and sentinel.is_file()
+        print("OWNED_INSTALLER_EXPLICIT_PURGE_REMOVES_ONLY_OWNED_DATA",True,flush=True)
         print("OWNED_INSTALLER_CLEAN_INSTALL_REPAIR_UPDATE_ROLLBACK_UNINSTALL",True)
         print("USER_SETTINGS_SENTINEL_PRESERVED",True)
     finally:
