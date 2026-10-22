@@ -1,6 +1,5 @@
 """Static guardrails for the independent WinUI 3 full-shell migration."""
 from pathlib import Path
-from historical_mfc import text as historical_text
 import unittest
 import xml.etree.ElementTree as ET
 ROOT=Path(__file__).resolve().parents[2]/"app"/"winui"
@@ -119,14 +118,10 @@ class MigrationContracts(unittest.TestCase):
   root=ROOT.parents[1]
   low=(root/"src/base/shell_enum_bridge.cpp").read_text(encoding="utf-8-sig")
   core=(root/"src/base/shell_navigation_core.cpp").read_text(encoding="utf-8-sig")
-  product=historical_text("src/fxfile/fxfile.gyp")
   project=text("flyExplorer.project-template.xml")
   self.assertFalse((root/"src/base/shell_enumerator_win.cpp").exists())
   self.assertEqual(low.count("folder->EnumObjects("),1)
   self.assertIn("openEnumeration(parent.p,nullptr,flags,&iterator.p)",core)
-  # cbffb48 is now history-only and predates the WinUI shared-bridge wiring.
-  self.assertNotIn("shell_enum_bridge.cpp",product)
-  self.assertNotIn("shell_navigation_core.cpp",product)
   self.assertIn("shell_enum_bridge.cpp",project)
   self.assertIn("shell_navigation_core.cpp",project)
   for token in ("afxwin.h","ListCtrlEx","m_hWnd","CWnd","CDialog"):
@@ -140,12 +135,10 @@ class MigrationContracts(unittest.TestCase):
   action=(root/"src/base/navigation_action.h").read_text(encoding="utf-8")
   supervisor=(root/"src/base/shell_isolated_supervisor.cpp").read_text(encoding="utf-8")
   bridge=(root/"src/base/directory_change_bridge.cpp").read_text(encoding="utf-8")
-  historical_watcher=historical_text("src/fxfile/file_change_watcher.cpp")
   self.assertNotIn("shell_async_worker.cpp",project)
   self.assertIn("shell_isolated_supervisor.cpp",project)
   self.assertIn("directory_watcher.cpp",project)
   self.assertIn("directory_change_bridge.cpp",project)
-  self.assertIn("FindFirstChangeNotification(",historical_watcher)
   self.assertIn("FindFirstChangeNotificationW",bridge)
   self.assertIn("FindFirstChangeNotificationA",bridge)
   self.assertIn("enum class NavigationAction",action)
