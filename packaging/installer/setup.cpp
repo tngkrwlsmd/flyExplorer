@@ -442,7 +442,6 @@ int uninstall(Options o,fs::path const& root){
     if(!o.silent&&!promptUninstall(o.purgeUserData))return ERROR_CANCELLED;
     if(!removeShortcuts(o,root))return ERROR_ACCESS_DENIED;
     if(!removeInstalledPayload(root))return ERROR_ACCESS_DENIED;
-    if(o.purgeUserData&&!removePrivateData(o,root))return ERROR_ACCESS_DENIED;
     const auto installedUninstaller=root/kUninstaller;
     const auto current=fs::path(selfPath());
     std::error_code ec;
@@ -455,9 +454,12 @@ int uninstall(Options o,fs::path const& root){
         if(ec)return ERROR_ACCESS_DENIED;
         ec.clear();
         if(!fs::remove(root,ec)||ec)return ERROR_DIR_NOT_EMPTY;
+        if(o.purgeUserData&&!removePrivateData(o,root))return ERROR_ACCESS_DENIED;
         return unregisterUninstall(o)?0:ERROR_ACCESS_DENIED;
     }
     // Self-deletion is deferred until this executable handle is released.
+    // The caller-owned profile is purged only after installed payload cleanup.
+    if(o.purgeUserData&&!removePrivateData(o,root))return ERROR_ACCESS_DENIED;
     if(!scheduleSelfCleanup(root))return ERROR_ACCESS_DENIED;
     return unregisterUninstall(o)?0:ERROR_ACCESS_DENIED;
 }
