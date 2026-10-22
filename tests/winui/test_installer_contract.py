@@ -93,6 +93,36 @@ class InstallerContract(unittest.TestCase):
             before_fixture)
         self.assertIn("raise RuntimeError(",before_fixture)
 
+    def test_complete_removal_requires_explicit_opt_in_and_scoped_profile(self):
+        body=SETUP.read_text(encoding="utf-8")
+        self.assertIn('eq(a,L"/PURGEUSERDATA")',body)
+        self.assertIn("o.purgeUserData&&(!o.uninstall||!o.silent)",body)
+        self.assertIn("config.pszVerificationText=",body)
+        self.assertIn("purge=checked!=FALSE",body)
+        self.assertIn("FOLDERID_LocalAppData",body)
+        self.assertIn("installer-profile-",body)
+        self.assertIn('target.filename()!=L"flyExplorer"',body)
+        self.assertIn("reparsePoint(target)",body)
+        self.assertIn("safeManifestTarget(root,relative)",body)
+        self.assertIn("if(!removeInstalledPayload(root))return ERROR_ACCESS_DENIED",body)
+        self.assertIn("if(!removeShortcuts(o,root))return ERROR_ACCESS_DENIED",body)
+        self.assertIn("ERROR_DIR_NOT_EMPTY",body)
+        tail=body.split("int uninstall(Options o,",1)[1]
+        self.assertLess(tail.index("if(!fs::remove(root,ec)"),
+                        tail.index("if(o.purgeUserData&&!removePrivateData(o,root))"))
+
+    def test_owned_lifecycle_proves_normal_and_purge_modes(self):
+        body=(ROOT/"tests/winui/test_installed_lifecycle.py").read_text(
+            encoding="utf-8")
+        for marker in (
+            "OWNED_INSTALLER_NORMAL_REMOVE_PRESERVES_SETTINGS",
+            "OWNED_INSTALLER_IMPLICIT_PURGE_REJECTED",
+            "OWNED_INSTALLER_UNTRACKED_FILE_BLOCKED_PURGE",
+            "OWNED_INSTALLER_EXPLICIT_PURGE_REMOVES_ONLY_OWNED_DATA",
+        ):
+            self.assertIn(marker,body)
+        self.assertIn("assert unrelated.is_file() and sentinel.is_file()",body)
+
     def test_msbuild_discovery_is_shared_and_not_edition_locked(self):
         resolver=(ROOT/"tools/winui/resolve_msbuild.py").read_text(encoding="utf-8")
         app=(ROOT/"app/winui/build.cmd").read_text(encoding="utf-8-sig")
