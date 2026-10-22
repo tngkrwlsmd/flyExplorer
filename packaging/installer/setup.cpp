@@ -438,10 +438,23 @@ int install(Options o,fs::path const& root){
     if(!registerUninstall(o,root))return ERROR_REGISTRY_CORRUPT;
     return 0;
 }
+bool onlySelfAndManifestRemain(fs::path const& root){
+    std::error_code ec;
+    fs::directory_iterator remaining(root,ec);
+    if(ec)return false;
+    for(auto const& item:remaining){
+        if(reparsePoint(item.path()))return false;
+        const auto name=item.path().filename();
+        if(name!=kUninstaller&&name!=kManifest)return false;
+        if(!item.is_regular_file(ec)||ec)return false;
+    }
+    return true;
+}
 int uninstall(Options o,fs::path const& root){
     if(!o.silent&&!promptUninstall(o.purgeUserData))return ERROR_CANCELLED;
     if(!removeShortcuts(o,root))return ERROR_ACCESS_DENIED;
     if(!removeInstalledPayload(root))return ERROR_ACCESS_DENIED;
+    if(!onlySelfAndManifestRemain(root))return ERROR_DIR_NOT_EMPTY;
     const auto installedUninstaller=root/kUninstaller;
     const auto current=fs::path(selfPath());
     std::error_code ec;
