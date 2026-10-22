@@ -24,6 +24,13 @@ class G01IntegratedStartupContract(unittest.TestCase):
                 self.assertNotEqual("YES",env.get(prohibited),prohibited)
         self.assertIn("startup-integrated",run_checks.GUI_AREAS)
         self.assertNotEqual("all","startup-integrated")
+        baseline_cmd, baseline, _ = run_checks.gui_command(
+            "core","Release",{"FLY_G01_INTEGRATED_STARTUP_ONLY":"YES"})
+        self.assertEqual("test_shell_gui.py",Path(baseline_cmd[-1]).name)
+        self.assertNotIn("FLY_G01_INTEGRATED_STARTUP_ONLY",baseline)
+        runner=(ROOT/"tools/winui/run_checks.py").read_text("utf-8")
+        self.assertIn("G01_INTEGRATED_STARTUP_GUI_PASS=True",runner)
+        self.assertIn("G01_INTEGRATED_STARTUP_MARKER_MISSING",runner)
 
     def test_startup_only_waits_for_actual_left_fixture_before_exiting(self):
         harness=(ROOT/"tests/winui/test_shell_gui.py").read_text("utf-8")
