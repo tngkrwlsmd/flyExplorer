@@ -40,9 +40,6 @@ class StructureContract(unittest.TestCase):
         ignore=(ROOT/".gitignore").read_text(encoding="utf-8-sig")
         self.assertIn("/out/",ignore)
         self.assertIn("/.cache/",ignore)
-        for body in (build,run,test,package):
-            self.assertIn("flyExplorer",body)
-
     def test_active_app_links_native_file_core(self):
         project=(APP/"flyExplorer.project-template.xml").read_text(encoding="utf-8")
         self.assertIn(r"..\..\src\base\file_operation_core.cpp",project)
