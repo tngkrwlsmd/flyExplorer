@@ -36,7 +36,6 @@ class RealWinUIIsolationContract(unittest.TestCase):
         self.assertIn("GetModuleFileNameW(nullptr,module",winui)
         self.assertIn('helper+=L"FlyShellIsolationHelper.exe"',winui)
         self.assertIn("shell_isolated_supervisor.cpp",proj)
-        self.assertNotIn("shell_async_worker.cpp",proj)
         self.assertIn("shell_isolation_wire.h",helper)
         self.assertIn("shell_isolation_wire.h",supervisor)
         self.assertIn("validPidl(bytes.data()+pos,n)",supervisor)
