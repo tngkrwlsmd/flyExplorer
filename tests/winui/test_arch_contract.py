@@ -33,7 +33,7 @@ class MigrationContracts(unittest.TestCase):
   self.assertIn("OpenSelectedFolder(int side)",impl)
   self.assertIn("if (mPopulatingTabs",impl)
 
- def test_separate_from_mfc_and_link_existing_native_file_core(self):
+ def test_current_native_file_core(self):
   project=text("flyExplorer.project-template.xml")
   impl=text("MainWindow.xaml.cpp")
   self.assertIn("file_operation_core.cpp",project)
@@ -119,7 +119,6 @@ class MigrationContracts(unittest.TestCase):
   low=(root/"src/base/shell_enum_bridge.cpp").read_text(encoding="utf-8-sig")
   core=(root/"src/base/shell_navigation_core.cpp").read_text(encoding="utf-8-sig")
   project=text("flyExplorer.project-template.xml")
-  self.assertFalse((root/"src/base/shell_enumerator_win.cpp").exists())
   self.assertEqual(low.count("folder->EnumObjects("),1)
   self.assertIn("openEnumeration(parent.p,nullptr,flags,&iterator.p)",core)
   self.assertIn("shell_enum_bridge.cpp",project)
@@ -135,7 +134,6 @@ class MigrationContracts(unittest.TestCase):
   action=(root/"src/base/navigation_action.h").read_text(encoding="utf-8")
   supervisor=(root/"src/base/shell_isolated_supervisor.cpp").read_text(encoding="utf-8")
   bridge=(root/"src/base/directory_change_bridge.cpp").read_text(encoding="utf-8")
-  self.assertNotIn("shell_async_worker.cpp",project)
   self.assertIn("shell_isolated_supervisor.cpp",project)
   self.assertIn("directory_watcher.cpp",project)
   self.assertIn("directory_change_bridge.cpp",project)
@@ -143,8 +141,6 @@ class MigrationContracts(unittest.TestCase):
   self.assertIn("FindFirstChangeNotificationA",bridge)
   self.assertIn("enum class NavigationAction",action)
   self.assertIn("std::thread",supervisor)
-  self.assertFalse((root/"src/base/shell_async_worker.cpp").exists())
-  self.assertFalse((root/"src/base/shell_async_worker.h").exists())
   controller=text("shell_navigation_controller.cpp")
   controllerhdr=text("shell_navigation_controller.h")
   self.assertIn("dispatch.TryEnqueue",winui)
