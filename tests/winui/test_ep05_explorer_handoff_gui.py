@@ -202,22 +202,38 @@ def run(*,win,element,focus,eventually,left,right,owned_pid):
                    "owned Explorer file-selection window did not close", 8)
         verified.remove(first)
         before_folder = set(explorer_windows())
+        # The left pane is dense and the last visible row can cover its
+        # bottom. Use the synthetic right pane and verify the point is
+        # outside every ListViewItem, not an inferred "blank" offset.
         focus()
-        view = element("LeftFiles").wrapper_object()
-        rect = view.rectangle()
-        assert rect.height() >= 280 and rect.width() >= 280
-        # Rows occupy the top of the fixture list; bottom-center is a
-        # blank region. Trigger the actual WinUI RightTapped background.
-        view.click_input(button="right",
-                         coords=(rect.width() // 2, rect.height() - 20))
+        view = element("RightFiles").wrapper_object()
+        area = view.rectangle()
+        assert area.height() >= 100 and area.width() >= 180
+        rows = [peer.rectangle() for peer in view.descendants()
+                if peer.element_info.control_type == "ListItem"]
+        candidates = [
+            (area.left + area.width() // 2, area.bottom - gap)
+            for gap in (25, 48, 75, 110, 145)
+            if gap < area.height() - 15
+        ]
+        def blank(point):
+            x,y = point
+            return (area.left+12 < x < area.right-12 and
+                    area.top+12 < y < area.bottom-12 and
+                    all(not (rect.left<=x<rect.right and
+                             rect.top<=y<rect.bottom) for rect in rows))
+        point = next((point for point in candidates if blank(point)),None)
+        assert point is not None, (
+            "No verified blank point in test-owned RightFiles; refusing click")
+        mouse.click(button="right",coords=point)
         menu_diagnostic("Windows 탐색기에서 현재 폴더 열기")
         menu_click("Windows 탐색기에서 현재 폴더 열기")
         eventually(lambda: "Windows 탐색기에서 현재 폴더를 열었습니다" in
                    element("StatusText").window_text(),
                    "native Explorer folder handoff failed", 14)
         second = eventually(lambda: find_owned_explorer(
-            before_folder, "복사본.txt"),
-            "no new Explorer window displayed the owned folder", 16)
+            before_folder, "자료.txt"),
+            "no new Explorer window displayed the owned right folder", 16)
         assert second not in baseline and second in verified
         print("EP05_NATIVE_EXPLORER_OPENED_OWNED_FOLDER=PASS", flush=True)
         assert payload.read_bytes() == initial

@@ -1,3 +1,22 @@
+# flyExplorer 작업 인계 — 2026-10-22 EP05 파일 위임 PASS, 폴더 빈 영역 보정
+
+## 2026-10-22 — 파일 선택 위임의 실제 Windows GUI PASS
+
+- 제품 `9889a5c8a1daae397f0a9f564115ed1a284d975a` [39708107790](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39708107790)
+  보관 GUI 로그에서 소유 파일의 native Explorer 선택 위임
+  PASS. 새로운 Explorer 창 및 소유 항목 실제 표시 확인.
+  앱 exit 0, 원래 설정 6개 불변 및 테스트 파일 정리 PASS.
+- 파일 목록이 많은 왼쪽 패널의 하단은 빈 공간이 아니라
+  ListViewItem이었으므로, 폴더 배경 메뉴 우클릭이 아니라
+  파일 메뉴를 다시 연 원인으로 확인했다.
+- 항목 수가 적은 오른쪽 소유 패널에서 모든 항목의 실제
+  화면 사각형과 교차하지 않는 빈 좌표를 계산한 후에만
+  우클릭하도록 변경했다. 이어 오른쪽 소유 파일 `자료.txt`
+  를 새 native Explorer 창에서 확인한다.
+- **새 검사 미실행**. 정확한 SHA Windows GUI 수용 전에는
+  ZIP 원본을 최종 삭제하지 않는다. G01 미해결,
+  G03-G05 제외, G07 중단 유지.
+
 # flyExplorer 작업 인계 — 2026-10-22 EP05 화면 밖 파일 행 스크롤 복원
 
 ## 2026-10-22 — EP05 실측 결과에서 대상 행이 ListView 밖에 존재

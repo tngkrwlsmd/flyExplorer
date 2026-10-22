@@ -1,3 +1,24 @@
+# flyExplorer current status — 2026-10-22 EP05 file handoff PASS; background test corrected
+
+## 2026-10-22 — first native file handoff PASS, folder background test still pending
+
+- Exact previous SHA `9889a5c8a1daae397f0a9f564115ed1a284d975a`, Windows CI
+  [39708107790](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39708107790):
+  source, Release and focused GUI PASS. Archived synthetic GUI log
+  confirms `EP05_NATIVE_EXPLORER_SELECTED_OWNED_FILE=PASS`:
+  new native Explorer HWND displayed selected owned file and was closed.
+- The second click hit a row in the dense left list, showing the
+  file selection menu rather than the background folder menu. It
+  did NOT invoke Explorer folder handoff and is not evidence of an
+  OS API failure.
+- Changed only the EP05 test: use the synthetic right pane and find
+  a coordinate strictly within the pane and outside all row bounds;
+  fail without clicking if none exists. Check the new Explorer HWND
+  for the owned right fixture `자료.txt`.
+- **NOT TESTED:** this change's source/Release/GUI and folder OS
+  delegation. Original ZIP core retained, G01 open, G03-G05
+  excluded and G07 stopped.
+
 # flyExplorer current status — 2026-10-22 EP05 clipped test row scroll fix
 
 ## 2026-10-22 — EP05 GUI found synthetic row outside the viewport
