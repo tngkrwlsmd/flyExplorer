@@ -55,7 +55,7 @@ Historical migration reports and legacy HTML Help are no longer kept in the
 working tree; Git history is their recovery source.
 
 See docs/development/CURRENT_STATUS.md for revision-scoped acceptance evidence
-and open release gates. Since 2026-10-10, flyExplorer no longer owns a
+and remaining private-use functional gaps. Since 2026-10-10, flyExplorer no longer owns a
 self-hosted Windows Runner, control/remote-shell branch or Windows Actions
 workflows. Normal main pushes do not trigger Windows acceptance.
 
@@ -73,7 +73,4 @@ Git example: prefer verified logical units directly on main when safe and
 permitted, using short-lived work branches only when required. Preserve
 evidence/remote-windows as a historical evidence archive.
 
-License
--------
-
-See LICENSE and CREDITS.
+Personal development only; no public-release or distribution workflow is planned.
