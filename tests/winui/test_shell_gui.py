@@ -9,6 +9,7 @@ from PIL import ImageGrab
 from profile_guard import (assert_legacy_profile_unchanged, present_count,
                            snapshot_legacy_profile)
 from gui_failure_evidence import capture_failure
+from owned_process_dump import capture_owned_dump
 
 # Read-only original user profile sentinel: the preview has NO permission
 # to use the legacy product's real profile or mutate its settings.
@@ -760,6 +761,10 @@ finally:
   if hwnd:u.PostMessageW(hwnd,0x10,0,0)
   try:p.wait(timeout=13)
   except subprocess.TimeoutExpired:
+   # G01: preserve a bounded stack/context from this exact owned process
+   # before terminating it; capture errors must not mask the shutdown hang.
+   evidence=capture_owned_dump(p, EXE, owned / "shutdown-evidence")
+   print("OWNED_SHELL_SHUTDOWN_DUMP",evidence,flush=True)
    p.terminate();p.wait(timeout=5)
    raise RuntimeError("owned WinUI3 shell did not close normally")
  print("OWNED_WINUI_SHELL_EXIT",p.returncode if p else None,flush=True)

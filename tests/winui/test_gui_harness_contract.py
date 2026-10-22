@@ -195,6 +195,21 @@ class GuiHarnessStaticContract(unittest.TestCase):
         self.assertIn('eventually(horizontal_resize_cursor,', gui)
         self.assertIn('SIX_ORIGINAL_MFC_SETTINGS_IDENTICAL', gui)
 
+    def test_integrated_shell_gui_captures_owned_shutdown_stack_on_timeout(self):
+        gui = (TESTS / "test_shell_gui.py").read_text(encoding="utf-8")
+        self.assertIn("from owned_process_dump import capture_owned_dump", gui)
+        self.assertIn('owned / "shutdown-evidence"', gui)
+        self.assertIn('"OWNED_SHELL_SHUTDOWN_DUMP"', gui)
+        timeout_body = gui.split("except subprocess.TimeoutExpired:", 1)[1].split(
+            'raise RuntimeError("owned WinUI3 shell did not close normally")', 1
+        )[0]
+        self.assertLess(
+            timeout_body.index("capture_owned_dump(p, EXE,"),
+            timeout_body.index("p.terminate()"),
+        )
+        self.assertIn("p.wait(timeout=5)", timeout_body)
+        self.assertIn('assert p and p.returncode==0', gui)
+
     def test_winui_python_sources_parse(self):
         failures = []
         paths = list(TESTS.glob("*.py")) + list(TOOLS.glob("*.py"))
