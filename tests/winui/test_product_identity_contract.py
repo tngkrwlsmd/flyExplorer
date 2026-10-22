@@ -34,6 +34,8 @@ class ProductIdentityContract(unittest.TestCase):
                       "InternalName","OriginalFilename","ProductVersion",
                       "FileVersion","LegalCopyright"):
             self.assertIn(token,resource)
+        self.assertIn('FLYEXPLORER_COMPANY_NAME "flyExplorer"',version)
+        self.assertIn('FLYEXPLORER_LEGAL_COPYRIGHT ""',version)
         self.assertTrue((APP/"Assets/flyExplorer.ico").is_file())
 
     def test_current_product_paths_have_no_retired_identity(self):
