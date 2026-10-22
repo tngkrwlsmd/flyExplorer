@@ -50,10 +50,6 @@ Canonical layout
 Release output is out\winui\Release\flyExplorer.exe. Do not copy the EXE
 alone; sibling WinUI resources and FlyShellIsolationHelper.exe are required.
 
-The retired MFC product is recoverable only from Git revision cbffb48.
-Historical migration reports and legacy HTML Help are no longer kept in the
-working tree; Git history is their recovery source.
-
 See docs/development/CURRENT_STATUS.md for revision-scoped acceptance evidence
 and remaining private-use functional gaps. Since 2026-10-10, flyExplorer no longer owns a
 self-hosted Windows Runner, control/remote-shell branch or Windows Actions
