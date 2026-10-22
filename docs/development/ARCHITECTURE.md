@@ -107,13 +107,12 @@ selection/folder Explorer handoffs and cancellation remain unchanged.
 The source-removal commit `79b039453de5e56677e3f57f170ffc8817e1890f`
 has **Windows source-contract, Release-build and functional-GUI acceptance**
 from [central CI #39728188652](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39728188652).
-This is not a new standalone pixel/visual or public-release acceptance.
-The Python standard-library-based deterministic
-`packaging/source_bundle.py` ZIP generator is a separate release/source
-delivery requirement and remains intact. Historical exact-release provenance,
-third-party notices and license-gate records must not be retroactively
-rewritten. A future Release package must regenerate exact-SHA binary/source
-provenance before distribution.
+This is not a new standalone pixel/visual acceptance. The public
+source-bundle and publication-identity scripts were retired for private
+personal development on 2026-10-22, independently of the F08 product
+ZIP-engine removal. Preserve actual inherited source copyrights and
+third-party dependency notices; the local private installer and runtime
+provenance/safe uninstall remain supported.
 
 Regular-document activation belongs to `app/winui/file_open_controller.h`.
 It owns one asynchronous Windows StorageFile/Launcher request, deadline and
