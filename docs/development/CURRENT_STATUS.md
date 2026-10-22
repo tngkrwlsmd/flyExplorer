@@ -1,3 +1,28 @@
+# flyExplorer current status — 2026-10-22 G01 owned shutdown evidence hardening
+
+- On exact source SHA `c31e9e7ff1a38dc363b90458fe2b83de7abea55a`,
+  the integrated owned WinUI GUI harness now attempts an existing bounded
+  caller-owned process mini-dump **before** terminating on its 13-second
+  application-close timeout. Evidence is saved only under the disposable
+  test-owned `logs/phase6-winui/shell-owned-*/shutdown-evidence` path.
+  The original nonzero shutdown failure is still raised even when dump
+  capture fails; normal GUI paths and C++ product sources are unchanged.
+- [Central Windows source CI #39730903166](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39730903166)
+  reports runner-health, policy and source contracts **PASS**, exit 0,
+  against this exact harness-only SHA. This `source` scope **does not**
+  qualify as a new Release build, functional GUI, or visual acceptance.
+- G01's earlier intermittent process-exit hang did not reproduce in this
+  source-only test. Its root cause remains **OPEN**; obtain an actual
+  owned app dump and symbolized native threads if it recurs. Do not
+  invent a shutdown fix, replay G03-G05 user exclusions or restart
+  the user-stopped G07 test.
+- Prior validated product cleanup SHA `79b039453de5e56677e3f57f170ffc8817e1890f`
+  retains [Windows source/Release/functional GUI acceptance #39728188652](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39728188652).
+  No package, installer, signing or independent pixel acceptance is inferred
+  from the new harness-only source commit.
+
+---
+
 # flyExplorer current status — 2026-10-22 P1 inactive F08 source cleanup Windows accepted
 
 - Preserved P0 Windows native Explorer handoff acceptance: exact product

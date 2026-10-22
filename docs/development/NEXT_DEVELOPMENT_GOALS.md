@@ -16,6 +16,21 @@ Windows 11 탐색기 기능 호환의 구체적인 개발 계약·관련 파일�
 점검·출시 차단 조건으로 우회하여 다시 넣지 않는다. 사용자가 새로 요청하지 않는 한
 이 세 항목의 실험·환경 구성·원격 실행·개선 제안은 하지 않는다.
 
+## 2026-10-22 — G01 소유 WinUI 종료 실패 진단 경로 보강 (실제 재발 미확인)
+
+- `c31e9e7ff1a38dc363b90458fe2b83de7abea55a`에서 통합 GUI 테스트가
+  소유 WinUI 프로세스의 종료 제한 시간을 초과하면 기존
+  `owned_process_dump.py`로 정확한 소유 Popen의 bounded native
+  stack/context 덤프를 먼저 기록한 뒤 소유 프로세스를 정리하도록 보강.
+  일반 실행·제품 C++·세션 복원 알고리즘은 변경하지 않았다.
+- 새 회귀 계약은 덤프 수집이 강제 종료보다 먼저 실행되는지 확인한다.
+  [Windows 중앙 소스 CI #39730903166](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39730903166)
+  는 runner-health·policy·source 계약 PASS, 종료 0.
+  **이번 SHA의 새 Release/GUI/시각 수용은 아님.**
+- G01 근본 원인은 여전히 미확정. 실제 잔류가 재발했을 때 소유 덤프와
+  심볼 스택으로 원인 경계를 분석한다. 이유 없는 재실행이나 추측한
+  종료·복원 제품 수정은 보류한다. G03~G05 사용자 제외, G07 중단 유지.
+
 ## 2026-10-22 — P1 비활성 F08 자체 ZIP 소스·테스트 정리
 
 - EP05의 실측 수용 기준은 제품 정확한 SHA `1a5aece2df3fe9a6b548a511e949a62469d107d1` 및 중앙 Windows
