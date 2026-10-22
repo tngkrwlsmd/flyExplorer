@@ -169,8 +169,8 @@ def _safe_startup_samples(samples):
         address = row.get("address")
         safe.append({
             "elapsed_bucket": bucket,
-            "status": status if status in _STARTUP_STATUSES else "other",
-            "address": address if address in _STARTUP_ADDRESSES else "other",
+            "status": status if isinstance(status, str) and status in _STARTUP_STATUSES else "other",
+            "address": address if isinstance(address, str) and address in _STARTUP_ADDRESSES else "other",
         })
     return safe
 
