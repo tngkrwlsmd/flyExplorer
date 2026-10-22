@@ -6,10 +6,6 @@ The canonical product on main is the C++/WinRT WinUI 3 application under
 app/winui. Shared UI-independent code is under src/base; tests are under
 tests/winui; canonical orchestration is tools/winui/run_checks.py.
 
-The former MFC product is retired from the current checkout and recoverable
-only from Git revision cbffb48. Do not recreate a persistent MFC/Phase5 tree on
-main.
-
 Higher-priority runtime/user instructions override this file. The vendored
 .agent-policy core is upstream-managed generic policy from
 tngkrwlsmd/universal-agent-docs; update that core atomically rather than
@@ -42,11 +38,9 @@ The user authorizes testing/builds when justified by the changed function, but *
 flyExplorer is now developed for **private personal use**, not public distribution.
 Signing, marketplace submission, public releases, public-source delivery and
 rightsholder clearance for publication are not active project goals.
-Uncompiled old MFC-era source files were retired on 2026-10-22 and the only
-live enum dependency was independently replaced. Do not retain old files just
-for history. However actual licenses/notices for still-used source or NuGet
-components remain necessary; removing files is not itself a license audit or
-a legal finding about possible derivation of active code.
+Do not restore discontinued source or keep history-only utilities in the
+active tree. Maintain the current application, its own contracts and actual
+third-party NuGet and asset notices.
 
 ## Codex 작업 범위와 사용량 절약
 
