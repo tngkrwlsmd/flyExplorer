@@ -27,6 +27,25 @@ not what counts as accepted; do not claim those gates passed or silently run
 them through another workflow. Do not restart user-stopped G07 or excluded
 G03/G04/G05 checks.
 
+## User-directed incremental validation rule (2026-10-22)
+
+The user authorizes testing/builds when justified by the changed function, but **not unrelated reruns**. If E changes in accepted A/B/C/D/E, validate E and only genuine dependencies; reuse A-D evidence. No automatic all-source/full-GUI/clean package gate.
+
+- Diff-classify first: documentation-only review; Python/harness changes use affected suite; one UI/feature change uses its product-source area and, when required, one focused owned GUI scenario.
+- Build incrementally with verified compatible retained intermediates, compiling only affected targets and dependencies. Reuse unchanged exact runtime. A clean build requires identified missing/untrustworthy cache or cross-cutting impact.
+- Central 'release' executes policy, all-source and Release build; 'gui' also runs all GUI. They are NOT focused validation and must not be the default for a one-feature change.
+- Do not retest unchanged features or package, installer lifecycle, Debug+Release and unrelated system integration by default. Escalate only for evidence of shared ABI, dependency or integration impact, a focused failure or explicit user request; explain why.
+- Always preserve safety/data-integrity gates, exact-SHA evidence, and distinguish *not re-tested* from PASS. G03/G04/G05 remain excluded; G07 remains stopped.
+
+## Personal-use product direction (2026-10-22)
+
+flyExplorer is now developed for **private personal use**, not public distribution.
+Signing, marketplace submission, public releases, public-source delivery and
+rightsholder clearance for publication are not active project goals.
+Existing inherited or third-party source copyrights, grants, notices and
+attributions remain unchanged: personal use does not justify erasing them or
+make a legal finding that earlier authors are unrelated to still-retained code.
+
 ## Codex 작업 범위와 사용량 절약
 
 Codex 사용량을 절약하면서 요청된 변경을 안전하게 완료한다. 이 절은
