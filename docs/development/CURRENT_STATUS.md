@@ -1,3 +1,41 @@
+# G01 startup failure-only route sampling — 2026-10-23
+
+- **Purpose:** classify an intermittent startup-left-pane failure without
+  guessing at a Shell implementation fix, adding retries, or increasing
+  the native helper 4.5-second-per-attempt and GUI 18-second deadlines.
+- **Changed only the G01-owned GUI test/evidence harness:**
+  `tests/winui/test_shell_gui.py` samples only bounded
+  `elapsed_bucket` (2-second bins), address route
+  `empty/owned-left/other` and fixed Shell status category while the
+  **existing** startup condition is polled. It keeps 16 transitions at
+  most (first three plus recent ones) in memory.
+  `tests/winui/gui_failure_evidence.py` serializes only allowlisted
+  fixed codes into `panes.json/Startup/sampled_transitions` when that
+  **exact** startup assertion fails. Other failures never receive the
+  timeline. Arbitrary status strings, user paths and raw UIA text are
+  not logged by this feature.
+- **Exact source test SHA:**
+  `5c1eec5428121b4a8d1655222ead6ce616dbbd1a`.
+  [Windows run #39870020233](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39870020233)
+  showed **3/3 focused evidence source-contract methods PASS**.
+  Its final AST check command failed because a Windows PowerShell
+  command-line quoting bug stripped the Python encoding string.
+  Corrected **AST-only** invocation
+  [Windows run #39870209119](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39870209119)
+  showed `FLY_G01_STARTUP_POLL_AST=PASS`, correct exact checkout, no
+  native build or GUI and clean scoped scratch checkout retirement.
+- **State:** G01 remains **OPEN**: the original failed
+  [integrated run #39732505243](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39732505243)
+  predates the timeline and cannot retroactively be classified.
+  No actual recurring left-pane failure or shutdown hang was
+  reproduced, and no new binary has been built. On a genuinely
+  justified same-scenario recurrence, compare the new categorical
+  state transitions to the active native request route before changing
+  implementation. Avoid blanket GUI loops. G03/G04/G05 excluded;
+  G07 stopped.
+
+---
+
 # flyExplorer current development status — 2026-10-23
 
 ## Product and source boundary
