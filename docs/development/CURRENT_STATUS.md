@@ -1,3 +1,56 @@
+# flyExplorer current status — 2026-10-22 disk cleanup + lossless compressed installer Windows PASS
+
+- Source `3219159c568933f5d09d0546a9a025557bfebe22` changed only
+  `packaging/package.py`, native installer `setup.cpp` and compression
+  contracts: staged files stay identical, but `Cabinet.dll` XPRESS-HUFF
+  compresses 320 of 326 embedded setup resources. The installer decodes
+  each one and checks exact expected length before writing. Source ZIP
+  Git tree `90e09954e125a36baf0a7f8382ff14fd00e25fdf` matches
+  GitHub's exact commit tree.
+- An isolated interactive Windows desktop checkout passed **11/11** native
+  compression + installer contract tests and a fresh canonical Release
+  `fly.bat package` build. Runtime provenance **PASS** with 305 files
+  (17 product, 288 matched NuGet). Raw payload resources 124,547,417
+  bytes; compressed resource storage 54,900,188 bytes.
+  Setup size dropped **124,933,120 -> 55,290,368 bytes (55.7% smaller)**
+  with no deletion of runtime DLLs.
+- Real `/TESTROOT` installer lifecycle again exited **0** with exact
+  compressed setup and runtime-file SHA provenance PASS: app launch,
+  owned navigation, repair, simulated update/rollback, normal uninstall
+  preserving settings, explicit full uninstall, unrelated data retention
+  and installed-uninstaller residual-file refusal/retry. Final setup
+  SHA-256 `fd3e5303df3eeba8eabb246df38ee0d123b400b328bf59b29c9419721428a9ae`.
+  Exact 543-file source ZIP SHA-256
+  `a9c4bf37eff120424510b25354362f8eafaa2fed0464b2869dfac4af39284b7b`.
+  Runtime manifest SHA-256
+  `158864c3e79fbfe156607029451be217eb3bc592d7bed3f16a54fca7db4d7359`.
+  `release_identity.py --write/--check` **PASS**.
+- The user-owned validation clones `flyExplorer-installer-owned-76559b0f`,
+  `flyExplorer-uninstall-owned-4b3ef3bc` and
+  `flyExplorer-uninstall-final-owned-266a271f` were deleted after
+  preserving/verifying release assets. The fresh optimized checkout's
+  generated NuGet cache, object/runtime output and logs were removed;
+  the immutable matching source ZIP remains under its
+  `out/release/` directory because its move was blocked. The setup
+  and release identity files are at `C:\dev\flyExplorer-release-3219159c`.
+  Superseded private setup artifacts were retired. Verified C: free
+  space rose from **28.2 GiB to 38.17 GiB** (~10 GiB reclaimed).
+- The SYSTEM-owned central CI manager's dry-run reported an
+  independent **3,572,516,085-byte** archive-less private package audit
+  workspace `1874061b033849999a89af14af7194bb` as
+  `PROTECTED: missing-request-metadata`; the stock guard MUST NOT
+  delete it. The failed preview workflow itself made no deletion.
+  This remaining protected workspace requires separate policy-compliant
+  identity/evidence review; do not invent a central-CI request.json or
+  recursively wipe ProgramData to suppress this safeguard.
+- The optimized setup is private and **unsigned**. Installation size
+  on disk remains approximately the same self-contained WinUI payload
+  (~119 MiB), even though the downloadable setup is much smaller.
+  No public release, signing, or clean-machine HKLM acceptance is
+  implied. G01 root cause OPEN; G03-G05 excluded and G07 stopped.
+
+---
+
 # flyExplorer current status — 2026-10-22 explicit full uninstall implementation and Windows test acceptance
 
 - Exact source SHA `266a271f70da86da8be2bda0607ba29195cb8be6` adds

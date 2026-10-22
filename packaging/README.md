@@ -30,6 +30,17 @@ is behaviorally unchanged.
 `out\winui\Release` runtime set and fails closed if the generated provenance
 snapshot does not match that runtime.
 
+The native setup embeds an **XPRESS-HUFF compressed resource payload**
+using the Windows built-in Cabinet Compression API. The canonical
+`out/winui/Release` files and installed payload are not stripped,
+and `PAYLOAD_PROVENANCE.json` still refers to the original raw bytes.
+`packaging/package.py` round-trips each compressed file during packaging,
+and the installer requires exact decompressed byte counts. On the
+2026-10-22 exact Windows SHA `3219159c`, setup size dropped
+from 124,933,120 to 55,290,368 bytes with the same 326 staged files.
+This reduces download/storage size; the unpacked WinUI footprint is
+intentionally unchanged.
+
 The installer project is reproducible: the tracked
 packaging/installer/flyExplorerSetup.project-template.xml is materialized as the
 ignored flyExplorerSetup.vcxproj by packaging/package.py before MSBuild runs.

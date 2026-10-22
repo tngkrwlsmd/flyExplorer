@@ -2,6 +2,31 @@
 
 This document records engineering evidence, not legal advice.
 
+## 2026-10-22 lossless native installer compression / corresponding source
+
+Private source SHA `3219159c568933f5d09d0546a9a025557bfebe22`
+now compresses *only embedded setup resources* with the Windows-built-in
+XPRESS-HUFF Cabinet API and restores **all original runtime bytes** when
+installing. Canonical clean Release build and real Windows-owned
+`/TESTROOT` lifecycle, including runtime provenance, repair, update,
+rollback, normal and complete uninstall and residual-file refusal,
+**PASS**. The unchanged 326-file installed payload has not been slimmed.
+
+The unsigned x64 installer was reduced from **124,933,120 bytes to
+55,290,368 bytes**; setup SHA-256
+`fd3e5303df3eeba8eabb246df38ee0d123b400b328bf59b29c9419721428a9ae`.
+The deterministic exact-source 543-file ZIP SHA-256 is
+`a9c4bf37eff120424510b25354362f8eafaa2fed0464b2869dfac4af39284b7b`,
+and its source Git tree `90e09954e125a36baf0a7f8382ff14fd00e25fdf`
+matches the source commit. The runtime provenance manifest SHA-256 is
+`158864c3e79fbfe156607029451be217eb3bc592d7bed3f16a54fca7db4d7359`.
+`RELEASE_IDENTITY --check` PASS; private artifacts are not published.
+
+The deprecated prior private installer and owned build outputs were
+retired after hash verification. The exact corresponding source ZIP is
+preserved separately from the relocated setup in the small optimized
+test checkout. This is **not signed/public release clearance**.
+
 ## 2026-10-22 optional complete removal and latest unsigned package evidence
 
 Source revision `266a271f70da86da8be2bda0607ba29195cb8be6` introduced
