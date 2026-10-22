@@ -1,4 +1,33 @@
-# flyExplorer current status — 2026-10-22 Windows API type-baseline GUI correction; G01 open
+# flyExplorer current status — 2026-10-22 exact-SHA Release and GUI acceptance; G01 open
+
+## 2026-10-22 — current Release and full owned GUI PASS at exact source SHA
+
+- flyExplorer main `e5c6cbd01f8e0f3a87679349a2956886a01f3405` passed the official central
+  [GUI run 39699010377](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39699010377):
+  runner-health, Python GUI dependencies, policy, product/source contracts,
+  Windows Release build and the functional GUI stage all **PASS**.
+- GUI window-tabs, shortcuts, filter-preset, folder-tree and integrated
+  `gui-all` sub-stages exited 0. The isolated, synthetic GUI log
+  confirmed actual Windows registered TXT type plus OS icon, Unicode
+  row metadata and sorting, multi-file Copy, real Move, Korean collision
+  Cancel without overwrite, KeepBoth without replacing the original,
+  Recycle confirmation canceled without trash mutation, owned session
+  save/restart/restore/clear, and application exit code 0.
+- Original six user profile/config files remained byte-for-byte
+  identical by SHA256, and all synthetic file fixtures were removed.
+  The acceptance log was checked separately using a bounded, read-only
+  archived-evidence command; no real user files were tested or mutated.
+- **Not covered by this pass:** actual file/background context click
+  through the newly delegated Windows Explorer window, sporadic G01
+  shutdown/root-cause closure, signed installer/rollback/public release,
+  final disposal of retained native ZIP engine. The earlier intermittent
+  empty-startup-address failure on 39695119767 remains recorded, although
+  a subsequent core-only GUI probe and this full GUI run passed.
+  G03/G04/G05 remain user-excluded and G07 user-stopped.
+- This is exact-source acceptance for `e5c6cbd01f8e0f3a87679349a2956886a01f3405`; later docs-only
+  updates are not a new runtime build acceptance.
+
+## 2026-10-22 — exact-SHA GUI repeat isolated unsupported type-prefix check
 
 ## 2026-10-22 — exact-SHA GUI repeat isolated unsupported type-prefix check
 
