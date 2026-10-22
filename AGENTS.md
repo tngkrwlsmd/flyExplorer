@@ -42,9 +42,11 @@ The user authorizes testing/builds when justified by the changed function, but *
 flyExplorer is now developed for **private personal use**, not public distribution.
 Signing, marketplace submission, public releases, public-source delivery and
 rightsholder clearance for publication are not active project goals.
-Existing inherited or third-party source copyrights, grants, notices and
-attributions remain unchanged: personal use does not justify erasing them or
-make a legal finding that earlier authors are unrelated to still-retained code.
+Uncompiled old MFC-era source files were retired on 2026-10-22 and the only
+live enum dependency was independently replaced. Do not retain old files just
+for history. However actual licenses/notices for still-used source or NuGet
+components remain necessary; removing files is not itself a license audit or
+a legal finding about possible derivation of active code.
 
 ## Codex 작업 범위와 사용량 절약
 

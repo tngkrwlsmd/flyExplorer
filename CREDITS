@@ -6,6 +6,4 @@ MIT License — Copyright (c) 2020 Microsoft Corporation.
 The private installer retains the corresponding Microsoft Windows App SDK,
 WebView2, and other active NuGet package license/NOTICE material under
 packaging/licenses/nuget/, with exact runtime provenance recorded separately.
-Former MFC-only GFL SDK, libiconv, libxml2, libcurl, historic MFC widgets,
-and orphaned checksum utility notices were retired together with unused code.
 This summary does not replace package-specific licenses or copyright notices.

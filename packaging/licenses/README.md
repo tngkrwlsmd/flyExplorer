@@ -1,4 +1,4 @@
-# Release distribution license inputs
+# Private-use installer dependency notices and payload provenance
 
 This directory contains notice/license inputs plus the last tracked payload
 provenance snapshot.
@@ -19,5 +19,5 @@ The directory also retains:
 - top-level Windows App SDK terms used by that package.
 
 The installer also adds root LICENSE and CREDITS to its licenses directory.
-Notice delivery and provenance evidence do not by themselves clear public
-redistribution.
+This installer is maintained for private personal use; public publication and
+redistribution gates are inactive. Actual active dependency licenses remain.
