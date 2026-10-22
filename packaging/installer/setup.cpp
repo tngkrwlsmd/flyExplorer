@@ -1,6 +1,7 @@
 #include <windows.h>
 #include <commctrl.h>
 #include <shellapi.h>
+#include <compressapi.h>
 #include <shlobj.h>
 #include <shobjidl.h>
 #include <filesystem>
@@ -17,6 +18,7 @@
 #pragma comment(lib, "ole32.lib")
 #pragma comment(lib, "shell32.lib")
 #pragma comment(lib, "advapi32.lib")
+#pragma comment(lib, "cabinet.lib")
 
 namespace fs=std::filesystem;
 namespace {
@@ -137,16 +139,37 @@ bool writeBytes(fs::path const& path,void const* data,DWORD bytes){
 }
 bool extractPayload(fs::path const& root){
     auto module=GetModuleHandleW(nullptr);
+    DECOMPRESSOR_HANDLE decoder=nullptr;
+    bool ok=true;
     for(auto const& file:kPayloadFiles){
-        HRSRC resource=FindResourceW(module,MAKEINTRESOURCEW(file.resourceId),RT_RCDATA);
-        if(!resource)return false;
-        DWORD size=SizeofResource(module,resource);
-        if(size!=file.bytes)return false;
-        HGLOBAL loaded=LoadResource(module,resource);if(!loaded)return false;
-        void* data=LockResource(loaded);if(!data&&size)return false;
-        if(!writeBytes(root/file.relativePath,data,size))return false;
+        HRSRC resource=FindResourceW(
+            module,MAKEINTRESOURCEW(file.resourceId),RT_RCDATA);
+        if(!resource){ok=false;break;}
+        DWORD stored=SizeofResource(module,resource);
+        if(stored!=file.storedBytes){ok=false;break;}
+        HGLOBAL loaded=LoadResource(module,resource);
+        if(!loaded){ok=false;break;}
+        void const* data=LockResource(loaded);
+        if(!data&&stored){ok=false;break;}
+        if(file.compressed){
+            if(!decoder&&!CreateDecompressor(
+                COMPRESS_ALGORITHM_XPRESS_HUFF,nullptr,&decoder)){
+                ok=false;break;
+            }
+            std::vector<BYTE> bytes(file.bytes);
+            SIZE_T decoded=0;
+            if(!Decompress(decoder,data,stored,bytes.data(),
+                           bytes.size(),&decoded)||decoded!=file.bytes||
+               !writeBytes(root/file.relativePath,bytes.data(),file.bytes)){
+                ok=false;break;
+            }
+        }else if(stored!=file.bytes||
+                 !writeBytes(root/file.relativePath,data,stored)){
+            ok=false;break;
+        }
     }
-    return true;
+    if(decoder)CloseDecompressor(decoder);
+    return ok;
 }
 
 std::string utf8(std::wstring const& value){
