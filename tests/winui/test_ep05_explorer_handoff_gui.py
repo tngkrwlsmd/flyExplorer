@@ -57,6 +57,8 @@ def run(*,win,element,focus,eventually,left,right,owned_pid):
     # Handles are eligible for teardown only after the test-owned fixture
     # is visible inside that exact newly created native Explorer window.
     verified = set()
+    parked = []
+    sentinel = right / "EP05-owned-folder-handoff.txt"
 
     def owned_menu(label):
         # WinUI 3 may expose a MenuFlyoutItem as MenuItem, Button or
@@ -202,9 +204,30 @@ def run(*,win,element,focus,eventually,left,right,owned_pid):
                    "owned Explorer file-selection window did not close", 8)
         verified.remove(first)
         before_folder = set(explorer_windows())
-        # The left pane is dense and the last visible row can cover its
-        # bottom. Use the synthetic right pane and verify the point is
-        # outside every ListViewItem, not an inferred "blank" offset.
+        # The right pane may be full-height after M22 operations. Make
+        # a genuinely sparse background using ONLY this disposable
+        # fixture's right folder, then restore every entry in finally.
+        # Staging is outside the watched pane but inside the same owned
+        # temp root; rename is reversible and preserves file bytes.
+        stage = right.parent / "EP05-temporary-parking"
+        assert not stage.exists() and not sentinel.exists()
+        stage.mkdir()
+        for child in list(right.iterdir()):
+            parked_path = stage / child.name
+            assert not parked_path.exists()
+            child.rename(parked_path)
+            parked.append((parked_path, child))
+        sentinel.write_text("EP05 folder delegation sentinel", encoding="utf-8")
+        eventually(lambda: any(
+            sentinel.name in peer.window_text()
+            for peer in element("RightFiles").descendants()
+            if peer.element_info.control_type == "ListItem"),
+            "test-owned sparse right pane did not refresh", 14)
+        eventually(lambda: all(
+            sentinel.name in peer.window_text()
+            for peer in element("RightFiles").descendants()
+            if peer.element_info.control_type == "ListItem"),
+            "old right-pane rows still visible after temporary parking", 12)
         focus()
         view = element("RightFiles").wrapper_object()
         area = view.rectangle()
@@ -232,7 +255,7 @@ def run(*,win,element,focus,eventually,left,right,owned_pid):
                    element("StatusText").window_text(),
                    "native Explorer folder handoff failed", 14)
         second = eventually(lambda: find_owned_explorer(
-            before_folder, "자료.txt"),
+            before_folder, sentinel.name),
             "no new Explorer window displayed the owned right folder", 16)
         assert second not in baseline and second in verified
         print("EP05_NATIVE_EXPLORER_OPENED_OWNED_FOLDER=PASS", flush=True)
@@ -245,3 +268,16 @@ def run(*,win,element,focus,eventually,left,right,owned_pid):
         for handle in tuple(verified):
             if handle not in baseline and handle in explorer_windows():
                 u.PostMessageW(handle, 0x0010, 0, 0)
+        # Always put this owned GUI fixture back before its outer M23
+        # continuation/cleanup, including on any menu or Explorer failure.
+        if sentinel.exists():
+            assert sentinel.read_text(encoding="utf-8") == (
+                "EP05 folder delegation sentinel")
+            sentinel.unlink()
+        for parked_path, original in reversed(parked):
+            assert parked_path.exists() and not original.exists()
+            parked_path.rename(original)
+        stage = right.parent / "EP05-temporary-parking"
+        if stage.exists():
+            assert not any(stage.iterdir())
+            stage.rmdir()

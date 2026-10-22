@@ -1,3 +1,11 @@
+# flyExplorer current status — 2026-10-22 EP05 genuine sparse background fixture correction
+
+## 2026-10-22 — exact-HEAD folder background test could not find blank viewport
+
+- Exact baseline `eaa0a544db2a4f478aad7545ef3441d4c684e386`, Windows [39710899440](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39710899440): source/Release/focused GUI PASS; integrated GUI reached EP05 file handoff, but test refused to click right-pane background because all proposed points intersected ListViewItems. This is a synthetic test geometry issue; native folder handoff was not invoked.
+- The owned EP05 GUI test temporarily parks ONLY the synthetic right-pane fixture's children in its same disposable parent, adds a single sentinel row, waits for the UI to reflect the sparse right folder, verifies a point is outside every visible row, and then clicks the folder background. It restores all parked child paths and removes the sentinel in `finally`, even after GUI failures. Does not touch real files or existing Explorer windows.
+- Source/Release/GUI NOT YET VERIFIED on this revision. EP05 file selection is previously PASS; folder handoff remains pending. G01 OPEN; G03-G05 excluded; G07 stopped.
+
 # flyExplorer current status — 2026-10-22 EP05 file handoff PASS; background test corrected
 
 ## 2026-10-22 — first native file handoff PASS, folder background test still pending

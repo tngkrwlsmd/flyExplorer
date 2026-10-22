@@ -1,3 +1,11 @@
+# flyExplorer 작업 인계 — 2026-10-22 EP05 테스트 소유 폴더를 비워 background 검증
+
+## 2026-10-22 — 빈 영역 없는 오른쪽 패널 테스트의 안전한 보정
+
+- 이전 `eaa0a544db2a4f478aad7545ef3441d4c684e386`에서 [Windows #39710899440](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39710899440) source·Release·집중 GUI PASS. 기존 EP05 파일 선택 위임 수용은 보존. 오른쪽 폴더에 빈 UI 좌표가 없어 보호 검사에서 멈췄다.
+- 테스트가 생성한 오른쪽 폴더 항목만 임시 같은 소유 루트의 `EP05-temporary-parking`에 보존 이동하고 단일 식별 파일을 둔 뒤 빈 UI 영역 우클릭을 실행하게 수정했다. `finally`에서 식별 파일을 제거하고 모든 파일·하위 폴더를 원위치로 복원한다.
+- 현재 폴더 Explorer 위임은 이 변경 이후 실제 검증 대기. G01 미해결, ZIP 원본 삭제 보류, G03-G05 제외 및 G07 중단 유지.
+
 # flyExplorer 작업 인계 — 2026-10-22 EP05 파일 위임 PASS, 폴더 빈 영역 보정
 
 ## 2026-10-22 — 파일 선택 위임의 실제 Windows GUI PASS
