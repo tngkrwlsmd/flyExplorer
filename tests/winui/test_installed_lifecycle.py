@@ -307,6 +307,16 @@ def main():
         assert invalid.returncode!=0
         assert settings.is_file() and reg_exists()
         print("OWNED_INSTALLER_IMPLICIT_PURGE_REJECTED",True,flush=True)
+        # An untracked file must block the uninstall and must not cause
+        # destructive profile deletion as a side effect of that failure.
+        untracked=root/"unmanaged-sentinel.txt"
+        untracked.write_text("user file: preserve",encoding="utf-8")
+        failed=subprocess.run([str(SETUP),"/UNINSTALL","/PURGEUSERDATA","/S",
+                               f"/TESTROOT={root}"],cwd=SETUP.parent,timeout=45)
+        assert failed.returncode!=0
+        assert untracked.is_file() and settings.is_file() and reg_exists()
+        untracked.unlink()
+        print("OWNED_INSTALLER_UNTRACKED_FILE_BLOCKED_PURGE",True,flush=True)
         result=subprocess.run([str(SETUP),"/UNINSTALL","/PURGEUSERDATA","/S",
                                f"/TESTROOT={root}"],cwd=SETUP.parent,timeout=45)
         assert result.returncode==0,result.returncode
