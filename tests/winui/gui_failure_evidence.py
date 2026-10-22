@@ -146,6 +146,35 @@ def _startup_status_category(value):
     return "other"
 
 
+_STARTUP_STATUSES = frozenset({
+    "native-initializing", "loading", "loaded", "recovered",
+    "helper-timeout", "shell-failed", "network-failed", "submit-failed",
+    "native-link-failed", "other", "unavailable",
+})
+_STARTUP_ADDRESSES = frozenset({"empty", "owned-left", "other"})
+
+
+def _safe_startup_samples(samples):
+    """Only fixed codes from a bounded, failure-only owned UIA poll."""
+    if not isinstance(samples, (list, tuple)):
+        return []
+    safe = []
+    for row in samples[-16:]:
+        if not isinstance(row, dict):
+            continue
+        bucket = row.get("elapsed_bucket")
+        if type(bucket) is not int or not (0 <= bucket <= 36):
+            continue
+        status = row.get("status")
+        address = row.get("address")
+        safe.append({
+            "elapsed_bucket": bucket,
+            "status": status if status in _STARTUP_STATUSES else "other",
+            "address": address if address in _STARTUP_ADDRESSES else "other",
+        })
+    return safe
+
+
 def _owned_startup_summary(win, ui: dict, left: Path, right: Path) -> dict:
     """Bounded, failure-only UIA categories for the synthetic startup route.
 
@@ -205,7 +234,8 @@ def _owned_startup_summary(win, ui: dict, left: Path, right: Path) -> dict:
 
 
 def capture_failure(*, base: Path, owned: Path, left: Path, right: Path,
-                    win, hwnd: int | None, pid: int | None, error: Exception):
+                    win, hwnd: int | None, pid: int | None, error: Exception,
+                    startup_samples=None):
     """Return evidence directory. A missing app/UIA peer is an evidence fact."""
     base, owned, left, right = map(Path, (base, owned, left, right))
     if not (_inside(owned, base) and _inside(left, owned)
@@ -235,6 +265,9 @@ def capture_failure(*, base: Path, owned: Path, left: Path, right: Path,
             except Exception as exc:
                 ui["AddressBox"] = {"error_type": type(exc).__name__}
         ui["Startup"] = _owned_startup_summary(win, ui, left, right)
+        if str(error) == "UI-independent native core/helper was not active at startup":
+            ui["Startup"]["sampled_transitions"] = _safe_startup_samples(
+                startup_samples)
         (output / "panes.json").write_text(json.dumps(ui, ensure_ascii=False, indent=2),
                                              encoding="utf-8")
         disk = {"left": {"path": _safe_address(left, owned),
