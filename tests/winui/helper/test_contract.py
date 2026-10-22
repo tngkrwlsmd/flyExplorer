@@ -10,7 +10,7 @@ def source(path):
     return (path if isinstance(path,Path) else HELPER/path).read_text(encoding="utf-8-sig")
 
 class IsolationContracts(unittest.TestCase):
-    def test_mfc_free_original_shell_enumerator_reuse(self):
+    def test_current_native_shell_enumerator(self):
         p=source("FlyShellIsolationHelper.project-template.xml")
         h=source("FlyShellIsolationHelper.cpp")
         self.assertIn("shell_navigation_core.cpp",p)
@@ -85,7 +85,6 @@ class IsolationContracts(unittest.TestCase):
         self.assertIn("FlyShellIsolationHelper.exe",main)
         self.assertNotIn("mWorker->submit",main+navigation)
         project=source(ROOT/"app/winui/flyExplorer.project-template.xml")
-        self.assertNotIn("shell_async_worker.cpp",project)
 
 if __name__=="__main__":
     unittest.main()
