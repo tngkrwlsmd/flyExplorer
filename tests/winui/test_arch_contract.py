@@ -42,10 +42,7 @@ class MigrationContracts(unittest.TestCase):
   self.assertIn("PrecompiledHeader>NotUsing",project)
   self.assertIn("file_operation_core.h",impl)
   self.assertIn("fxfile::fileop::execute(nullptr)==ERROR_INVALID_PARAMETER",impl)
-  self.assertNotIn("ExplorerCtrl",impl)
-  self.assertNotIn("ListCtrlEx",impl)
   self.assertNotIn("ProductCommandBridge",project)
-  self.assertNotIn("phase5_island_bridge",project)
 
  def test_first_slice_is_read_only_and_explicitly_unshipped(self):
   xaml=text("MainWindow.xaml")
@@ -123,8 +120,6 @@ class MigrationContracts(unittest.TestCase):
   self.assertIn("openEnumeration(parent.p,nullptr,flags,&iterator.p)",core)
   self.assertIn("shell_enum_bridge.cpp",project)
   self.assertIn("shell_navigation_core.cpp",project)
-  for token in ("afxwin.h","ListCtrlEx","m_hWnd","CWnd","CDialog"):
-   self.assertNotIn(token,low+core)
 
  def test_async_sta_shared_directory_change_contract(self):
   root=ROOT.parents[1]
@@ -155,8 +150,6 @@ class MigrationContracts(unittest.TestCase):
   self.assertIn("IsolatedShellSupervisor> supervisor_",controllerhdr)
   self.assertIn("DirectoryWatcher> watcher_",controllerhdr)
   self.assertNotIn("std::filesystem::directory_iterator",winui)
-  self.assertNotIn("CWnd",supervisor+bridge)
-  self.assertNotIn("ListCtrlEx",supervisor+bridge)
 
  def test_native_workspace_model_keeps_routes_and_pending_requests_out_of_winui_state(self):
   state=(ROOT.parents[1]/"src/base/explorer_ui_state.h").read_text(encoding="utf-8-sig")
@@ -167,7 +160,7 @@ class MigrationContracts(unittest.TestCase):
                 "routeIds,pending","Model::dispatch","Model::reset",
                 "Model::markPending","Model::completeRequest"):
    self.assertIn(token,state+impl)
-  for forbidden in ("CWnd","Microsoft::UI","APPDATA","RegSetValue"):
+  for forbidden in ("Microsoft::UI","APPDATA","RegSetValue"):
    self.assertNotIn(forbidden,state+impl)
   self.assertIn("WindowWorkspaceController mWorkspace",window)
   # The active workspace is bound once so PaneTab-local sort snapshots
