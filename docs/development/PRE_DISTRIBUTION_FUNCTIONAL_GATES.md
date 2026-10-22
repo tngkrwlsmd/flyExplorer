@@ -1,8 +1,10 @@
-# flyExplorer pre-distribution functional gates — updated 2026-10-12
+# flyExplorer historical functional validation checkpoints — updated 2026-10-22
 
-This document records tests and remaining product functionality **before**
-installer, signing, public release or redistribution. An accepted result
-applies only to the tested SHA/binary, environment, procedure and scope.
+This document preserves historically measured functional behavior and remaining
+private-use testing gaps. Former publication, signing and public-release gates
+in dated checkpoint sections below are inactive historical notes, not tasks.
+An accepted result applies only to the tested SHA/binary, environment,
+procedure and scope.
 See `CURRENT_STATUS.md`, `ARCHITECTURE.md`, `VERIFICATION_PROFILE.md`
 and `AGENTS.md`. Later evidence below supersedes older failure checkpoints.
 
