@@ -17,8 +17,8 @@ consumer core; this PROJECT.md remains project-owned across bundle refreshes.
     "build_command": {"value": "build.bat Release", "status": "Confirmed", "evidence": "manual:central registered desktop-a winui-gui profile invokes build.bat Release from verified flyExplorer main checkout"},
     "test_command": {"value": "test.bat source", "status": "Confirmed", "evidence": "manual:central registered desktop-a winui-gui profile invokes test.bat source from verified flyExplorer main checkout"},
     "runtime": {"value": "Windows 11 / Visual Studio 18.x / Python 3.14.x", "status": "Confirmed", "evidence": "manual:central registered Windows CI profile and current build policy"},
-    "deploy_command": {"value": "", "status": "NotApplicable", "evidence": "manual:2026-10-22 user directive: private personal use; no public deployment"},
-    "deploy_target": {"value": "", "status": "NotApplicable", "evidence": "manual:2026-10-22 user directive: no distribution target"}
+    "deploy_command": {"value": "", "status": "Unknown", "evidence": "manual:2026-10-22 user directive: private personal use; no public deployment"},
+    "deploy_target": {"value": "", "status": "Unknown", "evidence": "manual:2026-10-22 user directive: no distribution target"}
   },
   "components": [
     {"name": "winui-app", "path": "app/winui", "responsibility": "C++/WinRT WinUI 3 application"},
