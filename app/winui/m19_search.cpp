@@ -293,6 +293,7 @@ std::uint32_t localDateKey(FILETIME const& value)
 
 bool criteriaMatch(
     WIN32_FIND_DATAW const& fd,bool folderEntry,
+    SearchQuery const& query,
     std::uint64_t minBytes,bool hasMin,
     std::uint64_t maxBytes,bool hasMax,
     std::uint32_t afterDate,std::uint32_t beforeDate)
@@ -526,7 +527,7 @@ SearchResults scanFiles(
 
             bool matched=kindMatches(folderEntry,query.kind)&&
                nameMatch&&extensionMatch&&
-               criteriaMatch(fd,folderEntry,
+               criteriaMatch(fd,folderEntry,query,
                              minBytes,hasMin,maxBytes,hasMax,
                              afterDate,beforeDate);
             if(matched&&!query.contentTerm.empty()){
