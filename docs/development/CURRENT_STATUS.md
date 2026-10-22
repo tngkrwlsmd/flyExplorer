@@ -1,3 +1,49 @@
+# flyExplorer current status — 2026-10-22 original worktree build/cache retirement and source-size audit
+
+- Windows developer worktree `C:\dev\flyExplorer` was checked at its
+  existing, older exact SHA `387efa622f6a9ce6685e3bffb98299df0503de3c`,
+  `origin=https://github.com/tngkrwlsmd/flyExplorer.git`, with **zero
+  modified tracked files**. No update, reset or source deletion was made.
+- Measured **412 Git-tracked source files totaling 4,540,988 bytes**.
+  Local `.git` occupied 56,708,568 bytes; the apparent project bloat
+  consisted predominantly of ignored `out/` (4,576,335,603 bytes),
+  ignored `.cache/` (1,519,614,169 bytes), and native-test `bin/obj`
+  under `tests/winui/m19,m21,m22,m23` (roughly 130 MiB).
+- On the interactive Windows device, exact ignored `out/` and `.cache/`
+  were removed after verifying Git ownership, unchanged tracked files,
+  absence of build/app processes, and no reparse links or `.keep`
+  holds. The eight known test `bin/obj` directories were separately
+  retired with the same ignored-path/hold constraints.
+  **C: free space improved from 38.19 GiB to 43.99 GiB (~5.80 GiB)**.
+  The separate validated compressed setup and corresponding-source
+  assets were already retained under the distinct release/owned-source
+  paths, not this older developer checkout.
+- This worktree's ignored `logs/` still held ~415,362,949 bytes
+  across ~220,272 files at pre-clean inspection. In particular
+  `logs/m23` contained ~208,704 synthetic fixture files. Historical
+  `logs/remote-evidence` (146,570,373 bytes),
+  `logs/archived-worktree-evidence` and `logs/preserved-user`
+  need explicit evidence retention checks. A guarded attempt to retire
+  `logs/m23` **did not execute** because the Desktop Commander device
+  became offline. These logs are **NOT YET CLEANED**; do not imply they
+  are retired.
+- Mandatory same-run post-validation retirement, release hash preservation,
+  and fail-closed central SYSTEM safeguards were added to
+  `docs/development/AGENT_EFFICIENCY.md`. A proposed automation script
+  for local cleanup was blocked by tool safety review and was **not
+  committed or tested**; mandatory policy guidance is not an enforced
+  automation hook.
+- The separate SYSTEM-owned 3,572,516,085-byte private audit orphan
+  remains `PROTECTED: missing-request-metadata` under the central
+  capacity manager. [control issue #35](https://github.com/tngkrwlsmd/personal-control-plane/issues/35)
+  tracks reviewed retirement. No ProgramData cleanup override was used.
+  Product source/installer semantics remain unchanged by this source
+  audit; exact optimized package and TESTROOT lifecycle acceptance
+  remain at `3219159c568933f5d09d0546a9a025557bfebe22`.
+  G01 OPEN; G03-G05 excluded and G07 stopped.
+
+---
+
 # flyExplorer current status — 2026-10-22 disk cleanup + lossless compressed installer Windows PASS
 
 - Source `3219159c568933f5d09d0546a9a025557bfebe22` changed only
