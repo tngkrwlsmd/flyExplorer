@@ -16,6 +16,19 @@ Windows 11 탐색기 기능 호환의 구체적인 개발 계약·관련 파일�
 점검·출시 차단 조건으로 우회하여 다시 넣지 않는다. 사용자가 새로 요청하지 않는 한
 이 세 항목의 실험·환경 구성·원격 실행·개선 제안은 하지 않는다.
 
+## 2026-10-22 — EP05 Windows 탐색기 위임 P0 수용
+
+- 제품 정확한 SHA `1a5aece2df3fe9a6b548a511e949a62469d107d1`의
+  [Windows GUI #39720631293](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39720631293)
+  에서 정책·소스·Release·통합 GUI PASS.
+  [아카이브 검사 #39721385267](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39721385267)
+  는 **선택 파일 → native Explorer** 및 **현재 폴더 → native Explorer**
+  두 실제 창의 성공·읽기 전용·앱 정상 종료·기존 설정 불변을 확인.
+- P0 EP05 Windows 탐색기 위임은 이 VM/SHA 범위에서 **완료**.
+  P1 ZIP 잔여 코드/테스트/라이선스/빌드 입력 정리는
+  별도 영향 검토 후 진행. G01 간헐 종료 위험 미해결.
+  G03-G05 사용자 제외, G07 중단을 재개하지 않는다.
+
 ## 2026-10-22 — 최신 수용 및 남은 P0/P1 (정확한 SHA)
 
 - `e5c6cbd01f8e0f3a87679349a2956886a01f3405`의 [Windows 중앙 GUI #39699010377](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39699010377):

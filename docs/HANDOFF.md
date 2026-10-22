@@ -1,3 +1,25 @@
+# flyExplorer 작업 인계 — 2026-10-22 P0 Explorer 파일·폴더 위임 수용
+
+## 2026-10-22 — Windows 기본 탐색기 위임 실측 완료
+
+- 제품 SHA `1a5aece2df3fe9a6b548a511e949a62469d107d1`의 중앙 Windows
+  [#39720631293](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39720631293)
+  에서 policy/source/Release 빌드/집중 GUI/통합 GUI까지 PASS.
+  보관 증거 [#39721385267](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39721385267)
+  에서 테스트 소유 선택 파일과 현재 폴더의 별도 Explorer
+  창 위임을 각각 PASS로 확인했다. 두 명령 모두 읽기 전용.
+- 앱 정상 종료 0, 기존 설정 파일 6개 SHA256 동일, 테스트
+  픽스처 제거 PASS. 기존 사용자 Explorer 창은 건드리지 않았다.
+  임시 테스트 파일의 폴더 간 이동은 종료 시 역순 복원했다.
+- P0 Windows Explorer 위임은 **기록된 Windows VM과 정확한
+  제품 SHA 범위에서 완료**. 다른 Windows 버전·타사 제공자
+  수용까지 확대하지 않는다.
+- 이어질 별도 과제는 P1 미사용 ZIP 코어 및 miniz 라이선스/
+  프로젝트 참조/기존 계약 테스트 삭제 영향 조사,
+  P1 G01 간헐 종료 재발 시 네이티브 덤프 분석이다.
+  안전한 검토 없이 ZIP 원본 제거 금지. G03-G05 제외,
+  G07 중단 계속 유지.
+
 # flyExplorer 작업 인계 — 2026-10-22 EP05 테스트 소유 폴더를 비워 background 검증
 
 ## 2026-10-22 — 빈 영역 없는 오른쪽 패널 테스트의 안전한 보정

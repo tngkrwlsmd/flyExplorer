@@ -1,3 +1,35 @@
+# flyExplorer current status — 2026-10-22 native Windows Explorer handoff accepted; G01 open
+
+## 2026-10-22 — both native Explorer handoff paths Windows GUI PASS
+
+- Exact source `1a5aece2df3fe9a6b548a511e949a62469d107d1`, central Windows
+  [39720631293](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39720631293)
+  passed runner, policy, source contracts, Release build and all owned GUI
+  stages (window tabs, shortcuts, filter presets, local folder tree,
+  integrated gui-all).
+- Archived owned [evidence validation 39721385267](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39721385267)
+  independently confirms
+  `EP05_NATIVE_EXPLORER_SELECTED_OWNED_FILE=PASS`,
+  `EP05_NATIVE_EXPLORER_OPENED_OWNED_FOLDER=PASS`,
+  `EP05_NATIVE_EXPLORER_HANDOFF_READ_ONLY=PASS`.
+  The synthetic file and synthetic folder appeared in newly opened real
+  Windows Explorer HWNDs, not pre-existing Explorer windows. The test
+  only closed Explorer HWNDs verified as new and test-owned.
+- The full GUI acceptance additionally records WinUI app exit code 0,
+  SHA256-identical original six user config files, and complete removal
+  of synthetic fixture. The sparse right-pane test stage was reversed
+  in finally before the outer harness continued. No real user content
+  or settings were changed.
+- This closes the explicitly tested P0 Explorer handoff UI/OS path in the
+  recorded Windows VM at this SHA; native Shell behavior on other OS
+  builds and third-party providers is not claimed. It does NOT close
+  sporadic G01 startup/shutdown root cause or approve release/signing.
+  Inactive ZIP source remains for rollback until the separate
+  dependency, license, package and test removal review; those files
+  are not live WinUI menu commands. G03-G05 USER-EXCLUDED, G07 stopped.
+- This documentation-only follow-up does not claim a new binary/runtime
+  acceptance beyond the exact product SHA above.
+
 # flyExplorer current status — 2026-10-22 EP05 genuine sparse background fixture correction
 
 ## 2026-10-22 — exact-HEAD folder background test could not find blank viewport
