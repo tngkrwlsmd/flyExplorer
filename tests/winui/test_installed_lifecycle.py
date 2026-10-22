@@ -214,6 +214,8 @@ def main():
         return
 
     assert SETUP.is_file(),f"missing installer: {SETUP}; run package.bat Release"
+    if reg_exists():
+        raise RuntimeError("refusing to overwrite an existing installer test registry key")
     LOGS.mkdir(parents=True,exist_ok=True)
     token=uuid.uuid4().hex[:10]
     root=LOGS/f"flyExplorer-installer-test-{token}"
