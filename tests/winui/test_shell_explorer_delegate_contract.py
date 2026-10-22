@@ -118,6 +118,8 @@ class WindowsExplorerDelegationContracts(unittest.TestCase):
             'cls.value != "CabinetWClass"',
             'exe == "explorer.exe"',
             "owner.value == owned_pid",
+            'if peer.element_info.control_type not in ("MenuItem", "Button", "Text")',
+            "EP05_OWNED_MENU_UIA",
         ):
             self.assertIn(command,test)
         self.assertIn('if os.environ.get("FLY_EP05_EXPLORER_HANDOFF")=="YES":',harness)

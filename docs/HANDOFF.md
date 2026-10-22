@@ -1,3 +1,19 @@
+# flyExplorer 작업 인계 — 2026-10-22 EP05 첫 메뉴 UIA 탐지 실패 진단
+
+## 2026-10-22 — native Explorer 위임 GUI에서 메뉴 자동화 탐지 실패
+
+- 정확한 제품 SHA `0b05c3fc7e2a8ba35612e4ed5b9d4f60ad6282d8` [중앙 GUI #39702606701](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39702606701)
+  은 정책/소스/Release 및 기존 GUI M22 복사·이동·충돌·휴지통
+  취소까지 PASS. 새 검사에서 소유 WinUI 메뉴 항목을 찾지
+  못했으므로 Windows Explorer의 실제 전달까지는 도달하지 않았다.
+- UIA에서 `MenuFlyoutItem`이 MenuItem/Button/Text 중 어떤
+  형식으로 보이는지, 소유 WinUI 프로세스의 popup 안에
+  메뉴 항목이 남았는지만 검사하는 진단을 추가한다.
+  사용자 Explorer 창은 탐색·클릭·종료하지 않는다.
+- **미검증:** 변경한 자동화, 실제 선택 파일·현재 폴더 위임.
+  앱 구현 변경이나 ZIP 원본 삭제는 아직 보류한다.
+  G01 원인 미확정, G03-G05 제외·G07 중단 유지.
+
 # flyExplorer 작업 인계 — 2026-10-22 EP05 Windows 기본 탐색기 위임 GUI 신규 시험
 
 ## 2026-10-22 — 소유 파일/폴더를 통한 Explorer 위임 수용 추가

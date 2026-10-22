@@ -59,14 +59,40 @@ def run(*,win,element,focus,eventually,left,right,owned_pid):
     verified = set()
 
     def owned_menu(label):
+        # WinUI 3 may expose a MenuFlyoutItem as MenuItem, Button or
+        # its Text peer. The visible name plus owning process is the
+        # contract; no foreign desktop popups may be clicked.
         for top in Desktop(backend="uia").windows():
             if top.element_info.process_id != owned_pid:
                 continue
             for peer in [top, *top.descendants()]:
-                if (peer.element_info.control_type == "MenuItem" and
-                    peer.element_info.name == label):
+                if peer.element_info.control_type not in ("MenuItem", "Button", "Text"):
+                    continue
+                if (peer.element_info.name or "").strip() == label:
                     return peer
         return None
+
+    def menu_diagnostic(label):
+        owned_tops = 0
+        seen = []
+        for top in Desktop(backend="uia").windows():
+            if top.element_info.process_id != owned_pid:
+                continue
+            owned_tops += 1
+            for peer in [top, *top.descendants()]:
+                name = (peer.element_info.name or "").strip()
+                # Print only these fixed, product-owned menu labels,
+                # never user folders, file paths or unrelated UI names.
+                if name == label or name.startswith("Windows 탐색기에서"):
+                    seen.append((peer.element_info.control_type, name))
+        print("EP05_OWNED_MENU_UIA", owned_tops, seen[:12], flush=True)
+        print("EP05_MENU_ANCHOR_STATUS", 
+              "owned-source-selected" if any(
+                  "복사본.txt" in p.window_text()
+                  for p in element("LeftFiles").descendants()
+                  if p.element_info.control_type == "ListItem"
+                  and p.is_selected()) else "source-not-selected",
+              flush=True)
 
     def find_owned_explorer(previous, fixture):
         for handle in set(explorer_windows()) - previous:
@@ -101,6 +127,7 @@ def run(*,win,element,focus,eventually,left,right,owned_pid):
         row = eventually(file_row, "owned source file missing", 12)
         focus()
         row.click_input(button="right")
+        menu_diagnostic("Windows 탐색기에서 선택 열기")
         menu_click("Windows 탐색기에서 선택 열기")
         eventually(lambda: "Windows 탐색기에서 항목을 선택했습니다" in
                    element("StatusText").window_text(),
@@ -127,6 +154,7 @@ def run(*,win,element,focus,eventually,left,right,owned_pid):
         # blank region. Trigger the actual WinUI RightTapped background.
         view.click_input(button="right",
                          coords=(rect.width() // 2, rect.height() - 20))
+        menu_diagnostic("Windows 탐색기에서 현재 폴더 열기")
         menu_click("Windows 탐색기에서 현재 폴더 열기")
         eventually(lambda: "Windows 탐색기에서 현재 폴더를 열었습니다" in
                    element("StatusText").window_text(),

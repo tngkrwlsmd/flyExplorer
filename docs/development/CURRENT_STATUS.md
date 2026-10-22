@@ -1,3 +1,25 @@
+# flyExplorer current status — 2026-10-22 EP05 first real Explorer menu GUI failure
+
+## 2026-10-22 — first EP05 GUI failed before native handoff invocation
+
+- Current main baseline `0b05c3fc7e2a8ba35612e4ed5b9d4f60ad6282d8`, central Windows
+  [39702606701](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39702606701):
+  policy/source/Release build PASS, focused GUI checks PASS and existing
+  integrated M22 Copy/Move/collision/recycle checks PASS. New
+  `test_ep05_explorer_handoff_gui.py` stopped when its automation
+  could not locate `Windows 탐색기에서 선택 열기` in the WinUI
+  owned-process menu. No actual Explorer selection/folder
+  invocation was observed; do NOT claim a native handoff failure
+  or acceptance from that run.
+- Allow the same exact product-owned menu item label when WinUI UIA
+  exposes it as MenuItem/Button/Text, and add bounded diagnostics of
+  only static Explorer menu labels and selected synthetic fixture.
+  No actual app menu code changed. Source and GUI retest pending.
+  Never scan or interact with preexisting user's native Explorer windows.
+- Baseline `e5c6cbd` full GUI success is preserved; the present
+  `0b05c3fc7e2a8ba35612e4ed5b9d4f60ad6282d8` Release pass does not accept the newly added EP05 test.
+  G01 open, G03-G05 excluded, G07 user-stopped.
+
 # flyExplorer current status — 2026-10-22 EP05 native Explorer GUI acceptance added; NOT TESTED
 
 ## 2026-10-22 — add owned Windows Explorer native delegation GUI coverage
