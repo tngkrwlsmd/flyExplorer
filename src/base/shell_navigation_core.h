@@ -11,9 +11,8 @@
 
 namespace fxfile { namespace shellnav {
 
-// Existing ExplorerCtrl/ShellEnumerator passes exactly the native EnumObjects
-// flags and its owner HWND. The new WinUI session uses hwnd=nullptr.
-// No MFC type, UI message pump, global settings, or private window lifetime.
+// Keep the native EnumObjects flags and caller HWND. WinUI passes nullptr
+// when no Shell-owned parent window is required.
 HRESULT openEnumeration(IShellFolder* folder, HWND owner, DWORD flags,
                         IEnumIDList** enumeration) noexcept;
 
