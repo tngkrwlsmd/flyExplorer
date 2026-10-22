@@ -44,10 +44,26 @@ Normal install scope:
 - all-users Start Menu shortcut
 - optional current-user desktop shortcut
 - 64-bit HKLM Add/Remove Programs entry
-- user settings under %LOCALAPPDATA%\flyExplorer are preserved on uninstall
+- ordinary uninstall retains current-user settings under %LOCALAPPDATA%\flyExplorer
+- interactive uninstall offers an **unchecked** opt-in to remove those settings
+  and flyExplorer-owned cache/history/bookmarks as well
+- unattended complete removal requires explicit
+  `flyExplorerUninstall.exe /UNINSTALL /S /PURGEUSERDATA`
+  (normal silent uninstall omits `/PURGEUSERDATA`)
+- full removal targets only the current elevated process user's exact
+  %LOCALAPPDATA%\flyExplorer folder, never other profiles or arbitrary
+  user files. If UAC elevation switches accounts, it is **not** an all-users
+  purge. Pre-existing untracked files inside the installation directory
+  block removal instead of being deleted.
+- an installed uninstaller schedules deletion of its own executable and
+  install manifest after process exit; callers should wait for the root
+  to disappear before interpreting removal as finished. A failed/
+  incomplete operation must be investigated rather than ignored.
 
 /TESTROOT=<owned path> is the bounded validation mode and avoids normal
-Program Files/HKLM mutation.
+Program Files/HKLM mutation. In TESTROOT mode an explicit purge applies
+only to the exact matching synthetic `installer-profile-<token>` data
+directory under the owned test parent, never real user settings.
 
 ## Current product versus historical retained setup — 2026-10-12
 
