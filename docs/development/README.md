@@ -9,7 +9,7 @@ Their exact content remains available through Git history.
 
 - CURRENT_STATUS.md — accepted product state, latest evidence and open gates.
 - NEXT_DEVELOPMENT_GOALS.md — prioritized uncompleted goals, verified design gaps,
-  environment-dependent checks and release prerequisites; planning, not authorization.
+  environment-dependent checks for private use; planning, not authorization.
 - ARCHITECTURE.md — current WinUI/native-core/Shell-isolation architecture.
 - AGENT_EFFICIENCY.md — mandatory bounded tool/build/test strategy.
 - VERIFICATION_PROFILE.md — central CI scopes, failure taxonomy, FAST/STANDARD/FINAL profiles and high-cost fixture policy.
@@ -25,7 +25,6 @@ Their exact content remains available through Git history.
 - WIN11_PARITY_REAUDIT_20261022.md — current Windows 11 Explorer functional/UX
   difference ledger (PX01–PX18); no blanket equivalence claim.
 - UI_VISUAL_RETEST.md — current owned GUI/visual verification workflow.
-- DISTRIBUTION_LICENSE_REVIEW.md — current public-distribution/legal gates.
 
 The root README, AGENTS.md and editable .agent-policy/PROJECT.md are also
 current sources of truth. Current Windows request ownership is documented in
