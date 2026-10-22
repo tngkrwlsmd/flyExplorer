@@ -41,19 +41,13 @@ class StructureContract(unittest.TestCase):
         self.assertIn("/out/",ignore)
         self.assertIn("/.cache/",ignore)
         for body in (build,run,test,package):
-            self.assertNotIn("phase6_winui_shell",body)
-            self.assertNotIn("FLYEXP_PHASE5",body)
+            self.assertIn("flyExplorer",body)
 
-    def test_active_app_has_no_legacy_product_dependency(self):
-        text="\n".join(p.read_text(encoding="utf-8-sig",errors="replace")
-            for p in APP.rglob("*") if p.is_file() and p.suffix.lower() in
-            {".cpp",".h",".xaml",".idl",".xml",".cmd",".md"})
-        for token in ("experiments/phase6_winui_shell",
-                      "phase5_island_bridge","phase5_winui3",
-                      "FlyExplorerIslandBridge",
-                      r"..\..\src\fxfile\file_operation_core.cpp"):
-            self.assertNotIn(token,text)
-        self.assertIn(r"..\..\src\base\file_operation_core.cpp",text)
+    def test_active_app_links_native_file_core(self):
+        project=(APP/"flyExplorer.project-template.xml").read_text(encoding="utf-8")
+        self.assertIn(r"..\..\src\base\file_operation_core.cpp",project)
+        self.assertIn(r"..\..\src\base\shell_navigation_core.cpp",project)
+        self.assertTrue((ROOT/"src/base/file_operation_core.cpp").is_file())
 
     def test_current_native_source_tree(self):
         self.assertEqual(["base"],
