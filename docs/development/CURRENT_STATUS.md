@@ -1,3 +1,31 @@
+# G01 exact-main Windows Release + focused GUI probe — 2026-10-23
+
+- User authorized scoped live Windows verification. Ran **one** registered
+  `desktop-a` central `scope=gui-probe` at exact product SHA
+  `871caab7fb4729da0dffb1b08b56da2cae6b0250`:
+  [central run #39871105711](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39871105711).
+- Direct Windows job evidence: runner-health **PASS** (1,003 ms),
+  GUI dependencies **PASS** (240 ms), Release build **PASS**
+  (197,545 ms), targeted `gui-core-Release` **PASS**
+  (37.1 s, exit 0); `functional-gui-diagnostic` **PASS**
+  (37,547 ms). The central job concluded success, with
+  `NOT_FINAL_ACCEPTANCE=1`.
+- The initial Shell route failure **did not recur in this one focused**
+  startup observation. This is not an integrated `gui-all` acceptance:
+  the historical failing full-profile run used additional owned GUI
+  feature flags. No new failing `Startup/sampled_transitions` exists,
+  and no root cause or intermittent recovery resolution was shown.
+- The central cleanup archived bounded owned evidence, then retired the
+  verified ~3,236,461,965-byte scratch workspace. No current product
+  code or user settings were changed by the probe.
+- Do **not** repeat all GUI scopes merely to seek a green G01 result.
+  If the original startup failure is observed again in an authorized,
+  exact-SHA test-owned integrated scenario, use redacted bounded
+  startup transitions to locate the failed stage. G01 **OPEN**.
+  G03/G04/G05 remain excluded; G07 remains stopped.
+
+---
+
 # G01 startup failure-only route sampling — 2026-10-23
 
 - **Purpose:** classify an intermittent startup-left-pane failure without
