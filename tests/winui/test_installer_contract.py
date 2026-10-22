@@ -82,6 +82,17 @@ class InstallerContract(unittest.TestCase):
         ):
             self.assertIn(token,helper)
 
+    def test_lifecycle_refuses_preexisting_hkcu_test_registration(self):
+        script=(ROOT/"tests/winui/test_installed_lifecycle.py").read_text(
+            encoding="utf-8")
+        main=script.split("def main():",1)[1]
+        before_fixture=main.split("    LOGS.mkdir(",1)[0]
+        self.assertIn("if reg_exists():",before_fixture)
+        self.assertIn(
+            "refusing to overwrite an existing installer test registry key",
+            before_fixture)
+        self.assertIn("raise RuntimeError(",before_fixture)
+
     def test_msbuild_discovery_is_shared_and_not_edition_locked(self):
         resolver=(ROOT/"tools/winui/resolve_msbuild.py").read_text(encoding="utf-8")
         app=(ROOT/"app/winui/build.cmd").read_text(encoding="utf-8-sig")
