@@ -1,11 +1,11 @@
-// MFC-free Win32 directory invalidation bridge.
+// Win32 directory invalidation bridge.
 #pragma once
 #ifndef FXFILE_BASE_DIRECTORY_CHANGE_BRIDGE_H
 #define FXFILE_BASE_DIRECTORY_CHANGE_BRIDGE_H
 #include <windows.h>
 namespace fxfile { namespace directorychange {
 HANDLE open(wchar_t const* directory, bool subtree, DWORD mask) noexcept;
-// Preserve the original legacy x86 Multibyte watcher build contract.
+// ANSI overload for callers passing narrow Windows paths.
 HANDLE open(char const* directory, bool subtree, DWORD mask) noexcept;
 bool rearm(HANDLE watch) noexcept;
 void close(HANDLE watch) noexcept;
