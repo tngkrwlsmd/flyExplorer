@@ -66,6 +66,45 @@ For the same revision/configuration, build once unless the first run was
 inconclusive for an identified reason. Keep full output in ignored local logs;
 surface only exit status plus the first relevant error or concise success.
 
+### Mandatory post-verification disk retirement
+
+A verification is **not finished** when the last test passes: its acceptance
+includes **immediate cleanup of reproducible, test-owned files** in the same
+execution task. Do not defer routine cleanup to a future user request or
+leave a separate 3+ GiB checkout for each successful attempt.
+
+1. Before any build, designate a unique owned workspace and a **separate
+   retained release/evidence location**. Budget space for build, installer,
+   source ZIP and temporary files. Do not build repeatedly in the main
+   development checkout solely to capture diagnostics.
+2. After a successful run, record the exact source SHA, stage exit codes,
+   installer/source SHA-256s and bounded failure-independent status.
+   Verify that the retained release assets are reachable and hash-matched.
+3. **In a finally/teardown stage**, remove only the confirmed owned and
+   reproducible build intermediates, package caches, test bin/obj,
+   throwaway profiles, fixture files and success-only logs. Keep the final
+   installer, its corresponding-source ZIP, identity manifests, any explicit
+   .keep hold and unresolved G01 failure evidence. Preserve failures for
+   diagnosis; never relabel an interrupted cleanup as a successful teardown.
+4. Record pre/post free disk space and which exact generated roots were
+   retired. For local disposable outputs, use the existing
+   `fly.bat clean all` only **after** saving the exact setup/source
+   assets elsewhere. That command deletes `out/` and `.cache/` and
+   therefore **must not** precede release-asset preservation.
+5. Separate local checkout ownership from central SYSTEM workspaces.
+   Central CI removal **must** use reviewed
+   `personal-control-plane` ownership/evidence guards and honor
+   `.keep`, metadata requirements, process references and reparse points.
+   A missing request.json is not authorization to invent one, force-delete
+   ProgramData or bypass the retention manager. Report blocked candidates
+   explicitly and track their approved remediation.
+
+The checked-in C++/XAML/Python source should remain small; diagnose apparent
+project bloat by measuring Git-tracked source vs `.git`, `out`,
+`.cache`, `tests/**/bin|obj` and ignored `logs` separately. Do not
+delete tracked project source, real user data, failure minidumps, or private
+evidence to make the reported folder size look better.
+
 Prefer one start plus one final/blocking read. This applies to GitHub Actions,
 remote Windows tasks and local long-running commands, not only subprocesses.
 Do not poll every few seconds, alternate status/log-tail probes, or repeatedly
