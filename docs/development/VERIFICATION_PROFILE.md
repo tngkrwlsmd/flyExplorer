@@ -59,6 +59,26 @@ harness, or execution condition that explains the failure has materially
 changed. Resume from the earliest invalidated boundary and do not rebuild or
 repackage unchanged product merely because a later harness step failed.
 
+## Focused verification override — 2026-10-22
+
+Validation has been authorized with a strict **feature-local** budget.
+
+| Changed material | Minimal default proof | Unrelated work to omit |
+| --- | --- | --- |
+| Documents or roadmap | Review modified text and links | Builds, GUI, all-source |
+| Python/CI/harness | Syntax and affected contract only | Product suite/native builds |
+| Independent feature behavior | Its product-source area plus one targeted native/GUI test if needed | A/B/C/D regressions for E-only edit |
+| Compiled code or XAML | Relevant contracts and one incremental impacted target build using compatible intermediates | Clean all-target build or installer |
+| Shared ABI/dependency/stale build cache | Identified affected graph only | Arbitrary full retests |
+
+Use existing exact-source/runtime acceptance if compiled inputs are unchanged.
+An isolated fresh checkout without usable build cache cannot provide a true
+incremental binary build; require at most one justified new build and document
+the limitation. The registered central 'release' and 'gui' scopes include broad
+source tests and/or full GUI; do not use them for E-only acceptance by default.
+GUI is not implicit in build permission. Never reactivate excluded G03-G05 or
+stopped G07.
+
 ## Verification profiles
 
 ### FAST
