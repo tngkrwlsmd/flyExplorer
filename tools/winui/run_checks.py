@@ -6,6 +6,8 @@ import json
 import os
 from pathlib import Path
 import re
+import shutil
+import stat
 import subprocess
 import sys
 import time
@@ -525,6 +527,53 @@ def run_build(configuration, env, tag):
     return fail("PRODUCT_BUILD_FAILURE", rc) if rc else 0
 
 
+def retire_full_intermediates():
+    """Drop only ignored, reproducible intermediates after full GUI PASS.
+
+    The Release runtime, setup, source ZIP, failure evidence, and user data
+    are never cleanup targets. Explicit .keep and reparse links block an item.
+    """
+    targets = [ROOT / ".cache", ROOT / "out" / "obj"]
+    for milestone in ("m19", "m20", "m21", "m22", "m23"):
+        for name in ("obj", "bin"):
+            targets.append(TESTS / milestone / name)
+
+    for path in targets:
+        if not path.exists() and not path.is_symlink():
+            continue
+        if not path.is_dir() or path.is_symlink():
+            raise RuntimeError(f"unexpected cleanup target: {path}")
+        relative = path.relative_to(ROOT).as_posix()
+        ignored = subprocess.run(
+            ["git", "check-ignore", "-q", "--", relative],
+            cwd=ROOT, check=False,
+        )
+        if ignored.returncode:
+            raise RuntimeError(f"refusing nonignored target: {relative}")
+        tracked = subprocess.run(
+            ["git", "ls-files", "--", relative], cwd=ROOT,
+            text=True, capture_output=True, check=False,
+        )
+        if tracked.returncode or tracked.stdout.strip():
+            raise RuntimeError(f"tracked target: {relative}")
+        for current, dirs, files in os.walk(path, followlinks=False):
+            for filename in [*dirs, *files]:
+                candidate = Path(current) / filename
+                flags = candidate.lstat()
+                if (filename == ".keep" or stat.S_ISLNK(flags.st_mode)
+                    or getattr(flags, "st_file_attributes", 0) & 0x400):
+                    raise RuntimeError(
+                        f"protected file in {relative}: {filename}"
+                    )
+
+    for path in targets:
+        if path.is_dir():
+            shutil.rmtree(path)
+            print(f"VALIDATION_RETIRED={path.relative_to(ROOT).as_posix()}",
+                  flush=True)
+    print("FULL_INTERMEDIATE_RETIREMENT=PASS", flush=True)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -552,6 +601,11 @@ def main():
         "--include-debug",
         action="store_true",
         help="FINAL-only opt-in for configuration-specific Debug coverage.",
+    )
+    parser.add_argument(
+        "--retain-generated",
+        action="store_true",
+        help="Explicitly keep generated full-test intermediates for diagnosis.",
     )
     args = parser.parse_args()
 
@@ -621,6 +675,14 @@ def main():
         rc = run_gui("all", configuration, env, tag)
         if rc:
             return rc
+    if args.retain_generated:
+        print("FULL_INTERMEDIATE_RETIREMENT=EXPLICITLY_RETAINED", flush=True)
+    else:
+        try:
+            retire_full_intermediates()
+        except (OSError, RuntimeError) as error:
+            print(f"FULL_INTERMEDIATE_RETIREMENT=FAIL: {error}", flush=True)
+            return fail("VALIDATION_CLEANUP_FAILURE", 1)
     print(
         "FULL_CHECKS_COMPLETE=PASS; high-cost installer, High Contrast, "
         "8k/20k large-folder and visual review remain explicit FINAL gates",
