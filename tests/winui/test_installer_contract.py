@@ -107,6 +107,8 @@ class InstallerContract(unittest.TestCase):
         self.assertIn("if(!removeInstalledPayload(root))return ERROR_ACCESS_DENIED",body)
         self.assertIn("if(!removeShortcuts(o,root))return ERROR_ACCESS_DENIED",body)
         self.assertIn("ERROR_DIR_NOT_EMPTY",body)
+        self.assertIn("onlySelfAndManifestRemain(root)",body)
+        self.assertIn("if(reparsePoint(item.path()))return false",body)
         tail=body.split("int uninstall(Options o,",1)[1]
         self.assertLess(tail.index("if(!fs::remove(root,ec)"),
                         tail.index("if(o.purgeUserData&&!removePrivateData(o,root))"))
@@ -118,6 +120,7 @@ class InstallerContract(unittest.TestCase):
             "OWNED_INSTALLER_NORMAL_REMOVE_PRESERVES_SETTINGS",
             "OWNED_INSTALLER_IMPLICIT_PURGE_REJECTED",
             "OWNED_INSTALLER_UNTRACKED_FILE_BLOCKED_PURGE",
+            "OWNED_INSTALLER_SELF_RESIDUAL_REFUSED",
             "OWNED_INSTALLER_EXPLICIT_PURGE_REMOVES_ONLY_OWNED_DATA",
         ):
             self.assertIn(marker,body)
