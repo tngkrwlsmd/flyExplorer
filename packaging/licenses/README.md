@@ -12,12 +12,9 @@ a new byte set for provenance purposes: regenerate the snapshot with
 package that same runtime rather than expecting an older snapshot to match a
 later rebuild.
 
-The directory also retains:
-- GPL-3.0.txt, the full GNU GPL version 3 text;
-- NuGet license/NOTICE/ThirdPartyNotices material for packages represented in
-  the tracked packaged snapshot;
-- top-level Windows App SDK terms used by that package.
-
-The installer also adds root LICENSE and CREDITS to its licenses directory.
+The directory contains the dependency licenses and NOTICE materials for the
+NuGet packages represented in the tracked runtime inventory, including the
+Windows App SDK. The installer additionally carries the active asset notice
+from CREDITS.
 This installer is maintained for private personal use; public publication and
 redistribution gates are inactive. Actual active dependency licenses remain.
