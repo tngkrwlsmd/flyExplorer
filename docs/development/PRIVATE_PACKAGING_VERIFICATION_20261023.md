@@ -29,13 +29,14 @@
 
 - `packaging/licenses/PAYLOAD_PROVENANCE.json` and `.md` are snapshots of an
   older `2026-10-06` Release runtime/source, not current packaged artifacts.
-- That historical Markdown and `packaging/licenses/README.md` still contain
-  old project-license file references and should not be used as the current
-  installer input manifest. The present input list is in
-  `packaging/package.py`, as checked by the five tests above.
-- The current `packaging/provenance.py` rendering differs from that historical
-  Markdown, so fresh packaging must regenerate both provenance snapshots
-  against its exact newly built Release runtime before its `--check` gate.
+- The stale notice-policy paragraphs in `packaging/licenses/README.md`
+  and the generated Markdown snapshot were corrected on 2026-10-23. The
+  generated Markdown now matches `packaging/provenance.py` applied to the
+  checked-in `PAYLOAD_PROVENANCE.json` exactly (4,656 characters).
+- The snapshot still describes the older 2026-10-06 binary, not the latest
+  private-use application binary. A fresh package must regenerate both
+  provenance snapshots against the exact newly built Release runtime before
+  its `--check` gate; this document-only repair does not certify that build.
 - Distinct actual dependency/asset notices remain valid. Removing a tracked
   notice file does not itself change rights applicable to retained source.
 
