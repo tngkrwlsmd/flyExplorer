@@ -1,3 +1,34 @@
+# flyExplorer current status — 2026-10-22 G01 bounded startup GUI failure diagnosis accepted as source
+
+- Source SHA `52efcd7b637c941e8f304eb45e0d8c47e91c9563` extends only the
+  **failed, owned** GUI evidence collector and its unit contract; product
+  C++/WinUI behavior and normal GUI runs are unchanged. On failure,
+  `panes.json/Startup` records fixed categories for displayed address
+  route, active pane, known navigation status, presence of the synthetic
+  `Nested`/`Secondary` fixture entries and bounded UIA ListItem counts.
+  It never stores raw status labels, arbitrary status strings or paths
+  outside the owned fixture. The two new tests cover categorization,
+  empty-address/loading evidence and private text redaction.
+- Exact-SHA [central Windows source CI #39736441759](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39736441759)
+  reports runner-health/policy/source **PASS**, `SOURCE_CHECKS_COMPLETE=PASS`,
+  exit 0 (four source test groups included 4, 271, 54 and 30 tests).
+  This is **source-only**, not a new Release build or GUI reproduction.
+- The earlier initial-route failure from [GUI run #39732505243](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39732505243)
+  and its bounded [archive read #39733615566](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39733615566)
+  remain **unresolved**. [G01 issue #68](https://github.com/tngkrwlsmd/flyExplorer/issues/68)
+  tracks next controlled observation. Independent safe native dump retention
+  is [control-plane issue #34](https://github.com/tngkrwlsmd/personal-control-plane/issues/34).
+  Neither G01 root cause nor other unverified release, visual or setup
+  gates are closed; G03-G05 stay excluded and G07 stopped.
+- The last full product source/Release/functional GUI acceptance remains
+  exact `79b039453de5e56677e3f57f170ffc8817e1890f`
+  [#39728188652](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39728188652).
+  The subsequent unused-search-parameter experiment was reverted, and
+  current active app/engine/package source bytes remain identical to that
+  product acceptance.
+
+---
+
 # flyExplorer current status — 2026-10-22 G01 startup route failure reproduced, product baseline restored
 
 - Exact product-change SHA `b0ccf510cba24261f97ac2c832a920fc9810bff4`

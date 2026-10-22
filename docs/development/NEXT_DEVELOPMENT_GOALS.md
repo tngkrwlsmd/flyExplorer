@@ -16,6 +16,22 @@ Windows 11 탐색기 기능 호환의 구체적인 개발 계약·관련 파일�
 점검·출시 차단 조건으로 우회하여 다시 넣지 않는다. 사용자가 새로 요청하지 않는 한
 이 세 항목의 실험·환경 구성·원격 실행·개선 제안은 하지 않는다.
 
+## 2026-10-22 — G01 초기 탐색 실패 시 분류 증거 추가 (source PASS)
+
+- `52efcd7b637c941e8f304eb45e0d8c47e91c9563`에서 **실패한 소유 GUI에서만**
+  주소 경로 분류, 활성 패널, 제한된 Shell 상태 분류, `Nested`/`Secondary`
+  소유 픽스처 항목 표시 여부 및 UIA ListItem 수를 `panes.json/Startup`
+  으로 저장한다. 임의 사용자 상태 문구·외부 경로 원문은 새로 수집하지 않는다.
+- [중앙 Windows source #39736441759](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39736441759):
+  runner-health·policy·전체 source 계약 PASS, 종료 0.
+  **새 Windows GUI 실행이나 G01 실제 재현/해결 PASS는 아니다.**
+- 실패 GUI [#39732505243](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39732505243)
+  및 로컬 보관 증거 [#39733615566](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39733615566)
+  는 그대로 유지. [G01 추적 #68](https://github.com/tngkrwlsmd/flyExplorer/issues/68)에서
+  다음 안전한 소유 실행 시 추가 증거를 대조한다. 네이티브 메모리 덤프 보존
+  정책은 [control-plane #34](https://github.com/tngkrwlsmd/personal-control-plane/issues/34)
+  에 분리. 근거 없이 네이티브 탐색 코드를 수정하거나 timeout을 높이지 않는다.
+
 ## 2026-10-22 — G01 실제 초기 Shell 탐색 미완료 증거 및 수용 기준선 복원
 
 - `b0ccf510cba24261f97ac2c832a920fc9810bff4`의
