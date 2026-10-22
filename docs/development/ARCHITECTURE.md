@@ -92,28 +92,22 @@ archive busy flags or toolbar archive-cancellation branches. Windows Explorer
 handles user-initiated archive actions in its separate native window. The
 existing Shell transfer controller and toolbar cancellation remain intact.
 
-Native F08 source modules are **retained, not used by the current UI**:
-`zip_inspection.h`, `zip_store_writer.h`, `zip_deflate_writer.h`,
-`zip_store_extractor.h`, `zip_store_batch_writer.h`,
-`zip_store_batch_extractor.h`, `zip_store_compat.h` and
-`zip_raw_deflate*`. The pinned miniz 3.1.2 sources remain for source-level recovery,
-but the unreferenced raw ZIP Deflate translation units and miniz codecs
-have been removed from the active app project template. The inactive
-codecs are no longer intended to be linked into the product runtime.
-No Windows build or release-size measurement has been performed. These modules historically
-implemented bounded one-file and 2-8-member Store/Deflate archives,
-optional one-root and up to three direct children, checked CRC and names,
-and non-replacing staged publication. ZIP64/encryption/arbitrary nested
-paths were deliberately unsupported. This native code has no newer Windows
-build/runtime/GUI acceptance and must not be represented as a functioning
-flyExplorer archive feature.
+After the exact-SHA EP05 native Explorer handoff was accepted on Windows
+(product SHA `1a5aece2df3fe9a6b548a511e949a62469d107d1`), the
+inactive standalone F08 ZIP sources (`src/base/zip_*`), pinned miniz 3.1.2
+subset and their nine ZIP-only source contracts were removed from the current
+checkout. Git history preserves the earlier bounded Store/Deflate prototype
+and its vendor attribution. No custom ZIP parser, encoder or decoder remains
+as a product compile input. The active M22 Shell file operations, file
+selection/folder Explorer handoffs and cancellation remain unchanged.
 
-Keep the inactive core until the native Explorer handoff is accepted on an
-explicitly authorized Windows build and the release/build/license impacts
-of deleting the codec and project entries have been reviewed. Do not
-re-expose competing archive actions. Historical implementation detail and
-limitations remain recoverable from Git, the native source contracts,
-and `CURRENT_STATUS.md`.
+This is **not** new native build/GUI or public-release acceptance for the
+source-removal commit. The Python standard-library-based deterministic
+`packaging/source_bundle.py` ZIP generator is a separate release/source
+delivery requirement and remains intact. Historical exact-release provenance,
+third-party notices and license-gate records must not be rewritten to match
+an unbuilt source change. A new Release package must regenerate exact-SHA
+binary/source provenance before distribution.
 
 Regular-document activation belongs to `app/winui/file_open_controller.h`.
 It owns one asynchronous Windows StorageFile/Launcher request, deadline and

@@ -308,8 +308,8 @@ void MainWindow::ShowAppFileContextMenu(
                           localSelection&&count==1&&!isFolder,
      [side](MainWindow& ui){ui.OpenSelectedWith(side);}));
  // Windows owns compression, extraction and other Explorer commands.
- // F08 writers/extractors stay in the tree for rollback, but are not
- // exposed as competing production ZIP actions before Windows acceptance.
+ // Retired F08 native archive code is not part of this product.
+ // Explorer owns user-initiated archive commands in its separate window.
  menu.Items().Append(make(L"Windows 탐색기에서 선택 열기",L"\uE8B7",
                           canWindowsExplorer,
      [side](MainWindow& ui){ui.RevealSelectedInWindowsExplorer(side);}));

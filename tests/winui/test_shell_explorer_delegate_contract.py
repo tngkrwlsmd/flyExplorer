@@ -157,9 +157,9 @@ class WindowsExplorerDelegationContracts(unittest.TestCase):
 
     def test_archive_code_is_not_compiled_into_product(self):
         project=source("app/winui/flyExplorer.project-template.xml")
-        for inactive in ("zip_raw_deflate.cpp", "zip_raw_deflate_compress.cpp",
-                         "miniz_tinfl.c", "miniz_tdef.c"):
-            self.assertNotIn(inactive,project)
+        # Retired F08 implementation must not silently become a product input.
+        self.assertNotIn("zip_",project)
+        self.assertNotIn("miniz_",project)
         self.assertIn('ClCompile Include="m22_transfers.cpp"',project)
 
     def test_no_duplicate_archive_commands_are_exposed(self):
@@ -190,15 +190,14 @@ class WindowsExplorerDelegationContracts(unittest.TestCase):
             self.assertNotIn(retired,header)
         self.assertIn("mFileOperations.cancel();",ui)
         self.assertIn("fileBar()->CancelButton().IsEnabled(busy&&cancellable);",ui)
-        for path in (
-            "src/base/zip_store_writer.h",
-            "src/base/zip_deflate_writer.h",
-            "src/base/zip_store_extractor.h",
-            "src/base/zip_store_batch_writer.h",
-            "src/base/zip_store_batch_extractor.h",
-            "src/base/zip_inspection.h",
-        ):
-            self.assertTrue((ROOT/path).is_file())
+    def test_retired_f08_code_and_source_contracts_stay_absent(self):
+        self.assertEqual([],list((ROOT/"src/base").glob("zip_*")))
+        self.assertFalse((ROOT/"src/base/third_party/miniz_3_1_2").exists())
+        self.assertEqual([],list((ROOT/"tests/winui").glob("test_zip_*_contract.py")))
+        # The release source archive is independent of the removed F08 engine.
+        source_bundle=source("packaging/source_bundle.py")
+        self.assertIn("zipfile.ZipFile(bundle",source_bundle)
+        self.assertTrue((ROOT/"packaging/release_identity.py").is_file())
 
 if __name__=="__main__":
     unittest.main()

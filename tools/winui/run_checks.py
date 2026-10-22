@@ -58,6 +58,7 @@ PRODUCT_SUITES = {
     ],
     "file-operations": [
         "tests/winui/test_file_operation_controller_contract.py",
+        "tests/winui/test_shell_explorer_delegate_contract.py",
         "tests/winui/test_f2_rename_selection_contract.py",
         "tests/winui/test_command_availability_contract.py",
         "tests/winui/test_file_command_feedback_contract.py",

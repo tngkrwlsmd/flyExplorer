@@ -1,3 +1,30 @@
+# flyExplorer current status — 2026-10-22 P1 inactive F08 archive source cleanup
+
+- Preserved P0 Windows native Explorer handoff acceptance: exact product
+  `1a5aece2df3fe9a6b548a511e949a62469d107d1`, central GUI
+  [39720631293](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39720631293)
+  and archived evidence [39721385267](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39721385267).
+- Removed 11 inactive `src/base/zip_*` native files, the nine-file pinned
+  `src/base/third_party/miniz_3_1_2/` subset, and nine ZIP-only source
+  contract files. These were not compiled into the active app project;
+  historical source/licensing details remain recoverable from Git.
+- Kept independent native Explorer handoff and M22 file transfer behavior;
+  kept deterministic `packaging/source_bundle.py`, `CREDITS`, root
+  `LICENSE`, and tracked previous-release manifests/notices unchanged.
+- Converted the Explorer delegation contract from asserting inactive
+  archive-source existence to asserting absence of retired ZIP code,
+  absence from active build input, no duplicate archive UI, and retained
+  source-bundle tooling. Registered that contract under the file-operations
+  source suite in `tools/winui/run_checks.py`.
+- This source cleanup is **NOT Windows Release build/GUI/visual verified**.
+  The prior EP05 Windows PASS does not certify this new source commit.
+  No public build, signing, installation, release, or provenance refresh.
+- G01 intermittent startup/exit root cause remains open; G03/G04/G05
+  USER-EXCLUDED and G07 stopped. Older sections below describe earlier
+  snapshots and may refer to then-retained ZIP sources.
+
+---
+
 # flyExplorer current status — 2026-10-22 native Windows Explorer handoff accepted; G01 open
 
 ## 2026-10-22 — both native Explorer handoff paths Windows GUI PASS

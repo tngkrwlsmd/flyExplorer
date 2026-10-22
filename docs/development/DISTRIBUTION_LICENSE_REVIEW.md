@@ -2,29 +2,28 @@
 
 This document records engineering evidence, not legal advice.
 
-## 2026-10-21 F08 miniz tdefl addition (NOT LICENSE CLEARED)
+## 2026-10-22 F08 legacy ZIP source retirement (not release clearance)
 
-Low-level miniz 3.1.2 `miniz_tdef.h/.c` was added under the
-existing pinned upstream license, with a documented local
-`miniz_tdef_compat.h` shim and include adaptation. The compiler
-template now separately compiles the tdefl C unit alongside
-tinfl. No release, distribution or compliance clearance is claimed;
-ensure all upstream attribution and changes accompany matching
-binary/source materials and verify rightsholder grants.
+After the separately accepted native Windows Explorer handoff (product
+`1a5aece2df3fe9a6b548a511e949a62469d107d1`), the unused F08 archive
+implementation and its pinned miniz 3.1.2 sources were removed from the
+current source tree together with the nine ZIP-specific source-only tests.
+No custom F08 codec remains in the active WinUI compile template. The
+historical miniz version, original upstream
+[richgel999/miniz](https://github.com/richgel999/miniz), MIT-style upstream
+license, local `miniz_tinfl.c` / `miniz_tdef.c` include adaptations and
+`miniz_tdef_compat.h` shim remain documented in Git history, including
+the 2026-10-21 versions of this review and `UPSTREAM.md`.
 
-## 2026-10-21 F08 miniz codec source addition (NOT LICENSE CLEARED)
-
-The raw DEFLATE single-member decode experiment vendors low-level miniz
-tinfl **3.1.2** from `richgel999/miniz` under
-`src/base/third_party/miniz_3_1_2`, including the full upstream
-MIT-style LICENSE, unchanged headers and an include-adapted tinfl C source.
-The export-header shim and modifications are listed in `UPSTREAM.md`.
-This source inclusion is **not** release/legal approval. Before any
-distribution, ensure matching third-party copyright/license notices
-accompany the product's binary/source distribution and check the exact
-packaged payload and rightsholder grants. No external binary/code is
-downloaded at application runtime.
-
+This source removal is not a fresh package, legal audit, or declaration about
+previous exact-SHA binaries. Do not remove or retroactively rewrite
+historical release manifests, attribution or provenance snapshots.
+`packaging/source_bundle.py` still writes the required deterministic GPL
+source-distribution ZIP using Python's standard library, independently of
+the deleted F08 engine. The current application's root `LICENSE`,
+`CREDITS`, and `packaging/licenses/` payload-notice inputs are retained;
+clean Release/package provenance and all public-distribution gates below
+remain open until separately verified.
 
 ## Current product
 
