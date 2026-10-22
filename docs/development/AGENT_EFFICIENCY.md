@@ -41,6 +41,26 @@ Do not turn an invalid request into another Windows run. Work within a
 sensible call budget without skipping essential correctness checks. The
 retired source-side request validator and workflow are historical only.
 
+## 2026-10-22 minimal change-invalidation frontier
+
+Before each validation identify the modified behavior, actual dependent
+modules, reusable exact-SHA evidence and the smallest command. For an
+E-only edit, verify E and its genuine dependencies; do not replay already
+accepted A/B/C/D. An authorization to test is not an order to run all gates.
+
+Reuse safe incremental build outputs and compile only affected projects. Do
+not clear caches before an incremental compile. Clean build/package is reserved
+for cache provenance failures or identified cross-cutting change; do not
+describe a fresh isolated build as incremental. Afterwards safely retire
+disposable owned files while preserving evidence, user data and caches still
+needed for subsequent approved incremental development.
+
+Registered central 'release' and 'gui' stages run broad source and/or GUI
+suites and therefore are not suitable for small E-only changes by default.
+When running a more focused Windows command, preserve central SYSTEM
+ownership guards, exact source SHA, safe paths and retained evidence.
+Record untested areas as untested, rather than expanding acceptance claims.
+
 ## Reads and diagnosis
 
 Read narrow-first. Do not repeatedly reread unchanged files/logs. Separate
