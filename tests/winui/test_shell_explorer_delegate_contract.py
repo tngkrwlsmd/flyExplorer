@@ -194,10 +194,9 @@ class WindowsExplorerDelegationContracts(unittest.TestCase):
         self.assertEqual([],list((ROOT/"src/base").glob("zip_*")))
         self.assertFalse((ROOT/"src/base/third_party/miniz_3_1_2").exists())
         self.assertEqual([],list((ROOT/"tests/winui").glob("test_zip_*_contract.py")))
-        # The release source archive is independent of the removed F08 engine.
-        source_bundle=source("packaging/source_bundle.py")
-        self.assertIn("zipfile.ZipFile(bundle",source_bundle)
-        self.assertTrue((ROOT/"packaging/release_identity.py").is_file())
+        # No F08 archive engine remains; private-use installation does not
+        # require the retired public source-delivery/release identity pipeline.
+        self.assertFalse((ROOT/"packaging/public_source_delivery.py").exists())
 
 if __name__=="__main__":
     unittest.main()
