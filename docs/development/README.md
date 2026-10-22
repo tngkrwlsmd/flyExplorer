@@ -22,6 +22,8 @@ Their exact content remains available through Git history.
   acceptance criteria, priorities and scoped local build/run evidence.
 - WINUI_EXPLORER_VISUAL_BENCHMARK_20261001.md — measured Explorer baseline.
 - WIN11_EXPLORER_FEATURE_BENCHMARK_20261012.md — sourced feature-gap matrix, priorities and acceptance boundaries.
+- WIN11_PARITY_REAUDIT_20261022.md — current Windows 11 Explorer functional/UX
+  difference ledger (PX01–PX18); no blanket equivalence claim.
 - UI_VISUAL_RETEST.md — current owned GUI/visual verification workflow.
 - DISTRIBUTION_LICENSE_REVIEW.md — current public-distribution/legal gates.
 
