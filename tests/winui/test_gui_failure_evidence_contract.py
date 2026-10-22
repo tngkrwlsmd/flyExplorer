@@ -134,6 +134,44 @@ class GuiFailureEvidenceContract(unittest.TestCase):
             self.assertEqual("left", startup["active_pane"])
             self.assertEqual("loading", startup["status_category"])
 
+    def test_g01_startup_timeline_is_bounded_and_private(self):
+        with TemporaryDirectory() as root:
+            base = Path(root) / "phase6-winui"
+            owned = base / "shell-owned-startup"
+            left, right = owned / "Left", owned / "Right"
+            left.mkdir(parents=True)
+            right.mkdir()
+            sensitive = "C:\\Users\\someone\\private-marker"
+            samples = [
+                {"elapsed_bucket": index * 2, "status": "loading",
+                 "address": "empty"} for index in range(19)
+            ]
+            samples[-1] = {
+                "elapsed_bucket": 36, "status": sensitive,
+                "address": sensitive,
+            }
+            failure = AssertionError(
+                "UI-independent native core/helper was not active at startup")
+            output = capture_failure(
+                base=base, owned=owned, left=left, right=right,
+                win=StartupWindow("", "폴더를 불러오는 중입니다.", "활성: 왼쪽"),
+                hwnd=None, pid=None, error=failure, startup_samples=samples)
+            raw = (output / "panes.json").read_text(encoding="utf-8")
+            timeline = json.loads(raw)["Startup"]["sampled_transitions"]
+            self.assertEqual(16, len(timeline))
+            self.assertEqual(
+                {"elapsed_bucket": 36, "status": "other", "address": "other"},
+                timeline[-1])
+            self.assertNotIn(sensitive, raw)
+            non_startup = capture_failure(
+                base=base, owned=owned, left=left, right=right,
+                win=None, hwnd=None, pid=None,
+                error=AssertionError("unrelated GUI gate failed"),
+                startup_samples=samples)
+            unrelated = json.loads(
+                (non_startup / "panes.json").read_text(encoding="utf-8"))
+            self.assertNotIn("sampled_transitions", unrelated["Startup"])
+
     def test_refuses_unowned_directory_and_skips_symlinks(self):
         with TemporaryDirectory() as root:
             base = Path(root) / "phase6-winui"
