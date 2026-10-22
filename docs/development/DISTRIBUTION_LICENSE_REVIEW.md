@@ -2,6 +2,35 @@
 
 This document records engineering evidence, not legal advice.
 
+## 2026-10-22 optional complete removal and latest unsigned package evidence
+
+Source revision `266a271f70da86da8be2bda0607ba29195cb8be6` introduced
+explicit, opt-in current-user removal of flyExplorer-specific LocalAppData
+settings/cache/bookmarks/history. Ordinary removal preserves settings.
+An unattended complete purge requires all of `/UNINSTALL /S /PURGEUSERDATA`;
+interactive removal presents an unchecked verification box. Remaining
+untracked installation files prevent a successful uninstall result rather
+than being deleted, and reparse points are rejected in owned-data cleanup.
+
+On the interactive Windows desktop, the exact-SHA unsigned package
+`flyExplorer-Setup-x64.exe` was 124,933,120 bytes (SHA-256
+`c1d7d4248050aff56659cbb34ecee27f9407f488574c56739d8fff92c231f102`).
+The full bounded `/TESTROOT` install/repair/test-update/test-rollback/
+normal-uninstall/complete-uninstall and failure/retry lifecycle **PASS**,
+exit 0; related Windows source contracts **9/9 PASS**. This candidate's
+543-file deterministic corresponding-source ZIP SHA-256 is
+`07ceacb5d823b6d9056fe8beabbc34f84fbfe6c177b3473bbfa27b2e4d311a10`;
+runtime provenance SHA-256
+`f0feca329fbc889800ffd36ddfb16b8d0798175c370f84a4cbd78604a016e1b2`;
+the exact private release identity `--check` passed.
+
+This does **not** establish clean-machine production install/uninstall,
+administrator elevation across different Windows users, signed setup,
+complete elimination of all OS metadata/traces, or public distribution
+rights. `NotSigned` and other outstanding release permissions remain
+blocking. Binary/source assets reside in a private Windows workspace,
+not a public or immutable downloadable release.
+
 ## 2026-10-22 test-owned private setup / corresponding-source identity accepted
 
 An isolated, interactive Windows user session generated an **unsigned**
