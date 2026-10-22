@@ -9,6 +9,11 @@ SETUP=ROOT/"packaging"/"installer"/"setup.cpp"
 SETUP_PROJECT_TEMPLATE=ROOT/"packaging"/"installer"/"flyExplorerSetup.project-template.xml"
 
 class InstallerContract(unittest.TestCase):
+    def test_neutral_private_application_publisher(self):
+        body=SETUP.read_text(encoding="utf-8")
+        self.assertIn('constexpr wchar_t kPublisher[]=L"flyExplorer";',body)
+        self.assertNotIn('constexpr wchar_t kPublisher[]=L"Leon Lee";',body)
+
     def test_machine_install_and_shortcut_surfaces_are_explicit(self):
         body=SETUP.read_text(encoding="utf-8")
         for token in ("FOLDERID_ProgramFiles","FOLDERID_CommonPrograms",
