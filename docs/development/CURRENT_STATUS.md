@@ -1,3 +1,36 @@
+# flyExplorer current status — 2026-10-22 exact-SHA integrated Windows GUI verified, G01 remains open
+
+- At exact SHA `74bd0f3376d34b934f059b093c014fa469447606`,
+  [central Windows CI #39739943824](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39739943824)
+  finished `success` with `central-ci/windows-gui=success`: runner health,
+  GUI dependencies, policy, source contracts, Release build (exit 0)
+  and **functional GUI all PASS**. In particular the previously failing
+  integrated `gui-all-Release` profile exited **0**, 139.8 seconds,
+  after four passing focused GUI stages (window tabs, shortcuts, filter
+  presets and folder tree).
+- The separate [single core-only diagnostic #39738145818](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39738145818)
+  also passed but remains **`NOT_FINAL_ACCEPTANCE=1`**; only the
+  full `scope=gui` run above supplies this exact-SHA functional acceptance.
+- This does **not** resolve the intermittent G01 startup failure observed
+  in [earlier failed integrated run #39732505243](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39732505243).
+  That failed on a different source SHA (`b0ccf510`) before its unused
+  search argument edit was reverted; no causal link or independent native
+  stack evidence establishes a root cause. Its archived
+  [bounded UIA evidence #39733615566](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39733615566)
+  remains preserved. G01's separate historic shutdown hang is also open.
+  [G01 issue #68](https://github.com/tngkrwlsmd/flyExplorer/issues/68)
+  tracks evidence and differential diagnosis; native dump retention remains
+  [control-plane issue #34](https://github.com/tngkrwlsmd/personal-control-plane/issues/34).
+- Git compare against prior accepted `79b039453de5e56677e3f57f170ffc8817e1890f`
+  confirms **no active app, base or packaging source changes** at this
+  newly accepted `74bd0f33`. It adds only test-only diagnostic contracts
+  and documentation; no speculative product navigation fix was made.
+  Pixel-level visual QA, signed/public release, fresh installer lifecycle
+  and exact distributable provenance are **not** implied by this PASS.
+  G03-G05 stay USER-EXCLUDED and G07 remains stopped.
+
+---
+
 # flyExplorer current status — 2026-10-22 G01 bounded startup GUI failure diagnosis accepted as source
 
 - Source SHA `52efcd7b637c941e8f304eb45e0d8c47e91c9563` extends only the

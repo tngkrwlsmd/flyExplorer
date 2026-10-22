@@ -16,6 +16,27 @@ Windows 11 탐색기 기능 호환의 구체적인 개발 계약·관련 파일�
 점검·출시 차단 조건으로 우회하여 다시 넣지 않는다. 사용자가 새로 요청하지 않는 한
 이 세 항목의 실험·환경 구성·원격 실행·개선 제안은 하지 않는다.
 
+## 2026-10-22 — G01 통합 GUI 동일 프로필 실측 PASS (원인 미확정)
+
+- `74bd0f3376d34b934f059b093c014fa469447606`의
+  [중앙 Windows `scope=gui` #39739943824](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39739943824)
+  에서 policy·source·Release 빌드·독립 4개 GUI 및
+  **`gui-all-Release`** 모두 PASS, 종료 0. 정확한 SHA의
+  `central-ci/windows-gui=success`를 확인했다.
+- 핵심 Shell만 검사한 [`gui-probe` #39738145818](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39738145818)
+  은 별도의 진단 PASS이며 전체 GUI 수용으로 대체하지 않는다.
+- 기존 [초기 탐색 실패 #39732505243](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39732505243)
+  와 [보관 UIA 증거 #39733615566](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39733615566)
+  는 소급 삭제하지 않는다. 앞선 실패는 실험적 다른 SHA였으며
+  인수 제거와의 인과관계도 확인되지 않았다. 재현성·근본 원인은
+  여전히 미확정이며, G01 과거 종료 잔류도 별도 OPEN 상태다.
+- 새 `Startup` 실패 전용 분류 수집은 재발 시에만 활성화되고,
+  정상 실행에서 새로운 실패 증거를 만들지는 않는다.
+  [이슈 #68](https://github.com/tngkrwlsmd/flyExplorer/issues/68)에서
+  다음 근거가 생길 때 요청/응답/UIA 단계를 식별한다.
+  근거 없는 전체 CI 재시도나 타임아웃 확대를 금지한다.
+  G03~G05 제외, G07 중단과 공개 배포·독립 시각 수용 미완료 유지.
+
 ## 2026-10-22 — G01 초기 탐색 실패 시 분류 증거 추가 (source PASS)
 
 - `52efcd7b637c941e8f304eb45e0d8c47e91c9563`에서 **실패한 소유 GUI에서만**
