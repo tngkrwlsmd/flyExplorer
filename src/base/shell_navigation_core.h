@@ -1,5 +1,4 @@
 // UI-independent Windows Shell navigation core for the WinUI 3 app and helper.
-// GPLv3-or-later project source.
 #pragma once
 #ifndef FXFILE_BASE_SHELL_NAVIGATION_CORE_H
 #define FXFILE_BASE_SHELL_NAVIGATION_CORE_H

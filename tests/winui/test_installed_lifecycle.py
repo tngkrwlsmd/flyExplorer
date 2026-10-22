@@ -227,7 +227,6 @@ def main():
         run(["/S","/DESKTOP",f"/TESTROOT={root}","/TESTDISPLAYVERSION=1.0.0.0"])
         for rel in ("flyExplorer.exe","FlyShellIsolationHelper.exe","flyExplorer.pri",
                     "flyExplorerUninstall.exe","install-manifest.txt",
-                    "licenses/flyExplorer-LICENSE.txt","licenses/GPL-3.0.txt",
                     "licenses/THIRD_PARTY-NOTICES.txt","licenses/PAYLOAD_PROVENANCE.md",
                     "licenses/PAYLOAD_PROVENANCE.json",
                     "licenses/nuget/microsoft.windowsappsdk/2.5.1/license.txt",

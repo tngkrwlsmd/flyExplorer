@@ -37,8 +37,11 @@ class ReleasePayloadContract(unittest.TestCase):
         for old in ("FlyExplorerWinUIShell.exe","FlyExplorerIslandBridge.dll"):
             self.assertNotIn(old,required)
         notices={rel.as_posix() for _,rel in m.distribution_sources()}
-        for name in ("licenses/flyExplorer-LICENSE.txt","licenses/GPL-3.0.txt",
-                     "licenses/THIRD_PARTY-NOTICES.txt","licenses/PAYLOAD_PROVENANCE.md",
+        self.assertFalse((ROOT/"LICENSE").exists())
+        self.assertFalse((ROOT/"packaging/licenses/GPL-3.0.txt").exists())
+        self.assertNotIn("licenses/flyExplorer-LICENSE.txt",notices)
+        self.assertNotIn("licenses/GPL-3.0.txt",notices)
+        for name in ("licenses/THIRD_PARTY-NOTICES.txt","licenses/PAYLOAD_PROVENANCE.md",
                      "licenses/nuget/microsoft.windowsappsdk/2.5.1/license.txt",
                      "licenses/nuget/microsoft.windowsappsdk/2.5.1/NOTICE.txt",
                      "licenses/nuget/microsoft.web.webview2/1.0.3719.77/LICENSE.txt",
@@ -186,7 +189,7 @@ class ReleasePayloadContract(unittest.TestCase):
                 rel={p.as_posix() for _,p in pairs}
                 self.assertIn("flyExplorer.exe",rel)
                 self.assertIn("Assets/icon.png",rel)
-                self.assertIn("licenses/GPL-3.0.txt",rel)
+                self.assertNotIn("licenses/GPL-3.0.txt",rel)
                 self.assertIn("licenses/nuget/microsoft.web.webview2/1.0.3719.77/LICENSE.txt",rel)
                 self.assertIn("licenses/nuget/microsoft.web.webview2/1.0.3719.77/NOTICE.txt",rel)
                 (release/"debug.pdb").write_bytes(b"debug")

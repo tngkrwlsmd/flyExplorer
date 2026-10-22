@@ -319,10 +319,9 @@ def render_markdown(manifest: dict[str, object]) -> str:
 
     lines += [
         "",
-        "## Distribution-material policy",
+        "## Private installer dependency notices",
         "",
-        "- The installer additionally carries the repository root `LICENSE` and `CREDITS`.",
-        "- `packaging/licenses/GPL-3.0.txt` is the full GPLv3 text.",
+        "- The installer carries the active Fluent icon notice from `CREDITS`.",
         "- `packaging/licenses/nuget/` must contain notice/license material for every",
         "  package version identified above, plus the top-level Microsoft.WindowsAppSDK",
         "  package terms from the active restore graph.",

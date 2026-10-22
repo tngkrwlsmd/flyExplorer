@@ -1,4 +1,4 @@
-// MFC-free Win32 directory invalidation bridge. GPLv3-or-later.
+// MFC-free Win32 directory invalidation bridge.
 #pragma once
 #ifndef FXFILE_BASE_DIRECTORY_CHANGE_BRIDGE_H
 #define FXFILE_BASE_DIRECTORY_CHANGE_BRIDGE_H

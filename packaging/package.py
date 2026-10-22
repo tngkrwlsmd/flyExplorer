@@ -44,7 +44,6 @@ DISTRIBUTION_ROOT=ROOT/"packaging"/"licenses"
 
 def distribution_sources() -> list[tuple[Path,Path]]:
     pairs=[
-        (ROOT/"LICENSE", Path("licenses/flyExplorer-LICENSE.txt")),
         (ROOT/"CREDITS", Path("licenses/THIRD_PARTY-NOTICES.txt")),
     ]
     if not DISTRIBUTION_ROOT.is_dir():
