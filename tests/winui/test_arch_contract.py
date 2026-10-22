@@ -115,14 +115,13 @@ class MigrationContracts(unittest.TestCase):
   self.assertIn("mFileOperations.requestTransfer",transfer)
   self.assertIn("mFileOperations.startFileCommand",commands)
 
- def test_shared_native_enum_and_legacy_call_site(self):
+ def test_native_enum_uses_active_bridge(self):
   root=ROOT.parents[1]
-  legacy=(root/"src/base/shell_enumerator_win.cpp").read_text(encoding="utf-8-sig")
   low=(root/"src/base/shell_enum_bridge.cpp").read_text(encoding="utf-8-sig")
   core=(root/"src/base/shell_navigation_core.cpp").read_text(encoding="utf-8-sig")
   product=historical_text("src/fxfile/fxfile.gyp")
   project=text("flyExplorer.project-template.xml")
-  self.assertIn("shellnav::openEnumeration",legacy)
+  self.assertFalse((root/"src/base/shell_enumerator_win.cpp").exists())
   self.assertEqual(low.count("folder->EnumObjects("),1)
   self.assertIn("openEnumeration(parent.p,nullptr,flags,&iterator.p)",core)
   # cbffb48 is now history-only and predates the WinUI shared-bridge wiring.
@@ -138,7 +137,8 @@ class MigrationContracts(unittest.TestCase):
   project=text("flyExplorer.project-template.xml")
   winui=text("MainWindow.xaml.cpp")
   mainhdr=text("MainWindow.xaml.h")
-  worker=(root/"src/base/shell_async_worker.cpp").read_text(encoding="utf-8")
+  action=(root/"src/base/navigation_action.h").read_text(encoding="utf-8")
+  supervisor=(root/"src/base/shell_isolated_supervisor.cpp").read_text(encoding="utf-8")
   bridge=(root/"src/base/directory_change_bridge.cpp").read_text(encoding="utf-8")
   historical_watcher=historical_text("src/fxfile/file_change_watcher.cpp")
   self.assertNotIn("shell_async_worker.cpp",project)
@@ -148,9 +148,10 @@ class MigrationContracts(unittest.TestCase):
   self.assertIn("FindFirstChangeNotification(",historical_watcher)
   self.assertIn("FindFirstChangeNotificationW",bridge)
   self.assertIn("FindFirstChangeNotificationA",bridge)
-  self.assertIn("COINIT_APARTMENTTHREADED",worker)
-  self.assertIn("MsgWaitForMultipleObjectsEx",worker)
-  self.assertIn("std::thread([st]{run(st);}).detach()",worker)
+  self.assertIn("enum class NavigationAction",action)
+  self.assertIn("std::thread",supervisor)
+  self.assertFalse((root/"src/base/shell_async_worker.cpp").exists())
+  self.assertFalse((root/"src/base/shell_async_worker.h").exists())
   controller=text("shell_navigation_controller.cpp")
   controllerhdr=text("shell_navigation_controller.h")
   self.assertIn("dispatch.TryEnqueue",winui)
@@ -165,8 +166,8 @@ class MigrationContracts(unittest.TestCase):
   self.assertIn("IsolatedShellSupervisor> supervisor_",controllerhdr)
   self.assertIn("DirectoryWatcher> watcher_",controllerhdr)
   self.assertNotIn("std::filesystem::directory_iterator",winui)
-  self.assertNotIn("CWnd",worker+bridge)
-  self.assertNotIn("ListCtrlEx",worker+bridge)
+  self.assertNotIn("CWnd",supervisor+bridge)
+  self.assertNotIn("ListCtrlEx",supervisor+bridge)
 
  def test_native_workspace_model_keeps_routes_and_pending_requests_out_of_winui_state(self):
   state=(ROOT.parents[1]/"src/base/explorer_ui_state.h").read_text(encoding="utf-8-sig")

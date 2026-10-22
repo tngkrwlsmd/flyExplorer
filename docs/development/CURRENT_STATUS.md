@@ -1,3 +1,12 @@
+# flyExplorer current status — 2026-10-22 unused MFC-era native files retired
+
+- Removed 39 uncompiled MFC-era native source/header files from `src/base` after checking the current WinUI app/isolated helper/registered native test project compile lists and repository references. `shell_async_worker.h` had one active include solely for the `NavigationAction` enum; replaced it with a new minimal `navigation_action.h` and updated `shell_isolated_supervisor.h`. Other actively compiled WinUI/native/Shell sources are retained unchanged.
+- Updated the architecture test to assert the active `shell_enum_bridge.cpp` and isolated supervisor behavior rather than reading retired sources, and added a narrow removal contract; no unrelated A/B/C/D full GUI or rebuild is implied.
+- Replaced obsolete `CREDITS` inventory for inactive MFC-era libraries with the actively relevant WinUI/Fluent package notice index, while retaining the actual `packaging/licenses/nuget` license texts. Existing `LICENSE` and GPL statements on actively compiled source files were **not** erased: their provenance has not been proven independently reauthored. Deleting uncompiled files cannot by itself establish independent authorship of retained files.
+- Changed files are a source/inclusion cleanup, not a functional behavior change; exact updated verification evidence follows separately. Previous 2026-10-22 Windows Release acceptance predates this source-only cleanup.
+
+---
+
 # flyExplorer current status — 2026-10-22 focused testing, Windows 11 parity re-audit and private-use cleanup
 
 - **Explicit user direction:** only the edited function and actual dependencies may be tested; reuse accepted unrelated function evidence. Prefer verified incremental affected-target builds. A documentation-only edit does not trigger a native build/GUI; an all-source/whole-GUI/clean package run is exceptional, not the default. Current rules: `AGENTS.md`, `VERIFICATION_PROFILE.md`, `AGENT_EFFICIENCY.md`.

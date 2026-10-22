@@ -4,7 +4,7 @@
 #pragma once
 #ifndef FXFILE_BASE_SHELL_ISOLATED_SUPERVISOR_H
 #define FXFILE_BASE_SHELL_ISOLATED_SUPERVISOR_H
-#include "shell_async_worker.h" // shared NavigationAction type (no worker used)
+#include "navigation_action.h" // product-owned action vocabulary; no legacy worker
 #include <functional>
 #include <memory>
 #include <string>
