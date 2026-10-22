@@ -638,7 +638,7 @@
                            SelectionMode="Extended" DoubleTapped="OnLeftFileDoubleTapped" Tapped="OnLeftPaneTapped"
                           SelectionChanged="OnFileSelectionChanged" KeyUp="OnFileSelectionKeyUp"
 
-                          KeyDown="OnLeftFileKeyDown" RightTapped="OnFileRightTapped"
+                          KeyDown="OnLeftFileKeyDown"
                           AllowDrop="True" CanDragItems="True" CanReorderItems="False"
                           DragOver="OnFileDragOver" Drop="OnFileDrop"
                           DragItemsStarting="OnFileDragItemsStarting"
@@ -727,7 +727,7 @@
                            SelectionMode="Extended" DoubleTapped="OnRightFileDoubleTapped" Tapped="OnRightPaneTapped"
                           SelectionChanged="OnFileSelectionChanged" KeyUp="OnFileSelectionKeyUp"
 
-                          KeyDown="OnRightFileKeyDown" RightTapped="OnFileRightTapped"
+                          KeyDown="OnRightFileKeyDown"
                           AllowDrop="True" CanDragItems="True" CanReorderItems="False"
                           DragOver="OnFileDragOver" Drop="OnFileDrop"
                           DragItemsStarting="OnFileDragItemsStarting"

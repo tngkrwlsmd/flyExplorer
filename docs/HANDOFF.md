@@ -1,3 +1,21 @@
+# flyExplorer 작업 인계 — 2026-10-22 EP05 우클릭 routed event 보강
+
+## 2026-10-22 — ListViewItem 소비 가능 이벤트에 메뉴 연결
+
+- 정확한 `d90b4ef81ac4a4b937308f6434aad74e208d6f12` GUI [39703869796](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39703869796)
+  에서 WinUI 메뉴 후보 0개·우클릭 후 소유 파일 행 선택
+  상태 없음. 기존 M22 복사·이동·충돌/휴지통 검증까지는 PASS.
+- Microsoft.UI.Xaml의 RightTapped은 클래스 이벤트 처리 시
+  기본 부모 XAML 핸들러에서 누락될 수 있다. 두 ListView에
+  `AddHandler(UIElement::RightTappedEvent(),...,true)`로
+  재연결하고 중복 XAML 바인딩은 제거했다.
+- 파일 메뉴의 WindowTab/PaneTab·선택 식별자 보호, 앱
+  저장소 및 실제 파일 작업 구현, 외부 Explorer 호출 API는
+  변경하지 않았다. 관련 소스 회귀 계약을 추가했다.
+- **NOT TESTED:** 새 C++ 빌드, 메뉴 실측, 두 Explorer
+  위임 명령. 실패 증거를 확인한 뒤에만 ZIP 원본 정리 판단.
+  G01 위험 미확정, G03-G05 제외 및 G07 중단 유지.
+
 # flyExplorer 작업 인계 — 2026-10-22 EP05 첫 메뉴 UIA 탐지 실패 진단
 
 ## 2026-10-22 — native Explorer 위임 GUI에서 메뉴 자동화 탐지 실패

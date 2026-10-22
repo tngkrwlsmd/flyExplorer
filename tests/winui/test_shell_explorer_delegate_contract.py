@@ -60,6 +60,24 @@ class WindowsExplorerDelegationContracts(unittest.TestCase):
         ):
             self.assertIn(token,ui)
 
+    def test_right_tapped_on_handled_list_item_reaches_owned_menu(self):
+        xaml=source("app/winui/MainWindow.xaml")
+        cpp=source("app/winui/MainWindow.xaml.cpp")
+        for token in ('KeyDown="OnLeftFileKeyDown"', 'KeyDown="OnRightFileKeyDown"'):
+            self.assertIn(token,xaml)
+        self.assertNotIn('RightTapped="OnFileRightTapped"',xaml)
+        body=cpp.split("MainWindow::MainWindow()",1)[1].split(
+            "RootShell().AddHandler(",1)[0]
+        for token in (
+            "UIElement::RightTappedEvent()",
+            "RightTappedEventHandler{",
+            "this,&MainWindow::OnFileRightTapped",
+            "for(auto const& files:{LeftFiles(),RightFiles()})",
+            "true);",
+        ):
+            self.assertIn(token,body)
+        self.assertIn("void MainWindow::OnFileRightTapped(",source("app/winui/m22_transfers.cpp"))
+
     def test_deferred_context_menus_reject_closed_tabs_and_retargeted_folders(self):
         ui=source("app/winui/m22_transfers.cpp")
         file_menu=ui.split("void MainWindow::ShowAppFileContextMenu(",1)[1].split(

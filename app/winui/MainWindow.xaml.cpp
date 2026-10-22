@@ -110,6 +110,17 @@ namespace winrt::FlyExplorer::implementation
     MainWindow::MainWindow()
     {
         InitializeComponent();
+        // ListViewItem can consume RightTapped for its own selection/menu
+        // behavior. The pane's custom menu must also see handled events.
+        // Register exactly once, rather than duplicating XAML bindings.
+        using Microsoft::UI::Xaml::Input::RightTappedEventHandler;
+        for(auto const& files:{LeftFiles(),RightFiles()}){
+            files.AddHandler(
+                UIElement::RightTappedEvent(),
+                winrt::box_value(RightTappedEventHandler{
+                    this,&MainWindow::OnFileRightTapped}),
+                true);
+        }
         using Microsoft::UI::Xaml::Input::PointerEventHandler;
         RootShell().AddHandler(
             UIElement::PointerPressedEvent(),

@@ -1,3 +1,26 @@
+# flyExplorer current status — 2026-10-22 EP05 handled RightTapped routing fix
+
+## 2026-10-22 — handled ListViewItem right tap did not open custom menu
+
+- Windows GUI [39703869796](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39703869796)
+  on exact baseline `d90b4ef81ac4a4b937308f6434aad74e208d6f12` passed policy/source/Release
+  build and established owned M22 file operations. The new test
+  right-clicked a synthetic selected row, but owned WinUI popup
+  diagnostics reported `EP05_OWNED_MENU_UIA 1 []` and
+  `EP05_MENU_ANCHOR_STATUS source-not-selected`. No native Explorer
+  command had been invoked, so P0 OS handoff remains unaccepted.
+- `ListViewItem` can class-handle the RightTapped routed event before
+  its ListView parent sees a normal XAML handler. Register
+  `UIElement::RightTappedEvent()` with `AddHandler(...,true)` on
+  both LeftFiles and RightFiles instead; remove their duplicate
+  XAML event attributes so one right tap opens at most one menu.
+  Keep the existing selected-ID/route/folder guards intact.
+- Added a regression contract for both handled route bindings.
+  **NOT TESTED:** new C++ Windows compilation, menu opening,
+  OS Explorer selection/folder display, shutdown. An exact-SHA
+  Windows GUI retest is required; no ZIP source deletion yet.
+  G01 open, G03-G05 excluded, G07 stopped.
+
 # flyExplorer current status — 2026-10-22 EP05 first real Explorer menu GUI failure
 
 ## 2026-10-22 — first EP05 GUI failed before native handoff invocation
