@@ -126,27 +126,58 @@ def run(*,win,element,focus,eventually,left,right,owned_pid):
                    "복사본.txt" in peer.window_text()), None)
         eventually(lambda: file_row() is not None,
                    "owned source file missing", 12)
-        def select_owned_file():
+        # M22 previously changed sorting and focused other rows. UIA may
+        # still enumerate our test file after it scrolled off the viewport.
+        # Scroll only the owned list; never send a blind desktop click.
+        def selected_and_visible():
             target = file_row()
             if target is None:
                 return False
             focus()
             target.select()
+            try:
+                target.iface_scroll_item.ScrollIntoView()
+            except (AttributeError, RuntimeError, ValueError, OSError):
+                # Some ListViewItem peers omit ScrollItemPattern; use
+                # a bounded wheel fallback only inside the same list.
+                pass
             current = file_row()
-            return current is not None and current.is_selected()
-        eventually(select_owned_file, "owned file selection did not stabilize", 10)
-        # A ListViewItem can report its entire content-width bounding box,
-        # extending outside the physically clipped file-list viewport.
-        # Use only the row/list intersection, as in the existing
-        # test_owned_context_menu_gui.py acceptance harness.
+            if current is None or not current.is_selected():
+                return False
+            item = current.rectangle()
+            area = element("LeftFiles").rectangle()
+            left_edge = max(item.left,area.left)
+            right_edge = min(item.right,area.right)
+            top_edge = max(item.top,area.top)
+            bottom_edge = min(item.bottom,area.bottom)
+            if right_edge-left_edge>30 and bottom_edge-top_edge>5:
+                return True
+            if item.bottom<=area.top:
+                wheel = 2
+            elif item.top>=area.bottom:
+                wheel = -2
+            else:
+                return False
+            assert area.right-area.left>100 and area.bottom-area.top>80
+            origin=(area.left+min(55,(area.right-area.left)//2),
+                    area.top+min(55,(area.bottom-area.top)//2))
+            assert area.left<origin[0]<area.right
+            assert area.top<origin[1]<area.bottom
+            focus()
+            mouse.scroll(coords=origin,wheel_dist=wheel)
+            return False
+        eventually(selected_and_visible,
+                   "owned selected file could not be brought into visible ListView", 12)
+        # A ListViewItem may report a full content-width bounding box.
+        # Use only the verified row/list intersection, never coordinates
+        # on a different window or its titlebar.
         item = file_row().rectangle()
         area = element("LeftFiles").rectangle()
         left_edge=max(item.left,area.left)
         right_edge=min(item.right,area.right)
         top_edge=max(item.top,area.top)
         bottom_edge=min(item.bottom,area.bottom)
-        assert right_edge-left_edge>30 and bottom_edge-top_edge>5, (
-            "test-owned selected row is not physically visible in file list")
+        assert right_edge-left_edge>30 and bottom_edge-top_edge>5
         click=(left_edge+min(50,(right_edge-left_edge)//2),
                (top_edge+bottom_edge)//2)
         assert area.left<click[0]<area.right and area.top<click[1]<area.bottom

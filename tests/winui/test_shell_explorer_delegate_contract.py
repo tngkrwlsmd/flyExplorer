@@ -143,7 +143,9 @@ class WindowsExplorerDelegationContracts(unittest.TestCase):
             "top_edge=max(item.top,area.top)",
             "bottom_edge=min(item.bottom,area.bottom)",
             'mouse.click(button="right",coords=click)',
-            "eventually(select_owned_file,",
+            "eventually(selected_and_visible,",
+            "target.iface_scroll_item.ScrollIntoView()",
+            "mouse.scroll(coords=origin,wheel_dist=wheel)",
         ):
             self.assertIn(command,test)
         self.assertIn('if os.environ.get("FLY_EP05_EXPLORER_HANDOFF")=="YES":',harness)

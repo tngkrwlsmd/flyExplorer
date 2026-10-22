@@ -1,3 +1,26 @@
+# flyExplorer current status — 2026-10-22 EP05 clipped test row scroll fix
+
+## 2026-10-22 — EP05 GUI found synthetic row outside the viewport
+
+- Main `b982793639be09becc6ec12e4168f3e284373885`, central Windows GUI
+  [39707092408](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39707092408)
+  passed runner, policy, source, Release build, and focused GUI
+  but stopped within new EP05 after M22 functional GUI steps:
+  `AssertionError: test-owned selected row is not physically visible in file list`.
+  This proves the newly bounded physical click check prevented an unsafe
+  out-of-view click; it does NOT establish OS Explorer handoff.
+- M22 sorts by file size and previously navigates other selected rows,
+  so the next synthetic target can be enumerated by UIA while offscreen.
+  The focused EP05 harness now calls the target's UIA
+  `ScrollIntoView` when exposed, with an owned-list-only bounded
+  wheel fallback otherwise; waits until the selected row intersects
+  its actual clipped ListView viewport before physical right click.
+  Maintains the test-only native Explorer HWND ownership/snapshot
+  checks; C++ product unchanged.
+- Source/build/GUI for this correction are **NOT TESTED**. No ZIP
+  engine deletion until both Explorer menu commands are observed.
+  G01 open, G03-G05 excluded, G07 user-stopped.
+
 # flyExplorer current status — 2026-10-22 EP05 owned GUI click bounds correction
 
 ## 2026-10-22 — diagnose native Explorer menu fixture click outside owned list
