@@ -1,3 +1,41 @@
+# flyExplorer current status — 2026-10-22 G01 startup route failure reproduced, product baseline restored
+
+- Exact product-change SHA `b0ccf510cba24261f97ac2c832a920fc9810bff4`
+  was run on [central Windows CI #39732505243](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39732505243):
+  policy, source contracts and Release build all PASS; focused window-tabs,
+  shortcuts, filter-preset and folder-tree GUI stages exit 0. Integrated
+  `gui-all-Release` FAILED on the 18-second initial native left-pane
+  route/AddressBox readiness assertion (`UI-independent native core/helper
+  was not active at startup`). The owned app exited 0; this was **not**
+  a reproduced process-exit hang. Preserve CI's primary status FAILURE.
+- The failed run's local archive `c257265676124372aa419a2913927985`
+  was inspected read-only using [Windows owned archive read #39733615566](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39733615566).
+  `manifest.exception=AssertionError`, `AddressBox` present but empty,
+  `LeftFiles` present with 0 UIA descendants, `RightFiles` present with
+  48 UIA descendants (not necessarily file rows); `OWNED_WINUI_SHELL_EXIT 0`.
+  The same traceback is retained. GitHub failure-artifact upload separately
+  failed due to storage quota; do not confuse it with the WinUI failure.
+- [flyExplorer G01 startup issue #68](https://github.com/tngkrwlsmd/flyExplorer/issues/68)
+  tracks initial native helper/request/result/active-route diagnosis;
+  no Shell or session product fix is claimed. The existing G01 sporadic
+  process-exit root cause is also **OPEN**. Native dump retention across
+  CI workspace deletion is separately tracked in
+  [control-plane issue #34](https://github.com/tngkrwlsmd/personal-control-plane/issues/34);
+  do not upload sensitive memory dumps as ordinary UI artifacts.
+- The only experimental product change was removing an unused internal
+  search function argument; there is no evidence that it caused startup
+  failure. That nonessential change was **reverted** at exact commit
+  `f6cb6404782951fc0732706af747275e1ac9acf5`. Git compare against
+  last fully GUI-accepted product source `79b039453de5e56677e3f57f170ffc8817e1890f`
+  confirms **zero differences under `app/`, `src/`, `packaging/`**;
+  the seven remaining differences are docs and test harness/contracts.
+  The last fully accepted product SHA is still `79b03945`; do not
+  attribute a new Windows product acceptance to this revert/doc-only HEAD.
+- G03–G05 remain USER-EXCLUDED; G07 is stopped. No independent pixel,
+  signed setup, clean-machine install or public release acceptance.
+
+---
+
 # flyExplorer current status — 2026-10-22 G01 owned shutdown evidence hardening
 
 - On exact source SHA `c31e9e7ff1a38dc363b90458fe2b83de7abea55a`,

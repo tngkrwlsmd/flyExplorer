@@ -16,6 +16,33 @@ Windows 11 탐색기 기능 호환의 구체적인 개발 계약·관련 파일�
 점검·출시 차단 조건으로 우회하여 다시 넣지 않는다. 사용자가 새로 요청하지 않는 한
 이 세 항목의 실험·환경 구성·원격 실행·개선 제안은 하지 않는다.
 
+## 2026-10-22 — G01 실제 초기 Shell 탐색 미완료 증거 및 수용 기준선 복원
+
+- `b0ccf510cba24261f97ac2c832a920fc9810bff4`의
+  [중앙 CI #39732505243](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39732505243):
+  정책·소스·Release 빌드 PASS, 독립 GUI 4개 PASS였지만
+  통합 GUI `gui-all-Release`에서 첫 18초 왼쪽 소유 경로의
+  초기 표시가 완성되지 않아 **FAIL**. 앱 자체는 종료 0.
+- 테스트 소유 로컬 보관 증거 [#39733615566](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39733615566):
+  주소 입력란은 표시되지만 비어 있고, 왼쪽 목록 UIA 하위 항목
+  0개, 오른쪽 UIA 하위 항목 48개(파일 행 개수와 혼동 금지).
+  기존 G01 종료 잔류 재발과 구분해야 한다. GitHub 실패 증거
+  업로드는 저장 공간 할당량 문제였고 원래 GUI 실패 원인이 아니다.
+- [G01 실측 이슈 #68](https://github.com/tngkrwlsmd/flyExplorer/issues/68)에서
+  정확한 소유 폴더의 `QueuePath` → native helper/supervisor →
+  `OnNativeResult` → 활성 패널 경로 표시 단계의 근거를 요구한다.
+  충분한 재현·진단 없이 timeout 상향이나 추정 수정·전체 재빌드 반복 금지.
+- 경고 C4100을 제거하려던 사용하지 않는 검색 인수 변경은
+  원인이라고 판정하지 않은 채 `f6cb6404782951fc0732706af747275e1ac9acf5`
+  에서 되돌렸다. 마지막 GUI PASS 제품 SHA `79b03945`와
+  활성 앱·기반 엔진·패키징 소스가 바이트 동일하다.
+  최신 소스/문서 SHA에 새 Release/GUI 통과를 주장하지 않는다.
+- 종료 실패 시 native dump가 CI 정리로 사라질 수 있는 위험은
+  [중앙 제어 이슈 #34](https://github.com/tngkrwlsmd/personal-control-plane/issues/34)
+  에 분리해 검토한다. 개인정보를 포함할 수 있는 덤프를
+  일반 CI 아티팩트로 공개/자동 업로드하지 않는다.
+  G03~G05 제외 및 G07 중단 유지.
+
 ## 2026-10-22 — G01 소유 WinUI 종료 실패 진단 경로 보강 (실제 재발 미확인)
 
 - `c31e9e7ff1a38dc363b90458fe2b83de7abea55a`에서 통합 GUI 테스트가
