@@ -1,3 +1,13 @@
+# flyExplorer current status — 2026-10-22 read-only legacy-log recheck and central audit cleanup resolved
+
+- At exact existing developer checkout `C:\dev\flyExplorer` HEAD `387efa622f6a9ce6685e3bffb98299df0503de3c`, the bounded, read-only Windows task [#39777085502](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39777085502) verified the expected remote origin and **zero tracked/untracked ordinary Git status entries**. Its specific previously large `logs/m23` directory was **ABSENT** at inspection time; this inspection made **no deletion** and does not identify who removed it.
+- Deliberately retained under that older checkout: `logs/remote-evidence` (146,570,373 bytes), `logs/archived-worktree-evidence` (2,068,559 bytes) and `logs/preserved-user` (72,952 bytes). None had a direct or nested reparse point or `.keep` in the bounded scan, but archive/user-data retention must be decided separately; this is **not** deletion permission.
+- At the inspection instant, Windows C: free space was **51.86 GiB**. The run finished success and the Windows VM direct request slot was restored to idle by [#39777227412](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39777227412).
+- The separate previously protected **3,572,516,085-byte** central SYSTEM private-audit workspace has since been **deleted** after exact ownership/evidence/active-process preflight: [control issue #35](https://github.com/tngkrwlsmd/personal-control-plane/issues/35) CLOSED; [deletion #39775278799](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39775278799) PASS, C: free space 48.53 -> 51.87 GiB. The older sections below predate this retirement and are preserved as historical checkpoints, not the current residual status.
+- Latest `flyExplorer/main` `d5173501090ccbc741afe6a4402ebba0157b1b2e` adds post-GUI intermediate cleanup. Its exact-SHA Windows build/GUI or cleanup execution was **not run during this read-only task**. Original G01, user-excluded G03-G05 and stopped G07 states are unchanged.
+
+---
+
 # flyExplorer current status — 2026-10-22 original worktree build/cache retirement and source-size audit
 
 - Windows developer worktree `C:\dev\flyExplorer` was checked at its
