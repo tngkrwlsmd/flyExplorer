@@ -1,3 +1,35 @@
+# G01 all-profile startup-only Windows diagnosis — 2026-10-23
+
+- Reproduced the **original integrated suite's pre-start test conditions**
+  (same owned M19/M20/M21/M22/M23/V7 fixtures and feature flags), but stopped
+  after one existing 18-second startup predicate had seen **both** the owned
+  folder path and the actual `Nested` entry in the **left** WinUI file list.
+  No later tab/search/file-operation GUI interactions, G03–G05 or G07 tests
+  were replayed.
+- Exact product source `63c61237aa3c184ef534d83383b1be36cfe859a7`.
+  The focused Windows source [#39873451885](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39873451885)
+  passed 3/3 G01 startup harness/private-redaction tests and the AST syntax
+  of the three edited Python files; no binary build/GUI was run there.
+  Central [Quality #39873299998](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39873299998)
+  passed after updating the exact-tip-only Git checkout contract.
+- One real targeted Windows [`gui-startup` run #39873813652](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39873813652)
+  **PASS**: `runner-health` 647 ms; GUI dependencies 173 ms;
+  Release build 184,302 ms; `gui-startup-integrated-Release` exit 0 in
+  approximately 3.6 s; `functional-g01-startup-diagnostic` PASS in
+  3,981 ms; `NOT_FINAL_ACCEPTANCE=1`. A positive fixture-visibility
+  marker is required by the harness before it can succeed.
+- This **did not reproduce the intermittent G01 failure**. The run does not
+  reproduce the historical *sequence* of earlier unrelated GUI test processes,
+  nor certify full integration, user-visible visual fidelity or installer.
+  Treat G01 as **OPEN**, do not patch native Shell logic without failure
+  evidence and do not raise helper/GUI deadlines.
+- A separate central maintenance correction was required because the
+  newly registered `gui-startup` scope was initially unrecognized by the
+  workspace retirement metadata allowlist. Its bounded, exact-target
+  retirement is a separate operational step, not a product GUI regression.
+
+---
+
 # G01 exact-main Windows Release + focused GUI probe — 2026-10-23
 
 - User authorized scoped live Windows verification. Ran **one** registered
