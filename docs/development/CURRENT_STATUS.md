@@ -1,3 +1,26 @@
+# flyExplorer current status — 2026-10-22 EP05 native Explorer GUI acceptance added; NOT TESTED
+
+## 2026-10-22 — add owned Windows Explorer native delegation GUI coverage
+
+- At prior main `986a178f2cf26dc384032b8e989011cbad3cf484`, the official full Windows Release/GUI
+  run #39699010377 passed but did not trigger the new native Explorer
+  context-menu entries. The previously hidden ZIP source remains on
+  hold pending this explicit P0 acceptance.
+- Added `test_ep05_explorer_handoff_gui.py` to the existing owned
+  GUI harness, activated only for `gui-all`. It right-clicks a synthetic
+  file and the synthetic folder's blank list, invokes only the exact
+  product-owned Windows Explorer menu commands, checks the app's
+  successful native handoff feedback and locates a new Explorer HWND
+  showing the synthetic source. Only HWNDs created after the start
+  baseline and verified against a test-owned fixture may be closed.
+  Files are byte-compared before/after and real user Explorer windows
+  are not inspected or controlled.
+- Registered a source contract for the new end-to-end check.
+  **NOT TESTED yet:** newly added GUI code and exact current HEAD require
+  source and Windows full `gui-all` validation. Do not claim OS
+  delegation accepted or delete native ZIP modules until that succeeds.
+  G01 open; G03-G05 excluded, G07 user-stopped.
+
 # flyExplorer current status — 2026-10-22 exact-SHA Release and GUI acceptance; G01 open
 
 ## 2026-10-22 — current Release and full owned GUI PASS at exact source SHA

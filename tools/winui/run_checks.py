@@ -444,6 +444,9 @@ def gui_command(area, configuration, env):
         # native file-list visibility before M20 retemplates its WinUI peers.
         # Keep the handoff scoped to the chained complete GUI profile.
         gui_env["FLY_M20_OWNED_COLLAPSE_M19_PANELS"] = "YES"
+        # Explicit P0 acceptance: only the test-owned synthetic folder
+        # can spawn new native Explorer HWNDs. Previous user windows untouched.
+        gui_env["FLY_EP05_EXPLORER_HANDOFF"] = "YES"
     return [sys.executable, "-u", str(TESTS / "test_shell_gui.py")], gui_env, 260
 
 

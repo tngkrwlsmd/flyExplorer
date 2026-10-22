@@ -726,6 +726,11 @@ try:
   from test_m22_gui import run as m22_run
   m22_run(win=win,element=element,safe_click=safe_click,
           focus=ensure_owned_focus,eventually=eventually,left=left,right=right)
+ if os.environ.get("FLY_EP05_EXPLORER_HANDOFF")=="YES":
+  assert os.environ.get("FLY_M22_OWNED_FEATURES")=="YES"
+  from test_ep05_explorer_handoff_gui import run as ep05_run
+  ep05_run(win=win,element=element,focus=ensure_owned_focus,
+           eventually=eventually,left=left,right=right,owned_pid=p.pid)
  if os.environ.get("FLY_M23_OWNED_FEATURES")=="YES":
   from test_m23_gui import run as m23_run
   m23_run(win=win,element=element,safe_click=safe_click,

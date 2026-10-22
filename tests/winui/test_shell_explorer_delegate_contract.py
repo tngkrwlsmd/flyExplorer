@@ -104,6 +104,26 @@ class WindowsExplorerDelegationContracts(unittest.TestCase):
         self.assertNotIn("ShellExecuteExW(&request)",h.split(
             "inline HRESULT openFolder(",1)[0])
 
+    def test_owned_gui_exercises_both_native_windows_explorer_commands(self):
+        test=source("tests/winui/test_ep05_explorer_handoff_gui.py")
+        harness=source("tests/winui/test_shell_gui.py")
+        runner=source("tools/winui/run_checks.py")
+        for command in (
+            "Windows 탐색기에서 선택 열기",
+            "Windows 탐색기에서 현재 폴더 열기",
+            "EP05_NATIVE_EXPLORER_SELECTED_OWNED_FILE=PASS",
+            "EP05_NATIVE_EXPLORER_OPENED_OWNED_FOLDER=PASS",
+            "EP05_NATIVE_EXPLORER_HANDOFF_READ_ONLY=PASS",
+            "if handle not in baseline and handle in explorer_windows()",
+            'cls.value != "CabinetWClass"',
+            'exe == "explorer.exe"',
+            "owner.value == owned_pid",
+        ):
+            self.assertIn(command,test)
+        self.assertIn('if os.environ.get("FLY_EP05_EXPLORER_HANDOFF")=="YES":',harness)
+        self.assertIn("ep05_run(win=win,element=element",harness)
+        self.assertIn('gui_env["FLY_EP05_EXPLORER_HANDOFF"] = "YES"',runner)
+
     def test_archive_code_is_not_compiled_into_product(self):
         project=source("app/winui/flyExplorer.project-template.xml")
         for inactive in ("zip_raw_deflate.cpp", "zip_raw_deflate_compress.cpp",
