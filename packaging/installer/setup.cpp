@@ -30,6 +30,7 @@ constexpr wchar_t kManifest[]=L"install-manifest.txt";
 struct Options {
     bool silent=false;
     bool uninstall=false;
+    bool purgeUserData=false;
     bool desktop=false;
     std::wstring testRoot;
     std::wstring testDisplayVersion;
@@ -65,6 +66,7 @@ Options optionsFromCommandLine(){
         std::wstring a=argv[i];
         if(eq(a,L"/S")||eq(a,L"/SILENT"))o.silent=true;
         else if(eq(a,L"/UNINSTALL"))o.uninstall=true;
+        else if(eq(a,L"/PURGEUSERDATA"))o.purgeUserData=true;
         else if(eq(a,L"/DESKTOP"))o.desktop=true;
         else if(eq(a,L"/NODESKTOP"))o.desktop=false;
         else if(starts(a,L"/TESTROOT="))o.testRoot=a.substr(10);
@@ -177,6 +179,20 @@ bool writeInstallManifest(fs::path const& root){
     for(auto const& file:kPayloadFiles)out<<utf8(file.relativePath)<<"\r\n";
     return out.good();
 }
+bool reparsePoint(fs::path const& path){
+    const auto attributes=GetFileAttributesW(path.c_str());
+    return attributes!=INVALID_FILE_ATTRIBUTES &&
+        (attributes&FILE_ATTRIBUTE_REPARSE_POINT)!=0;
+}
+bool safeManifestTarget(fs::path const& root,fs::path const& relative){
+    if(!safeRelative(relative)||reparsePoint(root))return false;
+    auto cursor=root;
+    for(auto const& part:relative){
+        cursor/=part;
+        if(reparsePoint(cursor))return false;
+    }
+    return true;
+}
 void removeEmptyParents(fs::path parent,fs::path const& root){
     std::error_code ec;
     while(parent!=root&&parent.native().size()>root.native().size()){
@@ -184,19 +200,30 @@ void removeEmptyParents(fs::path parent,fs::path const& root){
         parent=parent.parent_path();
     }
 }
-void removeInstalledPayload(fs::path const& root){
+bool removeInstalledPayload(fs::path const& root){
+    std::error_code ec;
+    if(!fs::exists(root/kManifest,ec))return !ec;
+    if(ec||reparsePoint(root/kManifest))return false;
     std::ifstream in(root/kManifest,std::ios::binary);
+    if(!in)return false;
     std::vector<fs::path> paths;
     std::string line;
     while(std::getline(in,line)){
         if(!line.empty()&&line.back()=='\r')line.pop_back();
-        fs::path rel=wide(line);
-        if(safeRelative(rel))paths.push_back(rel);
+        fs::path relative=wide(line);
+        if(!safeManifestTarget(root,relative))return false;
+        paths.push_back(relative);
     }
+    if(in.bad())return false;
+    bool ok=true;
     for(auto it=paths.rbegin();it!=paths.rend();++it){
-        std::error_code ec;fs::remove(root/(*it),ec);
-        removeEmptyParents((root/(*it)).parent_path(),root);
+        const auto target=root/(*it);
+        ec.clear();
+        fs::remove(target,ec);
+        if(ec)ok=false;
+        removeEmptyParents(target.parent_path(),root);
     }
+    return ok;
 }
 
 HRESULT createLink(fs::path const& link,fs::path const& target,fs::path const& work){
@@ -221,12 +248,29 @@ ShortcutPaths shortcutPaths(Options const& o,fs::path const& root){
     auto desktop=knownFolder(FOLDERID_Desktop)/L"flyExplorer.lnk";
     return {start,desktop};
 }
-void removeShortcuts(Options const& o,fs::path const& root){
-    auto p=shortcutPaths(o,root);std::error_code ec;
-    fs::remove(p.startMenu,ec);fs::remove(p.desktop,ec);
-    if(!o.testRoot.empty())fs::remove_all(root/L"_installer_shortcuts",ec);
-    else fs::remove(p.startMenu.parent_path(),ec);
+bool removeShortcuts(Options const& o,fs::path const& root){
+    auto p=shortcutPaths(o,root);
+    std::error_code ec;
+    bool ok=true;
+    for(auto const& path:{p.startMenu,p.desktop}){
+        ec.clear();
+        fs::remove(path,ec);
+        if(ec)ok=false;
+    }
+    if(!o.testRoot.empty()){
+        const auto shortcutRoot=root/L"_installer_shortcuts";
+        if(reparsePoint(shortcutRoot))return false;
+        ec.clear();
+        fs::remove_all(shortcutRoot,ec);
+        if(ec)ok=false;
+    }else{
+        ec.clear();
+        fs::remove(p.startMenu.parent_path(),ec);
+        if(ec)ok=false;
+    }
+    return ok;
 }
+
 bool createShortcuts(Options const& o,fs::path const& root){
     HRESULT init=CoInitializeEx(nullptr,COINIT_APARTMENTTHREADED);
     const bool uninit=SUCCEEDED(init);
@@ -280,9 +324,10 @@ bool registerUninstall(Options const& o,fs::path const& root){
       setDword(key,L"NoModify",1)&&setDword(key,L"NoRepair",1);
     RegCloseKey(key);return ok;
 }
-void unregisterUninstall(Options const& o){
+bool unregisterUninstall(Options const& o){
     REGSAM access=o.testRoot.empty()?KEY_WOW64_64KEY:0;
-    RegDeleteKeyExW(registryRoot(o),registryPath(o),access,0);
+    const auto result=RegDeleteKeyExW(registryRoot(o),registryPath(o),access,0);
+    return result==ERROR_SUCCESS||result==ERROR_FILE_NOT_FOUND;
 }
 
 bool copySelf(fs::path const& root){
@@ -328,10 +373,55 @@ bool promptInstall(fs::path const& root,bool& desktop){
     if(FAILED(TaskDialogIndirect(&c,&button,nullptr,&checked)))return false;
     desktop=checked!=FALSE;return button==IDOK;
 }
-bool promptUninstall(){
-    return MessageBoxW(nullptr,L"flyExplorer를 제거하시겠습니까?\n사용자 설정은 유지됩니다.",
-        L"flyExplorer 제거",MB_OKCANCEL|MB_ICONQUESTION)==IDOK;
+bool promptUninstall(bool& purge){
+    TASKDIALOGCONFIG config{sizeof(config)};
+    config.hInstance=GetModuleHandleW(nullptr);
+    config.dwFlags=TDF_ALLOW_DIALOG_CANCELLATION;
+    config.dwCommonButtons=TDCBF_OK_BUTTON|TDCBF_CANCEL_BUTTON;
+    config.pszWindowTitle=L"flyExplorer 제거";
+    config.pszMainInstruction=L"flyExplorer를 제거하시겠습니까?";
+    config.pszContent=L"일반 제거 시 사용자 설정·즐겨찾기·검색 기록은 유지됩니다.";
+    config.pszVerificationText=
+        L"완전 제거: 현재 사용자의 flyExplorer 설정·캐시도 삭제 (복구 불가)";
+    int button=0;
+    BOOL checked=FALSE;
+    if(FAILED(TaskDialogIndirect(&config,&button,nullptr,&checked)))return false;
+    purge=checked!=FALSE;
+    return button==IDOK;
 }
+fs::path privateDataRoot(Options const& o,fs::path const& root){
+    if(o.testRoot.empty()){
+        const auto local=knownFolder(FOLDERID_LocalAppData);
+        return local.empty()?fs::path{}:local/L"flyExplorer";
+    }
+    const auto filename=root.filename().native();
+    const std::wstring prefix=L"flyExplorer-installer-test-";
+    if(filename.rfind(prefix,0)!=0||filename.size()<=prefix.size())return {};
+    const auto token=filename.substr(prefix.size());
+    return root.parent_path()/(L"installer-profile-"+token)/L"localappdata"/L"flyExplorer";
+}
+bool deleteOwnedDataTree(fs::path const& target){
+    if(reparsePoint(target))return false;
+    std::error_code ec;
+    if(!fs::exists(target,ec))return !ec;
+    if(ec)return false;
+    if(fs::is_directory(target,ec)){
+        if(ec)return false;
+        fs::directory_iterator children(target,ec);
+        if(ec)return false;
+        for(auto const& entry:children)
+            if(!deleteOwnedDataTree(entry.path()))return false;
+    }else if(ec)return false;
+    ec.clear();
+    return fs::remove(target,ec)&&!ec;
+}
+bool removePrivateData(Options const& o,fs::path const& root){
+    const auto target=privateDataRoot(o,root);
+    if(target.empty()||target.filename()!=L"flyExplorer"||
+       reparsePoint(target.parent_path()))return false;
+    return deleteOwnedDataTree(target);
+}
+
 void cleanupPartial(fs::path const& root){
     for(auto const& file:kPayloadFiles){
         std::error_code ec;fs::remove(root/file.relativePath,ec);
@@ -340,7 +430,7 @@ void cleanupPartial(fs::path const& root){
 int install(Options o,fs::path const& root){
     if(!o.silent&&!promptInstall(root,o.desktop))return ERROR_CANCELLED;
     std::error_code ec;fs::create_directories(root,ec);if(ec)return ERROR_CANNOT_MAKE;
-    removeInstalledPayload(root);
+    if(!removeInstalledPayload(root))return ERROR_ACCESS_DENIED;
     if(!extractPayload(root)){cleanupPartial(root);return ERROR_WRITE_FAULT;}
     if(!copySelf(root)){cleanupPartial(root);return ERROR_WRITE_FAULT;}
     if(!writeInstallManifest(root)){cleanupPartial(root);return ERROR_WRITE_FAULT;}
@@ -348,26 +438,37 @@ int install(Options o,fs::path const& root){
     if(!registerUninstall(o,root))return ERROR_REGISTRY_CORRUPT;
     return 0;
 }
-int uninstall(Options const& o,fs::path const& root){
-    if(!o.silent&&!promptUninstall())return ERROR_CANCELLED;
-    removeShortcuts(o,root);
-    unregisterUninstall(o);
-    removeInstalledPayload(root);
+int uninstall(Options o,fs::path const& root){
+    if(!o.silent&&!promptUninstall(o.purgeUserData))return ERROR_CANCELLED;
+    if(!removeShortcuts(o,root))return ERROR_ACCESS_DENIED;
+    if(!removeInstalledPayload(root))return ERROR_ACCESS_DENIED;
+    if(o.purgeUserData&&!removePrivateData(o,root))return ERROR_ACCESS_DENIED;
     const auto installedUninstaller=root/kUninstaller;
-    auto current=fs::path(selfPath());
+    const auto current=fs::path(selfPath());
     std::error_code ec;
     if(!fs::equivalent(current,installedUninstaller,ec)){
+        ec.clear();
         fs::remove(installedUninstaller,ec);
+        if(ec)return ERROR_ACCESS_DENIED;
+        ec.clear();
         fs::remove(root/kManifest,ec);
-        fs::remove(root,ec);
-        return 0;
+        if(ec)return ERROR_ACCESS_DENIED;
+        ec.clear();
+        if(!fs::remove(root,ec)||ec)return ERROR_DIR_NOT_EMPTY;
+        return unregisterUninstall(o)?0:ERROR_ACCESS_DENIED;
     }
-    return scheduleSelfCleanup(root)?0:ERROR_ACCESS_DENIED;
+    // Self-deletion is deferred until this executable handle is released.
+    if(!scheduleSelfCleanup(root))return ERROR_ACCESS_DENIED;
+    return unregisterUninstall(o)?0:ERROR_ACCESS_DENIED;
 }
+
 } // namespace
 
 int WINAPI wWinMain(HINSTANCE,HINSTANCE,PWSTR,int){
     auto o=optionsFromCommandLine();
+    // A script can request destructive profile cleanup only with an explicit
+    // silent uninstall; interactive uninstall uses an unchecked checkbox.
+    if(o.purgeUserData&&(!o.uninstall||!o.silent))return ERROR_INVALID_PARAMETER;
     fs::path root=installRoot(o);
     if(root.empty()){
         MessageBoxW(nullptr,L"안전한 설치 경로를 결정할 수 없습니다.",L"flyExplorer Setup",MB_OK|MB_ICONERROR);
