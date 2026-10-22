@@ -17,8 +17,8 @@ consumer core; this PROJECT.md remains project-owned across bundle refreshes.
     "build_command": {"value": "build.bat Release", "status": "Confirmed", "evidence": "manual:central registered desktop-a winui-gui profile invokes build.bat Release from verified flyExplorer main checkout"},
     "test_command": {"value": "test.bat source", "status": "Confirmed", "evidence": "manual:central registered desktop-a winui-gui profile invokes test.bat source from verified flyExplorer main checkout"},
     "runtime": {"value": "Windows 11 / Visual Studio 18.x / Python 3.14.x", "status": "Confirmed", "evidence": "manual:central registered Windows CI profile and current build policy"},
-    "deploy_command": {"value": "", "status": "Unknown", "evidence": "manual:public deployment/signing remains an open gate"},
-    "deploy_target": {"value": "", "status": "Unknown", "evidence": "manual:public deployment target is not certified"}
+    "deploy_command": {"value": "", "status": "NotApplicable", "evidence": "manual:2026-10-22 user directive: private personal use; no public deployment"},
+    "deploy_target": {"value": "", "status": "NotApplicable", "evidence": "manual:2026-10-22 user directive: no distribution target"}
   },
   "components": [
     {"name": "winui-app", "path": "app/winui", "responsibility": "C++/WinRT WinUI 3 application"},
@@ -823,8 +823,7 @@ Not certified:
 - actual 125/150/200% OS scaling;
 - actual Narrator spoken rule/color/icon/selection feedback and audible output
   (not verified; see `docs/development/NARRATOR_SPEECH_VALIDATION.md`);
-- signed clean-machine machine-wide install/update/rollback;
-- public redistribution/source-delivery/rightsholder/legal clearance.
+- private machine-wide installation outside a test root remains unverified and requires explicit user authorization.
 
 The latest **retained historical** unsigned package + exact binary/source
 identity acceptance is Remote Windows Task #440 (`37376305779`). This is not a
@@ -844,15 +843,10 @@ The setup, source ZIP, source manifest, runtime provenance and release identity
 were preserved together in the private #440 evidence artifact. This closes the
 technical exact binary/source identity gate.
 
-The public conveyance policy is now fixed to GPLv3 section 6(d): matching binary
-and source assets on the same public GitHub Release page, without authentication
-or extra source charge. `v1.0.0.0` is reserved but intentionally not pre-created;
-repository Immutable Releases was enabled in run #446 (`37379026246`) so the
-fully assembled published release locks its tag/assets. Corresponding Source
-must remain available while the binary is offered and for at least 1095 days
-after withdrawal under the project's stronger retention policy. Production
-signing, clean-machine machine-wide deployment, activation of the public
-release surface and rightsholder/legal clearance remain open.
+Publication plans have been retired by the 2026-10-22 private-use user
+directive. The historical acceptance records above are retained only as
+exact-revision technical evidence, not as public-release tasks. Inherited
+source and dependency notices remain accurate and retained.
 
 ## Documentation
 
