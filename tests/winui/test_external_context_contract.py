@@ -74,7 +74,17 @@ class ContextContract(unittest.TestCase):
   self.assertIn("로컬 고정 디스크만 지원합니다.",app)
   xml=src("app/winui/MainWindow.xaml")
   self.assertNotIn("<ListView.ContextFlyout>",xml)
-  self.assertEqual(xml.count('RightTapped="OnFileRightTapped"'),2)
+  # Both lists now use handledEventsToo=true: child ListViewItems can
+  # consume RightTapped, but the pane's menu must still run once.
+  self.assertEqual(xml.count('RightTapped="OnFileRightTapped"'),0)
+  constructor=src("app/winui/MainWindow.xaml.cpp").split(
+      "MainWindow::MainWindow()",1)[1].split(
+      "RootShell().AddHandler(",1)[0]
+  self.assertIn("for(auto const& files:{LeftFiles(),RightFiles()})",constructor)
+  self.assertIn("UIElement::RightTappedEvent()",constructor)
+  self.assertIn("this,&MainWindow::OnFileRightTapped",constructor)
+  self.assertEqual(constructor.count("UIElement::RightTappedEvent()"),1)
+  self.assertIn("true);",constructor)
   header=src("app/winui/MainWindow.xaml.h")
   self.assertIn("ShowExternalWindowsContextMenu(int side)",header)
   self.assertIn("OnExternalWindowsContextMenu",header)

@@ -1,3 +1,18 @@
+# flyExplorer 작업 인계 — 2026-10-22 EP05 기존 RightTapped 검사 정정
+
+## 2026-10-22 — 새 WinUI 이벤트 연결에 맞춘 기존 소스 계약
+
+- 정확한 제품 `e0dcfa2034982898e9658de24a0e7bf2a24c0213`의 Windows
+  [#39705321837](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39705321837)은
+  Release 이전 소스 계약에서 중단됐다. XAML 우클릭 속성
+  2개를 요구하는 기존 검사가 새로운 handled event 루프에
+  맞지 않은 원인이다.
+- 제품을 재변경하지 않고 XAML 속성 0개 및 좌우 파일 목록의
+  AddHandler(..., true) 한 번 등록을 검사한다.
+- **미검증:** 후속 SHA Release/GUI, 신규 Explorer 항목 선택
+  및 현재 폴더 위임. G01 종료 위험 미해결,
+  G03-G05 제외·G07 중단 유지. ZIP 원본 삭제 보류.
+
 # flyExplorer 작업 인계 — 2026-10-22 EP05 우클릭 routed event 보강
 
 ## 2026-10-22 — ListViewItem 소비 가능 이벤트에 메뉴 연결

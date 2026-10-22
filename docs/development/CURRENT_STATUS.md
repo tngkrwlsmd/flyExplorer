@@ -1,3 +1,19 @@
+# flyExplorer current status — 2026-10-22 EP05 prior RightTapped source contract corrected
+
+## 2026-10-22 — source contract fixed after moving handled menu routing
+
+- Windows [39705321837](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39705321837)
+  at `e0dcfa2034982898e9658de24a0e7bf2a24c0213`: runner health/policy PASS, source FAIL
+  (one of 262 product contracts), Release and GUI not reached.
+  `test_external_context_contract.py` still required the old pair
+  of XAML `RightTapped` attributes instead of the new
+  `AddHandler(UIElement::RightTappedEvent(), ..., true)`.
+- Updated only that historical source contract, requiring no duplicate
+  XAML binding and the single handled-routed registration for both
+  panes. C++ product unchanged. **New SHA needs Windows Release and
+  GUI verification** before the real Explorer handoff can be accepted.
+  G01 open, G03-G05 excluded and G07 user-stopped.
+
 # flyExplorer current status — 2026-10-22 EP05 handled RightTapped routing fix
 
 ## 2026-10-22 — handled ListViewItem right tap did not open custom menu
