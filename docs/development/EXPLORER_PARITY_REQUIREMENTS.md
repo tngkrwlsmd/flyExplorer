@@ -6,7 +6,26 @@
 이 문서는 요구사항이며, 아래 기능의 구현 완료나 새로운 GUI 수용을 뜻하지 않는다.
 기존 `NEXT_DEVELOPMENT_GOALS.md`의 G01~G08 및 F01~F18 비교 ID를 재사용한다.
 
-## 2026-10-22 선택 항목·빈 배경 양쪽 Explorer 위임 — 실제 Windows GUI 수용
+## 2026-10-22 Windows 11 Explorer 재비교 — 완전 동일성 불인정
+
+정식 Windows 11 파일 탐색기의 홈·클라우드 검색·빠른 액세스·공유·메뉴·표시
+옵션을 Microsoft 공식 설명과 현재 소스/기존 수용 기록에 대조했다.
+별도 Explorer 실행을 통한 Shell 기능은 flyExplorer 자체 동일 기능과 구별한다.
+**기능/화면/상호작용의 전체 동등성은 현재 성립하지 않는다.**
+
+[WIN11_PARITY_REAUDIT_20261022.md](WIN11_PARITY_REAUDIT_20261022.md)는
+PX01~PX18의 차이를 DIFFERENT/PARTIAL/CANDIDATE/OPEN/INTENTIONAL로
+분류하고 기능별 최소 수용 조건을 정한다. 기존 EP01~EP15 / F01~F18과
+연결되므로 완료한 항목을 초기 상태로 되돌리거나 새로 전체 검증하지 않는다.
+
+신규 명시 요구: 자체 메뉴와 외부 Explorer 위임 차이(PX01), 로컬 Home·최근
+항목 대 클라우드 추천(PX02), 내장/위임 압축 구분(PX03), Gallery(PX04),
+클라우드 동기화/오프라인 표시(PX05), Windows Search 범위 차이(PX06),
+외부 Windows Share(PX08), 되돌리기 트랜잭션(PX09), 탭 계층 및 보기 설정
+소유 범위(PX11), 실제 Explorer 대조 화면 증거(PX15), New-item 템플릿(PX17).
+완료 판정은 해당 변경 영역의 증거로만 내리고, G03~G05 제외/G07 중단을 유지한다.
+
+
 
 선택 항목 우클릭은 공식 Shell PIDL API로 해당 항목을
 Explorer에서 선택해 열고, 폴더 목록의 **빈 배경 우클릭**은
