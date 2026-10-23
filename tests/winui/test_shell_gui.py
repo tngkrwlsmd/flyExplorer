@@ -75,7 +75,7 @@ if os.environ.get("FLY_F05_FULL_KEYBOARD_ONLY")=="YES":
  assert os.environ.get("FLY_F05_VISUAL_CAPTURE")!="YES"
  assert os.environ.get("FLY_F05_KEYBOARD_DISCLOSURE_ONLY")!="YES"
  assert os.environ.get("FLY_F05_SCREEN_PHYSICAL_TYPE_ONLY")!="YES"
-if os.environ.get("FLY_F05_MODES_ONLY")=="YES":
+if os.environ.get("FLY_F05_MODES_ONLY")=="YES" or os.environ.get("FLY_PX10_SELECTION_ONLY")=="YES":
  for name,length,month in (
      ("Alpha-small.txt",20,7),
      ("Mango-medium.md",12000,8),
@@ -88,6 +88,10 @@ if os.environ.get("FLY_F05_MODES_ONLY")=="YES":
   stamp=datetime.datetime(2026,month,15,12,
                           tzinfo=datetime.timezone.utc).timestamp()
   os.utime(item,(stamp,stamp))
+if os.environ.get("FLY_PX10_SELECTION_ONLY")=="YES":
+ assert os.environ.get("FLY_F05_MODES_ONLY")!="YES"
+ assert os.environ.get("FLY_F05_VISUAL_CAPTURE")!="YES"
+ (left/"Alpha-second.txt").write_text("only PX10 owned selection",encoding="utf-8")
 if os.environ.get("FLY_F03_EXTRA_FORMATS")=="YES":
  assert os.environ.get("FLY_F03_TEXT_ONLY")=="YES"
  (left/"guide.md").write_text("# owned document\nowned markdown only",encoding="utf-8")
@@ -328,6 +332,13 @@ try:
      for e in element("LeftFiles").descendants()),
      "async native Shell directory items never displayed",12)
  print("REAL_FILE_LIST_IN_LEFT_PANE",True,flush=True)
+ if os.environ.get("FLY_PX10_SELECTION_ONLY")=="YES":
+  from test_px10_selection_projection_gui import run as px10_projection
+  px10_projection(win=win,element=element,safe_click=safe_click,
+                  focus=ensure_owned_focus,eventually=eventually,
+                  left=left,right=right)
+  print("PX10_SELECTION_PROJECTION_GUI_PASS=True",flush=True)
+  raise SystemExit(0)
  if os.environ.get("FLY_F05_MODES_ONLY")=="YES":
   from test_f05_group_modes_gui import run as f05_modes_probe
   f05_modes_probe(win=win,element=element,safe_click=safe_click,

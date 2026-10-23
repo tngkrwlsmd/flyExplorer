@@ -146,6 +146,7 @@ GUI_AREAS = (
     "large-folder",
     "column-resize",
     "context-selection",
+    "selection-projection",
     "folder-tree",
     "all",
 )
@@ -408,6 +409,10 @@ def gui_command(area, configuration, env):
             str(TESTS / "test_owned_context_properties_gui.py"),
             configuration,
         ], gui_env, 180
+    if area == "selection-projection":
+        gui_env["FLY_PX10_SELECTION_ONLY"] = "YES"
+        gui_env["FLY_F05_VISUAL_CAPTURE"] = "NO"
+        return [sys.executable, "-u", str(TESTS / "test_shell_gui.py")], gui_env, 160
     if area == "column-resize":
         return [
             sys.executable,
@@ -518,6 +523,27 @@ def run_gui(area, configuration, env, tag):
         if ("G01_INTEGRATED_STARTUP_GUI_PASS=True" not in set(body.splitlines())
                 or "Traceback (most recent call last)" in body):
             print("G01_INTEGRATED_STARTUP_MARKER_MISSING", flush=True)
+            rc = 1
+    if not rc and area == "selection-projection":
+        body = (LOGS / (tag + "-" + label + ".log")).read_text(
+            encoding="utf-8", errors="replace"
+        )
+        markers = (
+            "PX10_GUI_FILTER_TWO_SELECTED=PASS",
+            "PX10_GUI_FILTER_FOCUSED_FILE=PASS",
+            "PX10_GUI_GROUP_TWO_SELECTED=PASS",
+            "PX10_GUI_GROUPED_REFRESH_FOCUS=PASS",
+            "PX10_GUI_UNGROUP_TWO_SELECTED=PASS",
+            "PX10_GUI_EXCLUDED_NO_GHOST_SELECTION=PASS",
+            "PX10_GUI_ORIGINAL_FILE_HASHES_UNCHANGED=PASS",
+            "PX10_SELECTION_PROJECTION_GUI_PASS=True",
+            "OWNED_WINUI_SHELL_EXIT 0",
+            "LEGACY_USER_PROFILE_SENTINEL_UNCHANGED True",
+            "OWNED_SYNTHETIC_FIXTURE_REMOVED True",
+        )
+        if not all(marker in body for marker in markers) or (
+                "Traceback (most recent call last)" in body):
+            print("PX10_OWNED_GUI_MARKERS_MISSING_OR_ERROR", flush=True)
             rc = 1
     if not rc and area == "column-resize":
         # A Windows wrapper previously reported exit=0 despite a Python
