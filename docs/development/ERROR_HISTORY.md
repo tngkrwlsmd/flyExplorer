@@ -1,5 +1,13 @@
 # Error history
 
+## 2026-10-23 — L08 event instrumentation C++ compile failures; restoration and prevention
+
+- Diagnostic-only edit to `DetailColumnHandle` exposed Loaded, pointer entry/exit counts and ProtectedCursor presence via a test-gated UIA HelpText. All focused **Python source contracts passed**, but this did **not** validate the generated C++/WinRT projection.
+- Exact-source [central #39956401276](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39956401276) **Release FAIL** at `DetailColumnHandle.cpp:21` (braced `winrt::hstring{value}` parser error). Corrected explicit UTF-16 conversion. [#39957070274](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39957070274) **Release FAIL** at `DetailColumnHandle.cpp:20` because `this->as<DependencyObject>()` is absent on the implementation type. Changed to `get_strong().as<...>` but [#39957644663](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39957644663) still **Release FAIL** (error text unavailable in the bounded central log). **None of these three runs executed GUI**; do not mistake diagnostics for observed `PointerEntered`.
+- Read-only retained archive [#39958334368](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39958334368) held only the source filename, not compiler errors. Exact third-run CI workspace no longer existed [#39958541750](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39958541750). Failed GitHub artifact uploads hit storage quota; do not invent a call stack or error code for the third compile.
+- **Recovery:** reverted only the four new diagnostic/contract files to the exact GitHub blobs from accepted baseline `ae19755b47897dec298593cd4543c30a5e631ecd`, verified blob-for-blob at `7e086b4b00436aa5762abcc9495ac3b671caa949`. Previous [Windows GUI #39954174882](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39954174882) remains relevant for unchanged content, but the restore snapshot itself has **not been separately built/tested**. Prevent recurrence with an isolated C++/WinRT compile probe + complete compiler error preservation before another expensive scoped GUI; avoid guessed projection conversions.
+
+
 ## 2026-10-23 — L08 precise hover hit but native arrow persists through 600 ms
 
 - Old focused GUI `98e9b283` was a **real drag PASS**, not a cursor PASS. Read-only inspection of its retained log ([#39953465234](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39953465234)) showed exact automation hit on each of the three resize thumb elements and actual +40/+28/+20-pixel boundary movement, but `GetCursorInfo` reported native arrow `HCURSOR=65539` while Win32 `IDC_SIZEWE=65553`.
