@@ -31,6 +31,8 @@ class G01IntegratedStartupContract(unittest.TestCase):
         runner=(ROOT/"tools/winui/run_checks.py").read_text("utf-8")
         self.assertIn("G01_INTEGRATED_STARTUP_GUI_PASS=True",runner)
         self.assertIn("G01_INTEGRATED_STARTUP_MARKER_MISSING",runner)
+        self.assertIn('g01_startup_evidence_ok(body)',runner)
+        self.assertIn('LEGACY_USER_PROFILE_SENTINEL_UNCHANGED True PRESENT ',runner)
         for marker in ("G01_FINAL_WINDOW_ADDRESS_FOCUS=PASS",
                        "G01_FINAL_WINDOW_CTRL_W_EXIT=0",
                        "OWNED_WINUI_SHELL_EXIT 0",
@@ -59,6 +61,27 @@ class G01IntegratedStartupContract(unittest.TestCase):
         self.assertIn('raise SystemExit(0)',harness)
         self.assertIn('"UI-independent native core/helper was not active at startup",18',harness)
         self.assertIn('"left_fixture_visible":left_visible',harness)
+
+
+    def test_g01_startup_gate_handles_real_sentinel_line(self):
+        markers=(
+            "G01_INTEGRATED_STARTUP_GUI_PASS=True",
+            "G01_FINAL_WINDOW_ADDRESS_FOCUS=PASS",
+            "G01_FINAL_WINDOW_CTRL_W_EXIT=0",
+            "OWNED_WINUI_SHELL_EXIT 0",
+            "LEGACY_USER_PROFILE_SENTINEL_UNCHANGED True PRESENT 6",
+            "OWNED_SYNTHETIC_FIXTURE_REMOVED True",
+        )
+        body="\\n".join(markers)+"\\n"
+        self.assertTrue(run_checks.g01_startup_evidence_ok(body))
+        for missing in markers:
+            self.assertFalse(run_checks.g01_startup_evidence_ok(
+                "\\n".join(line for line in markers if line!=missing)))
+        self.assertFalse(run_checks.g01_startup_evidence_ok(
+            body.replace("True PRESENT 6","True PRESENT invalid")))
+        self.assertFalse(run_checks.g01_startup_evidence_ok(
+            body+"Traceback (most recent call last)\\n"))
+
 
 
 if __name__=="__main__": unittest.main()

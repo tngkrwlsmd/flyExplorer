@@ -482,6 +482,28 @@ def gui_command(area, configuration, env):
     return [sys.executable, "-u", str(TESTS / "test_shell_gui.py")], gui_env, 260
 
 
+def g01_startup_evidence_ok(body: str) -> bool:
+    """Accept exact owned-exit markers and the real bounded profile sentinel."""
+    lines = set(body.splitlines())
+    required = (
+        "G01_INTEGRATED_STARTUP_GUI_PASS=True",
+        "G01_FINAL_WINDOW_ADDRESS_FOCUS=PASS",
+        "G01_FINAL_WINDOW_CTRL_W_EXIT=0",
+        "OWNED_WINUI_SHELL_EXIT 0",
+        "OWNED_SYNTHETIC_FIXTURE_REMOVED True",
+    )
+    profile_prefix = "LEGACY_USER_PROFILE_SENTINEL_UNCHANGED True PRESENT "
+    return (
+        all(marker in lines for marker in required)
+        and any(
+            line.startswith(profile_prefix)
+            and line[len(profile_prefix):].isdigit()
+            for line in lines
+        )
+        and "Traceback (most recent call last)" not in body
+    )
+
+
 def run_gui(area, configuration, env, tag):
     dep_rc = execute(
         "gui-python-dependencies",
@@ -529,16 +551,7 @@ def run_gui(area, configuration, env, tag):
         body = (LOGS / (tag + "-" + label + ".log")).read_text(
             encoding="utf-8", errors="replace"
         )
-        markers = (
-            "G01_INTEGRATED_STARTUP_GUI_PASS=True",
-            "G01_FINAL_WINDOW_ADDRESS_FOCUS=PASS",
-            "G01_FINAL_WINDOW_CTRL_W_EXIT=0",
-            "OWNED_WINUI_SHELL_EXIT 0",
-            "LEGACY_USER_PROFILE_SENTINEL_UNCHANGED True",
-            "OWNED_SYNTHETIC_FIXTURE_REMOVED True",
-        )
-        if (not all(marker in body.splitlines() for marker in markers)
-                or "Traceback (most recent call last)" in body):
+        if not g01_startup_evidence_ok(body):
             print("G01_INTEGRATED_STARTUP_MARKER_MISSING", flush=True)
             rc = 1
     if not rc and area == "selection-projection":
