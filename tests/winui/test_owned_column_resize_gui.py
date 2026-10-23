@@ -199,19 +199,28 @@ def main(config="Release"):
         passed=True
     finally:
         if proc.poll() is None:
-            proc.terminate()
-            try:proc.wait(timeout=8)
-            except subprocess.TimeoutExpired:
-                proc.kill();proc.wait(timeout=5)
+            # Verify the normal owned WinUI close path, not terminate().
+            if hwnd is None:
+                proc.terminate();proc.wait(timeout=8)
+            else:
+                assert ctypes.windll.user32.PostMessageW(hwnd,0x10,0,0)
+                try:proc.wait(timeout=13)
+                except subprocess.TimeoutExpired:
+                    proc.terminate();proc.wait(timeout=5)
+                    raise RuntimeError("PX10 owned WinUI did not close normally")
+        print("OWNED_DETAIL_COLUMN_EXIT",proc.returncode,flush=True)
         safe=all((mfc/n).is_file() and
             hashlib.sha256((mfc/n).read_bytes()).digest()==h
             for n,h in old.items())
         print("SIX_ORIGINAL_MFC_SETTINGS_IDENTICAL",safe,flush=True)
-        if passed and safe:
+        if passed and safe and proc.returncode==0:
+            assert owned.parent==root and owned.name.startswith("columns-gui-owned-")
+            assert not owned.is_symlink()
             shutil.rmtree(owned)
+            print("OWNED_COLUMN_RESIZE_FIXTURE_REMOVED",True,flush=True)
         else:
             print("OWNED_COLUMN_RESIZE_DIAGNOSTIC_FIXTURE_RETAINED",owned,flush=True)
-    return 0 if passed and safe else 1
+    return 0 if passed and safe and proc.returncode==0 else 1
 
 if __name__=="__main__":
     try:
