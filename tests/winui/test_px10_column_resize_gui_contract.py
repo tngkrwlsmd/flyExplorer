@@ -42,6 +42,8 @@ class PX10ColumnResizeGuiContract(unittest.TestCase):
         gui=(ROOT/"tests/winui/test_owned_column_resize_gui.py").read_text("utf-8")
         self.assertIn("mCursorDiagnosticEnabled=false;",header)
         self.assertIn("winrt::hstring(value.c_str())",cpp)
+        self.assertIn("get_strong().as<Microsoft::UI::Xaml::DependencyObject>()",cpp)
+        self.assertNotIn("this->as<Microsoft::UI::Xaml::DependencyObject>()",cpp)
         self.assertNotIn("winrt::hstring{value}",cpp)
         self.assertIn("FLYEXPLORER_COLUMN_RESIZE_DIAGNOSTIC",cpp)
         self.assertIn("if(mCursorDiagnosticEnabled){",cpp)
