@@ -266,6 +266,12 @@ B의 좌우 닫기 범위, F6·목록 Tab 왕복·주소/검색·메뉴 복귀·
 
 ## L08 우선 검증 결과 (2026-10-19)
 
+**2026-10-23 이후 처리 기록 — 이벤트 계측 빌드 실패 후 원상복구:**
+
+- `Loaded`/`PointerEntered`/`PointerExited`/`ProtectedCursor` 상태를 UIA에 노출하는 **테스트 전용 C++ 계측**을 시도했으나 정확한 Windows 집중 빌드가 [#39956401276](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39956401276), [#39957070274](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39957070274), [#39957644663](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39957644663)에서 모두 **Release 컴파일 단계에 FAIL**했다. **진단 GUI는 한 번도 실행되지 않았다.** 초기 두 실패는 진단 문자열 변환·C++/WinRT 구현 타입의 잘못된 투영 호출이며, 세 번째는 보관 로그/작업 공간에서 정확한 오류를 복구할 수 없었다.
+- 불확실한 진단 C++ 변경과 의존 GUI/소스 계약 4개 파일을 기존 성공 스냅샷 `ae19755b`와 **동일한 blob**으로 되돌렸다(`7e086b4b`). 새 빌드 없이 파일 동일성만 검증했다. 마지막 유효 실제 커서 검증은 여전히 [#39954174882](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39954174882): 3열 정상 드래그 + 600ms까지 화살표(기능 PASS, 커서 미해결).
+- 다음 진행 전에 **WinRT 사용자 정의 Grid의 컴파일 가능한 투영/진단 API**를 최소 단위로 검증하고, 빌드 실패 시 원본 컴파일 오류가 보존되는 수집 경로부터 확보한다. 재빌드/전체 GUI 반복이나 근거 없는 사용자용 커서 덮어쓰기 금지.
+
 **2026-10-23 L08 추가 원인 분류 — 시간차에도 자동화 커서 arrow, 개선 보류:**
 
 - 기존 GUI PASS를 재검증하는 대신, `ProtectedCursor(SizeWestEast)`가 이미 설정된 실제 `DetailColumnHandle`의 **입력 전달/커서 갱신 경계**를 대상으로 진단을 좁혔다. 기준 성공 GUI 보관 로그 [조회 #39953465234](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39953465234)에서는 세 열 모두 정확한 UIA 조절 핸들 hit와 정상 경계 이동에도 native `GetCursorInfo`가 arrow였다.
