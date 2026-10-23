@@ -70,27 +70,22 @@ def main(config="Release"):
             except Exception as error:
                 return "<status-error:"+type(error).__name__+">"
 
-        # The column-resize acceptance only needs the left Details pane.
-        # Do not trust cached SecondaryPane UIA visibility or SplitButton text:
-        # click once and use the real LeftFiles width delta as the split-state
-        # oracle. If the first click made the pane narrower, it started in
-        # single-pane mode, so click once more to restore the wider state.
-        eventually(lambda:element("SplitButton").exists(timeout=.2) and
-                   element("SplitButton").is_visible(),
-                   "split toggle unavailable",6)
+        # L08 requires enough actual Details width, not a split-button
+        # transition. On smaller desktop sessions (e.g. 1280x768), forcing
+        # an unnecessary split click can fail before the hover oracle runs.
         initial_width=element("LeftFiles").rectangle().width()
-        element("SplitButton").click_input()
-        eventually(lambda:abs(element("LeftFiles").rectangle().width()-
-                              initial_width)>=80,
-                   "split toggle did not materially change left pane width",8)
-        toggled_width=element("LeftFiles").rectangle().width()
-        if toggled_width<initial_width:
+        rect=window().rectangle()
+        print("L08_INITIAL_PANE_GEOMETRY",initial_width,
+              (rect.left,rect.top,rect.right,rect.bottom),flush=True)
+        if initial_width<500:
+            eventually(lambda:element("SplitButton").exists(timeout=.2) and
+                       element("SplitButton").is_visible(),
+                       "split toggle unavailable",6)
             element("SplitButton").click_input()
-            eventually(lambda:element("LeftFiles").rectangle().width()>=
-                              initial_width-12,
-                       "left pane did not return to single-pane width",8)
+            eventually(lambda:element("LeftFiles").rectangle().width()>=500,
+                       "split toggle did not provide enough Details width",8)
         eventually(lambda:element("LeftFiles").rectangle().width()>=500,
-                   "single-pane width is too narrow for all Details columns",6)
+                   "left pane is too narrow for all Details columns",6)
 
         for auto_id in ("LeftNameColumnResizeThumb","LeftTypeColumnResizeThumb",
                         "LeftSizeColumnResizeThumb","LeftNameSortButton",
