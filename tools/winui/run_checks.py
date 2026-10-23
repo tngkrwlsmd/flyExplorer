@@ -529,7 +529,15 @@ def run_gui(area, configuration, env, tag):
         body = (LOGS / (tag + "-" + label + ".log")).read_text(
             encoding="utf-8", errors="replace"
         )
-        if ("G01_INTEGRATED_STARTUP_GUI_PASS=True" not in set(body.splitlines())
+        markers = (
+            "G01_INTEGRATED_STARTUP_GUI_PASS=True",
+            "G01_FINAL_WINDOW_ADDRESS_FOCUS=PASS",
+            "G01_FINAL_WINDOW_CTRL_W_EXIT=0",
+            "OWNED_WINUI_SHELL_EXIT 0",
+            "LEGACY_USER_PROFILE_SENTINEL_UNCHANGED True",
+            "OWNED_SYNTHETIC_FIXTURE_REMOVED True",
+        )
+        if (not all(marker in body.splitlines() for marker in markers)
                 or "Traceback (most recent call last)" in body):
             print("G01_INTEGRATED_STARTUP_MARKER_MISSING", flush=True)
             rc = 1

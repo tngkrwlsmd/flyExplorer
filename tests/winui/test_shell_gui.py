@@ -331,6 +331,25 @@ try:
  print("ACTUAL_CPP_NATIVE_CORE_NULL_CONTRACT_LINKED",True,flush=True)
  if G01_INTEGRATED_STARTUP_ONLY:
   print("G01_INTEGRATED_STARTUP_GUI_PASS=True",flush=True)
+  # Unlike the window-manager WM_CLOSE probe, Ctrl+W goes through
+  # MainWindow's own final-WindowTab close callback. Require real focus
+  # on this process's address TextBox immediately before that shortcut.
+  ensure_owned_focus()
+  send_keys("^l")
+  eventually(lambda:element("AddressBox").has_keyboard_focus(),
+             "G01 Ctrl+L did not focus owned address editor",8)
+  foreground=u.GetForegroundWindow()
+  foreground_pid=W.DWORD()
+  if foreground:
+   u.GetWindowThreadProcessId(foreground,c.byref(foreground_pid))
+  assert foreground_pid.value==p.pid, "G01 refusing input outside owned app"
+  assert element("AddressBox").has_keyboard_focus()
+  print("G01_FINAL_WINDOW_ADDRESS_FOCUS=PASS",flush=True)
+  send_keys("^w")
+  eventually(lambda:p.poll() is not None,
+             "G01 Ctrl+W did not close owned final window",8)
+  assert p.returncode==0, ("G01 Ctrl+W abnormal owned exit",p.returncode)
+  print("G01_FINAL_WINDOW_CTRL_W_EXIT=0",flush=True)
   raise SystemExit(0)
  if owned_block or owned_com:
   eventually(lambda:any("Nested" in e.window_text()

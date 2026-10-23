@@ -31,6 +31,12 @@ class G01IntegratedStartupContract(unittest.TestCase):
         runner=(ROOT/"tools/winui/run_checks.py").read_text("utf-8")
         self.assertIn("G01_INTEGRATED_STARTUP_GUI_PASS=True",runner)
         self.assertIn("G01_INTEGRATED_STARTUP_MARKER_MISSING",runner)
+        for marker in ("G01_FINAL_WINDOW_ADDRESS_FOCUS=PASS",
+                       "G01_FINAL_WINDOW_CTRL_W_EXIT=0",
+                       "OWNED_WINUI_SHELL_EXIT 0",
+                       "LEGACY_USER_PROFILE_SENTINEL_UNCHANGED True",
+                       "OWNED_SYNTHETIC_FIXTURE_REMOVED True"):
+            self.assertIn(marker,runner)
 
     def test_startup_only_waits_for_actual_left_fixture_before_exiting(self):
         harness=(ROOT/"tests/winui/test_shell_gui.py").read_text("utf-8")
@@ -38,6 +44,17 @@ class G01IntegratedStartupContract(unittest.TestCase):
         self.assertIn('element("LeftFiles").descendants()',harness)
         self.assertIn('return matched and (not G01_INTEGRATED_STARTUP_ONLY or left_visible)',harness)
         self.assertIn('G01_INTEGRATED_STARTUP_GUI_PASS=True',harness)
+        close_section=harness.split('print("G01_INTEGRATED_STARTUP_GUI_PASS=True"',1)[1]
+        close_section=close_section.split('raise SystemExit(0)',1)[0]
+        for fragment in ('send_keys("^l")',
+                         'element("AddressBox").has_keyboard_focus()',
+                         'foreground_pid.value==p.pid',
+                         'G01_FINAL_WINDOW_ADDRESS_FOCUS=PASS',
+                         'send_keys("^w")',
+                         'p.poll() is not None',
+                         'p.returncode==0',
+                         'G01_FINAL_WINDOW_CTRL_W_EXIT=0'):
+            self.assertIn(fragment,close_section)
         self.assertIn('raise SystemExit(0)',harness)
         self.assertIn('"UI-independent native core/helper was not active at startup",18',harness)
         self.assertIn('"left_fixture_visible":left_visible',harness)
