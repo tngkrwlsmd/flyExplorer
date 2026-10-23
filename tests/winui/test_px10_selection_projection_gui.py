@@ -66,15 +66,16 @@ def run(*, win, element, safe_click, focus, eventually, left, right):
 
     eventually(lambda: all(row(name) is not None for name in files),
                "PX10 test-owned source rows absent", 14)
+    # Existing real GUI acceptance uses Ctrl+Shift+F, not a guessed
+    # UIA label for the More flyout's popup MenuFlyoutItem.
     focus()
-    element("MoreButton").invoke()
-    toggle = eventually(lambda: live_menu(label="왼쪽 이름 필터"),
-                        "PX10 owned filter flyout item absent", 8)
-    assert owned_foreground() and toggle.element_info.process_id == pid
-    toggle.invoke()
+    element("LeftFiles").set_focus()
+    assert owned_foreground()
+    keyboard.send_keys("^+f")
     box = element("LeftNameFilterBox")
-    eventually(lambda: box.is_visible() and box.rectangle().width() > 60,
-               "PX10 filter editor did not open", 7)
+    eventually(lambda: box.has_keyboard_focus() and
+               box.is_visible() and box.rectangle().width() > 60,
+               "PX10 Ctrl+Shift+F failed to focus the owned left editor", 7)
     print("PX10_GUI_OWNED_FILTER_OPEN=PASS", flush=True)
 
     one = row(files[0])
