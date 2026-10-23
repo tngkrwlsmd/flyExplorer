@@ -154,6 +154,13 @@ def main(config="Release"):
                           else "other")
                 print("L08_HOVER_TIMELINE",thumb_id,"DWELL_MS",elapsed,
                       "HIT",owned_hit,"CURSOR",observed,flush=True)
+            # UIA HelpText is emitted only by our own diagnostic Grid.
+            # Correlate event arrival with the independent native HCURSOR.
+            try:
+                event_help=thumb.element_info.element.CurrentHelpText
+            except Exception as error:
+                event_help="<uia-help-error:"+type(error).__name__+">"
+            print("L08_POINTER_EVENT_HELP",thumb_id,event_help,flush=True)
             print("COLUMN_RESIZE_HOVER_PROBE",thumb_id,
                   owned_hit,current,flush=True)
             print("COLUMN_RESIZE_CURSOR_OBSERVED",thumb_id,
