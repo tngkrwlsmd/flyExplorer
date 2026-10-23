@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "DetailColumnHandle.h"
 #include <winrt/Microsoft.UI.Input.h>
+#include <winrt/Microsoft.UI.Xaml.Input.h>
 #include <winrt/Microsoft.UI.Xaml.Automation.h>
 #include <string>
 #if __has_include("DetailColumnHandle.g.cpp")
