@@ -72,15 +72,15 @@ class G01IntegratedStartupContract(unittest.TestCase):
             "LEGACY_USER_PROFILE_SENTINEL_UNCHANGED True PRESENT 6",
             "OWNED_SYNTHETIC_FIXTURE_REMOVED True",
         )
-        body="\\n".join(markers)+"\\n"
+        body="\n".join(markers)+"\n"
         self.assertTrue(run_checks.g01_startup_evidence_ok(body))
         for missing in markers:
             self.assertFalse(run_checks.g01_startup_evidence_ok(
-                "\\n".join(line for line in markers if line!=missing)))
+                "\n".join(line for line in markers if line!=missing)))
         self.assertFalse(run_checks.g01_startup_evidence_ok(
             body.replace("True PRESENT 6","True PRESENT invalid")))
         self.assertFalse(run_checks.g01_startup_evidence_ok(
-            body+"Traceback (most recent call last)\\n"))
+            body+"Traceback (most recent call last)\n"))
 
 
 
