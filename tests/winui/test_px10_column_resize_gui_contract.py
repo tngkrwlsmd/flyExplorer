@@ -40,7 +40,11 @@ class PX10ColumnResizeGuiContract(unittest.TestCase):
                          'OWNED_DETAIL_COLUMN_NAME_RESIZE True',
                          'OWNED_DETAIL_COLUMN_TYPE_RESIZE True',
                          'OWNED_DETAIL_COLUMN_SIZE_RESIZE True',
+                         'PX10_COLUMN_RAPID_TAIL_COMMITTED=True',
+                         'OWNED_DETAIL_COLUMN_WINDOW_TAB_RESTORED True',
+                         'OWNED_DETAIL_COLUMN_EXIT 0',
                          'SIX_ORIGINAL_MFC_SETTINGS_IDENTICAL True',
+                         'OWNED_COLUMN_RESIZE_FIXTURE_REMOVED True',
                          'Traceback (most recent call last)'):
             self.assertIn(fragment,section)
 
