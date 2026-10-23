@@ -65,7 +65,9 @@ def main(config="Release"):
         "properties-test-first-owned.txt", "properties-test-second-owned.txt")]
     a.write_text("owned first\n", encoding="utf-8")
     b.write_text("owned second\n", encoding="utf-8")
-    original = {a: a.read_bytes(), b: b.read_bytes()}
+    third = source / "properties-test-third-owned.txt"
+    third.write_text("owned third\n", encoding="utf-8")
+    original = {path: path.read_bytes() for path in (a, b, third)}
     mfc = Path(os.environ["APPDATA"]) / "fxfile" / "conf"
     baseline = {
         name: hashlib.sha256((mfc / name).read_bytes()).digest()
@@ -329,6 +331,28 @@ def main(config="Release"):
         assert pid_of(dialog_hwnd) == dialog_pid
         print("OWNED_PROPERTIES_DIALOG_HELPER_PID_MATCH",
               dialog_pid == helper_process.pid, flush=True)
+        # The helper still owns this dialog while the app's own ListView
+        # changes from {a,b} to {a,third}, the same-size different set.
+        # UIA SelectionItem acts only on the verified test-owned app process;
+        # never activate, click or close an unrelated desktop window.
+        def select_different_pair():
+            assert pid_of(app_hwnd) == app.pid
+            first = row(a.name)
+            replacement = row(third.name)
+            if first is None or replacement is None:
+                return False
+            first.iface_selection_item.Select()
+            replacement = row(third.name)
+            replacement.iface_selection_item.AddToSelection()
+            first, old, replacement = row(a.name), row(b.name), row(third.name)
+            return (first is not None and old is not None and
+                    replacement is not None and first.is_selected() and
+                    replacement.is_selected() and not old.is_selected())
+        eventually(select_different_pair,
+                   "Owned selection did not change while Properties was open", 9)
+        status_view = view.child_window(auto_id="StatusText")
+        before_close_status = status_view.window_text()
+        print("OWNED_PROPERTIES_DIFFERENT_SAME_COUNT_SELECTION", True, flush=True)
         assert user.PostMessageW(dialog_hwnd, 0x10, 0, 0)
         eventually(
             lambda: not any(x.handle == dialog_hwnd for x in
@@ -338,6 +362,15 @@ def main(config="Release"):
         eventually(lambda: not helper_process.is_running() or
                    helper_process.status() == "zombie",
                    "Isolated helper did not settle after Properties close", 9)
+        # A delayed {a,b} completion must not overwrite the current {a,third}
+        # status. Poll across a short dispatcher window, not just once.
+        for _ in range(10):
+            assert status_view.window_text() == before_close_status, (
+                "Stale external Properties result overwrote new selection status")
+            sleep(0.15)
+        assert row(a.name).is_selected() and row(third.name).is_selected()
+        assert not row(b.name).is_selected()
+        print("OWNED_PROPERTIES_STALE_SELECTION_STATUS_SUPPRESSED", True, flush=True)
         assert all(p.read_bytes() == data for p, data in original.items())
         print("OWNED_MULTI_PROPERTIES_SOURCE_UNCHANGED", True, flush=True)
         completed = True
