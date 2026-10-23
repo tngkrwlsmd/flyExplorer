@@ -5,6 +5,7 @@ from uia_polling import wait_until
 import ctypes as c, os, re, shutil, subprocess, tempfile, time, hashlib
 from ctypes import wintypes as W
 from pywinauto import Desktop
+from pywinauto.keyboard import send_keys
 from PIL import ImageGrab
 from profile_guard import (assert_legacy_profile_unchanged, present_count,
                            snapshot_legacy_profile)

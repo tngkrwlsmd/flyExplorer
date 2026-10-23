@@ -44,6 +44,7 @@ class G01IntegratedStartupContract(unittest.TestCase):
         self.assertIn('element("LeftFiles").descendants()',harness)
         self.assertIn('return matched and (not G01_INTEGRATED_STARTUP_ONLY or left_visible)',harness)
         self.assertIn('G01_INTEGRATED_STARTUP_GUI_PASS=True',harness)
+        self.assertIn('from pywinauto.keyboard import send_keys',harness)
         close_section=harness.split('print("G01_INTEGRATED_STARTUP_GUI_PASS=True"',1)[1]
         close_section=close_section.split('raise SystemExit(0)',1)[0]
         for fragment in ('send_keys("^l")',
