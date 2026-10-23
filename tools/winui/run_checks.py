@@ -145,6 +145,7 @@ GUI_AREAS = (
     "accessibility",
     "large-folder",
     "column-resize",
+    "context-selection",
     "folder-tree",
     "all",
 )
@@ -400,6 +401,13 @@ def gui_command(area, configuration, env):
         return [sys.executable, "-u", str(TESTS / "test_bookmark_gui.py")], gui_env, 150
     if area == "filter-preset":
         return [sys.executable, "-u", str(TESTS / "test_filter_preset_gui.py")], gui_env, 150
+    if area == "context-selection":
+        return [
+            sys.executable,
+            "-u",
+            str(TESTS / "test_owned_context_properties_gui.py"),
+            configuration,
+        ], gui_env, 180
     if area == "column-resize":
         return [
             sys.executable,
