@@ -1,3 +1,34 @@
+# PX01 external Windows context menu selection-ownership guard — 2026-10-23
+
+- **Scope:** changed only the delayed external Windows Shell context-menu
+  completion status guard in `app/winui/m22_transfers.cpp`; retained the
+  accepted multi-selection right-click preservation, explicit Explorer
+  fallback, helper isolation, no automatic external command invocation
+  and the existing context-menu 32-item/16K UTF-16 budget.
+- **Observed code gap:** completion previously verified active WindowTab,
+  PaneTab, route and visible folder, but not whether the user had since
+  changed the selected files *within that same tab/folder*. A delayed
+  native popup could overwrite the current selection's status.
+- **Fix:** snapshot the bounded original selected filesystem path set,
+  sort for order independence and keep it with the worker completion.
+  Before applying delayed UI feedback, revalidate the currently selected
+  item count and resolve current selected entries through the same active
+  PaneTab model; suppress feedback if identities/paths differ or the
+  tab has begun a new pending navigation.
+- **Focused source contracts:** exact code/test SHA
+  `c8dbfe90099b2c12bf550ff600575f25346f31bd`,
+  [Windows #39878343686](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39878343686)
+  — **3/3 PASS**: isolated native menu process boundary, distinct
+  workspace/route guard and original selection membership guard.
+  Scoped scratch clone retired. **No new WinUI native build, binary,
+  GUI or pixel test was performed** for this product code revision;
+  those gates remain **unverified**, not failed or passed.
+- **UX boundary:** this is status ownership protection, not claim of
+  full Windows 11 context-menu command/extension parity. Existing L06
+  multi-select preservation remains based on prior accepted evidence.
+
+---
+
 # G01 all-profile startup-only Windows diagnosis — 2026-10-23
 
 - Reproduced the **original integrated suite's pre-start test conditions**
