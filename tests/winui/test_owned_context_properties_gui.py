@@ -142,6 +142,32 @@ def main(config="Release"):
         assert user.GetForegroundWindow() == app_hwnd
         keyboard.send_keys("+{F10}")
 
+        # Shift+F10 opens flyExplorer's own menu. The isolated Shell
+        # helper starts only after the user explicitly chooses this item.
+        # Never invoke an arbitrary provider verb or click another process.
+        def extension_item():
+            found = []
+            for popup in Desktop(backend="uia").windows(process=app.pid):
+                try:
+                    found.extend(
+                        item for item in popup.descendants()
+                        if item.element_info.control_type == "MenuItem"
+                        and item.window_text() == "추가 옵션 표시"
+                        and item.element_info.process_id == app.pid
+                        and item.is_visible() and item.is_enabled()
+                    )
+                except Exception:
+                    pass
+            return found[0] if len(found) == 1 else None
+
+        extension = eventually(
+            extension_item, "Owned extension menu item did not appear", 8)
+        assert user.GetForegroundWindow() == app_hwnd
+        assert pid_of(app_hwnd) == app.pid
+        assert extension.element_info.process_id == app.pid
+        extension.click_input()
+        print("OWNED_PROPERTIES_EXPLICIT_EXTENSION_CHOICE", True, flush=True)
+
         def spawned():
             nonlocal helper_process
             candidates = []
