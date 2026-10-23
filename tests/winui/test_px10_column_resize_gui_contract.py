@@ -20,7 +20,7 @@ class PX10ColumnResizeGuiContract(unittest.TestCase):
         source=(ROOT/"tests/winui/test_owned_column_resize_gui.py").read_text("utf-8")
         for fragment in ('mouse.press(button="left"',
                          'mouse.move(coords=(nx,y))',
-                         'next_header.rectangle().left>=start+12',
+                         'element(next_header_id).rectangle().left>=start+12',
                          'keyboard.send_keys("^t")',
                          'len(tabs())==2',
                          'OWNED_DETAIL_COLUMN_WINDOW_TAB_RESTORED',
@@ -29,7 +29,7 @@ class PX10ColumnResizeGuiContract(unittest.TestCase):
                          'proc.returncode==0',
                          'SIX_ORIGINAL_MFC_SETTINGS_IDENTICAL',
                          'OWNED_COLUMN_RESIZE_FIXTURE_REMOVED'):
-            self.assertIn(fragment,source)
+            self.assertTrue(fragment in source,fragment)
         self.assertNotIn('eventually(horizontal_resize_cursor,',source)
 
     def test_existing_runner_requires_the_original_independent_resize_oracles(self):
