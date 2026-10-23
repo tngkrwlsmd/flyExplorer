@@ -266,6 +266,12 @@ B의 좌우 닫기 범위, F6·목록 Tab 왕복·주소/검색·메뉴 복귀·
 
 ## L08 우선 검증 결과 (2026-10-19)
 
+**2026-10-23 L08 추가 원인 분류 — 시간차에도 자동화 커서 arrow, 개선 보류:**
+
+- 기존 GUI PASS를 재검증하는 대신, `ProtectedCursor(SizeWestEast)`가 이미 설정된 실제 `DetailColumnHandle`의 **입력 전달/커서 갱신 경계**를 대상으로 진단을 좁혔다. 기준 성공 GUI 보관 로그 [조회 #39953465234](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39953465234)에서는 세 열 모두 정확한 UIA 조절 핸들 hit와 정상 경계 이동에도 native `GetCursorInfo`가 arrow였다.
+- 시간차를 추가한 정확한 `e5550518` [Windows 전용 GUI #39954174882](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39954174882) **Release 및 기능 GUI PASS**. [실제 성공 GUI 로그 조회 #39955105078](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39955105078)에서 3개 열 × 70/250/600ms = **9개 모두 조절 thumb hit + arrow**. 단순한 즉시 읽기 타이밍 문제는 배제 범위가 넓어졌으나, 실제 인간 마우스 입력과 자동화 메시지 차이 등은 아직 규명되지 않았다.
+- 다음 유효 단계는 **동일 바이너리에서 WinUI `PointerEntered`와 `ProtectedCursor` 실제 적용 여부를 확인하는 좁은 진단**이다. 이미 동작하는 물리적 열 크기 조절을 바꾸거나 임의 `WM_SETCURSOR`/전역 커서 덮어쓰기를 추가하지 않는다. 독립적인 커서 렌더링·시각 수용은 **OPEN**; 앞선 사용자 직접 정상 관찰은 별도로 보존. G03~G05 제외, G07 중단 유지.
+
 **2026-10-23 PX10/L08 최신 갱신 — 실제 열 조절 GUI 범위 PASS, 커서 시각 범위 OPEN:**
 
 - 정확한 [`98e9b283`](https://github.com/tngkrwlsmd/flyExplorer/commit/98e9b283998aa90c134ceacb1ec19be573841934) Windows [중앙 집중 GUI #39951081963](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39951081963)에서 Release 빌드 **PASS**, 소유 GUI 열 조절 **종료 0 / 29.3초 / PASS**. 이름·유형·크기 세 경계 실제 이동, 빠른 드래그의 release-tail, 두 번째 WindowTab 생성 후 기존 탭 복귀 시 경계 좌표 보존, 정상 WinUI 종료 0, 기존 설정 불변과 소유 fixture 정리를 검사했다. 제품 C++ 기능은 다시 수정하지 않았다.
