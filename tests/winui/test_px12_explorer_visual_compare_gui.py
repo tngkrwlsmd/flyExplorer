@@ -150,7 +150,7 @@ def run(*, win, element, focus, eventually, left, right, owned):
             try:
                 # New window must visibly expose both synthetic files/folder.
                 names={x.window_text() for x in wrapper.descendants()}
-                if "Nested" not in names or not any(n.startswith("readme") for n in names):
+                if "Nested" not in names or not any(n.startswith("PX12VisualRootOwned") for n in names):
                     return None
             except Exception:
                 return None
@@ -226,12 +226,27 @@ def run(*, win, element, focus, eventually, left, right, owned):
                   "="+base64.b64encode(png).decode("ascii"),flush=True)
         print("PX12_EXPLORER_MATCHED_COMPARISON_CAPTURE=PASS",flush=True)
     finally:
-        if explorer_hwnd and explorer_hwnd not in initial_cabinets and (
-                class_of(explorer_hwnd)=="CabinetWClass"):
-            # Close only the new HWND; Explorer may share a process with
-            # user-owned windows so never terminate or kill explorer.exe.
-            user.PostMessageW(explorer_hwnd,0x10,0,0)
-            eventually(lambda:explorer_hwnd not in cabinets(),
+        # A launched reference window may appear after the readiness poll.
+        # Retire it only when a NEW hwnd shows the unique synthetic marker;
+        # never close existing user Explorer HWNDs.
+        retire=explorer_hwnd
+        if retire is None and explore_proc is not None:
+            fresh=cabinets()-initial_cabinets
+            if len(fresh)==1:
+                probe=next(iter(fresh))
+                if class_of(probe)=="CabinetWClass":
+                    try:
+                        texts={node.window_text() for node in
+                               Desktop(backend="uia").window(handle=probe).descendants()}
+                        if any(t.startswith("PX12VisualRootOwned") for t in texts):
+                            retire=probe
+                    except Exception:
+                        pass
+        if retire and retire not in initial_cabinets and (
+                class_of(retire)=="CabinetWClass"):
+            # Never kill explorer.exe: the process may be shared.
+            user.PostMessageW(retire,0x10,0,0)
+            eventually(lambda:retire not in cabinets(),
                        "PX12 new Explorer window did not close normally",10)
         # The caller closes only its own flyExplorer PID and retires its
         # isolated profile and synthetic files in an independent finally.

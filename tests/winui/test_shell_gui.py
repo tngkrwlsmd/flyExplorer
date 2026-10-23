@@ -46,6 +46,7 @@ for folder in (inner,rightinner):folder.mkdir(parents=True,exist_ok=True)
 if os.environ.get("FLY_PX12_VISUAL_COMPARE_ONLY")=="YES":
  assert os.environ.get("FLY_PX12_ADDRESS_CHROME_ONLY")!="YES"
  (inner/"PX12VisualOwned.txt").write_text("only PX12 matched visual",encoding="utf-8")
+ (left/"PX12VisualRootOwned.txt").write_text("owned reference identity",encoding="utf-8")
 if os.environ.get("FLY_PX12_ADDRESS_CHROME_ONLY")=="YES":
  # Both candidates belong to this temporary source fixture, not user paths.
  (left/"PX12Vanishing").mkdir()
