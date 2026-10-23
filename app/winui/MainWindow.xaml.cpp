@@ -129,11 +129,6 @@ namespace winrt::FlyExplorer::implementation
                 this,&MainWindow::OnDetailColumnResizePointerPressed}),
             true);
         RootShell().AddHandler(
-            UIElement::PointerMovedEvent(),
-            winrt::box_value(PointerEventHandler{
-                this,&MainWindow::OnDetailColumnResizePointerMoved}),
-            true);
-        RootShell().AddHandler(
             UIElement::PointerReleasedEvent(),
             winrt::box_value(PointerEventHandler{
                 this,&MainWindow::OnDetailColumnResizePointerReleased}),
@@ -176,6 +171,22 @@ namespace winrt::FlyExplorer::implementation
         Closed([nativeWeak](IInspectable const&,WindowEventArgs const&){
             if(auto ui=nativeWeak.get())ui->PrepareForClose();
         });
+        // L08: some WinUI hosts never dispatch PointerEntered for the
+        // composable Grid, even though root-level resize presses work.
+        // A lightweight owned-window hover check sets the native cursor
+        // independent of XAML entry events; no global hook or mouse capture.
+        HWND cursorHwnd{};
+        if(SUCCEEDED(get_strong().as<::IWindowNative>()->get_WindowHandle(
+               &cursorHwnd))&&cursorHwnd){
+            mDetailColumnHoverHwnd=cursorHwnd;
+            auto timer=DispatcherQueue().CreateTimer();
+            timer.Interval(std::chrono::milliseconds(40));
+            timer.Tick([nativeWeak](auto const&,auto const&){
+                if(auto ui=nativeWeak.get())ui->ApplyDetailColumnHoverCursor();
+            });
+            mDetailColumnHoverTimer=timer;
+            timer.Start();
+        }
         auto titleHeader=winrt::get_self<
             winrt::FlyExplorer::implementation::ShellHeader>(HeaderView());
         titleHeader->SetWindowTabCallbacks(
@@ -883,6 +894,7 @@ namespace winrt::FlyExplorer::implementation
     {
         if(mClosing)return;
         mClosing=true;
+        try{if(mDetailColumnHoverTimer)mDetailColumnHoverTimer.Stop();}catch(...){}
         // Release candidate controls before the XAML tree is dismantled.
         try{
             AddressSuggestionPanel().Visibility(Visibility::Collapsed);
@@ -1710,33 +1722,49 @@ namespace winrt::FlyExplorer::implementation
             StatusText().Text(
                 hstring(L"RESIZE_MOVE "+std::to_wstring(delta)));
     }
+    void MainWindow::ApplyDetailColumnHoverCursor(){
+        if(mClosing||!mColumnControlsReady||mDetailColumnPointerDrag||
+           !mDetailColumnHoverHwnd)return;
+        if(::GetForegroundWindow()!=mDetailColumnHoverHwnd)return;
+        POINT physical{};
+        if(!::GetCursorPos(&physical)||
+           !::ScreenToClient(mDetailColumnHoverHwnd,&physical))return;
+        try{
+            const auto root=RootShell();
+            const auto xr=root.XamlRoot();
+            if(!xr)return;
+            const auto raster=xr.RasterizationScale();
+            if(raster<=0.0)return;
+            const auto rootOrigin=root.TransformToVisual(
+                Content().as<UIElement>()).TransformPoint({0.0f,0.0f});
+            const double x=physical.x/raster-rootOrigin.X;
+            const double y=physical.y/raster-rootOrigin.Y;
+            const auto inside=[&](Microsoft::UI::Xaml::FrameworkElement const& thumb){
+                if(thumb.Visibility()!=Visibility::Visible||
+                   thumb.ActualWidth()<=0.0||thumb.ActualHeight()<=0.0)return false;
+                const auto origin=thumb.TransformToVisual(root).TransformPoint(
+                    Windows::Foundation::Point{0.0f,0.0f});
+                return x>=origin.X&&x<=origin.X+thumb.ActualWidth()&&
+                       y>=origin.Y&&y<=origin.Y+thumb.ActualHeight();
+            };
+            if(inside(LeftNameColumnResizeThumb())||
+               inside(LeftTypeColumnResizeThumb())||
+               inside(LeftSizeColumnResizeThumb())||
+               inside(RightNameColumnResizeThumb())||
+               inside(RightTypeColumnResizeThumb())||
+               inside(RightSizeColumnResizeThumb())){
+                auto cursor=::LoadCursorW(nullptr,IDC_SIZEWE);
+                if(cursor&&::GetCursor()!=cursor)::SetCursor(cursor);
+            }
+        }catch(...){
+            // The foreground cursor is purely visual. Never impact resizing,
+            // window teardown or settings if XAML geometry is unavailable.
+        }
+    }
     void MainWindow::OnDetailColumnResizePointerMoved(
         IInspectable const&,
-        Microsoft::UI::Xaml::Input::PointerRoutedEventArgs const& args){
-        // L08: this routed root handler sees the resize press even when the
-        // visual handle receives no PointerEntered. Apply a native hover
-        // cursor only inside a visible 12px separator; never affect text
-        // fields, tabs, normal navigation, or the existing timed drag.
-        if(mClosing||mDetailColumnPointerDrag)return;
-        const auto position=args.GetCurrentPoint(RootShell()).Position();
-        const auto inside=[&](Microsoft::UI::Xaml::FrameworkElement const& thumb){
-            if(thumb.Visibility()!=Visibility::Visible||
-               thumb.ActualWidth()<=0.0||thumb.ActualHeight()<=0.0)return false;
-            const auto origin=thumb.TransformToVisual(RootShell()).TransformPoint(
-                Windows::Foundation::Point{0.0f,0.0f});
-            return position.X>=origin.X&&
-                   position.X<=origin.X+thumb.ActualWidth()&&
-                   position.Y>=origin.Y&&
-                   position.Y<=origin.Y+thumb.ActualHeight();
-        };
-        if(inside(LeftNameColumnResizeThumb())||
-           inside(LeftTypeColumnResizeThumb())||
-           inside(LeftSizeColumnResizeThumb())||
-           inside(RightNameColumnResizeThumb())||
-           inside(RightTypeColumnResizeThumb())||
-           inside(RightSizeColumnResizeThumb())){
-            ::SetCursor(::LoadCursorW(nullptr,IDC_SIZEWE));
-        }
+        Microsoft::UI::Xaml::Input::PointerRoutedEventArgs const&){
+        // Drag movement remains driven by mDetailColumnDragTimer.
     }
     void MainWindow::OnDetailColumnResizePointerReleased(
         IInspectable const&,
