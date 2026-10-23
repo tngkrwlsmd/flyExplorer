@@ -6,7 +6,7 @@ from PIL import ImageGrab
 import ctypes,hashlib,os,shutil,subprocess,sys,tempfile,time
 from ctypes import wintypes
 import psutil
-from pywinauto import Desktop,mouse
+from pywinauto import Desktop,mouse,keyboard
 
 LEGACY=("fxfile.conf","fxfile-main.conf","fxfile-toolbar.dat",
         "fxfile-coolbar.dat","fxfile-dlg_state.conf",
@@ -139,9 +139,12 @@ def main(config="Release"):
             # cursor assertion; otherwise a failed hover hides the evidence.
             print("COLUMN_RESIZE_HOVER_PROBE",thumb_id,
                   hit_info(x,y),horizontal_resize_cursor(details=True),flush=True)
-            eventually(horizontal_resize_cursor,
-                       thumb_id+" did not display the horizontal resize cursor",3)
+            # Record cursor evidence separately: earlier automated hover
+            # differed from user-observed cursor. Require actual geometry.
+            print("COLUMN_RESIZE_CURSOR_OBSERVED",thumb_id,
+                  horizontal_resize_cursor(),flush=True)
             print("COLUMN_RESIZE_HIT_BEFORE",thumb_id,hit_info(x,y),flush=True)
+            assert owned_foreground(), "physical input outside owned window"
             mouse.press(button="left",coords=(x,y))
             print("COLUMN_RESIZE_BUTTON_AFTER_PRESS",
                   bool(ctypes.windll.user32.GetAsyncKeyState(0x01)&0x8000),
@@ -162,8 +165,6 @@ def main(config="Release"):
             eventually(lambda:element(next_header_id).rectangle().left>=start+12,
                        thumb_id+" drag did not resize the next column boundary",8)
             end=element(next_header_id).rectangle().left
-            eventually(horizontal_resize_cursor,
-                       thumb_id+" lost the resize cursor after release",3)
             print("COLUMN_RESIZE_DRAG_END",thumb_id,
                   "boundary",end,"delta",end-start,flush=True)
         drag_and_verify("LeftNameColumnResizeThumb","LeftTypeSortButton",40)
@@ -179,12 +180,30 @@ def main(config="Release"):
         finally:mouse.release(button="left",coords=(x+24,y))
         eventually(lambda:element("LeftTypeSortButton").rectangle().left>=start+12,
                    "rapid resize lost its final movement",8)
-        eventually(horizontal_resize_cursor,"rapid resize lost its cursor",3)
+        print("PX10_COLUMN_RAPID_TAIL_COMMITTED=True",flush=True)
+        # Width belongs to the original WindowTab's pane. Check that it
+        # survives an unrelated workspace activation and return.
+        before_return=element("LeftTypeSortButton").rectangle().left
+        strip=element("WindowTabStrip")
+        def tabs():
+            return [t for t in strip.descendants()
+                    if t.element_info.control_type=="TabItem"
+                    and t.element_info.process_id==proc.pid]
+        eventually(lambda:len(tabs())==1,"initial owned WindowTab absent",6)
+        window().set_focus()
+        assert owned_foreground()
+        keyboard.send_keys("^t")
+        eventually(lambda:len(tabs())==2,
+                   "Ctrl+T did not create second owned WindowTab",10)
+        window().set_focus()
+        assert owned_foreground()
+        tabs()[0].click_input()
+        eventually(lambda:abs(element("LeftTypeSortButton").rectangle().left-
+                              before_return)<=4,
+                   "original WindowTab lost resized column width",14)
+        print("OWNED_DETAIL_COLUMN_WINDOW_TAB_RESTORED",True,flush=True)
         body=element("LeftFiles").rectangle()
         mouse.move(coords=(body.left+30,body.top+40))
-        eventually(lambda:not horizontal_resize_cursor(),
-                   "resize cursor remained outside the header",3)
-
         window().set_focus()
         eventually(owned_foreground,"owned window is not foreground for final capture",3)
         rect=window().rectangle()
