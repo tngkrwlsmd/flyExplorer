@@ -14,11 +14,27 @@ $owned=Join-Path $parent 'fly-l08-winui-api-preflight'
 if(Test-Path -LiteralPath $owned){throw 'L08_OWNED_FIXTURE_EXISTS'}
 New-Item -ItemType Directory -Path $owned -ErrorAction Stop | Out-Null
 function LogErrors([string]$file,[string]$marker){
-    if(Test-Path -LiteralPath $file -PathType Leaf){
-        foreach($line in @(Get-Content -LiteralPath $file -Encoding UTF8 | Select-Object -First 80)){
-            if($line.Length -lt 900){Write-Output ($marker+' '+$line)}
+    if(-not (Test-Path -LiteralPath $file -PathType Leaf)){return}
+    # The previous bounded CI report dropped the first meaningful C++/WinRT
+    # error. Keep the opening context AND error lines across the whole log.
+    # Bound stdout to an explicitly reported count rather than silently
+    # discarding the compiler's actual failure.
+    $lines=@(Get-Content -LiteralPath $file -Encoding UTF8)
+    Write-Output ($marker+'_TOTAL_LINES='+$lines.Count)
+    $emitted=0
+    for($index=0;$index -lt $lines.Count;$index++){
+        $line=[string]$lines[$index]
+        $isError=$line -match '(?i)(fatal error|error [A-Z]{1,5}[0-9]{4}|cppwinrt\s*:\s*error|mismatched C\+\+/WinRT|failed to find)'
+        if($index -ge 20 -and -not $isError){continue}
+        if($line.Length -gt 900){$line=$line.Substring(0,900)+' [line truncated]'}
+        Write-Output ($marker+' LINE='+($index+1)+' '+$line)
+        $emitted++
+        if($emitted -ge 160){
+            Write-Output ($marker+'_EMISSION_LIMIT=160')
+            break
         }
     }
+    Write-Output ($marker+'_EMITTED='+$emitted)
 }
 try{
     Add-Type -AssemblyName System.IO.Compression.FileSystem
