@@ -182,6 +182,29 @@ class ContextContract(unittest.TestCase):
   self.assertNotIn("InvokeCommand",a+b)
   self.assertNotIn("TrackPopupMenuEx",a+b)
 class OwnedContextInvocationRegression(unittest.TestCase):
+ def test_late_selection_gui_oracle_is_owned_and_observable(self):
+  probe=src("tests/winui/test_owned_context_properties_gui.py")
+  for token in (
+      'third = source / "properties-test-third-owned.txt"',
+      'original = {path: path.read_bytes() for path in (a, b, third)}',
+      'def select_different_pair():',
+      'assert pid_of(app_hwnd) == app.pid',
+      'first.iface_selection_item.Select()',
+      'replacement.iface_selection_item.AddToSelection()',
+      'not old.is_selected()',
+      'before_close_status = status_view.window_text()',
+      'assert status_view.window_text() == before_close_status',
+      'OWNED_PROPERTIES_STALE_SELECTION_STATUS_SUPPRESSED',
+      'all(p.read_bytes() == data for p, data in original.items())',
+  ):
+   self.assertIn(token,probe)
+  self.assertLess(probe.index('def select_different_pair():'),
+                  probe.index('assert user.PostMessageW(dialog_hwnd, 0x10, 0, 0)'))
+  self.assertLess(probe.index('assert user.PostMessageW(dialog_hwnd, 0x10, 0, 0)'),
+                  probe.index('assert status_view.window_text() == before_close_status'))
+  self.assertNotIn('os.system(',probe)
+  self.assertNotIn('shellcontext::show(',probe)
+
  def test_right_click_uses_only_intersection_of_owned_row_and_list(self):
   probe=src("tests/winui/test_owned_context_menu_gui.py")
   self.assertIn("left=max(item.left,area.left)",probe)
