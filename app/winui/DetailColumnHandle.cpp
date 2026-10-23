@@ -18,7 +18,7 @@ void DetailColumnHandle::PublishCursorDiagnostic() {
         std::to_wstring(ProtectedCursor()?1:0);
     Microsoft::UI::Xaml::Automation::AutomationProperties::SetHelpText(
         this->as<Microsoft::UI::Xaml::DependencyObject>(),
-        winrt::hstring{value});
+        winrt::hstring(value.c_str()));
 }
 
 DetailColumnHandle::DetailColumnHandle() {
