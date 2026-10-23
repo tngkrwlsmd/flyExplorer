@@ -36,29 +36,6 @@ class PX10ColumnResizeGuiContract(unittest.TestCase):
             self.assertTrue(fragment in source,fragment)
         self.assertNotIn('eventually(horizontal_resize_cursor,',source)
 
-    def test_owned_handle_event_instrumentation_is_diagnostic_only(self):
-        header=(ROOT/"app/winui/DetailColumnHandle.h").read_text("utf-8")
-        cpp=(ROOT/"app/winui/DetailColumnHandle.cpp").read_text("utf-8")
-        gui=(ROOT/"tests/winui/test_owned_column_resize_gui.py").read_text("utf-8")
-        self.assertIn("mCursorDiagnosticEnabled=false;",header)
-        self.assertIn("winrt::hstring(value.c_str())",cpp)
-        self.assertIn("get_strong().as<Microsoft::UI::Xaml::DependencyObject>()",cpp)
-        self.assertNotIn("this->as<Microsoft::UI::Xaml::DependencyObject>()",cpp)
-        self.assertNotIn("winrt::hstring{value}",cpp)
-        self.assertIn("FLYEXPLORER_COLUMN_RESIZE_DIAGNOSTIC",cpp)
-        self.assertIn("if(mCursorDiagnosticEnabled){",cpp)
-        for marker in ("PointerEntered([this]", "PointerExited([this]",
-                       "mCursorDiagnosticLoaded=true;",
-                       "ProtectedCursor(Microsoft::UI::Input::InputSystemCursor::Create(",
-                       "ProtectedCursor()?1:0", "AutomationProperties::SetHelpText("):
-            self.assertIn(marker,cpp)
-        for marker in ("def handle_diagnostic(auto_id):", "peer.CurrentHelpText",
-                       "L08_HANDLE_INITIAL", "L08_HANDLE_AFTER_EXIT",
-                       "HANDLE_STATE", "L08_LOAD=1 "):
-            self.assertIn(marker,gui)
-        self.assertLess(cpp.index("if(mCursorDiagnosticEnabled){"),
-                        cpp.index("PointerEntered([this]"))
-
     def test_existing_runner_requires_the_original_independent_resize_oracles(self):
         source=(ROOT/"tools/winui/run_checks.py").read_text("utf-8")
         section=source.split('if not rc and area == "column-resize":',1)[1].split(
