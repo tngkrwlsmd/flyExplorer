@@ -129,6 +129,11 @@ namespace winrt::FlyExplorer::implementation
                 this,&MainWindow::OnDetailColumnResizePointerPressed}),
             true);
         RootShell().AddHandler(
+            UIElement::PointerMovedEvent(),
+            winrt::box_value(PointerEventHandler{
+                this,&MainWindow::OnDetailColumnResizePointerMoved}),
+            true);
+        RootShell().AddHandler(
             UIElement::PointerReleasedEvent(),
             winrt::box_value(PointerEventHandler{
                 this,&MainWindow::OnDetailColumnResizePointerReleased}),
@@ -1707,9 +1712,31 @@ namespace winrt::FlyExplorer::implementation
     }
     void MainWindow::OnDetailColumnResizePointerMoved(
         IInspectable const&,
-        Microsoft::UI::Xaml::Input::PointerRoutedEventArgs const&){
-        // Physical mouse resize is driven by mDetailColumnDragTimer because
-        // WinUI does not reliably route PointerMoved during this owned drag.
+        Microsoft::UI::Xaml::Input::PointerRoutedEventArgs const& args){
+        // L08: this routed root handler sees the resize press even when the
+        // visual handle receives no PointerEntered. Apply a native hover
+        // cursor only inside a visible 12px separator; never affect text
+        // fields, tabs, normal navigation, or the existing timed drag.
+        if(mClosing||mDetailColumnPointerDrag)return;
+        const auto position=args.GetCurrentPoint(RootShell()).Position();
+        const auto inside=[&](Microsoft::UI::Xaml::FrameworkElement const& thumb){
+            if(thumb.Visibility()!=Visibility::Visible||
+               thumb.ActualWidth()<=0.0||thumb.ActualHeight()<=0.0)return false;
+            const auto origin=thumb.TransformToVisual(RootShell()).TransformPoint(
+                Windows::Foundation::Point{0.0f,0.0f});
+            return position.X>=origin.X&&
+                   position.X<=origin.X+thumb.ActualWidth()&&
+                   position.Y>=origin.Y&&
+                   position.Y<=origin.Y+thumb.ActualHeight();
+        };
+        if(inside(LeftNameColumnResizeThumb())||
+           inside(LeftTypeColumnResizeThumb())||
+           inside(LeftSizeColumnResizeThumb())||
+           inside(RightNameColumnResizeThumb())||
+           inside(RightTypeColumnResizeThumb())||
+           inside(RightSizeColumnResizeThumb())){
+            ::SetCursor(::LoadCursorW(nullptr,IDC_SIZEWE));
+        }
     }
     void MainWindow::OnDetailColumnResizePointerReleased(
         IInspectable const&,
