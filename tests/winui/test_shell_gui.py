@@ -43,6 +43,9 @@ owned=Path(tempfile.mkdtemp(prefix="shell-owned-",dir=base))
 left=owned/"Left";right=owned/"Right";inner=left/"Nested";rightinner=right/"Secondary"
 for folder in (inner,rightinner):folder.mkdir(parents=True,exist_ok=True)
 (left/"readme.txt").write_text("owned synthetic only",encoding="utf-8")
+if os.environ.get("FLY_PX12_VISUAL_COMPARE_ONLY")=="YES":
+ assert os.environ.get("FLY_PX12_ADDRESS_CHROME_ONLY")!="YES"
+ (inner/"PX12VisualOwned.txt").write_text("only PX12 matched visual",encoding="utf-8")
 if os.environ.get("FLY_PX12_ADDRESS_CHROME_ONLY")=="YES":
  # Both candidates belong to this temporary source fixture, not user paths.
  (left/"PX12Vanishing").mkdir()
@@ -127,6 +130,17 @@ if os.environ.get("FLY_M22_OWNED_FEATURES")=="YES":
  (right/"자료.txt").write_text("preexisting right",encoding="utf-8")
 appdata=owned/"appdata";appdata.mkdir()
 localdata=owned/"localdata";localdata.mkdir()
+if os.environ.get("FLY_PX12_VISUAL_COMPARE_ONLY")=="YES":
+ # Use only a disposable flyExplorer profile to match READ-ONLY OS apps theme.
+ import winreg
+ with winreg.OpenKey(winreg.HKEY_CURRENT_USER,
+     r"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize") as key:
+  apps_light=winreg.QueryValueEx(key,"AppsUseLightTheme")[0]
+ theme="light" if apps_light else "dark"
+ settings=localdata/"flyExplorer";settings.mkdir(exist_ok=True)
+ (settings/"ui-preferences-v1.txt").write_bytes(
+  ("schema=3\r\nlanguage=ko-KR\r\ntheme="+theme+
+   "\r\nview=details\r\naddress-shortcut=0\r\nsearch-shortcut=2\r\n").encode("utf-8"))
 if os.environ.get("FLY_F01_HIDDEN_ONLY")=="YES":
  theme=os.environ.get("FLY_F01_HIDDEN_THEME","light")
  assert theme in ("light","dark")
@@ -405,6 +419,12 @@ try:
   f03_probe(win=win,element=element,safe_click=safe_click,
             eventually=eventually,left=left,right=right)
   print("F03_OWNED_TEXT_GUI_PASS",True,flush=True)
+  raise SystemExit(0)
+ if os.environ.get("FLY_PX12_VISUAL_COMPARE_ONLY")=="YES":
+  from test_px12_explorer_visual_compare_gui import run as px12_visual
+  px12_visual(win=win,element=element,focus=ensure_owned_focus,
+              eventually=eventually,left=left,right=right,owned=owned)
+  print("PX12_VISUAL_CAPTURE_HARNESS_FINISHED=True",flush=True)
   raise SystemExit(0)
  if os.environ.get("FLY_PX12_ADDRESS_CHROME_ONLY")=="YES":
   from test_px12_address_chrome_gui import run as px12_probe

@@ -148,6 +148,7 @@ GUI_AREAS = (
     "context-selection",
     "selection-projection",
     "address-candidate-chrome",
+    "address-visual-compare",
     "folder-tree",
     "all",
 )
@@ -417,6 +418,10 @@ def gui_command(area, configuration, env):
     if area == "address-candidate-chrome":
         gui_env["FLY_PX12_ADDRESS_CHROME_ONLY"] = "YES"
         return [sys.executable, "-u", str(TESTS / "test_shell_gui.py")], gui_env, 160
+    if area == "address-visual-compare":
+        gui_env["FLY_PX12_VISUAL_COMPARE_ONLY"] = "YES"
+        gui_env["FLY_F05_VISUAL_CAPTURE"] = "NO"
+        return [sys.executable, "-u", str(TESTS / "test_shell_gui.py")], gui_env, 160
     if area == "column-resize":
         return [
             sys.executable,
@@ -570,6 +575,40 @@ def run_gui(area, configuration, env, tag):
         ):
             print("PX12_REQUIRED_OWNED_GUI_EVIDENCE_MISSING", flush=True)
             rc = 1
+    if not rc and area == "address-visual-compare":
+        body = (LOGS / (tag + "-" + label + ".log")).read_text(
+            encoding="utf-8", errors="replace"
+        )
+        markers = (
+            "PX12_VISUAL_FLY_CANDIDATE_CAPTURE=PASS",
+            "PX12_VISUAL_EXPLORER_SAFE_HEADER_CAPTURE=PASS",
+            "PX12_VISUAL_FLY_COMMITTED_CAPTURE=PASS",
+            "PX12_EXPLORER_ADDRESS_EDIT_ESCAPE=OBSERVED",
+            "PX12_EXPLORER_MATCHED_COMPARISON_CAPTURE=PASS",
+            "PX12_VISUAL_CAPTURE_HARNESS_FINISHED=True",
+            "OWNED_WINUI_SHELL_EXIT 0",
+            "LEGACY_USER_PROFILE_SENTINEL_UNCHANGED True",
+            "OWNED_SYNTHETIC_FIXTURE_REMOVED True",
+        )
+        if not all(marker in body for marker in markers) or (
+            "Traceback (most recent call last)" in body
+        ):
+            print("PX12_VISUAL_PROOF_MISSING_OR_INVALID", flush=True)
+            rc = 1
+        else:
+            # Emit only bounded synthetic-window PNGs and metadata,
+            # never full desktop or personal Explorer history.
+            for line in body.splitlines():
+                if line.startswith("PX12_VISUAL_METADATA="):
+                    print(line[:4000], flush=True)
+                if line.startswith("PX12_VISUAL_IMAGE_"):
+                    _,_,encoded=line.partition("=")
+                    if (len(encoded)>325000 or len(encoded)<250 or
+                            any(c not in "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=" for c in encoded)):
+                        print("PX12_VISUAL_IMAGE_ENVELOPE_INVALID", flush=True)
+                        rc = 1
+                        break
+                    print(line,flush=True)
     if not rc and area == "column-resize":
         # A Windows wrapper previously reported exit=0 despite a Python
         # traceback. Require positive, independent owned-GUI evidence.
