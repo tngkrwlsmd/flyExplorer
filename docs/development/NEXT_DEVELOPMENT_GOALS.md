@@ -266,6 +266,12 @@ B의 좌우 닫기 범위, F6·목록 Tab 왕복·주소/검색·메뉴 복귀·
 
 ## L08 우선 검증 결과 (2026-10-19)
 
+**2026-10-23 사전 검사 선행 작업 완료 — WinRT 코어 컴파일 및 오류 원문 수집:**
+
+- 새 `tools/winui/l08_cppwinrt_core_preflight.ps1`는 사용자 영역과 앱 파일을 건드리지 않고, Windows SDK 헤더 기반 MSVC `/Zs` 단일 번역 단위를 검사한다. 정확한 [소스 `88ef7641`](https://github.com/tngkrwlsmd/flyExplorer/commit/88ef76418f5d3049f13f7bdc64352c55a915604c) [중앙 Windows #39960766793](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39960766793) **파서 PASS, C++/WinRT 최소 컴파일 PASS, 의도적 `C1189` 오류 원문 확인 PASS, 자체 scratch·checkout 제거 PASS**. 이는 기존 앱 기능 또는 WinUI API 검증이 아니라 컴파일 사전 검사·로그 보존 절차의 수용이다.
+- VM에서 검증한 Windows SDK `10.0.26100.0`과 MSVC는 사용 가능하지만, 확인한 캐시에는 프로젝트 고정 `Microsoft.WindowsAppSDK 2.5.1`이 없었다. **다음 작업은 WinUI 투영 및 `DetailColumnHandle`용 실제 API 구문을 소형 컴파일로 검증하는 것**이다. 소유 임시 경로에서 필요한 SDK만 준비하고 컴파일 오류 원문을 먼저 출력한 후 정리하며, 준비되지 않았다면 전체 WinUI GUI 빌드를 재시도하지 않는다.
+- 커서의 실제 렌더링 문제는 미해결; PX10 기존 기능 PASS를 유지하고 G01 OPEN/G03~G05 제외/G07 중단을 유지한다.
+
 **2026-10-23 이후 처리 기록 — 이벤트 계측 빌드 실패 후 원상복구:**
 
 - `Loaded`/`PointerEntered`/`PointerExited`/`ProtectedCursor` 상태를 UIA에 노출하는 **테스트 전용 C++ 계측**을 시도했으나 정확한 Windows 집중 빌드가 [#39956401276](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39956401276), [#39957070274](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39957070274), [#39957644663](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39957644663)에서 모두 **Release 컴파일 단계에 FAIL**했다. **진단 GUI는 한 번도 실행되지 않았다.** 초기 두 실패는 진단 문자열 변환·C++/WinRT 구현 타입의 잘못된 투영 호출이며, 세 번째는 보관 로그/작업 공간에서 정확한 오류를 복구할 수 없었다.
