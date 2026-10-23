@@ -1,3 +1,12 @@
+# PX01 owned Properties GUI oracle exit/privacy accuracy — 2026-10-23
+
+- **Test-harness-only hardening:** in `tests/winui/test_owned_context_properties_gui.py`, the owned GUI oracle now requires an actual WinUI process **exit code 0** for its final PASS and successful test-fixture retirement. A forced termination or abnormal exit can no longer be misreported as accepted. The same guard is asserted in the narrow source regression `test_late_selection_gui_oracle_is_owned_and_observable`.
+- Removed `ImageGrab.grab(bbox=...)` from this **functional** oracle because a rectangle screen capture can include unrelated overlapping desktop content. The dialog is still verified by test-owned window/process identity, UIA visibility and geometry; no visual/pixel PASS is claimed.
+- Exact test/source SHA `3c87b82ae114e1a053480fdbda618314f9fabe11`: [central Windows one-off #39885610745](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39885610745) **1/1 focused source contract PASS**, **3/3 Python syntax files PASS**, owned temporary checkout retirement PASS; no native Release build, interactive GUI or pixel verification was run. Remote Shell request slot was restored to idle after completion.
+- **Pending:** run only the approved isolated `context-selection` interactive GUI area when such an authorized route exists. The current central registered scopes do not execute that area, and broad `gui`/`gui-probe` must not be mislabeled or substituted. The earlier PX01 product-source selection guard still lacks native-build/GUI acceptance; G01 remains unresolved and reproduction-deferred, G03–G05 excluded and G07 stopped.
+
+---
+
 # PX01 owned Properties selection-lifetime GUI oracle — 2026-10-23
 
 - Added one **test-only** GUI oracle in
