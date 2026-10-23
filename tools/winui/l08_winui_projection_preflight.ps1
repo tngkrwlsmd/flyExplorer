@@ -72,10 +72,10 @@ try{
     if(-not (Test-Path -LiteralPath $generator -PathType Leaf)){throw 'L08_CPPWINRT_MISSING'}
     if((Get-AuthenticodeSignature -FilePath $generator).Status -ne 'Valid'){throw 'L08_CPPWINRT_SIGNATURE_INVALID'}
     Write-Output 'L08_CPPWINRT_SIGNATURE_VALID=True'
-    function Generate([string[]]$args,[string]$step){
+    function Generate([string[]]$parameters,[string]$step){
         $stdout=Join-Path $owned ($step+'.stdout')
         $stderr=Join-Path $owned ($step+'.stderr')
-        $proc=Start-Process -FilePath $generator -ArgumentList $args -Wait -PassThru -NoNewWindow -RedirectStandardOutput $stdout -RedirectStandardError $stderr -ErrorAction Stop
+        $proc=Start-Process -FilePath $generator -ArgumentList $parameters -Wait -PassThru -NoNewWindow -RedirectStandardOutput $stdout -RedirectStandardError $stderr -ErrorAction Stop
         Write-Output ('L08_'+$step+'_EXIT='+$proc.ExitCode)
         if($proc.ExitCode -ne 0){LogErrors $stderr 'L08_GENERATOR_ERROR';throw ('L08_'+$step+'_FAILED')}
     }
