@@ -204,6 +204,14 @@ class OwnedContextInvocationRegression(unittest.TestCase):
                   probe.index('assert status_view.window_text() == before_close_status'))
   self.assertNotIn('os.system(',probe)
   self.assertNotIn('shellcontext::show(',probe)
+  # This functional oracle must not report PASS after forced WinUI teardown
+  # or keep a screenshot potentially containing unrelated desktop windows.
+  self.assertNotIn('ImageGrab',probe)
+  self.assertNotIn('owned-multi-properties-dialog.png',probe)
+  self.assertIn('normal_exit = app.poll() == 0',probe)
+  self.assertIn('OWNED_MULTI_PROPERTIES_APP_EXIT_ZERO',probe)
+  self.assertIn('if completed and unchanged and files_unchanged and normal_exit:',probe)
+  self.assertIn('return 0 if completed and unchanged and files_unchanged and normal_exit else 1',probe)
 
  def test_right_click_uses_only_intersection_of_owned_row_and_list(self):
   probe=src("tests/winui/test_owned_context_menu_gui.py")
