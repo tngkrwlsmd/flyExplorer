@@ -134,16 +134,31 @@ def main(config="Release"):
                     return (info.automation_id,info.control_type)
                 except Exception as error:
                     return ("<uia-error>",type(error).__name__,"")
+            # Force a real pointer exit/entry across the 12px thumb,
+            # then measure whether WinUI applies ProtectedCursor after
+            # dispatch time. Do not treat the old immediate HCURSOR oracle
+            # as visual acceptance or override the already-passing drag.
+            body=element("LeftFiles").rectangle()
+            mouse.move(coords=(body.left+30,body.top+36))
+            time.sleep(.10)
+            assert owned_foreground(), "diagnostic pointer left owned window"
             mouse.move(coords=(x,y))
-            # Record the actual UIA hit and native cursor BEFORE the strict
-            # cursor assertion; otherwise a failed hover hides the evidence.
+            elapsed=0
+            for wait_ms in (70,180,350):
+                time.sleep(wait_ms/1000.0)
+                elapsed+=wait_ms
+                current=horizontal_resize_cursor(details=True)
+                owned_hit=hit_info(x,y)
+                observed=("sizewe" if current["active"]==current["sizewe"]
+                          else "arrow" if current["active"]==current["arrow"]
+                          else "other")
+                print("L08_HOVER_TIMELINE",thumb_id,"DWELL_MS",elapsed,
+                      "HIT",owned_hit,"CURSOR",observed,flush=True)
             print("COLUMN_RESIZE_HOVER_PROBE",thumb_id,
-                  hit_info(x,y),horizontal_resize_cursor(details=True),flush=True)
-            # Record cursor evidence separately: earlier automated hover
-            # differed from user-observed cursor. Require actual geometry.
+                  owned_hit,current,flush=True)
             print("COLUMN_RESIZE_CURSOR_OBSERVED",thumb_id,
-                  horizontal_resize_cursor(),flush=True)
-            print("COLUMN_RESIZE_HIT_BEFORE",thumb_id,hit_info(x,y),flush=True)
+                  observed=="sizewe",flush=True)
+            print("COLUMN_RESIZE_HIT_BEFORE",thumb_id,owned_hit,flush=True)
             assert owned_foreground(), "physical input outside owned window"
             mouse.press(button="left",coords=(x,y))
             print("COLUMN_RESIZE_BUTTON_AFTER_PRESS",
