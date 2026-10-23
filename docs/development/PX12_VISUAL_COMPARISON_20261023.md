@@ -96,3 +96,11 @@ retrospective evidence that the failed GUI run's profile sentinel passed.
 - Previous exact-source PX12 functional GUI [#39907990501](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39907990501)
   remains accepted at its own SHA. The newer visual run's failure does not
   erase or silently extend that existing functional evidence.
+
+
+## 2026-10-23 continued: read-only WER inventory and fail-closed PX12 harness
+
+- [Remote Windows WER inventory #39916416607](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39916416607) correlated the same Event 1000 and a subsequent Event 1001, found one `ReportArchive` directory with **`.wer` only** and no matching ReportQueue directory. The exact retained product EXE existed, but no `flyExplorer.pdb` at the checked Release path and neither cdb.exe nor windbg.exe in the checked Windows Kits x64 Debuggers directory. These are **bounded inventories** of exact system locations, not exhaustive machine-wide absence claims. Consequently no exception-time stack was reconstructed.
+- Confirmed a separate **test-harness failure**: in `test_shell_gui.py`, asserting owned process exit zero before testing the original user-profile sentinel and retiring the synthetic fixture prevented both protective postconditions after a native access violation. PX12 visual-only branch now checks profile and retires owned synthetic files inside `finally` with explicit safe scratch and no-symlink constraints, while preserving abnormal exit as failure. It does not change product teardown or alter accepted GUI source paths. Source revision `4b901a6e0427ce917622fa4eb0e3b1cabbe92560`.
+- [Windows exact-source contract run #39916876932](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39916876932): **two source checks PASS**, Python syntax PASS, isolated source checkout cleaned. **No real GUI, image capture, process crash or exit behavior was re-tested.** This adjustment prevents a future *known observed* test clean-up masking pattern; actual runtime effectiveness remains to be independently verified only if the authorized scoped GUI scenario is resumed.
+- The original 96-DPI dark visual review remains **partial**, original visual CI #39911686462 remains **FAIL due to nonzero app exit**, and no root-cause fix or new final acceptance is claimed.
