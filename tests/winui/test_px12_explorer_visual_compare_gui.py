@@ -250,3 +250,14 @@ def run(*, win, element, focus, eventually, left, right, owned):
                        "PX12 new Explorer window did not close normally",10)
         # The caller closes only its own flyExplorer PID and retires its
         # isolated profile and synthetic files in an independent finally.
+
+    # Exercise the observed shutdown fault condition without capturing
+    # personal desktop pixels: the app-owned address editor must own focus
+    # immediately before test_shell_gui posts WM_CLOSE to this exact HWND.
+    focus()
+    foreground(app_hwnd,app_pid)
+    send_keys("^l")
+    eventually(lambda:element("AddressBox").has_keyboard_focus(),
+               "PX12 visual shutdown address editor never received focus",9)
+    assert element("AddressBox").has_keyboard_focus()
+    print("PX12_VISUAL_CLOSE_ADDRESS_FOCUSED=PASS",flush=True)

@@ -23,7 +23,9 @@ class Px12VisualComparisonContract(unittest.TestCase):
                 'foreground(explorer_hwnd,explorer_pid)',
                 'editor.rectangle().bottom-top+2',
                 'assert user.GetDpiForWindow(hwnd)==96',
-                'PX12_EXPLORER_MATCHED_COMPARISON_CAPTURE=PASS'):
+                'PX12_EXPLORER_MATCHED_COMPARISON_CAPTURE=PASS',
+                'PX12_VISUAL_CLOSE_ADDRESS_FOCUSED=PASS',
+                'element("AddressBox").has_keyboard_focus()'):
    self.assertIn(token,probe)
   for token in ('ImageGrab.grab(bbox=area','GetForegroundWindow',
                 'GetWindowThreadProcessId','explorer_hwnd not in initial_cabinets'):

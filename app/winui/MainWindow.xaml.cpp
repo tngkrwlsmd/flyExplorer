@@ -1,5 +1,6 @@
 #include "pch.h"
 #include <winrt/Microsoft.UI.Input.h>
+#include <winrt/Microsoft.UI.Windowing.h>
 #include "MainWindow.xaml.h"
 #include <unordered_map>
 #include "../../src/base/shell_assoc_type_core.h"
@@ -161,6 +162,12 @@ namespace winrt::FlyExplorer::implementation
         // Each reusable XAML control forwards intent; the window owns the
         // shared native state/settings. Never attach a permanent MFC host.
         const auto nativeWeak=get_weak();
+        // AppWindow.Closing runs before XAML input services are dismantled.
+        AppWindow().Closing([nativeWeak](
+            Microsoft::UI::Windowing::AppWindow const&,
+            Microsoft::UI::Windowing::AppWindowClosingEventArgs const&){
+            if(auto ui=nativeWeak.get())ui->PrepareXamlForClose();
+        });
         Closed([nativeWeak](IInspectable const&,WindowEventArgs const&){
             if(auto ui=nativeWeak.get())ui->PrepareForClose();
         });
@@ -177,7 +184,7 @@ namespace winrt::FlyExplorer::implementation
                 ui->ActivateWindowTab(static_cast<size_t>(index));
             }},
             [nativeWeak](int index){if(auto ui=nativeWeak.get()){
-                if(ui->mWorkspace.count()==1){ui->Close();return;}
+                if(ui->mWorkspace.count()==1){ui->PrepareXamlForClose();ui->Close();return;}
                 ui->CloseWindowTab(static_cast<size_t>(index));
             }});
         RootShell().PreviewKeyDown(
@@ -307,7 +314,7 @@ namespace winrt::FlyExplorer::implementation
                     if(key==Windows::System::VirtualKey::T){
                         if(ui->CreateWindowTab(L"shell:MyComputerFolder"))ui->RefreshWindowTabs();
                     }else if(key==Windows::System::VirtualKey::W){
-                        if(ui->mWorkspace.count()==1)ui->Close();
+                        if(ui->mWorkspace.count()==1){ui->PrepareXamlForClose();ui->Close();}
                         else if(ui->CloseWindowTab(ui->mWorkspace.activeIndex()))ui->RefreshWindowTabs();
                     }else if(ui->mWorkspace.count()>1){
                         const auto count=ui->mWorkspace.count();
@@ -854,6 +861,17 @@ namespace winrt::FlyExplorer::implementation
         if(snapshot.children.empty())return;
         mOwnedMetadataSortConsumed=true;
         UpdateSort(mOwnedMetadataSortMode);
+    }
+
+    void MainWindow::PrepareXamlForClose() noexcept
+    {
+        if(mClosing)return;
+        // Move focus off a live TextBox before WinUI destroys input services.
+        // The normal Close/Closed cleanup remains idempotent as a fallback.
+        try{
+            NewTabButton().Focus(FocusState::Programmatic);
+        }catch(...){ }
+        PrepareForClose();
     }
 
     void MainWindow::PrepareForClose() noexcept

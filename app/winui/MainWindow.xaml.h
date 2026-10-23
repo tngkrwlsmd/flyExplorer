@@ -215,6 +215,7 @@ namespace winrt::FlyExplorer::implementation
         void SuspendActiveWindowTab();
         void ApplyActiveWindowTab(winrt::hstring const& status);
         void ReleaseWindowTabRoutes(fxfile::previewtabs::WindowTabState& state);
+        void PrepareXamlForClose() noexcept;
         void PrepareForClose() noexcept;
         void RefreshWindowTabs();
         std::wstring WindowTabLabel(fxfile::previewtabs::WindowTabState const&) const;
