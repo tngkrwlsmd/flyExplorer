@@ -146,12 +146,35 @@ class ContextContract(unittest.TestCase):
       "ui->mFileOperations.busy()",
   ):
    self.assertIn(token,body)
-  callback=body.split("dispatch.TryEnqueue([weak,code,identity,side,tab,route,folder]",1)[1]
+  callback=body.split("dispatch.TryEnqueue([weak,code,identity,side,tab,route,folder,",1)[1]
   self.assertLess(callback.index("live.identity!=identity"),
                   callback.index("if(code==0)ui->StatusText().Text("))
   self.assertLess(callback.index("pane.filesystemPaths[tab]!=folder"),
                   callback.index("else if(code==65)ui->StatusText().Text("))
   self.assertIn("shellcontext::show(helper,paths,cursor,45000)",body)
+
+ def test_late_shell_menu_result_keeps_new_selection_status(self):
+  """The external menu can remain open while selection changes in one tab."""
+  app=src("app/winui/m22_transfers.cpp")
+  body=app.split("void MainWindow::ShowExternalWindowsContextMenu(int side){",1)[1].split(
+      "void MainWindow::OnExternalWindowsContextMenu(",1)[0]
+  self.assertIn("originalSelection.push_back(path);",body)
+  self.assertIn("std::sort(originalSelection.begin(),originalSelection.end());",body)
+  self.assertIn("std::make_shared<const std::vector<std::wstring>>(",body)
+  self.assertIn("expectedSelection]{",body)
+  callback=body.split("dispatch.TryEnqueue([weak,code,identity,side,tab,route,folder,",1)[1]
+  self.assertIn("if(tab>=pane.tabs.size()||tab>=pane.pending.size()||",callback)
+  self.assertIn("pane.pending[tab])return;",callback)
+  self.assertIn("selection.SelectedItems().Size()!=expectedSelection->size()",callback)
+  self.assertIn("pane.tabs[tab].indexedItem(",callback)
+  self.assertIn("indexed->isFileSystem()",callback)
+  self.assertIn("std::sort(actualSelection.begin(),actualSelection.end());",callback)
+  self.assertIn("if(actualSelection!=*expectedSelection)return;",callback)
+  self.assertLess(callback.index("if(actualSelection!=*expectedSelection)return;"),
+                  callback.index("if(code==0)ui->StatusText().Text("))
+  # A selection changed by the user must not launch a second Shell verb,
+  # refresh unrelated files, or rewrite an unrelated status.
+  self.assertNotIn("shellcontext::show(",callback)
 
  def test_no_automatic_external_command_execution(self):
   a=src("tests/winui/test_shell_gui.py")
