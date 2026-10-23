@@ -1,3 +1,11 @@
+# PX12 address-suggestion pending navigation chrome — 2026-10-23
+
+- **Scoped product change:** `MainWindow::OnAddressSuggestionClicked` now restores `AddressBox` and `BreadcrumbPanel` from the active `Current().snapshot().parsingName` immediately after `OpenFolder(path)`, before hiding the editor, matching the existing Enter-submission semantics. A clicked autocomplete candidate is a pending asynchronous Shell target, **not yet the committed folder**. A late navigation failure must not overwrite newer input; native completion, PaneTab routing, path parsing and the existing 8-choice/2048-index in-memory suggestion bounds are unchanged.
+- Product source `app/winui/MainWindow.xaml.cpp` and one targeted method in `tests/winui/test_window_tab_navigation_chrome_contract.py` changed; product SHA `f997de8633b32c1a9a91f85db1bb14d22dc8fb38`. Central owned Windows [focused PX12 source-only #39906179191](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39906179191) **1/1 PASS**, exact-main checkout, Python syntax and test-owned scratch retirement PASS; remote-shell request restored to idle, no overlapping Windows CI.
+- **Release/native build NOT RUN; actual GUI/path-failure interaction NOT RUN; pixel/visual verification NOT RUN.** The new test is a structural regression for the candidate-vs-committed chrome contract, not a runtime proof. Previous F06 accepted address candidate navigation and PX10 selection GUI evidence remain unchanged. PX12/Explorer location breadth remains PARTIAL; G01 repro-deferred, G03–G05 excluded and G07 stopped.
+
+---
+
 # PX10 owned filter/group selection and focus GUI acceptance — 2026-10-23
 
 - **Focused actual Windows GUI PASS**: [central registered PX10 #39904803892](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39904803892), exact trusted product main `1421e964dc41e02b89de3e244b623815ecd4180c`, `scope=gui-selection-projection` on the interactive Windows VM. Runner-health **PASS** (549 ms), pinned GUI deps **PASS** (157 ms), native Release build **PASS** (173,217 ms), and single targeted `functional-px10-selection-projection` **PASS** (16,616 ms, exit 0). This is an isolated diagnostic/focused acceptance, **not** a full GUI suite or overall release approval (`NOT_FINAL_ACCEPTANCE=1`).
