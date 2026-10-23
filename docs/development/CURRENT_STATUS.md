@@ -1,3 +1,39 @@
+# PX01 owned Properties selection-lifetime GUI oracle — 2026-10-23
+
+- Added one **test-only** GUI oracle in
+  `tests/winui/test_owned_context_properties_gui.py`: invoke only the
+  positively identified built-in Properties verb for disposable files A+B,
+  change the test-owned WinUI selection to A+C while the exact owned
+  Properties window is still open (same count, different item set), close
+  only that verified owned window, and ensure the delayed Shell response
+  does not replace the new selection's status. Includes exact-process
+  checks, original file hash preservation, bounded UIA polling and cleanup.
+- Registered the `context-selection` area in
+  `tools/winui/run_checks.py` for an eventual **single focused GUI run**.
+  This does not claim that central CI's existing `gui-probe` profile
+  executes this case.
+- Added `test_late_selection_gui_oracle_is_owned_and_observable` to the
+  source contract; Windows [#39882780540](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39882780540)
+  at source `42400ccec2b0720a3d965921db5193852130a11c`:
+  **1/1 PASS**, three Python files compiled without syntax errors and
+  isolated temporary checkout retirement PASS. An earlier
+  [#39882611485](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39882611485)
+  attempt failed *before* test collection owing to PowerShell
+  single-entry array unwrapping; corrected without re-running unrelated
+  methods.
+- **Native Release build and actual interactive GUI acceptance for this
+  revision remain UNVERIFIED.** Adding a new central GUI validation scope
+  was not authorized by the control-plane tool safety gate, so no
+  broad/incorrect GUI profile was substituted and the project was not
+  reported as accepted. The existing external-menu ownership guard has
+  3/3 targeted **source-contract** PASS at `c8dbfe9009...`.
+  The new probe can be run only through an approved isolated interactive
+  path, and only for synthetic test-owned files; do not run unrelated suites.
+- G01 remains open/reproduction-deferred by user instruction; excluded
+  G03–G05 and stopped G07 remain outside the test scope.
+
+---
+
 # PX01 external Windows context menu selection-ownership guard — 2026-10-23
 
 - **Scope:** changed only the delayed external Windows Shell context-menu
