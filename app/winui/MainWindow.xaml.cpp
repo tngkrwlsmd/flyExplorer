@@ -3277,6 +3277,21 @@ namespace winrt::FlyExplorer::implementation
         if(!view)return;
         const int side=view==LeftFiles()?0:view==RightFiles()?1:-1;
         if(side<0)return;
+        // A queued SelectionChanged may belong to a row discarded by a
+        // filter/group rebuild or an earlier workspace. Do not let it
+        // activate a pane or refresh commands for the new presentation.
+        auto const& pane=ActiveWindowTab().model.panes[side];
+        auto const& visible=ActiveWindowTab().fileLists[side];
+        if(pane.active>=pane.routeIds.size()||
+           visible.visibleRoute!=pane.routeIds[pane.active]||
+           visible.visibleTab!=pane.active)return;
+        bool ownedPresentation=false;
+        try{
+            ownedPresentation=view.Tag()&&
+                winrt::unbox_value<std::uint64_t>(view.Tag())==
+                    ActiveWindowTab().identity;
+        }catch(...){}
+        if(!ownedPresentation)return;
         // F05 headings are non-file presentation surfaces, never native
         // selection/transfer targets. A ListView parent can select even when
         // its child Button was clicked; remove any Tag-less heading first.
@@ -3300,7 +3315,12 @@ namespace winrt::FlyExplorer::implementation
         bool newlySelectedFile=false;
         for(auto const& candidate:args.AddedItems()){
             auto row=candidate.try_as<ListViewItem>();
-            if(row&&row.Tag())newlySelectedFile=true;
+            if(!row||!row.Tag())continue;
+            std::uint32_t currentIndex=0;
+            // A stale AddedItems row can still have a valid Shell Tag.
+            // Only a member of the current ListView can change pane focus.
+            if(view.Items().IndexOf(candidate,currentIndex))
+                newlySelectedFile=true;
         }
         if(newlySelectedFile&&ActiveWindowTab().model.activePane!=side)
             ActivatePane(side);
