@@ -1,5 +1,12 @@
 # Error history
 
+## 2026-10-23 — G01 focused TextBox close workaround: one bounded PX12 PASS
+
+- Prior actual PX12 visual test `f0980b5...` / [central run #39911686462](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39911686462) ended in `Microsoft.UI.Xaml.dll` access violation `0xC0000005`; its retained WER did not include an exception-time native dump. Microsoft [WinUI issue #11653](https://github.com/microsoft/microsoft-ui-xaml/issues/11653) reports a compatible focused-`TextBox` teardown bug, with focus relocation in `AppWindow.Closing` as a tested workaround. This is a plausible causal match, not independent native stack proof for flyExplorer.
+- Code and the PX12 focus precondition were changed in [`0893ba12`](https://github.com/tngkrwlsmd/flyExplorer/commit/0893ba12c67b05ad4d5c9534261fc78f5b82e770). On exact-source [Windows focused run #39936268900](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39936268900), Release compiled and the actual scoped PX12 GUI exited successfully; the harness enforces exit code 0, unchanged user-profile sentinel and owned-fixture cleanup.
+- Prevention: keep the pre-close focus assertion and real process-exit check; do not rely on `Window.Closed` alone for this workaround. Classify this as a single focused PASS, **not** evidence that all intermittent G01 shutdown or initial-navigation faults are resolved.
+
+
 This is the append-only failure/root-cause/prevention ledger. Older entries may
 refer to source or documentation paths that were later retired from the working
 tree. Recover those exact artifacts from Git when needed; do not interpret old
