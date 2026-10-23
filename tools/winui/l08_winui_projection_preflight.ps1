@@ -107,56 +107,20 @@ try{
     }
     Write-Output 'L08_WINUI_REQUIRED_HEADERS_GENERATED=True'
 
-    # Generating the WinUI headers after the platform projection may
-    # overwrite or remove the platform base.h. Check the *final* outputs,
-    # not only the intermediate state. The previous C2338 came from
-    # mixing generated headers with Windows SDK's older cppwinrt/base.h.
+    # Check the *final* output of both generators: a later generation
+    # step must not replace/delete the version-matched platform base.h.
     $baseFile=Join-Path $output 'winrt\base.h'
     $xamlFile=Join-Path $output 'winrt\Microsoft.UI.Xaml.Controls.h'
     if(-not (Test-Path -LiteralPath $baseFile -PathType Leaf)){
         throw 'L08_FINAL_GENERATED_BASE_HEADER_MISSING'
     }
     function ProjectionVersion([string]$path){
-        $matches=@(Get-Content -LiteralPath $path -TotalCount 64 -Encoding UTF8 |
-            Select-String -Pattern '^\s*#\s*define\s+CPPWINRT_VERSION\s+(.+)
-    $cpp=@'
-#include <winrt/Microsoft.UI.Xaml.Controls.h>
-#include <winrt/Microsoft.UI.Xaml.Automation.h>
-#include <winrt/Microsoft.UI.Input.h>
-void L08Probe(winrt::Microsoft::UI::Xaml::Controls::Grid const& grid) {
-    auto cursor=winrt::Microsoft::UI::Input::InputSystemCursor::Create(
-        winrt::Microsoft::UI::Input::InputSystemCursorShape::SizeWestEast);
-    winrt::Microsoft::UI::Xaml::Automation::AutomationProperties::SetHelpText(
-        grid, winrt::hstring(L"L08"));
-    (void)cursor;
-}
-'@
-    Set-Content -LiteralPath $probe -Value $cpp -Encoding UTF8 -ErrorAction Stop
-    $vswhere='C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe'
-    $vs=(& $vswhere -latest -products '*' -property installationPath).Trim()
-    if(-not $vs){throw 'L08_VS_NOT_FOUND'}
-    $vcvars=Join-Path $vs 'VC\Auxiliary\Build\vcvars64.bat'
-    if(-not (Test-Path -LiteralPath $vcvars -PathType Leaf)){throw 'L08_VCVARS_NOT_FOUND'}
-    $sdk='C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\cppwinrt'
-    $log=Join-Path $owned 'compiler.log'
-    $command='call "'+$vcvars+'" >nul && cl.exe /nologo /std:c++20 /EHsc /Zs /utf-8 /I "'+$output+'" /I "'+$sdk+'" "'+$probe+'"'
-    & cmd.exe /d /c $command 2>&1 | Out-File -LiteralPath $log -Encoding UTF8
-    $rc=$LASTEXITCODE
-    Write-Output ('L08_WINUI_CPP_COMPILE_EXIT='+$rc)
-    if($rc -ne 0){LogErrors $log 'L08_COMPILE_ERROR';throw 'L08_CPP_API_COMPILE_FAILED'}
-    Write-Output 'L08_WINUI_API_COMPILE_PASS=True'
-}finally{
-    if(Test-Path -LiteralPath $owned -PathType Container){
-        $item=Get-Item -LiteralPath $owned -Force
-        if(($item.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0){throw 'L08_UNSAFE_OWNED_DIRECTORY'}
-        if([IO.Path]::GetFullPath($owned) -cne [IO.Path]::GetFullPath((Join-Path $parent 'fly-l08-winui-api-preflight'))){throw 'L08_UNEXPECTED_CLEANUP_PATH'}
-        Remove-Item -LiteralPath $owned -Recurse -Force -ErrorAction Stop
-        Write-Output 'L08_WINUI_SCRATCH_REMOVED=True'
-    }
-}
-)
-        if($matches.Count -ne 1){throw ('L08_CPPWINRT_VERSION_MARKER_MISSING_'+[IO.Path]::GetFileName($path))}
-        return $matches[0].Matches[0].Groups[1].Value.Trim()
+        $versionHits=@(Get-Content -LiteralPath $path -TotalCount 64 -Encoding UTF8 |
+            Select-String -Pattern '^\s*#\s*define\s+CPPWINRT_VERSION\s+(.+)$')
+        if($versionHits.Count -ne 1){
+            throw ('L08_CPPWINRT_VERSION_MARKER_MISSING_'+[IO.Path]::GetFileName($path))
+        }
+        return $versionHits[0].Matches[0].Groups[1].Value.Trim()
     }
     $baseVersion=ProjectionVersion $baseFile
     $xamlVersion=ProjectionVersion $xamlFile
