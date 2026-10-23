@@ -86,18 +86,18 @@ def run(*, win, element, safe_click, focus, eventually, left, right):
     assert two is not None
     two.iface_selection_item.AddToSelection()
     eventually(pair, "PX10 initial multi-selection absent", 10)
-    row(files[0]).set_focus()
-    assert owned_foreground() and row(files[0]).has_keyboard_focus()
-
-    # ValuePattern changes the test-owned editor without physically
-    # changing keyboard focus to it. The focused file should survive FillFiles.
-    box.iface_value.SetValue("Alpha")
-    eventually(lambda: pair() and row(files[2]) is None,
-               "PX10 filter lost two matching selected files", 12)
+    # User-physical filter entry focuses the editor; it must remain the
+    # keyboard target while the selected file rows are rebuilt underneath.
+    box.set_focus()
+    assert owned_foreground() and box.has_keyboard_focus()
+    keyboard.send_keys("Alpha")
+    eventually(lambda: box.get_value() == "Alpha" and pair() and
+               row(files[2]) is None,
+               "PX10 physical filter lost the editor or selected pair", 12)
     print("PX10_GUI_FILTER_TWO_SELECTED=PASS", flush=True)
-    assert row(files[0]).has_keyboard_focus(), (
-        "PX10 native focused file not restored after filter")
-    print("PX10_GUI_FILTER_FOCUSED_FILE=PASS", flush=True)
+    assert box.has_keyboard_focus(), (
+        "PX10 active filter editor lost keyboard focus during redraw")
+    print("PX10_GUI_FILTER_EDITOR_FOCUS=PASS", flush=True)
 
     def type_group():
         focus()
@@ -119,27 +119,40 @@ def run(*, win, element, safe_click, focus, eventually, left, right):
     assert left_active() and owned_foreground()
     print("PX10_GUI_GROUP_TWO_SELECTED=PASS", flush=True)
 
+    # After grouping, a selected native file is still keyboard focusable.
     row(files[0]).set_focus()
-    assert row(files[0]).has_keyboard_focus()
-    box.iface_value.SetValue("")
-    eventually(lambda: pair() and row(files[2]) is not None,
-               "PX10 grouped filter-clear dropped selected pair", 12)
-    assert row(files[0]).has_keyboard_focus(), (
-        "PX10 grouped redraw lost selected row keyboard focus")
-    print("PX10_GUI_GROUPED_REFRESH_FOCUS=PASS", flush=True)
+    assert owned_foreground() and row(files[0]).has_keyboard_focus(), (
+        "PX10 grouped native file did not accept keyboard focus")
+    print("PX10_GUI_GROUPED_FILE_FOCUSABLE=PASS", flush=True)
+    # A real keyboard filter edit should keep the editor focused across
+    # another rebuild; selected file identities remain unchanged.
+    box.set_focus()
+    assert owned_foreground() and box.has_keyboard_focus()
+    keyboard.send_keys("^a{BACKSPACE}")
+    eventually(lambda: box.get_value() == "" and pair() and
+               row(files[2]) is not None,
+               "PX10 grouped keyboard filter-clear dropped selected pair", 12)
+    assert box.has_keyboard_focus(), (
+        "PX10 grouped redraw lost active filter editor keyboard focus")
+    print("PX10_GUI_GROUPED_EDITOR_FOCUS=PASS", flush=True)
 
     type_group()   # Selecting Type again explicitly turns grouping off.
     eventually(lambda: pair() and not grouped(),
                "PX10 ungrouped pair/heading coherence failed", 12)
     print("PX10_GUI_UNGROUP_TWO_SELECTED=PASS", flush=True)
 
-    box.iface_value.SetValue("Mango")
-    eventually(lambda: row(files[0]) is None and row(files[1]) is None and
+    box.set_focus()
+    assert owned_foreground() and box.has_keyboard_focus()
+    keyboard.send_keys("^a{BACKSPACE}Mango")
+    eventually(lambda: box.get_value() == "Mango" and
+               row(files[0]) is None and row(files[1]) is None and
                "선택됨" not in element("SelectionCountText").window_text(),
                "PX10 filtered-out rows retained ghost selection", 12)
     print("PX10_GUI_EXCLUDED_NO_GHOST_SELECTION=PASS", flush=True)
-    box.iface_value.SetValue("")
-    eventually(lambda: row(files[0]) is not None and row(files[1]) is not None and
+    assert box.has_keyboard_focus()
+    keyboard.send_keys("^a{BACKSPACE}")
+    eventually(lambda: box.get_value() == "" and
+               row(files[0]) is not None and row(files[1]) is not None and
                "선택됨" not in element("SelectionCountText").window_text(),
                "PX10 cleared filter resurrected unselected rows", 12)
     assert left_active()

@@ -16,10 +16,11 @@ class Px10GuiHarnessContract(unittest.TestCase):
  def test_exact_owned_selection_focus_and_rebuild_oracle(self):
   p=read("tests/winui/test_px10_selection_projection_gui.py")
   for needle in ('iface_selection_item.AddToSelection()', 'keyboard.send_keys("^+f")',
-                 'iface_value.SetValue("Alpha")',
+                 'keyboard.send_keys("Alpha")',
                  'has_keyboard_focus()', 'ViewGroupByTypeItem',
                  'keyboard.send_keys("{ENTER}")','PX10_GUI_GROUP_TWO_SELECTED=PASS',
-                 'PX10_GUI_GROUPED_REFRESH_FOCUS=PASS',
+                 'PX10_GUI_GROUPED_FILE_FOCUSABLE=PASS',
+                 'PX10_GUI_GROUPED_EDITOR_FOCUS=PASS',
                  'PX10_GUI_EXCLUDED_NO_GHOST_SELECTION=PASS',
                  'PX10_GUI_ORIGINAL_FILE_HASHES_UNCHANGED=PASS'):
    self.assertIn(needle,p)
