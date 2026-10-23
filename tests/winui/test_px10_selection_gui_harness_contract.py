@@ -22,6 +22,7 @@ class Px10GuiHarnessContract(unittest.TestCase):
                  'PX10_GUI_GROUPED_FILE_FOCUSABLE=PASS',
                  'PX10_GUI_GROUPED_EDITOR_FOCUS=PASS',
                  'PX10_GUI_EXCLUDED_NO_GHOST_SELECTION=PASS',
+                 'def no_ghost_selection():',
                  'PX10_GUI_ORIGINAL_FILE_HASHES_UNCHANGED=PASS'):
    self.assertIn(needle,p)
   for unsafe in ("ImageGrab","ClearClipboard","SetFileAttributesW","os.system("):

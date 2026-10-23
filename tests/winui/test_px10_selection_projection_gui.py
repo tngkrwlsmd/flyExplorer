@@ -48,6 +48,22 @@ def run(*, win, element, safe_click, focus, eventually, left, right):
     def left_active():
         return "왼쪽" in element("ActivePaneText").window_text()
 
+    def no_ghost_selection():
+        # At zero selected rows, WinUI can omit its empty TextBlock from
+        # UIA entirely. Require no actual selected ListItems, then accept
+        # either an absent badge or a visibly empty one.
+        selected_rows = [
+            node for node in element("LeftFiles").descendants()
+            if node.element_info.control_type == "ListItem" and
+            node.is_selected()
+        ]
+        if selected_rows:
+            return False
+        badge = element("SelectionCountText")
+        if not badge.exists(timeout=.1):
+            return True
+        return not badge.window_text().strip()
+
     def live_menu(*, ident=None, label=None):
         matches = []
         for popup in Desktop(backend="uia").windows(process=pid):
@@ -146,14 +162,14 @@ def run(*, win, element, safe_click, focus, eventually, left, right):
     keyboard.send_keys("^a{BACKSPACE}Mango")
     eventually(lambda: box.get_value() == "Mango" and
                row(files[0]) is None and row(files[1]) is None and
-               "선택됨" not in element("SelectionCountText").window_text(),
+               row(files[2]) is not None and no_ghost_selection(),
                "PX10 filtered-out rows retained ghost selection", 12)
     print("PX10_GUI_EXCLUDED_NO_GHOST_SELECTION=PASS", flush=True)
     assert box.has_keyboard_focus()
     keyboard.send_keys("^a{BACKSPACE}")
     eventually(lambda: box.get_value() == "" and
                row(files[0]) is not None and row(files[1]) is not None and
-               "선택됨" not in element("SelectionCountText").window_text(),
+               no_ghost_selection(),
                "PX10 cleared filter resurrected unselected rows", 12)
     assert left_active()
     assert all(hashlib.sha256((left / name).read_bytes()).digest() == digest
