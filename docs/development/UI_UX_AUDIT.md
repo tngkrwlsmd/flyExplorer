@@ -1,5 +1,12 @@
 # flyExplorer Windows 11 벤치마킹 및 UI/UX 점검
 
+## 2026-10-23 L08 커서 시간차 분류 — 물리적 드래그 PASS, 자동화 커서 OPEN
+
+- 기존 `98e9b283` GUI 성공 보관 로그 [#39953465234](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39953465234): 세 열의 정확한 UIA 조절 핸들 hit 및 +40/+28/+20px 열 경계 변경이 있었으나 native 커서는 `arrow`로 기록됐다.
+- 새 `e5550518` 진단은 포인터를 앱 내부 다른 영역에서 조절 핸들로 다시 옮기고 **70·250·600ms** 후 동일한 native 커서와 hit peer를 확인한다. [Windows GUI #39954174882](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39954174882) 기능 PASS/정상 종료 0, 보관 로그 [#39955105078](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39955105078) **9/9 올바른 hit + 화살표 커서**. 즉시 읽기만의 오탐으로는 보기 어렵지만, WinUI `PointerEntered` 전달 및 `ProtectedCursor` 적용 자체의 원인은 미확정이다.
+- 사용자 직접 hover에서 조절 커서가 정상 보였다는 과거 보고는 충돌하는 별도 범위의 증거로 보존한다. 앱의 커서 설정을 임의로 다시 구현하지 않았고, 마우스 포인터 자체가 포함된 캡처 또는 픽셀 비교는 수행하지 않았다. 따라서 L08 **커서·시각 수용은 미완료**, 드래그 기능 GUI PASS는 유지한다.
+
+
 
 ## 2026-10-23 PX10/L08 실제 마우스 열 조절 — 집중 기능 GUI PASS
 
