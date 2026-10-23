@@ -1,5 +1,13 @@
 # Error history
 
+## 2026-10-23 — L08 precise hover hit but native arrow persists through 600 ms
+
+- Old focused GUI `98e9b283` was a **real drag PASS**, not a cursor PASS. Read-only inspection of its retained log ([#39953465234](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39953465234)) showed exact automation hit on each of the three resize thumb elements and actual +40/+28/+20-pixel boundary movement, but `GetCursorInfo` reported native arrow `HCURSOR=65539` while Win32 `IDC_SIZEWE=65553`.
+- No new product cursor implementation was added. Narrow instrumentation in `dc0e5a826213b9e40e04eeeae4b7af1bc3dba311` enforces an owned-body-to-thumb pointer transition and logs `GetCursorInfo` and exact UIA peer at 70, 250 and 600 ms; a source contract in `e555051866868e4a7dc548a40b65d31edeccf552` guards this path. Windows preflight [#39954122328](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39954122328): syntax and 3/3 source tests PASS, isolated checkout removed.
+- Exact-source [Windows scoped GUI #39954174882](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39954174882): Release and actual column-resize GUI **PASS**, process exit 0 (33.8 s), native user settings preserved, owned fixture removed. Bounded archived log inspection [#39955105078](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39955105078): nine of nine post-hover samples hit the matching resize Grid/Group peer but reported `CURSOR arrow`; three drag width deltas unchanged at +40/+28/+20. This rules against *only* an immediate-sampling delay within 600 ms under that automation, but **does not establish the WinUI root cause** or invalidate previous direct user observation of working cursor.
+- Prevention: do not equate UIA hit or correct geometry with native cursor feedback; classify timed `GetCursorInfo` separately, and do not apply unproven cursor hacks or rerun accepted PX10/G01 features. Cursor-visual/pixel acceptance remains OPEN; G03–G05 excluded, G07 stopped.
+
+
 
 ## 2026-10-23 — PX10 physical column-resize focused GUI: verification and corrected preflight
 
