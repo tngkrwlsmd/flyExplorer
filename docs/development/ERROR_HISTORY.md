@@ -7,6 +7,13 @@ milestone/current-state wording as the present product status. For current
 product state use CURRENT_STATUS.md.
 # flyExplorer Error Diagnosis / Prevention History
 
+## 2026-10-23 — PX12 matched visual capture ended in XAML access violation
+
+- Exact source `f0980b515f47288c14b6aded2d1829e2620d421e` [Windows #39911686462](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39911686462): actual native Release build and 3 matched synthetic-address screenshot captures succeeded, but on owned WinUI process close the exit was `3221225477` (`0xC0000005`) and visual acceptance correctly failed. Standalone focused PX12 functional navigation acceptance [#39907990501](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39907990501) remains a separate prior PASS.
+- Read-only Windows Application Error 1000 [#39912873511](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39912873511) matched `flyExplorer.exe` PID 9492, `Microsoft.UI.Xaml.dll` exception `c0000005`, fault offset `0xA0981`, UTC 2026-10-23 06:32:05.673. This is a **crash site, not a proved root cause**. Do not attribute to PX12 change without a causal stack. Existing G01 intermittent-shutdown problem remains open/reproduction-deferred.
+- The GUI harness raised before its original-profile sentinel or owned scratch deletion; neither unexecuted check can be claimed to have passed. Independently preserved the three screenshot PNGs/hashes in failed-run log, then cleaned the unique test-owned fixture [#39914030926](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39914030926) with exact ancestry, unique file markers, no reparse/protected files or live matching app. All user-owned paths were excluded from cleanup. Do not add speculative native teardown changes or repeat expensive builds to turn the run green. See `docs/development/PX12_VISUAL_COMPARISON_20261023.md`.
+
+
 > **Chronological evidence archive (preserved):** Some entries describe past
 > source snapshots and scoped test runs; they are not assertions that current
 > `main` has passed the same tests. For active project status, evidence limits
