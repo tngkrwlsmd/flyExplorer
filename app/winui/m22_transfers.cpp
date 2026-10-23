@@ -1202,6 +1202,10 @@ void MainWindow::ShowExternalWindowsContextMenu(int side){
  auto const& session=pane.tabs[tab];
  std::vector<std::wstring> paths{};
  paths.reserve(count);
+ // The external popup is asynchronous: capture exactly which files own its
+ // eventual status update, not just the WindowTab/PaneTab and folder.
+ std::vector<std::wstring> originalSelection;
+ originalSelection.reserve(count);
  std::wstring commonParent;
  std::size_t units=0;
  for(std::uint32_t i=0;i<count;++i){
@@ -1241,7 +1245,12 @@ void MainWindow::ShowExternalWindowsContextMenu(int side){
                              path.c_str(),-1,TRUE)==CSTR_EQUAL)return;
   units+=path.size();
   paths.push_back(path);
+  originalSelection.push_back(path);
  }
+ std::sort(originalSelection.begin(),originalSelection.end());
+ const auto expectedSelection=
+     std::make_shared<const std::vector<std::wstring>>(
+         std::move(originalSelection));
  HWND hwnd=::GetActiveWindow();
  DWORD owner=0;
  if(hwnd)::GetWindowThreadProcessId(hwnd,&owner);
@@ -1261,9 +1270,11 @@ void MainWindow::ShowExternalWindowsContextMenu(int side){
   L"Windows Shell 확장 메뉴를 분리된 프로세스에서 엽니다.");
  try{
   std::thread([helper=std::move(helper),paths=std::move(paths),
-               cursor,dispatch,weak,identity,side,tab,route,folder]{
+               cursor,dispatch,weak,identity,side,tab,route,folder,
+               expectedSelection]{
     const DWORD code=fxfile::shellcontext::show(helper,paths,cursor,45000);
-    dispatch.TryEnqueue([weak,code,identity,side,tab,route,folder]{
+    dispatch.TryEnqueue([weak,code,identity,side,tab,route,folder,
+                         expectedSelection]{
       if(auto ui=weak.get()){
        if(ui->mClosing)return;
        const auto& live=ui->ActiveWindowTab();
@@ -1278,6 +1289,28 @@ void MainWindow::ShowExternalWindowsContextMenu(int side){
           pane.filesystemPaths[tab]!=folder||
           live.fileLists[side].visibleTab!=tab||
           live.fileLists[side].visibleRoute!=route)return;
+       // A user may change the selection while a native Properties sheet
+       // remains open. An older popup must not overwrite the new selection's
+       // status even when the same folder tab and route are still active.
+       if(tab>=pane.tabs.size()||tab>=pane.pending.size()||
+          pane.pending[tab])return;
+       auto selection=side==0?ui->LeftFiles():ui->RightFiles();
+       if(selection.SelectedItems().Size()!=expectedSelection->size())return;
+       std::vector<std::wstring> actualSelection;
+       actualSelection.reserve(expectedSelection->size());
+       for(auto const& value:selection.SelectedItems()){
+        auto row=value.try_as<ListViewItem>();
+        if(!row||!row.Tag())return;
+        std::uint64_t logical{};
+        try{logical=unbox_value<std::uint64_t>(row.Tag());}
+        catch(...){return;}
+        const auto* indexed=pane.tabs[tab].indexedItem(
+            static_cast<std::size_t>(logical));
+        if(!indexed||!indexed->isFileSystem())return;
+        actualSelection.push_back(indexed->parsingName);
+       }
+       std::sort(actualSelection.begin(),actualSelection.end());
+       if(actualSelection!=*expectedSelection)return;
        if(code==0)ui->StatusText().Text(
           L"Windows Shell 확장 메뉴가 종료됐습니다.");
        else if(code==65)ui->StatusText().Text(
