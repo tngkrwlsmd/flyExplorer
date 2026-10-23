@@ -43,6 +43,11 @@ owned=Path(tempfile.mkdtemp(prefix="shell-owned-",dir=base))
 left=owned/"Left";right=owned/"Right";inner=left/"Nested";rightinner=right/"Secondary"
 for folder in (inner,rightinner):folder.mkdir(parents=True,exist_ok=True)
 (left/"readme.txt").write_text("owned synthetic only",encoding="utf-8")
+if os.environ.get("FLY_PX12_ADDRESS_CHROME_ONLY")=="YES":
+ # Both candidates belong to this temporary source fixture, not user paths.
+ (left/"PX12Vanishing").mkdir()
+ (inner/"PX12OwnedDestination.txt").write_text("owned PX12 success",encoding="utf-8")
+ assert os.environ.get("FLY_F06_ADDRESS_SUGGEST_ONLY")!="YES"
 if os.environ.get("FLY_F05_GROUP_ONLY")=="YES" or os.environ.get("FLY_F05_PANES_ONLY")=="YES":
  (left/"group-guide.md").write_text("owned markdown only",encoding="utf-8")
  (left/"group-events.log").write_text("owned log only",encoding="utf-8")
@@ -400,6 +405,12 @@ try:
   f03_probe(win=win,element=element,safe_click=safe_click,
             eventually=eventually,left=left,right=right)
   print("F03_OWNED_TEXT_GUI_PASS",True,flush=True)
+  raise SystemExit(0)
+ if os.environ.get("FLY_PX12_ADDRESS_CHROME_ONLY")=="YES":
+  from test_px12_address_chrome_gui import run as px12_probe
+  px12_probe(win=win,element=element,focus=ensure_owned_focus,
+             eventually=eventually,left=left,right=right,owned=owned)
+  print("PX12_ADDRESS_CANDIDATE_CHROME_GUI_PASS=True",flush=True)
   raise SystemExit(0)
  if os.environ.get("FLY_F06_ADDRESS_SUGGEST_ONLY")=="YES":
   from test_f06_address_suggest_gui import run as address_probe
