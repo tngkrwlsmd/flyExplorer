@@ -159,6 +159,38 @@ class WindowTabChromeContract(unittest.TestCase):
         self.assertNotIn("AddressBox().Text(",failed)
         self.assertIn("UpdateNavigationChrome()",failed)
 
+    def test_px12_suggestion_submit_preserves_committed_chrome_until_navigation_wins(self):
+        src=compact((ROOT/"app/winui/MainWindow.xaml.cpp").read_text(encoding="utf-8"))
+        choose=src.split("void MainWindow::OnAddressSuggestionClicked(",1)[1].split(
+            "void MainWindow::OnAddressKeyDown(",1)[0]
+        enter=src.split("void MainWindow::OnAddressKeyDown(",1)[1].split(
+            "void MainWindow::OnAddressGotFocus(",1)[0]
+        for token in (
+            "button.Tag()", "unbox_value<hstring>(button.Tag())",
+            "HideAddressSuggestions()", "OpenFolder(path);",
+            "const auto committed=Current().snapshot().parsingName;",
+            "AddressBox().Text(hstring(FriendlyAddress(committed)));",
+            "UpdateBreadcrumb(committed);",
+            "AddressBox().Opacity(0.0);",
+            "AddressDisplayButton().Visibility(Visibility::Visible);",
+        ):
+            self.assertIn(token,choose)
+        self.assertLess(choose.index("OpenFolder(path);"),
+                        choose.index("const auto committed="))
+        self.assertLess(choose.index("UpdateBreadcrumb(committed);"),
+                        choose.index("AddressBox().Opacity(0.0);"))
+        for token in ("const auto committed=Current().snapshot().parsingName;",
+                      "AddressBox().Text(hstring(FriendlyAddress(committed)));",
+                      "UpdateBreadcrumb(committed);"):
+            self.assertIn(token,enter)
+        failed=src.split("if(completed.kind==Kind::Failed)",1)[1].split(
+            "if(completed.kind==Kind::Rejected)",1)[0]
+        self.assertNotIn("AddressBox().Text(",failed)
+        # No synchronous Shell/file-system inspection belongs in this handler.
+        for forbidden in ("GetFileAttributes", "FindFirstFile",
+                          "directory_iterator", "submitParsing(", "CoCreateInstance("):
+            self.assertNotIn(forbidden,choose)
+
     def test_f06_quoted_loopback_unc_failure_is_owned_and_nonmutating(self):
         src=(ROOT/"tests/winui/test_shell_gui.py").read_text(encoding="utf-8")
         for fragment in ("FLY_F06_QUOTED_LOOPBACK_UNC",

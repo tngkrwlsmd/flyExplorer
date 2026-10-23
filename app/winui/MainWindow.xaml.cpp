@@ -3485,6 +3485,13 @@ namespace winrt::FlyExplorer::implementation
         const auto path=std::wstring(unbox_value<hstring>(button.Tag()).c_str());
         HideAddressSuggestions();
         OpenFolder(path);
+        // A suggestion is a pending Shell request, not a committed folder.
+        // Match Enter submission: keep the last successful address until
+        // the isolated navigation result is accepted for this PaneTab.
+        // Do not reset the edit box later from a stale failure callback.
+        const auto committed=Current().snapshot().parsingName;
+        AddressBox().Text(hstring(FriendlyAddress(committed)));
+        UpdateBreadcrumb(committed);
         AddressBox().Opacity(0.0);
         AddressDisplayButton().Visibility(Visibility::Visible);
     }
