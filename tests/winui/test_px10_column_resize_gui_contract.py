@@ -20,6 +20,10 @@ class PX10ColumnResizeGuiContract(unittest.TestCase):
         source=(ROOT/"tests/winui/test_owned_column_resize_gui.py").read_text("utf-8")
         for fragment in ('mouse.press(button="left"',
                          'mouse.move(coords=(nx,y))',
+                         'L08_HOVER_TIMELINE',
+                         'for wait_ms in (70,180,350)',
+                         'mouse.move(coords=(body.left+30,body.top+36))',
+                         'observed=="sizewe"',
                          'element(next_header_id).rectangle().left>=start+12',
                          'keyboard.send_keys("^t")',
                          'len(tabs())==2',
