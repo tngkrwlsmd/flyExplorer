@@ -1,5 +1,12 @@
 # Error history
 
+## 2026-10-23 — WinUI C++/WinRT micro-projection failure isolated (no new GUI)
+
+- [Previous exact Windows run #39967597593](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39967597593) successfully verified all pinned NuGet component hashes, Authenticode signature on `cppwinrt.exe`, `Microsoft.UI.Xaml.Controls.h` generation and scratch cleanup, then failed native micro-compile: `C2338` mismatched generated-header vs Windows SDK `base.h`, `C1083` missing `winrt/Microsoft.UI.h`. This is a preflight/projection defect rather than evidence of product cursor behavior. Prior metadata inventory [#39966964422](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39966964422) located `Microsoft.UI.winmd`.
+- Replaced the untracked ad-hoc request concept with a reusable, source-reviewed but **not Windows-verified** `tools/winui/l08_winui_projection_preflight.ps1`. It requires trusted package digests, a signed exact generator, matches generated platform/WinUI projections before MSVC `/Zs`, echoes native compiler errors and retires only owned scratch. It does not modify `DetailColumnHandle` or run UI. A matching generator platform `base.h` and the requested WinUI API compile **must still be verified**; don't claim this fixes `C2338`/ `C1083` until the script passes.
+- Remote-shell request could not be reset to idle because update actions were blocked by a safety check; central run queue was empty. Do not overwrite an active request, work around the safeguard or repeat costly GUI builds. Inspect/clear the stale request through authorized control-plane procedures before the next exact-SHA focused preflight.
+
+
 ## 2026-10-23 — Preflight evidence path repaired for tiny WinRT compilation (not WinUI)
 
 - Repeated native diagnostic failures on earlier exact sources were compounded by missing compiler error detail after the central CI's bounded logging and scratch retirement. This does **not** retroactively recover the third failed compile from [#39957644663](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39957644663).
