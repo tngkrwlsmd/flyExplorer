@@ -1,5 +1,12 @@
 # Error history
 
+## 2026-10-23 — Preflight evidence path repaired for tiny WinRT compilation (not WinUI)
+
+- Repeated native diagnostic failures on earlier exact sources were compounded by missing compiler error detail after the central CI's bounded logging and scratch retirement. This does **not** retroactively recover the third failed compile from [#39957644663](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39957644663).
+- New, deliberately limited `tools/winui/l08_cppwinrt_core_preflight.ps1` at `88ef76418f5d3049f13f7bdc64352c55a915604c` compiles only a Windows SDK C++/WinRT `Windows.Foundation::IStringable` mock with the installed MSVC compiler, then verifies an intentional **C1189** compiler error is captured and echoed to the Actions job log while scratch still exists. [Committed-script VM execution #39960766793](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39960766793) **PASS**, exact checkout + compiler scratch safely retired. This is a negative-control proof of the **tiny unit** logging path, not a claim of full product compiler-error retention.
+- No WinUI 3 `ProtectedCursor`/generated `DetailColumnHandle` API probe is compiled yet: pinned Windows App SDK projections were absent from inspected global cache locations. Before further product event instrumentation, obtain that SDK in a temporary, owned compiler-only fixture and prove compilation of the actual candidate call sequence. Do not launch the costly focused GUI on an uncompiled candidate.
+
+
 ## 2026-10-23 — L08 event instrumentation C++ compile failures; restoration and prevention
 
 - Diagnostic-only edit to `DetailColumnHandle` exposed Loaded, pointer entry/exit counts and ProtectedCursor presence via a test-gated UIA HelpText. All focused **Python source contracts passed**, but this did **not** validate the generated C++/WinRT projection.
