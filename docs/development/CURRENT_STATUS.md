@@ -1,3 +1,12 @@
+# PX10 Details column drag origin-ownership guard — 2026-10-23
+
+- **Scoped product change:** during a Details header resize press, snapshot the originating `WindowTabState::identity` and active `PaneTab` index along with the existing side/column. Before the 16-ms timer or release-tail handler applies any subsequent pointer movement, reject and retire a stale drag if the window is closing, the workspace identity/pane/folder tab has changed, or the saved side/column is invalid. The name/type/size width bounds, pane-local layout, mouse-drag timer and ordinary release-tail flush are unchanged. This addresses a source-visible cross-workspace state-write risk, **not** an independently reproduced user GUI failure.
+- Edited `app/winui/MainWindow.xaml.h` and `MainWindow.xaml.cpp`, and added only `tests/winui/test_px10_column_drag_ownership_contract.py` with three focused source contracts. No changes to navigation semantics, PaneTab sorting, file contents, selection handling, Shell verbs or persistent session format.
+- Exact source SHA `ac9a6c3b3c2a6eafe247211153a65acc61472100`: central Windows [PX10 source-only #39890706779](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39890706779) **3/3 PASS** and owned scratch retirement PASS. Remote Shell request restored to idle. **Native Release build, actual column-pointer GUI acceptance and pixel/visual inspection NOT RUN**; no functional/visual acceptance for this new guard is claimed. The historical L08 user-observed resize cursor and any older GUI acceptance remain scoped to their own earlier evidence.
+- Remaining PX10 selection behavior after filter/group and detailed column GUI visual alignment are separate, unverified candidates. G01 remains reproduction-deferred; G03–G05 remain user-excluded and G07 user-stopped.
+
+---
+
 # PX11/EP02 established workspace/pane/tab ownership contract — 2026-10-23
 
 - **Decision / no product behavior change:** `WindowTab` remains an independent workspace. Each left/right pane owns its view mode, display toggles and detail-column widths; each `PaneTab` independently owns its sort order (session v4), while the active PaneTab sort is projected through the pane's `fileLists[side].sortMode`. Group selection/collapse uses a bounded transient route+tab cache rather than a new persisted setting. F14 user-opted folder view overrides remain in-memory for the current app session. This deliberately retains the existing hybrid contract, not a migration to full per-tab view/column persistence.
