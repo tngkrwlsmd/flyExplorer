@@ -16,7 +16,6 @@ import tempfile
 from time import sleep
 
 import psutil
-from PIL import ImageGrab
 from pywinauto import Desktop, keyboard, mouse
 from paths import APP, ROOT, app_exe
 from uia_polling import wait_until
@@ -320,12 +319,11 @@ def main(config="Release"):
         dialog = Desktop(backend="uia").window(handle=dialog_hwnd)
         box = dialog.rectangle()
         assert box.width() >= 220 and box.height() >= 160
-        # Capture exactly the newly created Properties window, never desktop.
-        image = log / "owned-multi-properties-dialog.png"
-        ImageGrab.grab(bbox=(box.left, box.top, box.right, box.bottom),
-                       include_layered_windows=True).save(image)
+        # UIA geometry establishes that the test-owned dialog is visible.
+        # Screen-region grabs can inadvertently record unrelated overlapping
+        # desktop windows; this is a functional, not pixel-visual, oracle.
         print("OWNED_MULTI_PROPERTIES_DIALOG_VISIBLE", True, flush=True)
-        print("OWNED_MULTI_PROPERTIES_DIALOG_PIXELS",
+        print("OWNED_MULTI_PROPERTIES_DIALOG_GEOMETRY",
               box.width(), box.height(), flush=True)
         assert dialog_hwnd not in baseline_windows
         assert pid_of(dialog_hwnd) == dialog_pid
@@ -397,6 +395,8 @@ def main(config="Release"):
             else:
                 app.terminate()
                 app.wait(timeout=7)
+        normal_exit = app.poll() == 0
+        print("OWNED_MULTI_PROPERTIES_APP_EXIT_ZERO", normal_exit, flush=True)
         unchanged = all((mfc / name).is_file() and
                         hashlib.sha256((mfc / name).read_bytes()).digest() == digest
                         for name, digest in baseline.items())
@@ -405,12 +405,12 @@ def main(config="Release"):
         print("SIX_ORIGINAL_MFC_SETTINGS_IDENTICAL", unchanged, flush=True)
         print("OWNED_MULTI_PROPERTIES_FINAL_FILES_IDENTICAL",
               files_unchanged, flush=True)
-        if completed and unchanged and files_unchanged:
+        if completed and unchanged and files_unchanged and normal_exit:
             import shutil
             shutil.rmtree(owned)
         else:
             print("OWNED_MULTI_PROPERTIES_FIXTURE_RETAINED", owned, flush=True)
-    return 0 if completed and unchanged and files_unchanged else 1
+    return 0 if completed and unchanged and files_unchanged and normal_exit else 1
 
 
 if __name__ == "__main__":
