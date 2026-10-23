@@ -195,9 +195,17 @@ class OwnedContextInvocationRegression(unittest.TestCase):
       'before_close_status = status_view.window_text()',
       'assert status_view.window_text() == before_close_status',
       'OWNED_PROPERTIES_STALE_SELECTION_STATUS_SUPPRESSED',
+      'OWNED_PROPERTIES_EXPLICIT_EXTENSION_CHOICE',
+      'item.window_text() == "추가 옵션 표시"',
+      'item.element_info.process_id == app.pid',
+      'extension.click_input()',
       'all(p.read_bytes() == data for p, data in original.items())',
   ):
    self.assertIn(token,probe)
+  self.assertLess(probe.index('keyboard.send_keys("+{F10}")'),
+                  probe.index('extension.click_input()'))
+  self.assertLess(probe.index('extension.click_input()'),
+                  probe.index('def spawned():'))
   self.assertLess(probe.index('def select_different_pair():'),
                   probe.index('assert user.PostMessageW(dialog_hwnd, 0x10, 0, 0)'))
   self.assertLess(probe.index('assert user.PostMessageW(dialog_hwnd, 0x10, 0, 0)'),
