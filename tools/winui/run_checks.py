@@ -100,6 +100,7 @@ HARNESS_CONTRACTS = [
     "tests/winui/test_build_environment_contract.py",
     "tests/winui/test_gui_harness_contract.py",
     "tests/winui/test_gui_failure_evidence_contract.py",
+    "tests/winui/test_l08_winui_projection_preflight_contract.py",
 ]
 INFRA_CONTRACTS = [
     "tests/winui/test_dev_entrypoint_contract.py",
