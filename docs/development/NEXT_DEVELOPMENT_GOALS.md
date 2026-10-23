@@ -266,6 +266,12 @@ B의 좌우 닫기 범위, F6·목록 Tab 왕복·주소/검색·메뉴 복귀·
 
 ## L08 우선 검증 결과 (2026-10-19)
 
+**2026-10-23 L08 다음 게이트 — 실제 WinUI 투영 소형 검사 스크립트 준비, 실행 미완료:**
+
+- [최근 실패 #39967597593](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39967597593)에서는 SDK WinRT `base.h`와 생성된 XAML 헤더의 버전 불일치(`C2338`), `Microsoft.UI.h` 생성 누락(`C1083`)이 확인됐다. 패키지 손상이 아닌 **생성·컴파일 범위** 문제로 분류한다.
+- 새 `tools/winui/l08_winui_projection_preflight.ps1`는 생성기와 NuGet SHA-256 고정, Windows 플랫폼 투영 선행 생성, `Microsoft.UI.winmd` 포함 WinUI 투영, 소형 `/Zs` 및 컴파일 오류 원문 출력, 소유 scratch 제거를 수행하도록 작성됐다. **Windows 실행·PowerShell 구문 검사·API 컴파일 모두 아직 미검증**. 실제 `ProtectedCursor` 멤버와 사용자 지정 Grid C++/WinRT 투영은 포함하지 않는다.
+- 중앙 요청 슬롯의 이전 실패 작업이 남아 있고 변경 시도가 안전 검사에 차단돼 이번에는 새 Windows 작업을 만들지 않았다. 안전한 승인 경로로 슬롯을 비운 뒤 **전용 사전 검사만 한 번** 실행하고, 이 검사로 입증된 API 경계만 제품 후보 계측에 적용한다. 기존 PX10 GUI 기능 PASS, G01 OPEN, G03~G05 제외, G07 중단 유지.
+
 **2026-10-23 사전 검사 선행 작업 완료 — WinRT 코어 컴파일 및 오류 원문 수집:**
 
 - 새 `tools/winui/l08_cppwinrt_core_preflight.ps1`는 사용자 영역과 앱 파일을 건드리지 않고, Windows SDK 헤더 기반 MSVC `/Zs` 단일 번역 단위를 검사한다. 정확한 [소스 `88ef7641`](https://github.com/tngkrwlsmd/flyExplorer/commit/88ef76418f5d3049f13f7bdc64352c55a915604c) [중앙 Windows #39960766793](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39960766793) **파서 PASS, C++/WinRT 최소 컴파일 PASS, 의도적 `C1189` 오류 원문 확인 PASS, 자체 scratch·checkout 제거 PASS**. 이는 기존 앱 기능 또는 WinUI API 검증이 아니라 컴파일 사전 검사·로그 보존 절차의 수용이다.
