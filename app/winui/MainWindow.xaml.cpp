@@ -1604,6 +1604,11 @@ namespace winrt::FlyExplorer::implementation
         const auto rootOrigin=RootShell().TransformToVisual(
             Content().as<UIElement>()).TransformPoint({0.0f,0.0f});
         if(ActiveWindowTab().model.activePane!=side)ActivatePane(side);
+        // The timer must never resize whichever workspace happens to be
+        // active after a later WindowTab/PaneTab/pane transition.
+        mDetailColumnPointerWindowIdentity=ActiveWindowTab().identity;
+        mDetailColumnPointerPaneTab=
+            ActiveWindowTab().model.panes[side].active;
         mDetailColumnPointerDrag=true;
         mDetailColumnPointerSide=side;
         mDetailColumnPointerColumn=column;
@@ -1637,6 +1642,21 @@ namespace winrt::FlyExplorer::implementation
     void MainWindow::ApplyDetailColumnPointerPosition()
     {
         if(!mDetailColumnPointerDrag)return;
+        // PX10: queued ticks and release callbacks may outlive the initiating
+        // workspace, pane or folder tab. Reject them before any width write.
+        if(mClosing||
+           mDetailColumnPointerSide<0||mDetailColumnPointerSide>1||
+           mDetailColumnPointerColumn<0||mDetailColumnPointerColumn>2||
+           ActiveWindowTab().identity!=mDetailColumnPointerWindowIdentity||
+           ActiveWindowTab().model.activePane!=mDetailColumnPointerSide||
+           ActiveWindowTab().model.panes[mDetailColumnPointerSide].active!=
+               mDetailColumnPointerPaneTab){
+            mDetailColumnPointerDrag=false;
+            mDetailColumnPointerSide=-1;
+            mDetailColumnPointerColumn=-1;
+            if(mDetailColumnDragTimer)mDetailColumnDragTimer.Stop();
+            return;
+        }
         POINT next{};
         if(!::GetCursorPos(&next))return;
         double raster=1.0;

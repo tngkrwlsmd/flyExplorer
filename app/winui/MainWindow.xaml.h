@@ -388,6 +388,10 @@ namespace winrt::FlyExplorer::implementation
         bool mDetailColumnPointerDrag=false;
         int mDetailColumnPointerSide=-1;
         int mDetailColumnPointerColumn=-1;
+        // Bind a 16ms pointer drag to its originating workspace and PaneTab.
+        // Column widths are pane-local, but stale events must not cross views.
+        std::uint64_t mDetailColumnPointerWindowIdentity=0;
+        std::size_t mDetailColumnPointerPaneTab=0;
         LONG mDetailColumnPointerLastScreenX=0;
         Microsoft::UI::Dispatching::DispatcherQueueTimer mDetailColumnDragTimer{nullptr};
         double mShellWidth=972.0;
