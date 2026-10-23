@@ -157,6 +157,7 @@ namespace winrt::FlyExplorer::implementation
             IInspectable const&,
             Microsoft::UI::Xaml::Input::PointerRoutedEventArgs const&);
         void ApplyDetailColumnPointerPosition();
+        void ApplyDetailColumnHoverCursor();
         void OnDetailColumnResizePointerMoved(
             IInspectable const&,
             Microsoft::UI::Xaml::Input::PointerRoutedEventArgs const&);
@@ -395,6 +396,10 @@ namespace winrt::FlyExplorer::implementation
         std::size_t mDetailColumnPointerPaneTab=0;
         LONG mDetailColumnPointerLastScreenX=0;
         Microsoft::UI::Dispatching::DispatcherQueueTimer mDetailColumnDragTimer{nullptr};
+        // L08: native cursor correction only while the owned window is
+        // foreground and the mouse is inside a visible 12px column handle.
+        HWND mDetailColumnHoverHwnd{};
+        Microsoft::UI::Dispatching::DispatcherQueueTimer mDetailColumnHoverTimer{nullptr};
         double mShellWidth=972.0;
         std::array<int,2> mDetailLayoutProfiles{{-1,-1}};
         int DetailLayoutProfile() const;
