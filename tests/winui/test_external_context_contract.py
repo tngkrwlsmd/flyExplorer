@@ -202,6 +202,9 @@ class OwnedContextInvocationRegression(unittest.TestCase):
       'all(p.read_bytes() == data for p, data in original.items())',
   ):
    self.assertIn(token,probe)
+  # The established owned context test identifies this WinUI menu item
+  # without a provider-dependent UIA visibility/enabled heuristic.
+  self.assertNotIn('and item.is_visible() and item.is_enabled()',probe)
   self.assertLess(probe.index('keyboard.send_keys("+{F10}")'),
                   probe.index('extension.click_input()'))
   self.assertLess(probe.index('extension.click_input()'),
