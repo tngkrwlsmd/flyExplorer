@@ -20,17 +20,33 @@ templates. Edit the templates, not generated project files.
     Window
     └── WindowTab[]
         ├── active pane + split state/ratio
-        ├── LeftPane
+        ├── LeftPane (and separately RightPane)
+        │   ├── pane-local view, display options and column widths
+        │   ├── transient grouping cache scoped to route + PaneTab
         │   └── PaneTab[]
-        │       ├── current Shell location
-        │       ├── Back/Forward history
-        │       └── view/sort/column state
-        └── RightPane
-            └── PaneTab[]
+        │       ├── current Shell location and Back/Forward history
+        │       └── independent sort order (v4 session)
+        └── independent pane-local state for the other side
+
+**PX11/EP02 ownership decision (2026-10-23):** preserve the existing hybrid
+model rather than silently change accepted UX or introduce a new session
+format. `WindowTabState::tabSortModes[side]` keeps inactive PaneTab sort
+orders; `fileLists[side].sortMode` is the active PaneTab's live sort.
+`WindowWorkspaceController::dispatch` exchanges them on folder-tab
+addition, selection and close. Each WindowTab has distinct left/right
+pane state. View mode, display switches, column widths and visible layout
+are **pane-local**, not per PaneTab. Grouping uses a bounded transient
+`TabGrouping` route/tab cache; it is not part of the serialized session.
+F14's explicitly remembered folder view can override the pane view only
+after accepted navigation in the same application session. Private session
+v4 saves each PaneTab sort and each pane's view/name-column width, while
+v1–v3 preserve their legacy pane-shared sort inheritance. This does not
+claim independent per-tab view/columns, Explorer drag/detach parity or
+persistent group-collapse state.
 
 Theme/language are application preferences. Window geometry and active Window
 Tab are session state. A pane owns its pane-local tab collection; a PaneTab owns
-its navigation identity/history.
+its navigation identity/history and independent sort.
 
 V8-A makes workspace ownership concrete in
 app/winui/WindowWorkspaceController. The controller owns the WindowTab

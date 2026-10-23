@@ -170,6 +170,42 @@ class MigrationContracts(unittest.TestCase):
   self.assertIn("state.tabSortModes[side]",controller)
   self.assertIn("modes[previous]=current;",controller)
 
+ def test_px11_existing_sort_and_pane_view_ownership_contract(self):
+  # Preserve the accepted v4 PaneTab sort and the distinct pane-view scope.
+  winstate=text("window_tab_state.h")
+  filelist=text("file_list_state.h")
+  controller=text("window_workspace_controller.cpp")
+  coordinator=text("session_coordinator.cpp")
+  view=text("m20_shell.cpp")
+  gui=text("MainWindow.xaml.cpp")
+  session=(ROOT.parents[1]/"src/base/ui_session.h").read_text(encoding="utf-8-sig")
+  for term in ("std::array<fxfile::previewlist::PaneState,2> fileLists",
+               "std::array<std::vector<int>,2> tabSortModes"):
+   self.assertIn(term,winstate)
+  for term in ("const int current=state.fileLists[side].sortMode;",
+               "modes[previous]=current;",
+               "modes.push_back(0);",
+               "modes.erase(",
+               "state.fileLists[side].sortMode=modes[pane.active];"):
+   self.assertIn(term,controller)
+  for term in ("FileViewMode viewMode=FileViewMode::Details;",
+               "double nameColumnWidth=168.0;",
+               "fxfile::filegroup::TabGrouping groupTabCache{};"):
+   self.assertIn(term,filelist)
+  self.assertIn("ActiveWindowTab().fileLists[side].viewMode=",view)
+  self.assertIn("mFolderViews.remember(folder,",view)
+  self.assertIn("state.groupTabCache.switchTo(nextRoute,pane.active,side)",gui)
+  for term in ("target.view=static_cast<std::uint32_t>(",
+               "target.nameColumnWidth=static_cast<std::uint32_t>(",
+               "i==pane.active?state.fileLists[side].sortMode:",
+               "state.tabSortModes[side][i]",
+               "state.tabSortModes[side].push_back(static_cast<int>(savedTab.sort))"):
+   self.assertIn(term,coordinator)
+  self.assertIn("std::uint32_t sort=0; // v4: folder-tab sort",session)
+  self.assertIn("std::uint32_t selected=0,sort=0,view=0,nameColumnWidth=168;",session)
+  self.assertNotIn("std::uint32_t sort=0,view=",session)
+  self.assertNotIn("target.groupMode=",coordinator)
+
  def test_native_model_rejects_stale_route_and_request_completions(self):
   impl=(ROOT.parents[1]/"src/base/explorer_ui_state.cpp").read_text(encoding="utf-8-sig")
   nav=text("shell_navigation_controller.cpp")
