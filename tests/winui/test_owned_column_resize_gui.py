@@ -70,6 +70,12 @@ def main(config="Release"):
             except Exception as error:
                 return "<status-error:"+type(error).__name__+">"
 
+        # The owned app can start at 960x519 even on a 1280x768 desktop.
+        # Maximize only our test window before testing Details column width.
+        window().maximize()
+        eventually(lambda:window().rectangle().width()>=1100,
+                   "owned window did not maximize for Details columns",6)
+
         # L08 requires enough actual Details width, not a split-button
         # transition. On smaller desktop sessions (e.g. 1280x768), forcing
         # an unnecessary split click can fail before the hover oracle runs.
