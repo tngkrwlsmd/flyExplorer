@@ -1,5 +1,13 @@
 # flyExplorer Windows 11 벤치마킹 및 UI/UX 점검
 
+
+## 2026-10-23 PX10/L08 실제 마우스 열 조절 — 집중 기능 GUI PASS
+
+- 정확한 `98e9b283998aa90c134ceacb1ec19be573841934`, [중앙 Windows `gui-column-resize` #39951081963](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39951081963): Release 빌드 통과, 소유 WinUI GUI **exit 0 (29.3초)**. 실제 마우스로 왼쪽 Details 이름·유형·크기 열의 다음 머리글 시작 좌표가 각각 12px 이상 이동, 짧은 누름/놓음 꼬리 이동 반영, WindowTab A→B→A 후 A 너비 좌표 오차 4px 이하 확인. 원래 사용자 설정 불변, 테스트 소유 파일 제거 및 앱 정상 종료도 판정 필수 항목이었다.
+- 소스 구조 검사 [#39950085238](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39950085238) 3/3 PASS와 실제 GUI 결과를 별도로 기록한다. WinUI 제품의 C++/XAML 수정이 아닌 소유 테스트 보강이다.
+- **시각 검증 보류:** 자동화 커서 모양 관찰은 통과 판정에서 제외했다. 이전 arrow vs 사용자 직접 size-아래 커서 보고의 차이는 해소되지 않았다. 실제 비교 이미지의 픽셀을 독립적으로 열어 검토하지 않았으므로 열 경계 커서/원본 스크린샷 **시각 PASS로 격상하지 않는다**. 오른쪽 패널·진행 중 드래그에서 탭 전환·CaptureLost는 이 집중 GUI에 포함되지 않았다. 기존 L08 전체 개선/커서 요구는 미완료로 유지한다.
+
+
 ## 2026-10-21 G01 — 구형 세션 실제 복원과 v4 저장 수용
 
 - main ebe26cf9, 기존 EXE 78fb331f...로 격리된 v1/v2/v3 프로필을 각각 한 번
