@@ -1,3 +1,12 @@
+# PX10 stale selection-event projection ownership — 2026-10-23
+
+- **Product change:** `MainWindow::OnFileSelectionChanged` now verifies the source ListView's current WindowTab identity and the pane's active PaneTab/route before acting on delayed `SelectionChanged` notifications. `AddedItems` is further restricted to actual members of the currently rendered ListView (`view.Items().IndexOf`), so a discarded row with a valid file tag cannot activate the wrong pane after filtering, sorting, grouping or switching workspaces.
+- This is a **source-visible asynchronous event ownership risk**, not an independently reproduced interactive defect. Existing path-identity-based selection/focus restoration in `FillFiles`, filtered/hidden row omission, group heading exclusion, native Shell selection, file operations, and session state are unchanged.
+- Changed `app/winui/MainWindow.xaml.cpp` and added focused `tests/winui/test_px10_selection_owner_contract.py`. Exact product SHA `2c4410c4438c60e476391848612f16c61d40f650`: [central owned Windows source-only #39892102917](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39892102917) **3/3 contract PASS**, exact checkout and test-owned scratch cleanup PASS. Remote-shell slot returned to idle.
+- **Release/native build NOT RUN; functional GUI and visual/pixel acceptance NOT RUN.** This test checks code structure, not actual delayed WinUI delivery, selection highlight or focus. Any separate filter/group selection GUI acceptance remains outstanding. G01 historical intermittent behavior remains reproduction-deferred; G03–G05 user-excluded, G07 user-stopped.
+
+---
+
 # PX10 Details column drag origin-ownership guard — 2026-10-23
 
 - **Scoped product change:** during a Details header resize press, snapshot the originating `WindowTabState::identity` and active `PaneTab` index along with the existing side/column. Before the 16-ms timer or release-tail handler applies any subsequent pointer movement, reject and retire a stale drag if the window is closing, the workspace identity/pane/folder tab has changed, or the saved side/column is invalid. The name/type/size width bounds, pane-local layout, mouse-drag timer and ordinary release-tail flush are unchanged. This addresses a source-visible cross-workspace state-write risk, **not** an independently reproduced user GUI failure.
