@@ -3,7 +3,7 @@ from pathlib import Path
 from paths import APP, app_exe
 from uia_polling import wait_until
 from PIL import ImageGrab
-import ctypes,hashlib,os,shutil,subprocess,sys,tempfile,time
+import ctypes,hashlib,os,re,shutil,subprocess,sys,tempfile,time
 from ctypes import wintypes
 import psutil
 from pywinauto import Desktop,mouse,keyboard
@@ -69,6 +69,18 @@ def main(config="Release"):
                 return element("StatusText").window_text()
             except Exception as error:
                 return "<status-error:"+type(error).__name__+">"
+
+        def handle_diagnostic(auto_id):
+            # Read only this test-owned control's UIA HelpText, never
+            # enumerate unrelated windows or copy user-visible content.
+            try:
+                peer=element(auto_id).wrapper_object().element_info.element
+                state=str(peer.CurrentHelpText)
+            except Exception as error:
+                return "L08_UIA_UNREADABLE_"+type(error).__name__
+            if not re.fullmatch(r"L08_LOAD=[01] ENTER=\d+ EXIT=\d+ CURSOR=[01]",state):
+                return "L08_UIA_MARKER_MISSING"
+            return state
 
         # The column-resize acceptance only needs the left Details pane.
         # Do not trust cached SecondaryPane UIA visibility or SplitButton text:
@@ -139,8 +151,15 @@ def main(config="Release"):
             # dispatch time. Do not treat the old immediate HCURSOR oracle
             # as visual acceptance or override the already-passing drag.
             body=element("LeftFiles").rectangle()
+            initial_state=handle_diagnostic(thumb_id)
+            print("L08_HANDLE_INITIAL",thumb_id,initial_state,flush=True)
+            assert initial_state.startswith("L08_LOAD=1 "), (
+                "owned WinUI handle did not publish Loaded/cursor diagnostic",
+                thumb_id,initial_state)
             mouse.move(coords=(body.left+30,body.top+36))
             time.sleep(.10)
+            print("L08_HANDLE_AFTER_EXIT",thumb_id,
+                  handle_diagnostic(thumb_id),flush=True)
             assert owned_foreground(), "diagnostic pointer left owned window"
             mouse.move(coords=(x,y))
             elapsed=0
@@ -153,7 +172,8 @@ def main(config="Release"):
                           else "arrow" if current["active"]==current["arrow"]
                           else "other")
                 print("L08_HOVER_TIMELINE",thumb_id,"DWELL_MS",elapsed,
-                      "HIT",owned_hit,"CURSOR",observed,flush=True)
+                      "HIT",owned_hit,"CURSOR",observed,"HANDLE_STATE",
+                      handle_diagnostic(thumb_id),flush=True)
             print("COLUMN_RESIZE_HOVER_PROBE",thumb_id,
                   owned_hit,current,flush=True)
             print("COLUMN_RESIZE_CURSOR_OBSERVED",thumb_id,
