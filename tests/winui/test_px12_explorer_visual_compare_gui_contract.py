@@ -32,4 +32,22 @@ class Px12VisualComparisonContract(unittest.TestCase):
                     'explore_proc.kill(', 'os.system('):
    self.assertNotIn(forbidden,probe)
 
+ def test_crash_path_retains_failure_and_retires_only_owned_fixture(self):
+  shell=read("tests/winui/test_shell_gui.py")
+  section=shell.split('print("OWNED_WINUI_SHELL_EXIT",',1)[1]
+  visual=section.split('if os.environ.get("FLY_PX12_VISUAL_COMPARE_ONLY")=="YES":',1)[1].split(
+   '\n else:\n  assert p and p.returncode==0',1)[0]
+  for fragment in ("assert_legacy_profile_unchanged(REAL_CONF,ORIGINAL_PROFILE)",
+                   "finally:", 'owned.parent==base', 'owned.name.startswith("shell-owned-")',
+                   'assert not owned.is_symlink()', "os.walk(owned,followlinks=False)",
+                   'shutil.rmtree(owned)', '"OWNED_SYNTHETIC_FIXTURE_REMOVED"',
+                   'assert p and p.returncode==0'):
+   self.assertIn(fragment,visual)
+  self.assertLess(visual.index("assert_legacy_profile_unchanged"),
+                  visual.index("shutil.rmtree(owned)"))
+  self.assertLess(visual.index("shutil.rmtree(owned)"),
+                  visual.index("assert p and p.returncode==0"))
+  # The unchanged fallback path retains the usual shutdown-first policy.
+  self.assertIn('else:\n  assert p and p.returncode==0',section)
+
 if __name__=="__main__":unittest.main()

@@ -858,15 +858,40 @@ finally:
    p.terminate();p.wait(timeout=5)
    raise RuntimeError("owned WinUI3 shell did not close normally")
  print("OWNED_WINUI_SHELL_EXIT",p.returncode if p else None,flush=True)
- assert p and p.returncode==0
- assert_legacy_profile_unchanged(REAL_CONF,ORIGINAL_PROFILE)
- print("LEGACY_USER_PROFILE_SENTINEL_UNCHANGED",True,
-       "PRESENT",ORIGINAL_PROFILE_PRESENT,flush=True)
- if ORIGINAL_PROFILE_PRESENT==6:
-  print("ORIGINAL_SIX_USER_CONFIG_SHA256_IDENTICAL",True,flush=True)
+ if os.environ.get("FLY_PX12_VISUAL_COMPARE_ONLY")=="YES":
+  # A failed WinUI shutdown must remain a GUI failure, but must not skip
+  # the independent legacy-user-profile check or leave synthetic files.
+  # This recovery path is strictly limited to the PX12 visual fixture.
+  try:
+   assert_legacy_profile_unchanged(REAL_CONF,ORIGINAL_PROFILE)
+   print("LEGACY_USER_PROFILE_SENTINEL_UNCHANGED",True,
+         "PRESENT",ORIGINAL_PROFILE_PRESENT,flush=True)
+   if ORIGINAL_PROFILE_PRESENT==6:
+    print("ORIGINAL_SIX_USER_CONFIG_SHA256_IDENTICAL",True,flush=True)
+   else:
+    print("ORIGINAL_SIX_USER_CONFIG_SHA256_IDENTICAL","NOT_APPLICABLE",
+          "PRESENT",ORIGINAL_PROFILE_PRESENT,flush=True)
+  finally:
+   assert owned.parent==base and owned.name.startswith("shell-owned-")
+   assert not owned.is_symlink() and not base.is_symlink()
+   # Refuse any nested symlink or junction: only owned disposable files
+   # may be retired; unrelated directories are never accepted.
+   for current,folders,files in os.walk(owned,followlinks=False):
+    for name in folders+files:
+     assert not (Path(current)/name).is_symlink()
+   shutil.rmtree(owned)
+   print("OWNED_SYNTHETIC_FIXTURE_REMOVED",True,flush=True)
+  assert p and p.returncode==0, "owned PX12 visual app exited abnormally"
  else:
-  print("ORIGINAL_SIX_USER_CONFIG_SHA256_IDENTICAL","NOT_APPLICABLE",
+  assert p and p.returncode==0
+  assert_legacy_profile_unchanged(REAL_CONF,ORIGINAL_PROFILE)
+  print("LEGACY_USER_PROFILE_SENTINEL_UNCHANGED",True,
         "PRESENT",ORIGINAL_PROFILE_PRESENT,flush=True)
- assert owned.parent==base and owned.name.startswith("shell-owned-")
- shutil.rmtree(owned)
- print("OWNED_SYNTHETIC_FIXTURE_REMOVED",True,flush=True)
+  if ORIGINAL_PROFILE_PRESENT==6:
+   print("ORIGINAL_SIX_USER_CONFIG_SHA256_IDENTICAL",True,flush=True)
+  else:
+   print("ORIGINAL_SIX_USER_CONFIG_SHA256_IDENTICAL","NOT_APPLICABLE",
+         "PRESENT",ORIGINAL_PROFILE_PRESENT,flush=True)
+  assert owned.parent==base and owned.name.startswith("shell-owned-")
+  shutil.rmtree(owned)
+  print("OWNED_SYNTHETIC_FIXTURE_REMOVED",True,flush=True)
