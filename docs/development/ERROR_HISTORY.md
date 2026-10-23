@@ -1,5 +1,13 @@
 # Error history
 
+## 2026-10-23 — G01 focused Ctrl+W close PASS, central marker false negative (bounded)
+
+- New focused test on `f5c327b40e53439b904a484c8a0d19b9d3dc2805` exercised startup plus address-focused Ctrl+W final-window close. First actual Windows run [#39941356463](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39941356463) had a **harness NameError** (new `send_keys` call lacked import), not a diagnosed native application failure. Fixed the import at `f3a29d3d640a13723e8bed5592c9613a0152cb3c`.
+- Corrected exact-source [central Windows #39942415493](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39942415493) compiled Release **PASS** and executed `gui-startup-integrated-Release EXIT=0`, but was marked `G01_INTEGRATED_STARTUP_MARKER_MISSING`. Read-only retained log inspection [#39943122615](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39943122615) proved startup, focused editor, Ctrl+W exit 0, legacy settings unchanged, and owned-fixture cleanup markers all present. The actual legacy sentinel line ended with **`PRESENT 6`**; exact-line matching erroneously rejected it. The runner failure **must not be relabeled a CI PASS**.
+- Fix `beb8b83cad232a2b7206571e4e6201098ba84b9b` checks the actual numeric suffix while requiring the remaining exact markers, and test fixture newline correction `2ba0da35c6144bc8d28c0d3949431ff9d598739e` covers positive, missing-marker, invalid-suffix and traceback cases. Exact-SHA Windows **source-only** [#39946409466](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39946409466): **3 tests PASS**, no GUI/build, isolated checkout retired and command slot idle. Do not rerun an otherwise successful GUI merely to change its reporter verdict; keep source, GUI and CI-verdict evidence distinct.
+- G01 intermittent initial Shell navigation and shutdown reliability remain **OPEN**. Do not infer native exception-time stack, broad acceptance, or excluded G03–G05/G07 test coverage.
+
+
 ## 2026-10-23 — G01 focused TextBox close workaround: one bounded PX12 PASS
 
 - Prior actual PX12 visual test `f0980b5...` / [central run #39911686462](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39911686462) ended in `Microsoft.UI.Xaml.dll` access violation `0xC0000005`; its retained WER did not include an exception-time native dump. Microsoft [WinUI issue #11653](https://github.com/microsoft/microsoft-ui-xaml/issues/11653) reports a compatible focused-`TextBox` teardown bug, with focus relocation in `AppWindow.Closing` as a tested workaround. This is a plausible causal match, not independent native stack proof for flyExplorer.
