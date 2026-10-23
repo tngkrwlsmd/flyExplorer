@@ -154,7 +154,6 @@ def main(config="Release"):
                         if item.element_info.control_type == "MenuItem"
                         and item.window_text() == "추가 옵션 표시"
                         and item.element_info.process_id == app.pid
-                        and item.is_visible() and item.is_enabled()
                     )
                 except Exception:
                     pass
