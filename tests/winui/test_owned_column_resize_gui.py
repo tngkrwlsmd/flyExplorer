@@ -314,6 +314,8 @@ def main(config="Release"):
                 try:proc.wait(timeout=13)
                 except subprocess.TimeoutExpired:
                     close_timed_out=True
+                    user32.IsWindow.argtypes=[wintypes.HWND]
+                    user32.IsWindow.restype=wintypes.BOOL
                     print("OWNED_DETAIL_COLUMN_CLOSE_TIMEOUT",True,
                           "WINDOW_ALIVE",bool(user32.IsWindow(hwnd)),
                           "PROCESS_PID",proc.pid,flush=True)
