@@ -34,13 +34,6 @@ namespace winrt::FlyExplorer::implementation
 #endif
     }
 
-    App::WindowReleaseWitness::~WindowReleaseWitness() noexcept
-    {
-        // Called only after C++ has completed App::window member destruction.
-        // Trace is disabled for ordinary app executions.
-        TraceG01AppLifecycle("APP_WINDOW_MEMBER_RELEASE_COMPLETE");
-    }
-
     App::~App()
     {
         // Destruction of App::window follows this destructor body.
