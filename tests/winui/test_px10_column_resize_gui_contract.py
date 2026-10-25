@@ -38,6 +38,27 @@ class PX10ColumnResizeGuiContract(unittest.TestCase):
             self.assertTrue(fragment in source,fragment)
         self.assertNotIn('eventually(horizontal_resize_cursor,',source)
 
+    def test_g01_close_probe_is_bounded_owned_and_preserves_first_error(self):
+        source=(ROOT/"tests/winui/test_owned_column_resize_gui.py").read_text("utf-8")
+        for fragment in (
+            'G01_OWNED_WM_CLOSE_POSTED',
+            'G01_OWNED_WM_CLOSE_TIMELINE',
+            'G01_OWNED_WM_CLOSE_EXIT_MS',
+            'GetWindowThreadProcessId',
+            'process_id.value!=proc.pid',
+            'SendMessageTimeoutW',
+            'hwnd,0,0,0,0x0003,200',
+            'for deadline in (.25,1.0,3.0,7.0,13.0):',
+            'OWNED_DETAIL_COLUMN_CLOSE_TIMEOUT',
+            'if close_timed_out and sys.exc_info()[0] is None:',
+            'SIX_ORIGINAL_MFC_SETTINGS_IDENTICAL',
+            'assert observed=="sizewe"',
+            'proc.terminate();proc.wait(timeout=5)',
+        ):
+            self.assertIn(fragment,source,fragment)
+        # Do not quietly enlarge the existing 13-second normal-close budget.
+        self.assertNotIn('proc.wait(timeout=30)',source)
+
     def test_existing_runner_requires_the_original_independent_resize_oracles(self):
         source=(ROOT/"tools/winui/run_checks.py").read_text("utf-8")
         section=source.split('if not rc and area == "column-resize":',1)[1].split(
