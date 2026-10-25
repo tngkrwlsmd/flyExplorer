@@ -55,6 +55,26 @@ def image_info(module: Path) -> tuple[int, int]:
     return stamp, size
 
 
+def probe_module(module: Path, expected_stamp: int | None) -> dict:
+    """Check only a local PE: no PDB, symbols, debugger, or network required."""
+    if not module.is_file() or module.suffix.lower() not in (".dll", ".exe"):
+        raise ValueError("expected an existing DLL or EXE")
+    if module.is_symlink() or module.stat().st_size > 256 * 1024 * 1024:
+        raise ValueError("unsafe or oversized PE")
+    timestamp, size = image_info(module)
+    if expected_stamp is not None and timestamp != expected_stamp:
+        raise ValueError("PE COFF timestamp mismatch")
+    guid, age = pe_codeview(module)
+    return {
+        "status": "LOCAL_PE_PROBE_OK",
+        "module": module.name,
+        "coff_timestamp": f"{timestamp:08X}",
+        "image_size": size,
+        "pdb_guid": str(guid),
+        "pdb_age": age,
+    }
+
+
 def resolve(module: Path, pdb: Path, rva: int, expected_stamp: int | None) -> dict:
     if os.name != "nt" or struct.calcsize("P") != 8:
         raise RuntimeError("requires 64-bit Windows")
@@ -150,16 +170,28 @@ def resolve(module: Path, pdb: Path, rva: int, expected_stamp: int | None) -> di
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--module", type=Path, required=True)
-    parser.add_argument("--pdb", type=Path, required=True)
-    parser.add_argument("--rva", type=lambda s: int(s, 0), required=True)
+    parser.add_argument("--pdb", type=Path)
+    parser.add_argument("--rva", type=lambda s: int(s, 0))
     parser.add_argument("--expected-stamp", type=lambda s: int(s, 16))
+    parser.add_argument("--probe-module", action="store_true",
+                        help="validate only the local PE image and CodeView identity")
     args = parser.parse_args()
+    if not args.probe_module and (args.pdb is None or args.rva is None):
+        parser.error("--pdb and --rva are required unless --probe-module is set")
+    if args.probe_module and (args.pdb is not None or args.rva is not None):
+        parser.error("--probe-module does not accept --pdb or --rva")
     try:
-        result = resolve(args.module, args.pdb, args.rva, args.expected_stamp)
+        if args.probe_module:
+            result = probe_module(args.module, args.expected_stamp)
+        else:
+            result = resolve(args.module, args.pdb, args.rva, args.expected_stamp)
     except (OSError, ValueError, RuntimeError, struct.error, KeyError) as exc:
-        print(json.dumps({"status": "LOCAL_SYMBOL_LOOKUP_FAILED", "error": type(exc).__name__}))
+        print(json.dumps({"status": "LOCAL_SYMBOL_LOOKUP_FAILED",
+                          "stage": "MODULE_PROBE" if args.probe_module else "RVA_LOOKUP",
+                          "error": type(exc).__name__}))
         return 2
-    print("G01_LOCAL_FAULT_SYMBOL=" + json.dumps(result, ensure_ascii=True, sort_keys=True))
+    prefix = "G01_LOCAL_PE_PROBE=" if args.probe_module else "G01_LOCAL_FAULT_SYMBOL="
+    print(prefix + json.dumps(result, ensure_ascii=True, sort_keys=True))
     return 0
 
 
