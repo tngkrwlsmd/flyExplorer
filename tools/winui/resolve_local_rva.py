@@ -38,6 +38,51 @@ class SymbolInfo(ctypes.Structure):
     ]
 
 
+# Only fixed, reviewed failure codes may cross the CI-log boundary.
+# Never print exception messages: parsing failures can embed local paths.
+_REJECTION_CODES = {
+    "not a PE image": "PE_SIGNATURE_INVALID",
+    "invalid PE header": "PE_HEADER_INVALID",
+    "expected bounded x64 PE32+ image": "PE_ARCH_OR_SIZE_INVALID",
+    "not a bounded PE image": "PE_SIGNATURE_INVALID",
+    "missing PE header": "PE_HEADER_INVALID",
+    "unreasonable PE sections": "PE_SECTION_COUNT_INVALID",
+    "truncated section table": "PE_SECTION_TABLE_TRUNCATED",
+    "not a supported PE optional header": "PE_OPTIONAL_HEADER_UNSUPPORTED",
+    "no debug data directory": "PE_DEBUG_DIRECTORY_ABSENT",
+    "missing bounded debug entries": "PE_DEBUG_ENTRIES_INVALID",
+    "debug RVA outside available file section": "PE_DEBUG_RVA_INVALID",
+    "unbounded CodeView entry": "PE_CODEVIEW_ENTRY_INVALID",
+    "expected one PE CodeView RSDS identity": "PE_RSDS_IDENTITY_AMBIGUOUS",
+    "not an MSF7 PDB": "PDB_MAGIC_INVALID",
+    "unsupported MSF block size": "PDB_BLOCK_SIZE_UNSUPPORTED",
+    "unreasonable MSF stream directory": "PDB_DIRECTORY_INVALID",
+    "unsupported MSF block-map span": "PDB_BLOCK_MAP_SPAN_UNSUPPORTED",
+    "MSF block outside PDB": "PDB_STREAM_BLOCK_INVALID",
+    "short MSF block": "PDB_STREAM_BLOCK_TRUNCATED",
+    "bad MSF stream directory count": "PDB_STREAM_COUNT_INVALID",
+    "truncated MSF stream blocks": "PDB_STREAM_TABLE_TRUNCATED",
+    "invalid PDB information stream": "PDB_INFO_STREAM_INVALID",
+    "out of bounds metadata": "BOUNDS_INVALID",
+}
+
+
+class SymbolValidationError(ValueError):
+    def __init__(self, stage: str, reason: str):
+        super().__init__(reason)
+        self.stage = stage
+        self.reason = reason
+
+
+def _checked(stage: str, operation):
+    try:
+        return operation()
+    except (ValueError, struct.error) as exc:
+        raise SymbolValidationError(
+            stage, _REJECTION_CODES.get(str(exc), "PARSE_REJECTED")
+        ) from None
+
+
 def image_info(module: Path) -> tuple[int, int]:
     with module.open("rb") as stream:
         header = stream.read(4096)
@@ -61,10 +106,10 @@ def probe_module(module: Path, expected_stamp: int | None) -> dict:
         raise ValueError("expected an existing DLL or EXE")
     if module.is_symlink() or module.stat().st_size > 256 * 1024 * 1024:
         raise ValueError("unsafe or oversized PE")
-    timestamp, size = image_info(module)
+    timestamp, size = _checked("PE_HEADER", lambda: image_info(module))
     if expected_stamp is not None and timestamp != expected_stamp:
-        raise ValueError("PE COFF timestamp mismatch")
-    guid, age = pe_codeview(module)
+        raise SymbolValidationError("PE_TIMESTAMP", "STAMP_MISMATCH")
+    guid, age = _checked("PE_CODEVIEW", lambda: pe_codeview(module))
     return {
         "status": "LOCAL_PE_PROBE_OK",
         "module": module.name,
@@ -88,16 +133,16 @@ def resolve(module: Path, pdb: Path, rva: int, expected_stamp: int | None) -> di
         raise ValueError("reparse/symbolic link input not supported")
     if module.stat().st_size > 256 * 1024 * 1024 or pdb.stat().st_size > 512 * 1024 * 1024:
         raise ValueError("oversized input")
-    timestamp, size = image_info(module)
+    timestamp, size = _checked("PE_HEADER", lambda: image_info(module))
     if expected_stamp is not None and timestamp != expected_stamp:
-        raise ValueError("PE COFF timestamp mismatch")
+        raise SymbolValidationError("PE_TIMESTAMP", "STAMP_MISMATCH")
     if not 0 <= rva < size:
-        raise ValueError("RVA outside PE SizeOfImage")
+        raise SymbolValidationError("PE_RVA", "RVA_OUT_OF_IMAGE")
 
-    cv = pe_codeview(module)
-    info = msf_pdb_identity(pdb)
+    cv = _checked("PE_CODEVIEW", lambda: pe_codeview(module))
+    info = _checked("PDB_MSF7", lambda: msf_pdb_identity(pdb))
     if cv != info:
-        raise ValueError("PE CodeView GUID/age differs from PDB")
+        raise SymbolValidationError("PDB_IDENTITY", "GUID_AGE_MISMATCH")
     # DbgHelp reads *only the explicitly supplied local folder*. No srv* search.
     system = Path(os.environ["SystemRoot"]) / "System32"
     dbghelp = ctypes.WinDLL(str(system / "dbghelp.dll"), use_last_error=True)
@@ -186,9 +231,13 @@ def main() -> int:
         else:
             result = resolve(args.module, args.pdb, args.rva, args.expected_stamp)
     except (OSError, ValueError, RuntimeError, struct.error, KeyError) as exc:
-        print(json.dumps({"status": "LOCAL_SYMBOL_LOOKUP_FAILED",
-                          "stage": "MODULE_PROBE" if args.probe_module else "RVA_LOOKUP",
-                          "error": type(exc).__name__}))
+        details = {"status": "LOCAL_SYMBOL_LOOKUP_FAILED",
+                   "stage": "MODULE_PROBE" if args.probe_module else "RVA_LOOKUP",
+                   "error": type(exc).__name__}
+        if isinstance(exc, SymbolValidationError):
+            details["stage"] = exc.stage
+            details["reason"] = exc.reason
+        print(json.dumps(details, sort_keys=True))
         return 2
     prefix = "G01_LOCAL_PE_PROBE=" if args.probe_module else "G01_LOCAL_FAULT_SYMBOL="
     print(prefix + json.dumps(result, ensure_ascii=True, sort_keys=True))
