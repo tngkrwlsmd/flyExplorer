@@ -39,6 +39,36 @@ using namespace Microsoft::UI::Xaml;
 using namespace Microsoft::UI::Xaml::Controls;
 
 namespace {
+    // Failure-only G01 lifecycle phase trace. Only a dedicated column-resize
+    // owned fixture enables this; never log user paths or emit normal-app files.
+    void TraceG01OwnedClose(char const* stage) noexcept
+    {
+        try{
+            wchar_t enabled[8]{};
+            if(::GetEnvironmentVariableW(
+                    L"FLY_G01_OWNED_CLOSE_TRACE",enabled,8)!=3||
+               std::wcscmp(enabled,L"YES")!=0)return;
+            wchar_t temp[MAX_PATH]{};
+            const auto length=::GetTempPathW(MAX_PATH,temp);
+            if(!length||length>=MAX_PATH)return;
+            std::wstring path(temp,length);
+            if(path.find(L"columns-gui-owned-")==std::wstring::npos)return;
+            path+=L"fly-g01-close-"+std::to_wstring(::GetCurrentProcessId())+
+                  L".log";
+            auto file=::CreateFileW(path.c_str(),FILE_APPEND_DATA,
+                FILE_SHARE_READ,nullptr,OPEN_ALWAYS,
+                FILE_ATTRIBUTE_NORMAL|FILE_FLAG_WRITE_THROUGH,nullptr);
+            if(file==INVALID_HANDLE_VALUE)return;
+            const auto bytes=static_cast<DWORD>(std::strlen(stage));
+            if(bytes&&bytes<80){
+                DWORD written{};
+                ::WriteFile(file,stage,bytes,&written,nullptr);
+                ::WriteFile(file,"\n",1,&written,nullptr);
+            }
+            ::CloseHandle(file);
+        }catch(...){}
+    }
+
     constexpr UINT_PTR kDetailColumnCursorSubclassId=0xF1E08;
     constexpr UINT_PTR kDetailColumnInputSubclassId=0xF1E09;
 
@@ -171,10 +201,14 @@ namespace winrt::FlyExplorer::implementation
         AppWindow().Closing([nativeWeak](
             Microsoft::UI::Windowing::AppWindow const&,
             Microsoft::UI::Windowing::AppWindowClosingEventArgs const&){
+            TraceG01OwnedClose("APPWINDOW_CLOSING_ENTER");
             if(auto ui=nativeWeak.get())ui->PrepareXamlForClose();
+            TraceG01OwnedClose("APPWINDOW_CLOSING_EXIT");
         });
         Closed([nativeWeak](IInspectable const&,WindowEventArgs const&){
+            TraceG01OwnedClose("WINDOW_CLOSED_ENTER");
             if(auto ui=nativeWeak.get())ui->PrepareForClose();
+            TraceG01OwnedClose("WINDOW_CLOSED_EXIT");
         });
         // L08: some WinUI hosts never dispatch PointerEntered for the
         // composable Grid, even though root-level resize presses work.
@@ -951,18 +985,31 @@ namespace winrt::FlyExplorer::implementation
 
     void MainWindow::PrepareXamlForClose() noexcept
     {
-        if(mClosing)return;
+        TraceG01OwnedClose("PREPARE_XAML_ENTER");
+        if(mClosing){
+            TraceG01OwnedClose("PREPARE_XAML_ALREADY_CLOSING");
+            return;
+        }
         // Move focus off a live TextBox before WinUI destroys input services.
         // The normal Close/Closed cleanup remains idempotent as a fallback.
+        TraceG01OwnedClose("FOCUS_TRANSFER_BEGIN");
         try{
             NewTabButton().Focus(FocusState::Programmatic);
-        }catch(...){ }
+        }catch(...){
+            TraceG01OwnedClose("FOCUS_TRANSFER_EXCEPTION");
+        }
+        TraceG01OwnedClose("FOCUS_TRANSFER_DONE");
         PrepareForClose();
+        TraceG01OwnedClose("PREPARE_XAML_EXIT");
     }
 
     void MainWindow::PrepareForClose() noexcept
     {
-        if(mClosing)return;
+        TraceG01OwnedClose("PREPARE_CLOSE_ENTER");
+        if(mClosing){
+            TraceG01OwnedClose("PREPARE_CLOSE_ALREADY_CLOSING");
+            return;
+        }
         mClosing=true;
         // Remove the owned child input-site callback before XAML teardown.
         try{UpdateDetailColumnInputSite(false);}catch(...){}
@@ -977,28 +1024,37 @@ namespace winrt::FlyExplorer::implementation
         mDetailColumnHoverSubclassInstalled=false;
         mDetailColumnHoverHwnd=nullptr;
         try{if(mDetailColumnHoverTimer)mDetailColumnHoverTimer.Stop();}catch(...){}
+        TraceG01OwnedClose("CURSOR_HOOKS_STOPPED");
         // Release candidate controls before the XAML tree is dismantled.
         try{
             AddressSuggestionPanel().Visibility(Visibility::Collapsed);
             AddressSuggestionRows().Children().Clear();
         }catch(...){ }
+        TraceG01OwnedClose("XAML_CONTROLS_RELEASED");
         mWorkspaceRestore.reset();
         mSessionCoordinator.prepareForClose();
+        TraceG01OwnedClose("SESSION_CLOSE_PREPARED");
         mFileOperations.prepareForClose();
         mFileOpen.prepareForClose();
         mFileMetadata.prepareForClose();
         mFileDetails.prepareForClose();
         mTextPreviewController.prepareForClose();
+        TraceG01OwnedClose("CONTROLLERS_CLOSE_PREPARED");
         for(std::size_t i=0;i<mWorkspace.count();++i)
             for(auto& files:mWorkspace.state(i).fileLists)files.invalidate();
         try{if(mTransferTimer)mTransferTimer.Stop();}catch(...){}
+        TraceG01OwnedClose("WORKSPACE_ROUTES_INVALIDATED");
         if(mShellNavigation)mShellNavigation->shutdown();
+        TraceG01OwnedClose("SHELL_NAV_SHUTDOWN_DONE");
         mSearchController.prepareForClose();
         mRecentActivity.enable(false); // Clear opt-in memory on close.
+        TraceG01OwnedClose("PREPARE_CLOSE_EXIT");
     }
     MainWindow::~MainWindow()
     {
+        TraceG01OwnedClose("MAINWINDOW_DESTRUCTOR_ENTER");
         PrepareForClose();
+        TraceG01OwnedClose("MAINWINDOW_DESTRUCTOR_EXIT");
     }
     int32_t MainWindow::MyProperty() {return 0;}
     void MainWindow::MyProperty(int32_t) {}
