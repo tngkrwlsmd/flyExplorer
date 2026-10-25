@@ -114,6 +114,7 @@ def main(config="Release"):
             bbox=(rect.left,rect.top,rect.right,rect.bottom),
             include_layered_windows=True).save(before)
 
+        cursor_observations=[]
         def drag_and_verify(thumb_id,next_header_id,delta):
             window().set_focus()
             time.sleep(.12)
@@ -200,9 +201,11 @@ def main(config="Release"):
             assert owned_hit[0]==thumb_id, (
                 "L08 pointer missed the expected owned resize handle",
                 thumb_id,owned_hit)
-            assert observed=="sizewe", (
-                "L08 native horizontal resize cursor missing on owned handle",
-                thumb_id,current,owned_hit,event_help)
+            # Preserve the failed OS-cursor oracle but defer its assertion so
+            # physical drag, rapid-tail, workspace restore and normal close
+            # can be independently exercised in the same exact-SHA run.
+            cursor_observations.append(
+                (thumb_id,observed,current,owned_hit,event_help))
             assert owned_foreground(), "physical input outside owned window"
             mouse.press(button="left",coords=(x,y))
             print("COLUMN_RESIZE_BUTTON_AFTER_PRESS",
@@ -274,6 +277,13 @@ def main(config="Release"):
         print("OWNED_DETAIL_COLUMN_TYPE_RESIZE",True,flush=True)
         print("OWNED_DETAIL_COLUMN_SIZE_RESIZE",True,flush=True)
         print("OWNED_DETAIL_COLUMN_VISUALS",before.name,after.name,flush=True)
+        print("L08_CURSOR_ORACLE_OBSERVATIONS",cursor_observations,flush=True)
+        # A successful drag never overrides failed native cursor acceptance.
+        assert len(cursor_observations)==3,"L08 cursor probes were skipped"
+        for thumb_id,observed,current,owned_hit,event_help in cursor_observations:
+            assert observed=="sizewe", (
+                "L08 native horizontal resize cursor missing on owned handle",
+                thumb_id,current,owned_hit,event_help)
         passed=True
     finally:
         if proc.poll() is None:
