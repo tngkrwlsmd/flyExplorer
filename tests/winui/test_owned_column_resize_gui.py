@@ -162,6 +162,7 @@ def main(config="Release"):
             except Exception as error:
                 event_help="<uia-help-error:"+type(error).__name__+">"
             print("L08_POINTER_EVENT_HELP",thumb_id,event_help,flush=True)
+            print("L08_NATIVE_CURSOR_TRACE",thumb_id,resize_status(),flush=True)
             print("COLUMN_RESIZE_HOVER_PROBE",thumb_id,
                   owned_hit,current,flush=True)
             print("COLUMN_RESIZE_CURSOR_OBSERVED",thumb_id,
