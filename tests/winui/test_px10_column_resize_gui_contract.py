@@ -42,6 +42,8 @@ class PX10ColumnResizeGuiContract(unittest.TestCase):
         source=(ROOT/"tests/winui/test_owned_column_resize_gui.py").read_text("utf-8")
         for fragment in (
             'G01_OWNED_WM_CLOSE_POSTED',
+            'posted=bool(user32.PostMessageW',
+            'user32=ctypes.windll.user32',
             'G01_OWNED_WM_CLOSE_TIMELINE',
             'G01_OWNED_WM_CLOSE_EXIT_MS',
             'GetWindowThreadProcessId',
@@ -58,6 +60,9 @@ class PX10ColumnResizeGuiContract(unittest.TestCase):
             self.assertIn(fragment,source,fragment)
         # Do not quietly enlarge the existing 13-second normal-close budget.
         self.assertNotIn('proc.wait(timeout=30)',source)
+        # A failed/vanished close HWND must never mask an earlier GUI failure.
+        self.assertNotIn('assert user32.PostMessageW(',source)
+        self.assertNotIn('assert owned_shutdown_state()[0]',source)
 
     def test_existing_runner_requires_the_original_independent_resize_oracles(self):
         source=(ROOT/"tools/winui/run_checks.py").read_text("utf-8")
