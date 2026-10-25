@@ -158,7 +158,10 @@ namespace winrt::FlyExplorer::implementation
             Microsoft::UI::Xaml::Input::PointerRoutedEventArgs const&);
         void ApplyDetailColumnPointerPosition();
         bool ApplyDetailColumnHoverCursor();
+        void UpdateDetailColumnInputSite(bool gripHovered);
         static LRESULT CALLBACK OnDetailColumnCursorMessage(
+            HWND,UINT,WPARAM,LPARAM,UINT_PTR,DWORD_PTR);
+        static LRESULT CALLBACK OnDetailColumnInputCursorMessage(
             HWND,UINT,WPARAM,LPARAM,UINT_PTR,DWORD_PTR);
         void OnDetailColumnResizePointerMoved(
             IInspectable const&,
@@ -402,6 +405,10 @@ namespace winrt::FlyExplorer::implementation
         // foreground and the mouse is inside a visible 12px column handle.
         HWND mDetailColumnHoverHwnd{};
         bool mDetailColumnHoverSubclassInstalled=false;
+        // WinUI 3 mouse input is delivered by an owned child HWND, not the
+        // app's top-level AppWindow HWND. Subclass only if it is same-thread.
+        HWND mDetailColumnInputHwnd{};
+        bool mDetailColumnInputSubclassInstalled=false;
         // L08 opt-in owned GUI diagnostic counters; no persistent logging.
         std::uint32_t mL08HoverTimerTicks=0;
         std::uint32_t mL08HoverCursorMessages=0;
