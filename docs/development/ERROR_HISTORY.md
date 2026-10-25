@@ -1,5 +1,12 @@
 # Error history
 
+## 2026-10-26 — G01 parser stage ambiguity narrowed in source, no Windows validation
+
+- The 2026-10-25 direct Windows run [#40240026806](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/40240026806) finished with `LOCAL_SYMBOL_LOOKUP_FAILED / ValueError` after downloading the full public PDB and successfully removing its test-owned temporary folder. The exact failure stage **cannot** be retroactively recovered from the coarse error; do not attribute it to WinUI or assume the public PDB's GUID is incorrect.
+- A source-only change to `tools/winui/resolve_local_rva.py` now identifies fixed, path-redacted failure categories for PE header, PE RSDS, PDB MSF7 parser and GUID/age checks. New synthetic portable `tests/winui/test_g01_symbol_preflight.py` covers six success/failure contracts, but those tests **have not been run** against the committed code. This protects subsequent investigations from needlessly redownloading a 293MB PDB just to classify an unrecognized `ValueError`.
+- Source review of `inspect_release_symbols.py` identified a deliberate one-block PDB directory-map limit, consistent with the documented MSF7 block-map indirection. Whether that limit was encountered by the historical PDB is **unverified**. No speculative parser rewrite or renewed download was made.
+- Prior blocked Windows probe remains a safety boundary; no substitute tooling, user-data access, registry changes, native dumps, unrelated GUI validation or product fix. G01 remains unresolved; continue only through a permitted, reviewed evidence path.
+
 ## 2026-10-26 — G01 public PDB download completed; pre-symbol ValueError, cleanup succeeded
 
 - Resume checkpoint: exact prior [Windows Remote Shell Direct #40240026806](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/40240026806) / control request commit `6fb10ea323984f13ca54553aa6f1a21350b2f665` actually **completed with failure**, not in progress. Microsoft public `Microsoft.UI.Xaml.pdb` download reached **292,835,328 bytes** (matching the previously returned HEAD Content-Length). The local RVA resolver returned `{"status":"LOCAL_SYMBOL_LOOKUP_FAILED","error":"ValueError"}`; it did not name a faulting function. The failure originated from a validation/parser ValueError before a successful function-name lookup; the sanitized error prevents identifying the specific rejected condition. Do not assume a wrong public PDB, an unsupported PE format, or an app defect from this result.
