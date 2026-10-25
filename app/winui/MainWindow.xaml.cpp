@@ -41,18 +41,26 @@ using namespace Microsoft::UI::Xaml::Controls;
 namespace {
     // Failure-only G01 lifecycle phase trace. Only a dedicated column-resize
     // owned fixture enables this; never log user paths or emit normal-app files.
+    bool G01OwnedCloseTraceEnabled() noexcept
+    {
+        wchar_t enabled[8]{};
+        if(::GetEnvironmentVariableW(
+                L"FLY_G01_OWNED_CLOSE_TRACE",enabled,8)!=3||
+           std::wcscmp(enabled,L"YES")!=0)return false;
+        wchar_t temp[MAX_PATH]{};
+        const auto length=::GetTempPathW(MAX_PATH,temp);
+        if(!length||length>=MAX_PATH)return false;
+        return std::wstring(temp,length).find(L"columns-gui-owned-")!=
+               std::wstring::npos;
+    }
     void TraceG01OwnedClose(char const* stage) noexcept
     {
         try{
-            wchar_t enabled[8]{};
-            if(::GetEnvironmentVariableW(
-                    L"FLY_G01_OWNED_CLOSE_TRACE",enabled,8)!=3||
-               std::wcscmp(enabled,L"YES")!=0)return;
+            if(!G01OwnedCloseTraceEnabled())return;
             wchar_t temp[MAX_PATH]{};
             const auto length=::GetTempPathW(MAX_PATH,temp);
             if(!length||length>=MAX_PATH)return;
             std::wstring path(temp,length);
-            if(path.find(L"columns-gui-owned-")==std::wstring::npos)return;
             path+=L"fly-g01-close-"+std::to_wstring(::GetCurrentProcessId())+
                   L".log";
             auto file=::CreateFileW(path.c_str(),FILE_APPEND_DATA,
@@ -990,15 +998,42 @@ namespace winrt::FlyExplorer::implementation
             TraceG01OwnedClose("PREPARE_XAML_ALREADY_CLOSING");
             return;
         }
+        // Read focus only in the dedicated test fixture. A completed Focus()
+        // call is not proof that the old TextBox actually lost focus.
+        auto traceFocus=[this](bool after) noexcept{
+            if(!G01OwnedCloseTraceEnabled())return;
+            try{
+                const auto focused=Microsoft::UI::Xaml::Input::FocusManager::
+                    GetFocusedElement(RootShell().XamlRoot());
+                const bool textInput=focused&&(
+                    focused.try_as<Microsoft::UI::Xaml::Controls::TextBox>()||
+                    focused.try_as<Microsoft::UI::Xaml::Controls::RichEditBox>()||
+                    focused.try_as<Microsoft::UI::Xaml::Controls::PasswordBox>());
+                TraceG01OwnedClose(
+                    after?
+                    (textInput?"FOCUS_AFTER_TEXT_INPUT":
+                     focused?"FOCUS_AFTER_OTHER":"FOCUS_AFTER_NONE"):
+                    (textInput?"FOCUS_BEFORE_TEXT_INPUT":
+                     focused?"FOCUS_BEFORE_OTHER":"FOCUS_BEFORE_NONE"));
+            }catch(...){
+                TraceG01OwnedClose(
+                    after?"FOCUS_AFTER_QUERY_EXCEPTION":
+                          "FOCUS_BEFORE_QUERY_EXCEPTION");
+            }
+        };
+        traceFocus(false);
         // Move focus off a live TextBox before WinUI destroys input services.
         // The normal Close/Closed cleanup remains idempotent as a fallback.
         TraceG01OwnedClose("FOCUS_TRANSFER_BEGIN");
         try{
-            NewTabButton().Focus(FocusState::Programmatic);
+            const bool changed=NewTabButton().Focus(FocusState::Programmatic);
+            TraceG01OwnedClose(changed?"FOCUS_TRANSFER_SUCCEEDED":
+                                      "FOCUS_TRANSFER_REJECTED");
         }catch(...){
             TraceG01OwnedClose("FOCUS_TRANSFER_EXCEPTION");
         }
         TraceG01OwnedClose("FOCUS_TRANSFER_DONE");
+        traceFocus(true);
         PrepareForClose();
         TraceG01OwnedClose("PREPARE_XAML_EXIT");
     }
