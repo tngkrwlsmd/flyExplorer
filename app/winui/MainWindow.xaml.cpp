@@ -194,7 +194,32 @@ namespace winrt::FlyExplorer::implementation
             auto timer=DispatcherQueue().CreateTimer();
             timer.Interval(std::chrono::milliseconds(40));
             timer.Tick([nativeWeak](auto const&,auto const&){
-                if(auto ui=nativeWeak.get())ui->ApplyDetailColumnHoverCursor();
+                if(auto ui=nativeWeak.get()){
+                    ++ui->mL08HoverTimerTicks;
+                    ui->ApplyDetailColumnHoverCursor();
+                    // Only a test-owned opt-in launch publishes UIA diagnostics.
+                    if((ui->mL08HoverTimerTicks%4)==0&&
+                       ::GetEnvironmentVariableW(
+                           L"FLYEXPLORER_COLUMN_RESIZE_DIAGNOSTIC",
+                           nullptr,0)>0){
+                        try{
+                            auto value=std::wstring(L"L08_NATIVE ticks=")+
+                                std::to_wstring(ui->mL08HoverTimerTicks)+
+                                L" wm="+std::to_wstring(ui->mL08HoverCursorMessages)+
+                                L" hits="+std::to_wstring(ui->mL08HoverMatches)+
+                                L" subclass="+std::to_wstring(
+                                    ui->mDetailColumnHoverSubclassInstalled?1:0)+
+                                L" why="+ui->mL08HoverLastReason+
+                                L" pos="+std::to_wstring(ui->mL08HoverLastX)+
+                                L","+std::to_wstring(ui->mL08HoverLastY)+
+                                L" grip="+std::to_wstring(ui->mL08HoverLeftNameX)+
+                                L","+std::to_wstring(ui->mL08HoverLeftNameY)+
+                                L","+std::to_wstring(ui->mL08HoverLeftNameW)+
+                                L","+std::to_wstring(ui->mL08HoverLeftNameH);
+                            ui->StatusText().Text(winrt::hstring(value));
+                        }catch(...){}
+                    }
+                }
             });
             mDetailColumnHoverTimer=timer;
             timer.Start();
