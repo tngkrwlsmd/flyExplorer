@@ -151,6 +151,13 @@ namespace {
 
 namespace winrt::FlyExplorer::implementation
 {
+    // Share the existing opt-in test-owned phase trace with App lifecycle.
+    // Do not change WinUI object destruction order or window ownership.
+    void TraceG01AppLifecycle(char const* stage) noexcept
+    {
+        TraceG01OwnedClose(stage);
+    }
+
     MainWindow::MainWindow()
     {
         InitializeComponent();
