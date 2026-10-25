@@ -24,6 +24,8 @@ class PX10ColumnResizeGuiContract(unittest.TestCase):
                          'for wait_ms in (70,180,350)',
                          'mouse.move(coords=(body.left+30,body.top+36))',
                          'observed=="sizewe"',
+                         'assert owned_hit[0]==thumb_id',
+                         'assert observed=="sizewe"',
                          'element(next_header_id).rectangle().left>=start+12',
                          'keyboard.send_keys("^t")',
                          'len(tabs())==2',
