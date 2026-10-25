@@ -1,5 +1,12 @@
 # Error history
 
+## 2026-10-25 — G01 public PDB located, native caller stack still unavailable
+
+- Repeat owned Release crash WER: `Microsoft.UI.Xaml.dll`, `0xC0000005`, RVA `0xAB04B`, COFF timestamp `05FCB77A` ([#40190876464](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/40190876464)). The original CI-loaded DLL was retired, and available text WER metadata has no exception-time stack.
+- A registered Windows App Runtime 2.5.1 DLL's **PE COFF timestamp exactly matches** `05FCB77A` ([#40191885960](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/40191885960)); its CodeView debug identity is **Microsoft.UI.Xaml.pdb / GUID `4ACDBE85-D668-192E-B8B6-A9334AC91B79` / age `1`** ([#40191726913](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/40191726913)). File-version labeling differs (`3.2.3.2609` installed versus `3.2.3.0` WER); do not assert bytewise equality without a content hash.
+- Microsoft public symbol endpoint returned **HTTP 200** to HEAD for that PDB (292,835,328 bytes; [#40192068135](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/40192068135)); no file download, dump, debugger installation or GUI reenactment was performed. Symbolizing RVA alone cannot reveal the caller stack. A future explicitly authorized isolated native debugger run must obtain exception-time frames, with controlled data exposure, before C++ ownership changes. G01 remains unresolved.
+
+
 ## 2026-10-25 — precise G01 lifetime terminology and Release WinUI module identity
 
 - Actual Windows Error 1000 read-only [remote run #40189509823](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/40189509823) confirms the failing module is **Microsoft.UI.Xaml.dll 3.2.3.0**, native access violation **0xC0000005** at RVA **0xAB04B**. The tracked project-template source uses **Microsoft.WindowsAppSDK 2.5.1**, and `WindowsAppSDKSelfContained=true` for Release. Debug's self-contained setting differs, so a Debug-only outcome is not interchangeable with the recorded self-contained Release crash.
