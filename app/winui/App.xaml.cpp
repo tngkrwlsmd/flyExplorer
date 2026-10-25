@@ -10,6 +10,9 @@ using namespace Microsoft::UI::Xaml;
 
 namespace winrt::FlyExplorer::implementation
 {
+    // Implemented in MainWindow.xaml.cpp: bounded, opt-in, test-owned only.
+    void TraceG01AppLifecycle(char const* stage) noexcept;
+
     /// <summary>
     /// Initializes the singleton application object.  This is the first line of authored code
     /// executed, and as such is the logical equivalent of main() or WinMain().
@@ -29,6 +32,15 @@ namespace winrt::FlyExplorer::implementation
             }
         });
 #endif
+    }
+
+    App::~App()
+    {
+        // Destruction of App::window follows this destructor body.
+        // Distinguish that projected-window release boundary from the
+        // already observed MainWindow destructor without changing ownership.
+        TraceG01AppLifecycle("APP_DESTRUCTOR_ENTER");
+        TraceG01AppLifecycle("APP_DESTRUCTOR_BODY_EXIT");
     }
 
     /// <summary>
