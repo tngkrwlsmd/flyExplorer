@@ -40,6 +40,7 @@ using namespace Microsoft::UI::Xaml::Controls;
 
 namespace {
     constexpr UINT_PTR kDetailColumnCursorSubclassId=0xF1E08;
+    constexpr UINT_PTR kDetailColumnInputSubclassId=0xF1E09;
 
     std::wstring FriendlyAddress(std::wstring value)
     {
@@ -196,7 +197,8 @@ namespace winrt::FlyExplorer::implementation
             timer.Tick([nativeWeak](auto const&,auto const&){
                 if(auto ui=nativeWeak.get()){
                     ++ui->mL08HoverTimerTicks;
-                    ui->ApplyDetailColumnHoverCursor();
+                    const bool gripHovered=ui->ApplyDetailColumnHoverCursor();
+                    ui->UpdateDetailColumnInputSite(gripHovered);
                     // Only a test-owned opt-in launch publishes UIA diagnostics.
                     if((ui->mL08HoverTimerTicks%4)==0&&
                        ::GetEnvironmentVariableW(
@@ -209,6 +211,8 @@ namespace winrt::FlyExplorer::implementation
                                 L" hits="+std::to_wstring(ui->mL08HoverMatches)+
                                 L" subclass="+std::to_wstring(
                                     ui->mDetailColumnHoverSubclassInstalled?1:0)+
+                                L" siteHook="+std::to_wstring(
+                                    ui->mDetailColumnInputSubclassInstalled?1:0)+
                                 L" why="+ui->mL08HoverLastReason+
                                 L" pos="+std::to_wstring(ui->mL08HoverLastX)+
                                 L","+std::to_wstring(ui->mL08HoverLastY)+
@@ -960,6 +964,8 @@ namespace winrt::FlyExplorer::implementation
     {
         if(mClosing)return;
         mClosing=true;
+        // Remove the owned child input-site callback before XAML teardown.
+        try{UpdateDetailColumnInputSite(false);}catch(...){}
         try{
             if(mDetailColumnHoverSubclassInstalled&&mDetailColumnHoverHwnd&&
                ::IsWindow(mDetailColumnHoverHwnd))
@@ -1820,6 +1826,75 @@ namespace winrt::FlyExplorer::implementation
             }
         }
         return ::DefSubclassProc(hwnd,message,wParam,lParam);
+    }
+    LRESULT CALLBACK MainWindow::OnDetailColumnInputCursorMessage(
+        HWND hwnd,UINT message,WPARAM wParam,LPARAM lParam,
+        UINT_PTR subclassId,DWORD_PTR refData){
+        auto ui=reinterpret_cast<MainWindow*>(refData);
+        if(message==WM_NCDESTROY){
+            // WinUI can replace its child input HWND during its lifetime.
+            ::RemoveWindowSubclass(
+                hwnd,&MainWindow::OnDetailColumnInputCursorMessage,subclassId);
+            if(ui&&ui->mDetailColumnInputHwnd==hwnd){
+                ui->mDetailColumnInputHwnd=nullptr;
+                ui->mDetailColumnInputSubclassInstalled=false;
+            }
+        }else if(message==WM_SETCURSOR&&ui){
+            ++ui->mL08HoverCursorMessages;
+            if(LOWORD(lParam)==HTCLIENT&&
+               ui->ApplyDetailColumnHoverCursor()){
+                // The real input child, not AppWindow, owns this cursor update.
+                return TRUE;
+            }
+        }
+        return ::DefSubclassProc(hwnd,message,wParam,lParam);
+    }
+    void MainWindow::UpdateDetailColumnInputSite(bool gripHovered){
+        HWND candidate{};
+        if(gripHovered&&mDetailColumnHoverHwnd){
+            POINT screen{};
+            if(::GetCursorPos(&screen)){
+                auto hit=::WindowFromPoint(screen);
+                if(hit&&hit!=mDetailColumnHoverHwnd&&
+                   ::IsChild(mDetailColumnHoverHwnd,hit)){
+                    DWORD pid{};
+                    const auto thread=::GetWindowThreadProcessId(hit,&pid);
+                    // Never subclass arbitrary processes or another UI thread.
+                    if(pid==::GetCurrentProcessId()&&
+                       thread==::GetCurrentThreadId())candidate=hit;
+                }
+            }
+        }
+        if(candidate!=mDetailColumnInputHwnd){
+            if(mDetailColumnInputSubclassInstalled&&mDetailColumnInputHwnd&&
+               ::IsWindow(mDetailColumnInputHwnd))
+                ::RemoveWindowSubclass(
+                    mDetailColumnInputHwnd,
+                    &MainWindow::OnDetailColumnInputCursorMessage,
+                    kDetailColumnInputSubclassId);
+            mDetailColumnInputHwnd=nullptr;
+            mDetailColumnInputSubclassInstalled=false;
+            if(candidate&&::SetWindowSubclass(
+                    candidate,&MainWindow::OnDetailColumnInputCursorMessage,
+                    kDetailColumnInputSubclassId,
+                    reinterpret_cast<DWORD_PTR>(this))){
+                mDetailColumnInputHwnd=candidate;
+                mDetailColumnInputSubclassInstalled=true;
+            }
+        }
+        if(candidate&&mDetailColumnInputSubclassInstalled){
+            // A stationary hover produces no further WM_SETCURSOR.
+            // Ask only our own same-thread input child to refresh it if the
+            // independently observed system cursor is still the class arrow.
+            CURSORINFO info{};
+            info.cbSize=sizeof(info);
+            auto sizewe=::LoadCursorW(nullptr,IDC_SIZEWE);
+            if(sizewe&&::GetCursorInfo(&info)&&info.hCursor!=sizewe)
+                ::SendMessageW(
+                    candidate,WM_SETCURSOR,
+                    reinterpret_cast<WPARAM>(candidate),
+                    MAKELPARAM(HTCLIENT,WM_MOUSEMOVE));
+        }
     }
     bool MainWindow::ApplyDetailColumnHoverCursor(){
         mL08HoverLastReason=L"not-ready";
