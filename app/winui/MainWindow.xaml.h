@@ -402,6 +402,17 @@ namespace winrt::FlyExplorer::implementation
         // foreground and the mouse is inside a visible 12px column handle.
         HWND mDetailColumnHoverHwnd{};
         bool mDetailColumnHoverSubclassInstalled=false;
+        // L08 opt-in owned GUI diagnostic counters; no persistent logging.
+        std::uint32_t mL08HoverTimerTicks=0;
+        std::uint32_t mL08HoverCursorMessages=0;
+        std::uint32_t mL08HoverMatches=0;
+        std::wstring mL08HoverLastReason=L"not-sampled";
+        LONG mL08HoverLastX=0;
+        LONG mL08HoverLastY=0;
+        LONG mL08HoverLeftNameX=0;
+        LONG mL08HoverLeftNameY=0;
+        LONG mL08HoverLeftNameW=0;
+        LONG mL08HoverLeftNameH=0;
         Microsoft::UI::Dispatching::DispatcherQueueTimer mDetailColumnHoverTimer{nullptr};
         double mShellWidth=972.0;
         std::array<int,2> mDetailLayoutProfiles{{-1,-1}};
