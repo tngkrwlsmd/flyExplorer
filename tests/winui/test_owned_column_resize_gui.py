@@ -51,7 +51,7 @@ def main(config="Release"):
     for key in ("APPDATA","LOCALAPPDATA","TEMP","TMP"):
         target=owned/key.lower();target.mkdir();env[key]=str(target)
     proc=subprocess.Popen([str(exe),str(folder)],cwd=exe.parent,env=env)
-    hwnd=None;passed=False
+    hwnd=None;passed=False;close_timed_out=False
     try:
         def window():
             nonlocal hwnd
@@ -313,21 +313,29 @@ def main(config="Release"):
                 assert ctypes.windll.user32.PostMessageW(hwnd,0x10,0,0)
                 try:proc.wait(timeout=13)
                 except subprocess.TimeoutExpired:
+                    close_timed_out=True
+                    print("OWNED_DETAIL_COLUMN_CLOSE_TIMEOUT",True,
+                          "WINDOW_ALIVE",bool(user32.IsWindow(hwnd)),
+                          "PROCESS_PID",proc.pid,flush=True)
+                    # Only our exact test-owned process may be terminated.
                     proc.terminate();proc.wait(timeout=5)
-                    raise RuntimeError("PX10 owned WinUI did not close normally")
         print("OWNED_DETAIL_COLUMN_EXIT",proc.returncode,flush=True)
         safe=all((mfc/n).is_file() and
             hashlib.sha256((mfc/n).read_bytes()).digest()==h
             for n,h in old.items())
         print("SIX_ORIGINAL_MFC_SETTINGS_IDENTICAL",safe,flush=True)
-        if passed and safe and proc.returncode==0:
+        if passed and safe and proc.returncode==0 and not close_timed_out:
             assert owned.parent==root and owned.name.startswith("columns-gui-owned-")
             assert not owned.is_symlink()
             shutil.rmtree(owned)
             print("OWNED_COLUMN_RESIZE_FIXTURE_REMOVED",True,flush=True)
         else:
             print("OWNED_COLUMN_RESIZE_DIAGNOSTIC_FIXTURE_RETAINED",owned,flush=True)
-    return 0 if passed and safe and proc.returncode==0 else 1
+        if close_timed_out and sys.exc_info()[0] is None:
+            # Report a standalone close defect, but never replace an earlier
+            # cursor/drag assertion with the secondary shutdown failure.
+            raise RuntimeError("PX10 owned WinUI did not close normally")
+    return 0 if passed and safe and proc.returncode==0 and not close_timed_out else 1
 
 if __name__=="__main__":
     try:
