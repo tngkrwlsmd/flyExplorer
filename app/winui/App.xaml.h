@@ -12,13 +12,6 @@ namespace winrt::FlyExplorer::implementation
         void OnLaunched(Microsoft::UI::Xaml::LaunchActivatedEventArgs const&);
 
     private:
-        // C++ destroys members in reverse declaration order: the Window
-        // releases before this diagnostic-only witness is destroyed.
-        struct WindowReleaseWitness
-        {
-            ~WindowReleaseWitness() noexcept;
-        };
-        WindowReleaseWitness mWindowReleaseWitness{};
         winrt::Microsoft::UI::Xaml::Window window{ nullptr };
     };
 }
