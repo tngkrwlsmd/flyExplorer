@@ -167,6 +167,14 @@ def main(config="Release"):
             print("COLUMN_RESIZE_CURSOR_OBSERVED",thumb_id,
                   observed=="sizewe",flush=True)
             print("COLUMN_RESIZE_HIT_BEFORE",thumb_id,owned_hit,flush=True)
+            # Cursor appearance is an independent L08 acceptance gate.
+            # A successful column drag must not mask a persistent arrow.
+            assert owned_hit[0]==thumb_id, (
+                "L08 pointer missed the expected owned resize handle",
+                thumb_id,owned_hit)
+            assert observed=="sizewe", (
+                "L08 native horizontal resize cursor missing on owned handle",
+                thumb_id,current,owned_hit,event_help)
             assert owned_foreground(), "physical input outside owned window"
             mouse.press(button="left",coords=(x,y))
             print("COLUMN_RESIZE_BUTTON_AFTER_PRESS",
