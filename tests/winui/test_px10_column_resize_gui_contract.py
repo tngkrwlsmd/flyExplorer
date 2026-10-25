@@ -64,6 +64,40 @@ class PX10ColumnResizeGuiContract(unittest.TestCase):
         self.assertNotIn('assert user32.PostMessageW(',source)
         self.assertNotIn('assert owned_shutdown_state()[0]',source)
 
+    def test_g01_owned_native_close_phases_are_opt_in_and_bounded(self):
+        cpp=(ROOT/"app/winui/MainWindow.xaml.cpp").read_text("utf-8")
+        gui=(ROOT/"tests/winui/test_owned_column_resize_gui.py").read_text("utf-8")
+        for fragment in (
+            'FLY_G01_OWNED_CLOSE_TRACE',
+            'columns-gui-owned-',
+            'TraceG01OwnedClose("APPWINDOW_CLOSING_ENTER")',
+            'TraceG01OwnedClose("APPWINDOW_CLOSING_EXIT")',
+            'TraceG01OwnedClose("WINDOW_CLOSED_ENTER")',
+            'TraceG01OwnedClose("WINDOW_CLOSED_EXIT")',
+            'TraceG01OwnedClose("FOCUS_TRANSFER_BEGIN")',
+            'TraceG01OwnedClose("FOCUS_TRANSFER_DONE")',
+            'TraceG01OwnedClose("SHELL_NAV_SHUTDOWN_DONE")',
+            'TraceG01OwnedClose("PREPARE_CLOSE_EXIT")',
+            'TraceG01OwnedClose("MAINWINDOW_DESTRUCTOR_EXIT")',
+            'FILE_APPEND_DATA',
+            'FILE_FLAG_WRITE_THROUGH',
+        ):
+            self.assertIn(fragment,cpp,fragment)
+        for fragment in (
+            'env["FLY_G01_OWNED_CLOSE_TRACE"]="YES"',
+            'trace_files=(owned/"tmp"/trace_name,owned/"temp"/trace_name)',
+            'trace.stat().st_size>4096',
+            'len(lines)>64',
+            'allowed_close_phases',
+            'G01_OWNED_CLOSE_PHASE_TRACE',
+            'G01_OWNED_CLOSE_PHASE_TRACE_MISSING',
+            'SIX_ORIGINAL_MFC_SETTINGS_IDENTICAL',
+            'assert observed=="sizewe"',
+        ):
+            self.assertIn(fragment,gui,fragment)
+        self.assertNotIn('SetUnhandledExceptionFilter',cpp)
+        self.assertNotIn('MiniDumpWriteDump',cpp)
+
     def test_existing_runner_requires_the_original_independent_resize_oracles(self):
         source=(ROOT/"tools/winui/run_checks.py").read_text("utf-8")
         section=source.split('if not rc and area == "column-resize":',1)[1].split(
