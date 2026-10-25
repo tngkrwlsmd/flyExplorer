@@ -310,16 +310,60 @@ def main(config="Release"):
             if hwnd is None:
                 proc.terminate();proc.wait(timeout=8)
             else:
-                assert ctypes.windll.user32.PostMessageW(hwnd,0x10,0,0)
-                try:proc.wait(timeout=13)
-                except subprocess.TimeoutExpired:
+                # Scope all native probes to this test-owned HWND/PID. Query
+                # liveness with bounded WM_NULL, never SendMessage(WM_CLOSE),
+                # UIA, or an unbounded cross-thread wait during teardown.
+                user32.IsWindow.argtypes=[wintypes.HWND]
+                user32.IsWindow.restype=wintypes.BOOL
+                user32.GetWindowThreadProcessId.argtypes=[
+                    wintypes.HWND,ctypes.POINTER(wintypes.DWORD)]
+                user32.GetWindowThreadProcessId.restype=wintypes.DWORD
+                user32.SendMessageTimeoutW.argtypes=[
+                    wintypes.HWND,wintypes.UINT,wintypes.WPARAM,
+                    wintypes.LPARAM,wintypes.UINT,wintypes.UINT,
+                    ctypes.POINTER(ctypes.c_size_t)]
+                user32.SendMessageTimeoutW.restype=wintypes.LPARAM
+                user32.PostMessageW.argtypes=[
+                    wintypes.HWND,wintypes.UINT,wintypes.WPARAM,wintypes.LPARAM]
+                user32.PostMessageW.restype=wintypes.BOOL
+                def owned_shutdown_state():
+                    if proc.poll() is not None:return ("exited",)
+                    if not user32.IsWindow(hwnd):return ("hwnd-destroyed",)
+                    process_id=wintypes.DWORD()
+                    thread_id=user32.GetWindowThreadProcessId(
+                        hwnd,ctypes.byref(process_id))
+                    if not thread_id or process_id.value!=proc.pid:
+                        return ("hwnd-no-longer-owned",)
+                    native_result=ctypes.c_size_t()
+                    responsive=bool(user32.SendMessageTimeoutW(
+                        hwnd,0,0,0,0x0003,200,ctypes.byref(native_result)))
+                    return ("owned-hwnd", "responsive" if responsive else "blocked")
+                assert owned_shutdown_state()[0]=="owned-hwnd", (
+                    "G01 shutdown HWND no longer belongs to owned app")
+                began=time.monotonic()
+                assert user32.PostMessageW(hwnd,0x10,0,0), (
+                    "G01 WM_CLOSE dispatch failed on owned HWND")
+                print("G01_OWNED_WM_CLOSE_POSTED",True,flush=True)
+                # Monotonic deadlines preserve the existing 13s close budget
+                # while revealing whether the UI thread stops pumping WM_NULL.
+                for deadline in (.25,1.0,3.0,7.0,13.0):
+                    remaining=deadline-(time.monotonic()-began)
+                    if remaining>0:
+                        try:proc.wait(timeout=remaining)
+                        except subprocess.TimeoutExpired:pass
+                    if proc.poll() is not None:
+                        print("G01_OWNED_WM_CLOSE_EXIT_MS",
+                              int((time.monotonic()-began)*1000),flush=True)
+                        break
+                    state=owned_shutdown_state()
+                    print("G01_OWNED_WM_CLOSE_TIMELINE",
+                          "DEADLINE_MS",int(deadline*1000),
+                          "STATE",state,flush=True)
+                if proc.poll() is None:
                     close_timed_out=True
-                    user32.IsWindow.argtypes=[wintypes.HWND]
-                    user32.IsWindow.restype=wintypes.BOOL
                     print("OWNED_DETAIL_COLUMN_CLOSE_TIMEOUT",True,
-                          "WINDOW_ALIVE",bool(user32.IsWindow(hwnd)),
-                          "PROCESS_PID",proc.pid,flush=True)
-                    # Only our exact test-owned process may be terminated.
+                          "STATE",owned_shutdown_state(),flush=True)
+                    # Preserve evidence, terminate only this exact child.
                     proc.terminate();proc.wait(timeout=5)
         print("OWNED_DETAIL_COLUMN_EXIT",proc.returncode,flush=True)
         safe=all((mfc/n).is_file() and
