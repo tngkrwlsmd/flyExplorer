@@ -7,6 +7,7 @@ namespace winrt::FlyExplorer::implementation
     struct App : AppT<App>
     {
         App();
+        ~App();
 
         void OnLaunched(Microsoft::UI::Xaml::LaunchActivatedEventArgs const&);
 
