@@ -51,6 +51,8 @@ def main(config="Release"):
     for key in ("APPDATA","LOCALAPPDATA","TEMP","TMP"):
         target=owned/key.lower();target.mkdir();env[key]=str(target)
     proc=subprocess.Popen([str(exe),str(folder)],cwd=exe.parent,env=env)
+    # Available even if maximization or early UIA setup fails before hover.
+    user32=ctypes.windll.user32
     hwnd=None;passed=False;close_timed_out=False
     try:
         def window():
@@ -338,32 +340,35 @@ def main(config="Release"):
                     responsive=bool(user32.SendMessageTimeoutW(
                         hwnd,0,0,0,0x0003,200,ctypes.byref(native_result)))
                     return ("owned-hwnd", "responsive" if responsive else "blocked")
-                assert owned_shutdown_state()[0]=="owned-hwnd", (
-                    "G01 shutdown HWND no longer belongs to owned app")
-                began=time.monotonic()
-                assert user32.PostMessageW(hwnd,0x10,0,0), (
-                    "G01 WM_CLOSE dispatch failed on owned HWND")
-                print("G01_OWNED_WM_CLOSE_POSTED",True,flush=True)
-                # Monotonic deadlines preserve the existing 13s close budget
-                # while revealing whether the UI thread stops pumping WM_NULL.
-                for deadline in (.25,1.0,3.0,7.0,13.0):
-                    remaining=deadline-(time.monotonic()-began)
-                    if remaining>0:
-                        try:proc.wait(timeout=remaining)
-                        except subprocess.TimeoutExpired:pass
-                    if proc.poll() is not None:
-                        print("G01_OWNED_WM_CLOSE_EXIT_MS",
-                              int((time.monotonic()-began)*1000),flush=True)
-                        break
-                    state=owned_shutdown_state()
-                    print("G01_OWNED_WM_CLOSE_TIMELINE",
-                          "DEADLINE_MS",int(deadline*1000),
-                          "STATE",state,flush=True)
+                owner=owned_shutdown_state()
+                posted=bool(user32.PostMessageW(hwnd,0x10,0,0)) if (
+                    owner[0]=="owned-hwnd") else False
+                print("G01_OWNED_WM_CLOSE_POSTED",posted,
+                      "PRESTATE",owner,flush=True)
+                if posted:
+                    began=time.monotonic()
+                    # Monotonic deadlines preserve the existing 13s close
+                    # budget and identify a blocked native UI thread.
+                    for deadline in (.25,1.0,3.0,7.0,13.0):
+                        remaining=deadline-(time.monotonic()-began)
+                        if remaining>0:
+                            try:proc.wait(timeout=remaining)
+                            except subprocess.TimeoutExpired:pass
+                        if proc.poll() is not None:
+                            print("G01_OWNED_WM_CLOSE_EXIT_MS",
+                                  int((time.monotonic()-began)*1000),
+                                  flush=True)
+                            break
+                        print("G01_OWNED_WM_CLOSE_TIMELINE",
+                              "DEADLINE_MS",int(deadline*1000),
+                              "STATE",owned_shutdown_state(),flush=True)
                 if proc.poll() is None:
                     close_timed_out=True
                     print("OWNED_DETAIL_COLUMN_CLOSE_TIMEOUT",True,
+                          "POSTED",posted,
                           "STATE",owned_shutdown_state(),flush=True)
-                    # Preserve evidence, terminate only this exact child.
+                    # Preserve the original failure while safely terminating
+                    # only this exact test-owned child process.
                     proc.terminate();proc.wait(timeout=5)
         print("OWNED_DETAIL_COLUMN_EXIT",proc.returncode,flush=True)
         safe=all((mfc/n).is_file() and
