@@ -48,6 +48,7 @@ def main(config="Release"):
          for n in LEGACY if (mfc/n).is_file()}
     env=os.environ.copy()
     env["FLYEXPLORER_COLUMN_RESIZE_DIAGNOSTIC"]="1"
+    env["FLY_G01_OWNED_CLOSE_TRACE"]="YES"
     for key in ("APPDATA","LOCALAPPDATA","TEMP","TMP"):
         target=owned/key.lower();target.mkdir();env[key]=str(target)
     proc=subprocess.Popen([str(exe),str(folder)],cwd=exe.parent,env=env)
@@ -371,6 +372,38 @@ def main(config="Release"):
                     # only this exact test-owned child process.
                     proc.terminate();proc.wait(timeout=5)
         print("OWNED_DETAIL_COLUMN_EXIT",proc.returncode,flush=True)
+        # Read only the bounded, test-owned phase trace. Do not read user
+        # TEMP, untrusted links, native dumps or arbitrary crash records.
+        allowed_close_phases={
+            "APPWINDOW_CLOSING_ENTER","APPWINDOW_CLOSING_EXIT",
+            "WINDOW_CLOSED_ENTER","WINDOW_CLOSED_EXIT",
+            "PREPARE_XAML_ENTER","PREPARE_XAML_ALREADY_CLOSING",
+            "FOCUS_TRANSFER_BEGIN","FOCUS_TRANSFER_EXCEPTION",
+            "FOCUS_TRANSFER_DONE","PREPARE_XAML_EXIT",
+            "PREPARE_CLOSE_ENTER","PREPARE_CLOSE_ALREADY_CLOSING",
+            "CURSOR_HOOKS_STOPPED","XAML_CONTROLS_RELEASED",
+            "SESSION_CLOSE_PREPARED","CONTROLLERS_CLOSE_PREPARED",
+            "WORKSPACE_ROUTES_INVALIDATED","SHELL_NAV_SHUTDOWN_DONE",
+            "PREPARE_CLOSE_EXIT","MAINWINDOW_DESTRUCTOR_ENTER",
+            "MAINWINDOW_DESTRUCTOR_EXIT",
+        }
+        trace_name=f"fly-g01-close-{proc.pid}.log"
+        trace_files=(owned/"tmp"/trace_name,owned/"temp"/trace_name)
+        trace_found=False
+        for trace in trace_files:
+            if (not trace.is_file() or trace.is_symlink() or
+                trace.stat().st_size>4096):
+                continue
+            lines=trace.read_text(encoding="ascii").splitlines()
+            if len(lines)>64 or any(line not in allowed_close_phases
+                                    for line in lines):
+                print("G01_OWNED_CLOSE_PHASE_TRACE_INVALID",True,flush=True)
+                continue
+            print("G01_OWNED_CLOSE_PHASE_TRACE",
+                  ",".join(lines),flush=True)
+            trace_found=True
+        if not trace_found:
+            print("G01_OWNED_CLOSE_PHASE_TRACE_MISSING",True,flush=True)
         safe=all((mfc/n).is_file() and
             hashlib.sha256((mfc/n).read_bytes()).digest()==h
             for n,h in old.items())
