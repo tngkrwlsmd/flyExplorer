@@ -1782,11 +1782,13 @@ namespace winrt::FlyExplorer::implementation
                 ui->mDetailColumnHoverSubclassInstalled=false;
                 ui->mDetailColumnHoverHwnd=nullptr;
             }
-        }else if(message==WM_SETCURSOR&&ui&&
-                 LOWORD(lParam)==HTCLIENT&&
-                 ui->ApplyDetailColumnHoverCursor()){
-            // Win32 will otherwise replace our cursor with the class arrow.
-            return TRUE;
+        }else if(message==WM_SETCURSOR&&ui){
+            ++ui->mL08HoverCursorMessages;
+            if(LOWORD(lParam)==HTCLIENT&&
+               ui->ApplyDetailColumnHoverCursor()){
+                // Only a positive owned Thumb hit may consume the message.
+                return TRUE;
+            }
         }
         return ::DefSubclassProc(hwnd,message,wParam,lParam);
     }
