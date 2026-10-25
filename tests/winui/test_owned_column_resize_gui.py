@@ -28,7 +28,9 @@ def horizontal_resize_cursor(details=False):
     if details:
         arrow=user.LoadCursorW(None,32512) # IDC_ARROW
         return {"active":int(info.hCursor or 0),
-                "arrow":int(arrow or 0),"sizewe":int(expected or 0)}
+                "arrow":int(arrow or 0),"sizewe":int(expected or 0),
+                "flags":int(info.flags),
+                "position":(info.position.x,info.position.y)}
     return info.hCursor==expected
 
 def main(config="Release"):
@@ -168,6 +170,31 @@ def main(config="Release"):
             print("COLUMN_RESIZE_CURSOR_OBSERVED",thumb_id,
                   observed=="sizewe",flush=True)
             print("COLUMN_RESIZE_HIT_BEFORE",thumb_id,owned_hit,flush=True)
+            # The global OS cursor can differ from this test thread's cursor
+            # and from the owned app's thread-local cursor. Only after the
+            # original strict observation has failed, temporarily calibrate
+            # SetCursor on this test thread and restore its exact old value.
+            # Never use this synthetic calibration to satisfy acceptance.
+            if observed!="sizewe":
+                user32.GetCursor.restype=wintypes.HANDLE
+                user32.SetCursor.argtypes=[wintypes.HANDLE]
+                user32.SetCursor.restype=wintypes.HANDLE
+                previous=user32.GetCursor()
+                try:
+                    user32.SetCursor(current["sizewe"])
+                    time.sleep(.03)
+                    test_thread=horizontal_resize_cursor(details=True)
+                    print("L08_TEST_THREAD_CURSOR_CALIBRATION",
+                          thumb_id,"OLD",int(previous or 0),
+                          "GLOBAL_BEFORE",current,
+                          "GLOBAL_DURING",test_thread,
+                          "GLOBAL_CHANGED",
+                          test_thread["active"]==current["sizewe"],
+                          "OWNED_FOREGROUND",owned_foreground(),flush=True)
+                finally:
+                    user32.SetCursor(previous)
+                print("L08_TEST_THREAD_CURSOR_RESTORED",thumb_id,
+                      horizontal_resize_cursor(details=True),flush=True)
             # Cursor appearance is an independent L08 acceptance gate.
             # A successful column drag must not mask a persistent arrow.
             assert owned_hit[0]==thumb_id, (
