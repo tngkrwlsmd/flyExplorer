@@ -1,5 +1,12 @@
 # Error history
 
+## 2026-10-25 — G01 actual App destructor order and non-TextBox focus observed
+
+- Exact trusted-main focused Windows [#40187978307](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/40187978307), source `f7bf2b72413e077b0892ea6b77951a7234e296a1`: native Release build PASS; all three physical Details resize drags, rapid-tail and WindowTab restore PASS, original MFC settings unchanged, strict L08 OS cursor FAIL.
+- Read-only preserved owned GUI trace [#40188449625](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/40188449625) captured `FOCUS_BEFORE_OTHER`, `FOCUS_TRANSFER_SUCCEEDED`, `FOCUS_AFTER_OTHER`, `APP_DESTRUCTOR_ENTER`, `APP_DESTRUCTOR_BODY_EXIT`, `MAINWINDOW_DESTRUCTOR_ENTER`, `MAINWINDOW_DESTRUCTOR_EXIT`, then process exit code **0xC0000005** after 3353ms. The owned main HWND was destroyed by 250ms after a successful normal `WM_CLOSE` post. This is *not* a focused-TextBox-at-close reproduction; App's projected Window-member release occurs after the App destructor body. It is still unknown whether Window-member release fully completed before the AV. No exception-time stack exists from this run.
+- A proposed inert post-Window-member-release witness C++ diagnostic could not be completed because the required GUI-test allowlist edit was blocked by automated safety inspection; no workaround attempted. Both temporary C++ commits were reverted, and read-back verified unchanged pre-proposal App.xaml.cpp and App.xaml.h blobs. Product state and strict test remain consistent with the built source. **G01 remains OPEN**; do not claim fix or crash cause based on trace order alone.
+
+
 ## 2026-10-25 — repeated G01 access violation AFTER MainWindow destructor (post-XAML-close boundary)
 
 - In source `a1f686c19d830bae9c5356b8a90805fe6ad78474`, bounded opt-in test-only native lifecycle trace was added. Source AST 2/2 and focused contracts 5/5 PASS ([#40180943309](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/40180943309)), actual Windows Release build PASS in [#40181069199](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/40181069199), physical three-column drag/tail/workspace-restore PASS, original MFC settings unchanged, but strict GUI L08 cursor FAIL. Avoid conflating independent functional GUI checks with full acceptance.
