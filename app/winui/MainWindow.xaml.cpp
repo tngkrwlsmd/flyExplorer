@@ -216,6 +216,35 @@ namespace winrt::FlyExplorer::implementation
                                 L","+std::to_wstring(ui->mL08HoverLeftNameY)+
                                 L","+std::to_wstring(ui->mL08HoverLeftNameW)+
                                 L","+std::to_wstring(ui->mL08HoverLeftNameH);
+                            // Observe the *system* HCURSOR separately from
+                            // this UI thread's SetCursor/GetCursor state.
+                            // This distinguishes a WinUI child input HWND
+                            // from a simple wrong XAML hit rectangle.
+                            CURSORINFO info{};
+                            info.cbSize=sizeof(info);
+                            const bool globalOk=::GetCursorInfo(&info)!=FALSE;
+                            const auto sizeWe=::LoadCursorW(nullptr,IDC_SIZEWE);
+                            POINT screen{};
+                            HWND site{};
+                            DWORD sitePid=0;
+                            DWORD siteTid=0;
+                            if(::GetCursorPos(&screen)){
+                                site=::WindowFromPoint(screen);
+                                if(site)siteTid=::GetWindowThreadProcessId(
+                                    site,&sitePid);
+                            }
+                            value+=L" os="+std::to_wstring(
+                                globalOk&&info.hCursor==sizeWe?1:0)+
+                                L" ui="+std::to_wstring(
+                                    ::GetCursor()==sizeWe?1:0)+
+                                L" site="+std::to_wstring(
+                                    site==ui->mDetailColumnHoverHwnd?1:0)+
+                                L" child="+std::to_wstring(
+                                    site&&::IsChild(ui->mDetailColumnHoverHwnd,site)?1:0)+
+                                L" sameThread="+std::to_wstring(
+                                    siteTid==::GetCurrentThreadId()?1:0)+
+                                L" ownProc="+std::to_wstring(
+                                    sitePid==::GetCurrentProcessId()?1:0);
                             ui->StatusText().Text(winrt::hstring(value));
                         }catch(...){}
                     }
