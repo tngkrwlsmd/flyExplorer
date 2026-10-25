@@ -109,6 +109,31 @@ class PX10ColumnResizeGuiContract(unittest.TestCase):
         self.assertNotIn('SetUnhandledExceptionFilter',cpp)
         self.assertNotIn('MiniDumpWriteDump',cpp)
 
+    def test_g01_app_window_member_release_boundary_is_trace_only(self):
+        app_h=(ROOT/"app/winui/App.xaml.h").read_text("utf-8")
+        app_cpp=(ROOT/"app/winui/App.xaml.cpp").read_text("utf-8")
+        window_cpp=(ROOT/"app/winui/MainWindow.xaml.cpp").read_text("utf-8")
+        gui=(ROOT/"tests/winui/test_owned_column_resize_gui.py").read_text("utf-8")
+        for fragment in (
+            '~App();',
+            'winrt::Microsoft::UI::Xaml::Window window{ nullptr };',
+        ):
+            self.assertIn(fragment,app_h)
+        for fragment in (
+            'App::~App()',
+            'TraceG01AppLifecycle("APP_DESTRUCTOR_ENTER")',
+            'TraceG01AppLifecycle("APP_DESTRUCTOR_BODY_EXIT")',
+        ):
+            self.assertIn(fragment,app_cpp)
+        self.assertIn('void TraceG01AppLifecycle(char const* stage) noexcept',
+                      window_cpp)
+        self.assertIn('TraceG01OwnedClose(stage);',window_cpp)
+        for token in ('APP_DESTRUCTOR_ENTER','APP_DESTRUCTOR_BODY_EXIT'):
+            self.assertIn(token,gui)
+        # Not a product lifecycle workaround; no manual release in destructor.
+        self.assertNotIn('window = nullptr;',app_cpp)
+        self.assertNotIn('window.Close()',app_cpp)
+
     def test_existing_runner_requires_the_original_independent_resize_oracles(self):
         source=(ROOT/"tools/winui/run_checks.py").read_text("utf-8")
         section=source.split('if not rc and area == "column-resize":',1)[1].split(
