@@ -9,6 +9,7 @@
 #include "MainWindow.g.cpp"
 #endif
 #include <shellapi.h>
+#include <commctrl.h>
 #include <microsoft.ui.xaml.window.h>
 #include "../../src/base/file_operation_core.h"
 #include "../../src/base/shell_isolation_wire.h"
@@ -31,12 +32,15 @@
 #include <robuffer.h>
 #include <cstring>
 #pragma comment(lib, "shell32.lib")
+#pragma comment(lib, "comctl32.lib")
 
 using namespace winrt;
 using namespace Microsoft::UI::Xaml;
 using namespace Microsoft::UI::Xaml::Controls;
 
 namespace {
+    constexpr UINT_PTR kDetailColumnCursorSubclassId=0xF1E08;
+
     std::wstring FriendlyAddress(std::wstring value)
     {
         auto lower=value;
@@ -179,6 +183,14 @@ namespace winrt::FlyExplorer::implementation
         if(SUCCEEDED(get_strong().as<::IWindowNative>()->get_WindowHandle(
                &cursorHwnd))&&cursorHwnd){
             mDetailColumnHoverHwnd=cursorHwnd;
+            // WM_SETCURSOR is the native, synchronous cursor boundary.
+            // SetCursor from an idle timer alone can be reset to an arrow on
+            // the next mouse message before WinUI raises PointerEntered.
+            mDetailColumnHoverSubclassInstalled=
+                ::SetWindowSubclass(
+                    cursorHwnd,&MainWindow::OnDetailColumnCursorMessage,
+                    kDetailColumnCursorSubclassId,
+                    reinterpret_cast<DWORD_PTR>(this))!=FALSE;
             auto timer=DispatcherQueue().CreateTimer();
             timer.Interval(std::chrono::milliseconds(40));
             timer.Tick([nativeWeak](auto const&,auto const&){
@@ -894,6 +906,16 @@ namespace winrt::FlyExplorer::implementation
     {
         if(mClosing)return;
         mClosing=true;
+        try{
+            if(mDetailColumnHoverSubclassInstalled&&mDetailColumnHoverHwnd&&
+               ::IsWindow(mDetailColumnHoverHwnd))
+                ::RemoveWindowSubclass(
+                    mDetailColumnHoverHwnd,
+                    &MainWindow::OnDetailColumnCursorMessage,
+                    kDetailColumnCursorSubclassId);
+        }catch(...){}
+        mDetailColumnHoverSubclassInstalled=false;
+        mDetailColumnHoverHwnd=nullptr;
         try{if(mDetailColumnHoverTimer)mDetailColumnHoverTimer.Stop();}catch(...){}
         // Release candidate controls before the XAML tree is dismantled.
         try{
@@ -1722,19 +1744,40 @@ namespace winrt::FlyExplorer::implementation
             StatusText().Text(
                 hstring(L"RESIZE_MOVE "+std::to_wstring(delta)));
     }
-    void MainWindow::ApplyDetailColumnHoverCursor(){
+    LRESULT CALLBACK MainWindow::OnDetailColumnCursorMessage(
+        HWND hwnd,UINT message,WPARAM wParam,LPARAM lParam,
+        UINT_PTR subclassId,DWORD_PTR refData){
+        auto ui=reinterpret_cast<MainWindow*>(refData);
+        if(message==WM_NCDESTROY){
+            // The HWND may be destroyed before Closed runs. Drop the native
+            // callback while the WinUI implementation still exists.
+            ::RemoveWindowSubclass(
+                hwnd,&MainWindow::OnDetailColumnCursorMessage,subclassId);
+            if(ui){
+                ui->mDetailColumnHoverSubclassInstalled=false;
+                ui->mDetailColumnHoverHwnd=nullptr;
+            }
+        }else if(message==WM_SETCURSOR&&ui&&
+                 LOWORD(lParam)==HTCLIENT&&
+                 ui->ApplyDetailColumnHoverCursor()){
+            // Win32 will otherwise replace our cursor with the class arrow.
+            return TRUE;
+        }
+        return ::DefSubclassProc(hwnd,message,wParam,lParam);
+    }
+    bool MainWindow::ApplyDetailColumnHoverCursor(){
         if(mClosing||!mColumnControlsReady||mDetailColumnPointerDrag||
-           !mDetailColumnHoverHwnd)return;
-        if(::GetForegroundWindow()!=mDetailColumnHoverHwnd)return;
+           !mDetailColumnHoverHwnd)return false;
+        if(::GetForegroundWindow()!=mDetailColumnHoverHwnd)return false;
         POINT physical{};
         if(!::GetCursorPos(&physical)||
-           !::ScreenToClient(mDetailColumnHoverHwnd,&physical))return;
+           !::ScreenToClient(mDetailColumnHoverHwnd,&physical))return false;
         try{
             const auto root=RootShell();
             const auto xr=root.XamlRoot();
-            if(!xr)return;
+            if(!xr)return false;
             const auto raster=xr.RasterizationScale();
-            if(raster<=0.0)return;
+            if(raster<=0.0)return false;
             const auto rootOrigin=root.TransformToVisual(
                 Content().as<UIElement>()).TransformPoint({0.0f,0.0f});
             const double x=physical.x/raster-rootOrigin.X;
@@ -1754,12 +1797,15 @@ namespace winrt::FlyExplorer::implementation
                inside(RightTypeColumnResizeThumb())||
                inside(RightSizeColumnResizeThumb())){
                 auto cursor=::LoadCursorW(nullptr,IDC_SIZEWE);
-                if(cursor&&::GetCursor()!=cursor)::SetCursor(cursor);
+                if(cursor){
+                    if(::GetCursor()!=cursor)::SetCursor(cursor);
+                    return true;
+                }
             }
         }catch(...){
-            // The foreground cursor is purely visual. Never impact resizing,
-            // window teardown or settings if XAML geometry is unavailable.
+            // Cursor appearance must not affect file operations or teardown.
         }
+        return false;
     }
     void MainWindow::OnDetailColumnResizePointerMoved(
         IInspectable const&,
