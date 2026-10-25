@@ -391,6 +391,7 @@ def main(config="Release"):
             "WORKSPACE_ROUTES_INVALIDATED","SHELL_NAV_SHUTDOWN_DONE",
             "PREPARE_CLOSE_EXIT","MAINWINDOW_DESTRUCTOR_ENTER",
             "MAINWINDOW_DESTRUCTOR_EXIT",
+            "APP_DESTRUCTOR_ENTER","APP_DESTRUCTOR_BODY_EXIT",
         }
         trace_name=f"fly-g01-close-{proc.pid}.log"
         trace_files=(owned/"tmp"/trace_name,owned/"temp"/trace_name)
