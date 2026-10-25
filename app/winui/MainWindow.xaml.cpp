@@ -1793,22 +1793,37 @@ namespace winrt::FlyExplorer::implementation
         return ::DefSubclassProc(hwnd,message,wParam,lParam);
     }
     bool MainWindow::ApplyDetailColumnHoverCursor(){
+        mL08HoverLastReason=L"not-ready";
         if(mClosing||!mColumnControlsReady||mDetailColumnPointerDrag||
            !mDetailColumnHoverHwnd)return false;
+        mL08HoverLastReason=L"not-foreground";
         if(::GetForegroundWindow()!=mDetailColumnHoverHwnd)return false;
         POINT physical{};
+        mL08HoverLastReason=L"cursor-to-client";
         if(!::GetCursorPos(&physical)||
            !::ScreenToClient(mDetailColumnHoverHwnd,&physical))return false;
         try{
+            mL08HoverLastReason=L"no-xaml-root";
             const auto root=RootShell();
             const auto xr=root.XamlRoot();
             if(!xr)return false;
+            mL08HoverLastReason=L"invalid-raster";
             const auto raster=xr.RasterizationScale();
             if(raster<=0.0)return false;
+            mL08HoverLastReason=L"geometry";
             const auto rootOrigin=root.TransformToVisual(
                 Content().as<UIElement>()).TransformPoint({0.0f,0.0f});
             const double x=physical.x/raster-rootOrigin.X;
             const double y=physical.y/raster-rootOrigin.Y;
+            mL08HoverLastX=static_cast<LONG>(std::lround(x));
+            mL08HoverLastY=static_cast<LONG>(std::lround(y));
+            const auto nameGrip=LeftNameColumnResizeThumb();
+            const auto nameOrigin=nameGrip.TransformToVisual(root).TransformPoint(
+                Windows::Foundation::Point{0.0f,0.0f});
+            mL08HoverLeftNameX=static_cast<LONG>(std::lround(nameOrigin.X));
+            mL08HoverLeftNameY=static_cast<LONG>(std::lround(nameOrigin.Y));
+            mL08HoverLeftNameW=static_cast<LONG>(std::lround(nameGrip.ActualWidth()));
+            mL08HoverLeftNameH=static_cast<LONG>(std::lround(nameGrip.ActualHeight()));
             const auto inside=[&](Microsoft::UI::Xaml::FrameworkElement const& thumb){
                 if(thumb.Visibility()!=Visibility::Visible||
                    thumb.ActualWidth()<=0.0||thumb.ActualHeight()<=0.0)return false;
@@ -1817,6 +1832,7 @@ namespace winrt::FlyExplorer::implementation
                 return x>=origin.X&&x<=origin.X+thumb.ActualWidth()&&
                        y>=origin.Y&&y<=origin.Y+thumb.ActualHeight();
             };
+            mL08HoverLastReason=L"outside-grips";
             if(inside(LeftNameColumnResizeThumb())||
                inside(LeftTypeColumnResizeThumb())||
                inside(LeftSizeColumnResizeThumb())||
@@ -1825,11 +1841,14 @@ namespace winrt::FlyExplorer::implementation
                inside(RightSizeColumnResizeThumb())){
                 auto cursor=::LoadCursorW(nullptr,IDC_SIZEWE);
                 if(cursor){
+                    ++mL08HoverMatches;
                     if(::GetCursor()!=cursor)::SetCursor(cursor);
+                    mL08HoverLastReason=L"sizewe-set";
                     return true;
                 }
             }
         }catch(...){
+            mL08HoverLastReason=L"geometry-exception";
             // Cursor appearance must not affect file operations or teardown.
         }
         return false;
