@@ -2,6 +2,7 @@
 #include "file_operation_controller.h"
 #include <algorithm>
 #include <filesystem>
+#include <limits>
 #include <mutex>
 #include <optional>
 #include <thread>
@@ -17,11 +18,14 @@ struct FileOperationController::PendingTransfer final {
     // Keep earlier skip decisions when a reduced batch encounters
     // another destination collision during its fresh worker preflight.
     std::size_t skippedCollisions=0;
+    // Unique to the confirmation being displayed, even in the same folder.
+    std::uint64_t token=0;
 };
 
 struct FileOperationController::SharedState final {
     mutable std::mutex mutex;
     std::uint64_t epoch=0;
+    std::uint64_t confirmationSerial=0;
     bool busy=false;
     bool closing=false;
     std::shared_ptr<fxfile::shelltransfer::Progress> progress{};
@@ -91,6 +95,15 @@ FileOperationController::progress() const noexcept
     }catch(...){return {};}
 }
 
+std::uint64_t FileOperationController::pendingConfirmationToken() const noexcept
+{
+    try{
+        std::lock_guard<std::mutex> lock(state_->mutex);
+        return state_->closing||state_->busy||!state_->pending?
+            0:state_->pending->token;
+    }catch(...){return 0;}
+}
+
 void FileOperationController::cancel() noexcept
 {
     auto current=progress();
@@ -121,7 +134,11 @@ FileOperationController::StartStatus FileOperationController::requestTransfer(
             return StartStatus::InvalidVisibleContext;
         if(request.kind==fxfile::shelltransfer::Kind::Recycle&&
            !request.recycleConfirmed){
+            if(state_->confirmationSerial==
+               (std::numeric_limits<std::uint64_t>::max)())
+                return StartStatus::ThreadStartFailed;
             state_->pending=PendingTransfer{std::move(request),std::move(context)};
+            state_->pending->token=++state_->confirmationSerial;
             return StartStatus::NeedsRecycleConfirmation;
         }
         state_->pending.reset();
@@ -132,14 +149,15 @@ FileOperationController::StartStatus FileOperationController::requestTransfer(
 }
 
 FileOperationController::StartStatus FileOperationController::confirmRecycle(
-    bool approved,Context liveContext,Post post,
-    TransferCallback completion)
+    bool approved,std::uint64_t expectedToken,Context liveContext,
+    Post post,TransferCallback completion)
 {
     PendingTransfer pending{};
     {
         std::lock_guard<std::mutex> lock(state_->mutex);
         if(state_->closing||state_->busy)return StartStatus::Busy;
-        if(!state_->pending||
+        if(!expectedToken||!state_->pending||
+           state_->pending->token!=expectedToken||
            state_->pending->request.kind!=fxfile::shelltransfer::Kind::Recycle)
             return StartStatus::StaleConfirmation;
         pending=std::move(*state_->pending);
@@ -155,14 +173,15 @@ FileOperationController::StartStatus FileOperationController::confirmRecycle(
 }
 
 FileOperationController::StartStatus FileOperationController::confirmCollision(
-    bool approved,Context liveContext,Post post,
-    TransferCallback completion)
+    bool approved,std::uint64_t expectedToken,Context liveContext,
+    Post post,TransferCallback completion)
 {
     PendingTransfer pending{};
     {
         std::lock_guard<std::mutex> lock(state_->mutex);
         if(state_->closing||state_->busy)return StartStatus::Busy;
-        if(!state_->pending||
+        if(!expectedToken||!state_->pending||
+           state_->pending->token!=expectedToken||
            state_->pending->request.kind==fxfile::shelltransfer::Kind::Recycle)
             return StartStatus::StaleConfirmation;
         pending=std::move(*state_->pending);
@@ -179,15 +198,17 @@ FileOperationController::StartStatus FileOperationController::confirmCollision(
 
 FileOperationController::StartStatus
 FileOperationController::skipCollisions(
-    Context liveContext,Post post,TransferCallback completion,
-    std::size_t& skipped)
+    std::uint64_t expectedToken,Context liveContext,
+    Post post,TransferCallback completion,std::size_t& skipped)
 {
     skipped=0;
     PendingTransfer pending{};
     {
         std::lock_guard<std::mutex> lock(state_->mutex);
         if(state_->closing||state_->busy)return StartStatus::Busy;
-        if(!state_->pending)return StartStatus::StaleConfirmation;
+        if(!expectedToken||!state_->pending||
+           state_->pending->token!=expectedToken)
+            return StartStatus::StaleConfirmation;
         auto const& request=state_->pending->request;
         if(request.kind==fxfile::shelltransfer::Kind::Recycle||
            request.sourceMode!=fxfile::shelltransfer::SourceMode::Filesystem||
@@ -342,9 +363,13 @@ FileOperationController::acceptTransfer(
        completion.request.collision==fxfile::shelltransfer::Collision::Reject&&
        !completion.report.collisions.empty()&&
        completion.request.kind!=fxfile::shelltransfer::Kind::Recycle){
+        if(state_->confirmationSerial==
+           (std::numeric_limits<std::uint64_t>::max)())
+            return TransferDisposition::Failed;
         state_->pending=PendingTransfer{
             completion.request,completion.context,
             completion.report.collisions,completion.skippedCollisions};
+        state_->pending->token=++state_->confirmationSerial;
         return TransferDisposition::NeedsCollisionConfirmation;
     }
     // An aborted native operation can have committed earlier items.
