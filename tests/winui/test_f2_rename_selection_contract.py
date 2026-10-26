@@ -59,17 +59,22 @@ class RenameSelectionContract(unittest.TestCase):
             "void MainWindow::OnFileCommandCompleted(",1)[0]
         self.assertIn("mPendingNameEdit->kind!=kind",execute)
         self.assertIn("FileNameBox().Opacity()<0.5",execute)
+        self.assertIn("fxfile::nameedit::sameScope(editContext,liveContext)",execute)
+        self.assertIn("fxfile::nameedit::sameRenameSource(",execute)
+        self.assertIn("mPendingNameEdit->source,indexed->parsingName",execute)
+        native=(ROOT / "src" / "base" / "name_edit_guard.h").read_text(
+            encoding="utf-8-sig")
         for item in (
             "windowTabIdentity","side","tab","route",
             "visibleFolder","visibleShellFolder"
         ):
-            self.assertIn(f"liveContext.{item}!=editContext.{item}",execute)
-        self.assertIn("indexed->parsingName!=mPendingNameEdit->source",execute)
+            self.assertIn(f"opened.{item}==live.{item}",native)
+        self.assertIn("!opened.empty()&&!selected.empty()&&opened==selected",native)
         self.assertIn("request.source=mPendingNameEdit->source;",execute)
         self.assertNotIn("request.source=indexed->parsingName;",execute)
-        self.assertLess(execute.index("indexed->parsingName!=mPendingNameEdit->source"),
+        self.assertLess(execute.index("fxfile::nameedit::sameRenameSource("),
                         execute.index("mFileOperations.startFileCommand("))
-        self.assertLess(execute.index("liveContext.windowTabIdentity!=editContext.windowTabIdentity"),
+        self.assertLess(execute.index("fxfile::nameedit::sameScope(editContext,liveContext)"),
                         execute.index("mFileOperations.startFileCommand("))
         self.assertIn("mPendingNameEdit.reset();",execute)
         self.assertIn("fileBar()->EndNameEdit();",execute)
@@ -84,6 +89,23 @@ class RenameSelectionContract(unittest.TestCase):
         self.assertIn("FileNameBox().Opacity()<0.5",execute)
         self.assertLess(execute.index("FileNameBox().Opacity()<0.5"),
                         execute.index("mFileOperations.startFileCommand("))
+
+    def test_native_name_edit_gate_has_runtime_fixture(self):
+        fixture=(ROOT / "tests" / "winui" /
+                 "name_edit_guard_native.cpp").read_text(encoding="utf-8-sig")
+        commands=(APP / "m21_commands.cpp").read_text(encoding="utf-8-sig")
+        self.assertIn('#include "../../src/base/name_edit_guard.h"',commands)
+        self.assertIn("fxfile::nameedit::sameScope(",commands)
+        self.assertIn("fxfile::nameedit::sameRenameSource(",commands)
+        for test_case in (
+            "same_context","other_workspace","other_pane",
+            "other_pane_tab","other_route","other_filesystem_folder",
+            "other_shell_folder","same_rename_source","changed_selection",
+            "empty_captured_source","empty_current_source",
+            "exact_spelling_required",
+        ):
+            self.assertIn(f'"{test_case}"',fixture)
+        self.assertIn("passed==12&&failed==0",fixture)
 
     def test_rename_and_create_operations_unchanged(self):
         bar = (APP / "FileToolbar.xaml.cpp").read_text(encoding="utf-8-sig")
