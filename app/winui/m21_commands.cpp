@@ -177,8 +177,11 @@ void MainWindow::OnFileCommandCompleted(
  if(disposition==Disposition::StaleContext){
      // Switching WindowTab, PaneTab or folder must never update another
      // workspace's visible status. Keep the warning in its original tab.
-     const std::wstring notice=
-         L"파일 작업이 종료됐지만 화면이 변경됐습니다. 원본 폴더에서 결과를 확인하세요.";
+     const std::wstring notice=completion.result.error==ERROR_SUCCESS?
+         L"파일 작업이 완료됐지만 화면이 변경됐습니다. 원본 폴더에서 결과를 확인하세요.":
+         L"파일 작업에 실패했고 화면이 변경됐습니다. "
+         L"원본 폴더에서 결과를 확인하세요. Windows 오류: "+
+         std::to_wstring(completion.result.error);
      rememberOrigin(notice);
      if(originActive)StatusText().Text(hstring(notice));
      return;
@@ -192,11 +195,15 @@ void MainWindow::OnFileCommandCompleted(
  // Reveal is only an outcome of an explicitly accepted success.
  if(disposition!=Disposition::Succeeded)return;
  fileBar()->EndNameEdit();
- if(originActive)StatusText().Text(
+ const std::wstring message=
      completion.kind==fxfile::filecommand::Kind::CreateFolder?
      L"새 폴더를 만들었습니다.":
      completion.kind==fxfile::filecommand::Kind::CreateTextFile?
-     L"새 텍스트 문서를 만들었습니다.":L"이름을 변경했습니다.");
+     L"새 텍스트 문서를 만들었습니다.":L"이름을 변경했습니다.";
+ // A matching Shell Refresh can replace the footer text; retain the
+ // accepted result in the exact originating workspace until navigation.
+ rememberOrigin(message);
+ if(originActive)StatusText().Text(hstring(message));
  const int side=completion.context.side;
  auto const& pane=ActiveWindowTab().model.panes[side];
  // The worker supplied the actual target path. Defer selection until
