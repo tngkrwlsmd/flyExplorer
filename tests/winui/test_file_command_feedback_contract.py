@@ -162,6 +162,42 @@ class TransferFeedbackContract(unittest.TestCase):
         self.assertIn("fxfile::shellnav::NavigationAction::Refresh",completion)
         self.assertIn("if(disposition==Disposition::StaleContext)",completion)
 
+    def test_transfer_notice_cleared_only_after_an_actual_launch(self):
+        source=(APP/"m22_transfers.cpp").read_text(encoding="utf-8-sig")
+        start=source.split("void MainWindow::ApplyTransferStartStatus(",1)[1].split(
+            "void MainWindow::StartTransfer(",1)[0]
+        entry=source.split("void MainWindow::StartTransfer(",1)[1].split(
+            "winrt::fire_and_forget MainWindow::ConfirmRecycle(",1)[0]
+        self.assertIn("if(status==Start::Started){",start)
+        self.assertIn("ActiveWindowTab().fileOperationNotice.clear();",start)
+        self.assertLess(start.index("if(status==Start::Started){"),
+                        start.index("ActiveWindowTab().fileOperationNotice.clear();"))
+        self.assertNotIn("fileOperationNotice.clear()",entry)
+        self.assertIn("if(mFileOperations.pendingConfirmationToken()){",entry)
+        self.assertIn("mFileOperations.requestTransfer(",entry)
+
+    def test_transfer_outcome_is_preserved_for_inactive_origin_workspace(self):
+        source=(APP/"m22_transfers.cpp").read_text(encoding="utf-8-sig")
+        body=source.split("void MainWindow::OnTransferCompleted(",1)[1].split(
+            "bool MainWindow::CopySelectedToWindowsClipboard(",1)[0]
+        stale=body.split("if(disposition==Disposition::StaleContext){",1)[1].split(
+            "if(disposition==Disposition::Failed){",1)[0]
+        self.assertIn("completion.report.error==ERROR_SUCCESS",stale)
+        self.assertIn("!completion.report.aborted",stale)
+        self.assertIn("일부 항목이 처리됐을 수 있습니다.",stale)
+        self.assertIn("std::to_wstring(completion.report.error)",stale)
+        self.assertIn("completion.skippedCollisions",stale)
+        self.assertIn("rememberOrigin(notice);",stale)
+        self.assertIn("if(originActive)StatusText().Text(hstring(notice));",stale)
+        self.assertNotIn("QueuePidl(",stale)
+        success=body.split("if(disposition==Disposition::Failed){",1)[1]
+        self.assertIn("rememberOrigin(message);",success)
+        self.assertLess(success.index("rememberOrigin(message);"),
+                        success.index("if(originActive)StatusText().Text(hstring(message));"))
+        self.assertIn("state.identity==completion.context.windowTabIdentity",body)
+        self.assertIn("state.fileOperationNotice=message;",body)
+
+
 class AsyncWindowTabOwnershipContract(unittest.TestCase):
     def test_file_operations_reject_other_window_tab_results(self):
         header=(APP/"file_operation_controller.h").read_text(encoding="utf-8-sig")
