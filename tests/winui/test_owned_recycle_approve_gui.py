@@ -225,7 +225,16 @@ def run(config="Debug"):
 
         # RESTORE targets only that one exact GUID item and original parent.
         # No global Recycle Bin clear, deletion or destructive cleanup.
-        item.InvokeVerb("RESTORE")
+        # InvokeVerb("RESTORE") may silently do nothing on non-English
+        # Windows. Use the unique localized Shell action for this exact
+        # GUID-named item; never operate on any other Recycle entry.
+        restore_verbs = [
+            verb for verb in item.Verbs()
+            if "복원" in str(verb.Name)
+            or "restore" in str(verb.Name).casefold()
+        ]
+        assert len(restore_verbs) == 1, "owned restore verb not unique"
+        restore_verbs[0].DoIt()
         wait_until(
             lambda: source.is_file(),
             "Shell restore did not recover exact owned source",
@@ -262,7 +271,13 @@ def run(config="Debug"):
             try:
                 recovered = owned_bin_entry()
                 if recovered is not None and not source.exists():
-                    recovered.InvokeVerb("RESTORE")
+                    verbs = [
+                        verb for verb in recovered.Verbs()
+                        if "복원" in str(verb.Name)
+                        or "restore" in str(verb.Name).casefold()
+                    ]
+                    assert len(verbs) == 1
+                    verbs[0].DoIt()
                     wait_until(lambda: source.is_file(),
                                "exact-item recovery restore did not finish",
                                seconds=16, interval=.35)
