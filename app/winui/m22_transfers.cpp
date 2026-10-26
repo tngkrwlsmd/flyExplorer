@@ -770,7 +770,7 @@ void MainWindow::ApplyTransferStartStatus(
   return;
  }
  if(status==Start::NeedsRecycleConfirmation){
-  ConfirmRecycle(recycleCount);
+  ConfirmRecycle(recycleCount,mFileOperations.pendingConfirmationToken());
   return;
  }
  if(status==Start::Busy)
@@ -801,7 +801,8 @@ void MainWindow::StartTransfer(fxfile::shelltransfer::Request request){
   });
  ApplyTransferStartStatus(status,count);
 }
-winrt::fire_and_forget MainWindow::ConfirmRecycle(std::size_t count){
+winrt::fire_and_forget MainWindow::ConfirmRecycle(
+ std::size_t count,std::uint64_t token){
  const auto keep=get_strong();
  ContentDialog dialog;
  dialog.XamlRoot(RootShell().XamlRoot());
@@ -814,9 +815,12 @@ winrt::fire_and_forget MainWindow::ConfirmRecycle(std::size_t count){
  dialog.CloseButtonText(L"취소");
  dialog.DefaultButton(ContentDialogButton::Close);
  const bool approved=co_await dialog.ShowAsync()==ContentDialogResult::Primary;
+ // An older dialog can finish after a newer request in the same folder.
+ // Never apply its choice to a different pending operation.
+ if(!token||mFileOperations.pendingConfirmationToken()!=token)co_return;
  auto weak=get_weak();
  const auto status=mFileOperations.confirmRecycle(
-  approved,FileOperationContext(ActiveWindowTab().model.activePane),
+  approved,token,FileOperationContext(ActiveWindowTab().model.activePane),
   operationPost(DispatcherQueue()),
   [weak](FileOperationController::TransferCompletion completion){
    if(auto ui=weak.get())ui->OnTransferCompleted(std::move(completion));
@@ -825,7 +829,7 @@ winrt::fire_and_forget MainWindow::ConfirmRecycle(std::size_t count){
 }
 winrt::fire_and_forget MainWindow::ConfirmCollision(
  std::size_t requested,std::size_t collided,bool allowSkip,
- std::size_t previouslySkipped){
+ std::size_t previouslySkipped,std::uint64_t token){
  const auto keep=get_strong();
  ContentDialog dialog;
  dialog.XamlRoot(RootShell().XamlRoot());
@@ -846,6 +850,8 @@ winrt::fire_and_forget MainWindow::ConfirmCollision(
  dialog.CloseButtonText(L"취소");
  dialog.DefaultButton(ContentDialogButton::Close);
  const auto choice=co_await dialog.ShowAsync();
+ // A superseded confirmation has no authority over a newer transfer.
+ if(!token||mFileOperations.pendingConfirmationToken()!=token)co_return;
  auto weak=get_weak();
  const auto context=FileOperationContext(ActiveWindowTab().model.activePane);
  const auto post=operationPost(DispatcherQueue());
@@ -855,7 +861,7 @@ winrt::fire_and_forget MainWindow::ConfirmCollision(
  if(allowSkip&&choice==ContentDialogResult::Secondary){
   std::size_t skipped=0;
   const auto status=mFileOperations.skipCollisions(
-      context,post,std::move(completed),skipped);
+      token,context,post,std::move(completed),skipped);
   ApplyTransferStartStatus(status);
   if(status==FileOperationController::StartStatus::Started)
    StatusText().Text(hstring(L"충돌 항목 "+std::to_wstring(skipped)+
@@ -866,7 +872,8 @@ winrt::fire_and_forget MainWindow::ConfirmCollision(
   co_return;
  }
  const auto status=mFileOperations.confirmCollision(
-  choice==ContentDialogResult::Primary,context,post,std::move(completed));
+  choice==ContentDialogResult::Primary,token,context,post,
+  std::move(completed));
  ApplyTransferStartStatus(status);
 }
 void MainWindow::OnTransferCompleted(
@@ -898,7 +905,8 @@ void MainWindow::OnTransferCompleted(
       request.kind!=fxfile::shelltransfer::Kind::Recycle;
   ConfirmCollision(request.sources.size(),
                    completion.report.collisions.size(),allowSkip,
-                   completion.skippedCollisions);
+                   completion.skippedCollisions,
+                   mFileOperations.pendingConfirmationToken());
   return;
  }
  // Failed or canceled transfers can have committed earlier items. Refresh
