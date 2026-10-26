@@ -170,13 +170,26 @@ def run(config="Debug"):
             return matches[0] if len(matches) == 1 else None
 
         def select_and_prompt():
-            item = wait_until(lambda: row(source.name),
-                              "owned recycle row disappeared",
-                              seconds=8, interval=.2)
-            focus_owned(win, process.pid)
-            item.click_input()
-            item.iface_selection_item.Select()
-            assert row(source.name).is_selected()
+            def selected_owned_source():
+                # Shell watcher may replace the ListItem wrapper during a
+                # row refresh; use the current PID-bound item each time.
+                item = row(source.name)
+                if item is None:
+                    return False
+                if item.is_selected():
+                    return True
+                focus_owned(win, process.pid)
+                item.click_input()
+                current = row(source.name)
+                if current is None:
+                    return False
+                current.iface_selection_item.Select()
+                verify = row(source.name)
+                return verify is not None and verify.is_selected()
+
+            wait_until(selected_owned_source,
+                       "owned recycle source could not be selected",
+                       seconds=16, interval=.25)
             assert recycle.is_enabled()
             assert recycle.element_info.process_id == process.pid
             focus_owned(win, process.pid)
