@@ -1053,6 +1053,23 @@ namespace winrt::FlyExplorer::implementation
             return;
         }
         mClosing=true;
+        // A queued drag tick must not examine XAML or apply a new width once
+        // close has started. Stop every outstanding window-owned timer before
+        // the input site and XAML controls are released.
+        mDetailColumnPointerDrag=false;
+        mDetailColumnPointerSide=-1;
+        mDetailColumnPointerColumn=-1;
+        mDetailColumnPointerWindowIdentity=0;
+        mDetailColumnPointerPaneTab=0;
+        try{if(mDetailColumnDragTimer)mDetailColumnDragTimer.Stop();}catch(...){}
+        try{if(mFileRowDragTimer)mFileRowDragTimer.Stop();}catch(...){}
+        try{if(mOwnedSearchVisualTimer)mOwnedSearchVisualTimer.Stop();}catch(...){}
+        try{if(mOwnedShellProviderVisualTimer)
+                mOwnedShellProviderVisualTimer.Stop();}catch(...){}
+        try{if(mOwnedF05VisualTimer)mOwnedF05VisualTimer.Stop();}catch(...){}
+        try{if(mOwnedF05VisualGroupTimer)
+                mOwnedF05VisualGroupTimer.Stop();}catch(...){}
+        TraceG01OwnedClose("QUEUED_XAML_TIMERS_STOPPED");
         // Remove the owned child input-site callback before XAML teardown.
         try{UpdateDetailColumnInputSite(false);}catch(...){}
         try{
