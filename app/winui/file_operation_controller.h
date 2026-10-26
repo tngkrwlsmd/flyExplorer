@@ -78,22 +78,25 @@ public:
     std::shared_ptr<fxfile::shelltransfer::Progress> progress() const noexcept;
     void cancel() noexcept;
     void prepareForClose() noexcept;
+    // A dialog must carry the identity of the exact request it displays.
+    // Zero means no live pending confirmation.
+    std::uint64_t pendingConfirmationToken() const noexcept;
 
     StartStatus requestTransfer(
         fxfile::shelltransfer::Request request,Context context,
         Post post,TransferCallback completion);
     StartStatus confirmRecycle(
-        bool approved,Context liveContext,Post post,
+        bool approved,std::uint64_t expectedToken,Context liveContext,Post post,
         TransferCallback completion);
     StartStatus confirmCollision(
-        bool approved,Context liveContext,Post post,
+        bool approved,std::uint64_t expectedToken,Context liveContext,Post post,
         TransferCallback completion);
     // A preflight-only choice for ordinary filesystem Copy/Move: omit
     // precisely the destination names already reported as collisions.
     // No filesystem/Shell I/O occurs on the UI thread.
     StartStatus skipCollisions(
-        Context liveContext,Post post,TransferCallback completion,
-        std::size_t& skipped);
+        std::uint64_t expectedToken,Context liveContext,Post post,
+        TransferCallback completion,std::size_t& skipped);
     TransferDisposition acceptTransfer(
         TransferCompletion const& completion,Context const& liveContext);
 
