@@ -31,6 +31,7 @@
 #include "m19_search.h"
 #include <array>
 #include <memory>
+#include <optional>
 #include <vector>
 #include <filesystem>
 
@@ -227,6 +228,15 @@ namespace winrt::FlyExplorer::implementation
         std::wstring WindowTabLabel(fxfile::previewtabs::WindowTabState const&) const;
         fxfile::previewprefs::PreferencesCoordinator mPreferencesCoordinator{};
         fxfile::previewops::FileOperationController mFileOperations{};
+        // A name edit is bound to the exact workspace, pane tab, route and
+        // rename source selected when the editor opened. Never retarget an
+        // in-progress edit to whatever is selected when Enter is pressed.
+        struct PendingNameEdit final {
+            fxfile::filecommand::Kind kind;
+            FileOperationController::Context context{};
+            std::wstring source{};
+        };
+        std::optional<PendingNameEdit> mPendingNameEdit{};
         // Reusable XAML controls expose their inner primitives to the
         // existing M2.1 callers without coupling native state to views.
         winrt::FlyExplorer::implementation::FileToolbar* fileBar(){
