@@ -67,7 +67,7 @@ def check(condition, description, seconds=12):
 
 def run(config="Release", scenario="full"):
     assert config in ("Release", "Debug")
-    assert scenario in ("baseline", "tabs", "full")
+    assert scenario in ("plain", "baseline", "tabs", "full")
     exe = app_exe(config)
     assert exe.is_file()
     root = APP.parents[1] / "logs" / "g01-close-focused"
@@ -84,8 +84,11 @@ def run(config="Release", scenario="full"):
         name: hashlib.sha256((profile / name).read_bytes()).digest()
         for name in LEGACY if (profile / name).is_file()
     }
-    environment = {**os.environ, "FLY_G01_OWNED_CLOSE_TRACE": "YES",
-                   "FLYEXPLORER_COLUMN_RESIZE_DIAGNOSTIC": "1"}
+    environment = {**os.environ, "FLY_G01_OWNED_CLOSE_TRACE": "YES"}
+    if scenario != "plain":
+        environment["FLYEXPLORER_COLUMN_RESIZE_DIAGNOSTIC"] = "1"
+    else:
+        environment.pop("FLYEXPLORER_COLUMN_RESIZE_DIAGNOSTIC", None)
     for key in ("APPDATA", "LOCALAPPDATA", "TEMP", "TMP"):
         target = owned / key.lower()
         target.mkdir()
