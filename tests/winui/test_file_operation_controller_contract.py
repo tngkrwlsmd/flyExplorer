@@ -239,9 +239,15 @@ class FileOperationContracts(unittest.TestCase):
         self.assertNotIn("::MoveFileExW(", host)
         for token in (
             "--owned-isolated-collision",
+            "--owned-isolated-move-collision",
             "M22_ISOLATED_COLLISION_PATH=",
             "M22_ISOLATED_SKIP_PRESERVES_COLLISION=",
+            "M22_ISOLATED_MOVE_COLLISION_PATH=",
+            "M22_ISOLATED_MOVE_SKIP_PRESERVES_SOURCE=",
+            "task.kind=moving?Kind::Move:Kind::Copy;",
             "read(target)==\"existing-destination\"",
+            "read(taken)==\"original-source\"",
+            "(moving?!fs::exists(free):read(free)==\"remaining-source\")",
             "task.sources={free.native()};",
         ):
             self.assertIn(token, fixture)
