@@ -208,6 +208,33 @@ class FileOperationContracts(unittest.TestCase):
         ):
             self.assertIn(scenario, fixture)
 
+    def test_isolated_filesystem_collision_skip_uses_exact_readonly_recheck(self):
+        core = read("src/base/shell_transfer_core.cpp")
+        fixture = read("tests/winui/m22/m22_transfer_fixture.cpp")
+        host = core.split("Report executeIsolated(", 1)[1].split(
+            "int runIsolatedHelper(", 1
+        )[0]
+        self.assertIn("filesystemCollisionReported=true;", host)
+        self.assertIn("auto observed=validate(task);", host)
+        self.assertIn("result.collisions.swap(observed.collisions);", host)
+        self.assertIn("observed.queued==result.queued", host)
+        self.assertIn("task.collision==Collision::Reject", host)
+        self.assertIn("result.error==ERROR_ALREADY_EXISTS&&!result.aborted", host)
+        self.assertLess(host.index("::GetExitCodeProcess("),
+                        host.index("auto observed=validate(task);"))
+        # A wire collision flag must never become a filesystem path "".
+        self.assertIn("task.sourceMode!=SourceMode::Filesystem||", host)
+        self.assertNotIn("::DeleteFileW(", host)
+        self.assertNotIn("::MoveFileExW(", host)
+        for token in (
+            "--owned-isolated-collision",
+            "M22_ISOLATED_COLLISION_PATH=",
+            "M22_ISOLATED_SKIP_PRESERVES_COLLISION=",
+            "read(target)==\"existing-destination\"",
+            "task.sources={free.native()};",
+        ):
+            self.assertIn(token, fixture)
+
     def test_network_copy_move_are_isolated_while_recycle_stays_local_only(self):
         header = read("src/base/shell_transfer_core.h")
         body = read("src/base/shell_transfer_core.cpp")
