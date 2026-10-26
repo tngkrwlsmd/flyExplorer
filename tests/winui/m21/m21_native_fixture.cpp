@@ -64,6 +64,22 @@ int wmain(int argc,wchar_t**argv){
  req.name=L"CON.txt";
  chk(!filecommand::validLeaf(req.name)&&
    filecommand::execute(req).error==ERROR_INVALID_NAME,"deny_reserved_device");
+ // Keep Win32 console aliases and superscript COM/LPT aliases out of all
+ // file-mutating commands, including device stems followed by extensions.
+ bool deviceNamesRejected=true;
+ for(auto const* leaf:{
+      L"CONIN$",L"conout$",L"CONIN$.txt",L"CONOUT$.bak",
+      L"COM\u00B9",L"com\u00B2.log",L"LPT\u00B3.txt"}){
+  req.name=leaf;
+  deviceNamesRejected=deviceNamesRejected&&
+     !filecommand::validLeaf(req.name)&&
+     filecommand::execute(req).error==ERROR_INVALID_NAME;
+ }
+ chk(deviceNamesRejected,"deny_console_and_superscript_device_names");
+ chk(filecommand::validLeaf(L"COM10.txt")&&
+     filecommand::validLeaf(L"LPT10.txt")&&
+     filecommand::validLeaf(L"문서 ¹.txt"),
+     "allow_non_device_leaf_names");
  req.name=L"no/paths";
  chk(!filecommand::validLeaf(req.name)&&
    filecommand::execute(req).error==ERROR_INVALID_NAME,"deny_slash");
@@ -79,6 +95,12 @@ int wmain(int argc,wchar_t**argv){
  chk(filecommand::execute(req).error!=ERROR_SUCCESS&&
     std::filesystem::is_directory(dir/L"이름 변경")&&
     std::filesystem::is_directory(dir/L"대상 존재"),"rename_never_replaces_existing");
+ // Rejected device destination must not rename/delete the existing
+ // test-owned source directory.
+ req.source=(dir/L"이름 변경").native();req.name=L"lpt\u00B9";
+ chk(filecommand::execute(req).error==ERROR_INVALID_NAME&&
+     std::filesystem::is_directory(dir/L"이름 변경"),
+     "rename_denies_superscript_device_destination");
  req.source=(root/L"foreign-source").native();req.name=L"safe";
  chk(filecommand::execute(req).error==ERROR_INVALID_NAME,"rename_source_must_be_child");
  req.parent=L"shell:MyComputerFolder";
@@ -107,6 +129,14 @@ int wmain(int argc,wchar_t**argv){
  req.name=L"CON.txt";
  chk(filecommand::execute(req).error==ERROR_INVALID_NAME,
      "text_document_denies_reserved_device");
+ bool textDevicesRejected=true;
+ for(auto const* leaf:{L"CONIN$.txt",L"conout$.TXT",
+                       L"COM\u00B3.txt",L"lpt\u00B2.TXT"}){
+  req.name=leaf;
+  textDevicesRejected=textDevicesRejected&&
+     filecommand::execute(req).error==ERROR_INVALID_NAME;
+ }
+ chk(textDevicesRejected,"text_document_denies_console_device_names");
  req.parent=L"shell:MyComputerFolder";req.name=L"virtual.txt";
  chk(filecommand::execute(req).error!=ERROR_SUCCESS,
      "text_document_denies_virtual_parent");
