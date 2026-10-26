@@ -42,6 +42,36 @@ class FileCommandFeedbackContract(unittest.TestCase):
         ):
             self.assertIn(required,completion)
 
+    def test_file_command_stale_result_preserves_true_outcome(self):
+        source=(APP/"m21_commands.cpp").read_text(encoding="utf-8-sig")
+        completion=source.split("void MainWindow::OnFileCommandCompleted(",1)[1]
+        stale=completion.split("if(disposition==Disposition::StaleContext){",1)[1].split(
+            "if(disposition==Disposition::Failed){",1)[0]
+        self.assertIn("completion.result.error==ERROR_SUCCESS",stale)
+        self.assertIn("파일 작업이 완료됐지만 화면이 변경됐습니다.",stale)
+        self.assertIn("파일 작업에 실패했고 화면이 변경됐습니다.",stale)
+        self.assertIn("std::to_wstring(completion.result.error)",stale)
+        self.assertIn("rememberOrigin(notice);",stale)
+        self.assertIn("if(originActive)StatusText().Text(hstring(notice));",stale)
+        self.assertNotIn("QueuePidl(",stale)
+
+    def test_create_rename_success_survives_shell_refresh_in_origin_tab(self):
+        source=(APP/"m21_commands.cpp").read_text(encoding="utf-8-sig")
+        completion=source.split("void MainWindow::OnFileCommandCompleted(",1)[1]
+        success=completion.split("if(disposition!=Disposition::Succeeded)return;",1)[1]
+        self.assertIn("fileBar()->EndNameEdit();",success)
+        self.assertIn("const std::wstring message=",success)
+        for message in ("새 폴더를 만들었습니다.",
+                        "새 텍스트 문서를 만들었습니다.",
+                        "이름을 변경했습니다."):
+            self.assertIn(message,success)
+        self.assertIn("rememberOrigin(message);",success)
+        self.assertLess(success.index("rememberOrigin(message);"),
+                        success.index("if(originActive)StatusText().Text(hstring(message));"))
+        self.assertLess(success.index("rememberOrigin(message);"),
+                        success.index("QueuePidl(side,"))
+        self.assertIn("fxfile::shellnav::NavigationAction::Refresh",success)
+
     def test_native_create_rename_target_revealed_only_after_same_refresh(self):
         ui=(APP/"MainWindow.xaml.cpp").read_text(encoding="utf-8-sig")
         commands=(APP/"m21_commands.cpp").read_text(encoding="utf-8-sig")
