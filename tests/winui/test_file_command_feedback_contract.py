@@ -131,7 +131,9 @@ class TransferFeedbackContract(unittest.TestCase):
         body=(APP/"m22_transfers.cpp").read_text(encoding="utf-8-sig")
         dialog=body.split("winrt::fire_and_forget MainWindow::ConfirmCollision(",1)[1].split(
             "void MainWindow::OnTransferCompleted(",1)[0]
-        self.assertIn("co_await dialog.ShowAsync();",dialog)
+        self.assertIn("choice=co_await dialog.ShowAsync();",dialog)
+        self.assertIn("}catch(...){",dialog)
+        self.assertIn("ContentDialogResult choice=ContentDialogResult::None;",dialog)
         self.assertIn("mFileOperations.skipCollisions(",dialog)
         self.assertIn("co_return;",dialog)
         self.assertNotIn("\n  return;",dialog)
