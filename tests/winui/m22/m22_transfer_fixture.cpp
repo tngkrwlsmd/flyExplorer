@@ -91,7 +91,9 @@ int wmain(int count,wchar_t**args){
   const auto outcome=execute(request,progress);
   return outcome.error==ERROR_SUCCESS?0:23;
  }
- if(count==3&&std::wstring(args[1])==L"--owned-isolated-collision"){
+ if(count==3&&(std::wstring(args[1])==L"--owned-isolated-collision"||
+               std::wstring(args[1])==L"--owned-isolated-move-collision")){
+  const bool moving=std::wstring(args[1])==L"--owned-isolated-move-collision";
   // The driver must supply its unique disposable local directory.
   // No clipboard, Recycle Bin, user preferences or external locations.
   const fs::path root(args[2]);
@@ -115,7 +117,7 @@ int wmain(int count,wchar_t**args){
   if(!write(taken,"original-source")||!write(free,"remaining-source")||
      !write(target,"existing-destination"))return 41;
   Request task{};
-  task.kind=Kind::Copy;
+  task.kind=moving?Kind::Move:Kind::Copy;
   task.collision=Collision::Reject;
   task.sourceParent=left.native();
   task.destination=right.native();
@@ -128,8 +130,10 @@ int wmain(int count,wchar_t**args){
    rejected.collisions[0]==target.native()&&
    read(target)=="existing-destination"&&
    read(taken)=="original-source"&&
+   read(free)=="remaining-source"&&
    !fs::exists(right/free.filename());
-  std::printf("M22_ISOLATED_COLLISION_PATH=%s\n",
+  std::printf(moving?"M22_ISOLATED_MOVE_COLLISION_PATH=%s\n":
+                     "M22_ISOLATED_COLLISION_PATH=%s\n",
               collisionRecognized?"PASS":"FAIL");
   if(!collisionRecognized)return 42;
   // Simulate "skip existing": only the verified noncolliding source is
@@ -141,8 +145,10 @@ int wmain(int count,wchar_t**args){
    !succeeded.aborted&&succeeded.collisions.empty()&&
    read(target)=="existing-destination"&&
    read(right/free.filename())=="remaining-source"&&
-   read(taken)=="original-source";
-  std::printf("M22_ISOLATED_SKIP_PRESERVES_COLLISION=%s\n",
+   read(taken)=="original-source"&&
+   (moving?!fs::exists(free):read(free)=="remaining-source");
+  std::printf(moving?"M22_ISOLATED_MOVE_SKIP_PRESERVES_SOURCE=%s\n":
+                     "M22_ISOLATED_SKIP_PRESERVES_COLLISION=%s\n",
               skippedSafely?"PASS":"FAIL");
   return skippedSafely?0:43;
  }
