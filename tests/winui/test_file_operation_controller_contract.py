@@ -367,7 +367,7 @@ class FileOperationContracts(unittest.TestCase):
         )
         self.assertIn("BeginFileNameCommand(", constructor)
         self.assertNotIn("CreateDirectoryW", constructor)
-        self.assertIn("if(mFileOperations.busy())", command)
+        self.assertIn("if(mFileOperations.busy()||mFileOperations.pendingConfirmationToken())", command)
         self.assertIn(
             "const int side=ActiveWindowTab().model.activePane;",
             command,
