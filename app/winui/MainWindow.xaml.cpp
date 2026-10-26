@@ -53,16 +53,6 @@ namespace {
         return std::wstring(temp,length).find(L"columns-gui-owned-")!=
                std::wstring::npos;
     }
-    bool G01OwnedDeferToClosedEnabled() noexcept
-    {
-        // Experimental shutdown ordering only for the strictly owned G01
-        // fixture. Ordinary users retain the existing XAML close sequence.
-        if(!G01OwnedCloseTraceEnabled())return false;
-        wchar_t flag[8]{};
-        return ::GetEnvironmentVariableW(
-            L"FLY_G01_OWNED_DEFER_PREPARE",flag,8)==3 &&
-            std::wcscmp(flag,L"YES")==0;
-    }
     void TraceG01OwnedClose(char const* stage) noexcept
     {
         try{
@@ -227,9 +217,7 @@ namespace winrt::FlyExplorer::implementation
             Microsoft::UI::Windowing::AppWindow const&,
             Microsoft::UI::Windowing::AppWindowClosingEventArgs const&){
             TraceG01OwnedClose("APPWINDOW_CLOSING_ENTER");
-            if(G01OwnedDeferToClosedEnabled())
-                TraceG01OwnedClose("PREPARE_XAML_DEFERRED_TO_CLOSED");
-            else if(auto ui=nativeWeak.get())ui->PrepareXamlForClose();
+            if(auto ui=nativeWeak.get())ui->PrepareXamlForClose();
             TraceG01OwnedClose("APPWINDOW_CLOSING_EXIT");
         });
         Closed([nativeWeak](IInspectable const&,WindowEventArgs const&){
