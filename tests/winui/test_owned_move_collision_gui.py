@@ -245,13 +245,28 @@ def run(config="Debug"):
         wait_until(lambda: row(leftfiles, name) is not None,
                    "left pane did not refresh after first Move",
                    seconds=12, interval=.2)
-        item = row(leftfiles, name)
-        focus_owned(win, process.pid)
-        item.click_input()
-        item.iface_selection_item.Select()
-        wait_until(lambda: row(leftfiles, name).is_selected(),
-                   "remaining Move source did not select",
-                   seconds=7, interval=.15)
+
+        def select_remaining():
+            # The first Move queues a Shell folder refresh. A ListItem
+            # wrapper may be replaced between the first click and the next
+            # UIA inspection, so reacquire and reselect the owned row.
+            item = row(leftfiles, name)
+            if item is None:
+                return False
+            if item.is_selected():
+                return True
+            focus_owned(win, process.pid)
+            item.click_input()
+            fresh = row(leftfiles, name)
+            if fresh is None:
+                return False
+            fresh.iface_selection_item.Select()
+            check = row(leftfiles, name)
+            return check is not None and check.is_selected()
+
+        wait_until(select_remaining,
+                   "remaining Move source did not reselect after refresh",
+                   seconds=16, interval=.25)
         assert not clean_source.exists()
         assert source.read_bytes() == source_bytes
         assert move_button.is_enabled()
