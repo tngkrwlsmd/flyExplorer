@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "MainWindow.xaml.h"
+#include "../../src/base/name_edit_guard.h"
 #include <thread>
 #include <string>
 using namespace winrt;
@@ -118,12 +119,7 @@ void MainWindow::ExecuteFileCommand(fxfile::filecommand::Kind kind){
  if(side<0||side>1)return;
  const auto liveContext=FileOperationContext(side);
  auto const& editContext=mPendingNameEdit->context;
- if(liveContext.windowTabIdentity!=editContext.windowTabIdentity||
-    liveContext.side!=editContext.side||
-    liveContext.tab!=editContext.tab||
-    liveContext.route!=editContext.route||
-    liveContext.visibleFolder!=editContext.visibleFolder||
-    liveContext.visibleShellFolder!=editContext.visibleShellFolder){
+ if(!fxfile::nameedit::sameScope(editContext,liveContext)){
      mPendingNameEdit.reset();
      fileBar()->EndNameEdit();
      StatusText().Text(L"편집하는 동안 작업공간 또는 폴더가 변경됐습니다. 다시 선택하세요.");
@@ -174,8 +170,8 @@ void MainWindow::ExecuteFileCommand(fxfile::filecommand::Kind kind){
      }
      // Selection can change while the filename box holds keyboard focus.
      // Never rename an unrelated new selection using the old edit text.
-     if(mPendingNameEdit->source.empty()||
-        indexed->parsingName!=mPendingNameEdit->source){
+     if(!fxfile::nameedit::sameRenameSource(
+         mPendingNameEdit->source,indexed->parsingName)){
          mPendingNameEdit.reset();
          fileBar()->EndNameEdit();
          StatusText().Text(L"이름 변경 대상이 바뀌었습니다. 다시 선택해 주세요.");
