@@ -106,7 +106,11 @@ def run(config: str = "Debug") -> None:
                 )
                 if "flyExplorer" in item.window_text()
             ]
-            return candidates[0] if len(candidates) == 1 else None
+            # Desktop.windows yields a resolved UIAWrapper, while
+            # child_window is a WindowSpecification API. Re-bind the exact
+            # verified HWND before asking for its named child controls.
+            return (Desktop(backend="uia").window(handle=candidates[0].handle)
+                    if len(candidates) == 1 else None)
 
         view = wait_until(
             window, "one test-owned WinUI window missing",
