@@ -38,7 +38,22 @@ void MainWindow::BeginFileNameCommand(fxfile::filecommand::Kind kind){
  if(kind!=fxfile::filecommand::Kind::CreateFolder&&
     kind!=fxfile::filecommand::Kind::CreateTextFile&&
     kind!=fxfile::filecommand::Kind::RenameSelected)return;
+ // The toolbar is shared by all workspaces. Every new edit supersedes
+ // the previous edit anchor, even when validation rejects this request.
+ mPendingNameEdit.reset();
+ const int editSide=ActiveWindowTab().model.activePane;
+ if(editSide<0||editSide>1)return;
+ const auto editContext=FileOperationContext(editSide);
+ auto const& editPane=ActiveWindowTab().model.panes[editSide];
+ if(editContext.side!=editSide||editContext.visibleFolder.empty()||
+    editPane.active>=editPane.tabs.size()||
+    editPane.active>=editPane.pending.size()||
+    editPane.pending[editPane.active]){
+  StatusText().Text(L"폴더를 완전히 불러온 후 이름 작업을 시작하세요.");
+  return;
+ }
  std::wstring initial;
+ std::wstring renameSource;
  bool renameFolder=false;
  if(kind==fxfile::filecommand::Kind::CreateTextFile)
   initial=L"새 텍스트 문서.txt";
@@ -65,10 +80,12 @@ void MainWindow::BeginFileNameCommand(fxfile::filecommand::Kind kind){
    return;
   }
   renameFolder=indexed->isFolder();
+  renameSource=indexed->parsingName;
   try{initial=std::filesystem::path(
           indexed->parsingName).filename().wstring();}
   catch(...){initial=indexed->label;}
  }
+ mPendingNameEdit=PendingNameEdit{kind,editContext,std::move(renameSource)};
  fileBar()->BeginNameEdit(
      kind==fxfile::filecommand::Kind::CreateFolder?0:
      kind==fxfile::filecommand::Kind::CreateTextFile?2:1,
@@ -85,10 +102,32 @@ void MainWindow::ExecuteFileCommand(fxfile::filecommand::Kind kind){
      StatusText().Text(L"이전 파일 작업이 완료될 때까지 기다려 주세요.");
      return;
  }
+ // Enter must commit the edit that was opened, not an action for the
+ // workspace, pane or selection which happens to be active now.
+ if(!mPendingNameEdit||mPendingNameEdit->kind!=kind||
+    FileNameBox().Opacity()<0.5){
+     StatusText().Text(L"이름 편집을 다시 시작한 후 확정하세요.");
+     return;
+ }
  const int side=ActiveWindowTab().model.activePane;
+ if(side<0||side>1)return;
+ const auto liveContext=FileOperationContext(side);
+ auto const& editContext=mPendingNameEdit->context;
+ if(liveContext.windowTabIdentity!=editContext.windowTabIdentity||
+    liveContext.side!=editContext.side||
+    liveContext.tab!=editContext.tab||
+    liveContext.route!=editContext.route||
+    liveContext.visibleFolder!=editContext.visibleFolder||
+    liveContext.visibleShellFolder!=editContext.visibleShellFolder){
+     mPendingNameEdit.reset();
+     fileBar()->EndNameEdit();
+     StatusText().Text(L"편집하는 동안 작업공간 또는 폴더가 변경됐습니다. 다시 선택하세요.");
+     return;
+ }
  auto& pane=ActiveWindowTab().model.panes[static_cast<size_t>(side)];
  const size_t tab=pane.active;
- if(pane.pending[tab]||pane.filesystemPaths[tab].empty()){
+ if(tab>=pane.pending.size()||tab>=pane.filesystemPaths.size()||
+    pane.pending[tab]||pane.filesystemPaths[tab].empty()){
      StatusText().Text(L"파일 작업은 불러오기가 끝난 실제 폴더에서만 사용할 수 있습니다.");
      return;
  }
@@ -128,7 +167,16 @@ void MainWindow::ExecuteFileCommand(fxfile::filecommand::Kind kind){
          StatusText().Text(L"가상 Shell 항목은 이 파일 작업에서 변경할 수 없습니다.");
          return;
      }
-     request.source=indexed->parsingName;
+     // Selection can change while the filename box holds keyboard focus.
+     // Never rename an unrelated new selection using the old edit text.
+     if(mPendingNameEdit->source.empty()||
+        indexed->parsingName!=mPendingNameEdit->source){
+         mPendingNameEdit.reset();
+         fileBar()->EndNameEdit();
+         StatusText().Text(L"이름 변경 대상이 바뀌었습니다. 다시 선택해 주세요.");
+         return;
+     }
+     request.source=mPendingNameEdit->source;
  }
  auto dispatch=DispatcherQueue();
  FileOperationController::Post post=[dispatch](FileOperationController::UiTask task){
@@ -195,6 +243,7 @@ void MainWindow::OnFileCommandCompleted(
  // Reveal is only an outcome of an explicitly accepted success.
  if(disposition!=Disposition::Succeeded)return;
  fileBar()->EndNameEdit();
+ mPendingNameEdit.reset();
  const std::wstring message=
      completion.kind==fxfile::filecommand::Kind::CreateFolder?
      L"새 폴더를 만들었습니다.":
