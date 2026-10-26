@@ -42,8 +42,9 @@ class RenameSelectionContract(unittest.TestCase):
             self.assertIn(field,header)
         self.assertLess(header.index("struct PendingNameEdit final"),
                         header.index("using FileOperationController=fxfile::previewops::FileOperationController;"))
-        self.assertNotIn("FileOperationController::Context context{};",header.split(
-            "struct PendingNameEdit final",1)[1].split("};",1)[0])
+        self.assertNotRegex(header.split(
+            "struct PendingNameEdit final",1)[1].split("};",1)[0],
+            r"(?m)^\s+FileOperationController::Context context\{\};$")
         self.assertIn("mPendingNameEdit.reset();",begin)
         self.assertIn("const auto editContext=FileOperationContext(editSide);",begin)
         self.assertIn("renameSource=indexed->parsingName;",begin)
