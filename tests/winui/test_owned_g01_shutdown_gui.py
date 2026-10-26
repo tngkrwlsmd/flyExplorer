@@ -180,31 +180,53 @@ def run(config="Release", scenario="full"):
         scenario_ready = True
     finally:
         if proc.poll() is None:
-            assert hwnd is not None
+            # Failure of UIA before HWND discovery must never strand the
+            # exact test-owned flyExplorer process. A stale/reused HWND
+            # must never receive a close message for an unrelated window.
             current = wintypes.DWORD()
-            thread = USER32.GetWindowThreadProcessId(
-                hwnd, ctypes.byref(current))
-            assert thread and current.value == proc.pid
-            posted = bool(USER32.PostMessageW(hwnd, 0x0010, 0, 0))
+            owned_hwnd = bool(
+                hwnd and USER32.IsWindow(hwnd)
+                and USER32.GetWindowThreadProcessId(
+                    hwnd, ctypes.byref(current))
+                and current.value == proc.pid
+            )
+            posted = (
+                bool(USER32.PostMessageW(hwnd, 0x0010, 0, 0))
+                if owned_hwnd else False
+            )
             print("G01_OWNED_CLOSE_POSTED", posted, flush=True)
-            assert posted, "owned WM_CLOSE not posted"
-            start = time.monotonic()
-            for seconds in (.25, 1.0, 3.0, 7.0, 13.0):
-                remaining = seconds - (time.monotonic() - start)
-                if remaining > 0:
-                    try:
-                        proc.wait(timeout=remaining)
-                    except subprocess.TimeoutExpired:
-                        pass
-                if proc.poll() is not None:
-                    break
-                print("G01_OWNED_CLOSE_TIMELINE_MS", int(seconds * 1000),
-                      "HWND_ALIVE", bool(USER32.IsWindow(hwnd)),
+            if not owned_hwnd:
+                print("G01_OWNED_CLOSE_SKIPPED_INVALID_HWND=True",
                       flush=True)
+            if posted:
+                start = time.monotonic()
+                for seconds in (.25, 1.0, 3.0, 7.0, 13.0):
+                    remaining = seconds - (time.monotonic() - start)
+                    if remaining > 0:
+                        try:
+                            proc.wait(timeout=remaining)
+                        except subprocess.TimeoutExpired:
+                            pass
+                    if proc.poll() is not None:
+                        break
+                    print("G01_OWNED_CLOSE_TIMELINE_MS", int(seconds * 1000),
+                          "HWND_ALIVE", bool(USER32.IsWindow(hwnd)),
+                          flush=True)
             if proc.poll() is None:
                 timed_out = True
+                # Force-stop only the verified binary we just launched.
+                # This is emergency fixture cleanup, not normal-close PASS.
+                assert Path(psutil.Process(proc.pid).exe()).resolve() == (
+                    exe.resolve()
+                ), "G01 fixture PID no longer refers to owned binary"
                 proc.terminate()
-                proc.wait(timeout=5)
+                try:
+                    proc.wait(timeout=5)
+                except subprocess.TimeoutExpired:
+                    proc.kill()
+                    proc.wait(timeout=5)
+                print("G01_OWNED_PROCESS_CLEANED_AFTER_CLOSE_FAILURE=True",
+                      flush=True)
         assert proc.poll() is not None
         print("G01_OWNED_NATIVE_EXIT_HEX",
               hex(proc.returncode & 0xffffffff), flush=True)
