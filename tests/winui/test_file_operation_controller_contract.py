@@ -182,7 +182,18 @@ class FileOperationContracts(unittest.TestCase):
         # Only a newly selected real file row may activate its pane.
         self.assertIn("bool newlySelectedFile=false;", body)
         self.assertIn("for(auto const& candidate:args.AddedItems())", body)
-        self.assertIn("if(row&&row.Tag())newlySelectedFile=true;", body)
+        # Stale selected rows may still carry a valid Shell Tag.
+        # Current route/tab, workspace owner and actual ListView membership
+        # must be checked before activating the command pane.
+        for guard in (
+            "visible.visibleRoute!=pane.routeIds[pane.active]",
+            "visible.visibleTab!=pane.active",
+            "ActiveWindowTab().identity",
+            "if(!ownedPresentation)return;",
+            "if(!row||!row.Tag())continue;",
+            "view.Items().IndexOf(candidate,currentIndex)",
+        ):
+            self.assertIn(guard, body)
         self.assertIn("if(newlySelectedFile&&ActiveWindowTab().model.activePane!=side)", body)
         self.assertIn("ActivatePane(side);", body)
 
