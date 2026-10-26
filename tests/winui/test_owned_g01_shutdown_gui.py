@@ -53,6 +53,7 @@ PHASES = {
     "PREPARE_CLOSE_EXIT", "MAINWINDOW_DESTRUCTOR_ENTER",
     "MAINWINDOW_DESTRUCTOR_EXIT", "APP_DESTRUCTOR_ENTER",
     "APP_DESTRUCTOR_BODY_EXIT",
+    "PREPARE_XAML_DEFERRED_TO_CLOSED",
 }
 LEGACY = (
     "fxfile.conf", "fxfile-main.conf", "fxfile-toolbar.dat",
@@ -67,7 +68,7 @@ def check(condition, description, seconds=12):
 
 def run(config="Release", scenario="full"):
     assert config in ("Release", "Debug")
-    assert scenario in ("plain", "baseline", "tabs", "full")
+    assert scenario in ("plain", "deferred", "baseline", "tabs", "full")
     exe = app_exe(config)
     assert exe.is_file()
     root = APP.parents[1] / "logs" / "g01-close-focused"
@@ -85,10 +86,14 @@ def run(config="Release", scenario="full"):
         for name in LEGACY if (profile / name).is_file()
     }
     environment = {**os.environ, "FLY_G01_OWNED_CLOSE_TRACE": "YES"}
-    if scenario != "plain":
+    if scenario not in ("plain", "deferred"):
         environment["FLYEXPLORER_COLUMN_RESIZE_DIAGNOSTIC"] = "1"
     else:
         environment.pop("FLYEXPLORER_COLUMN_RESIZE_DIAGNOSTIC", None)
+    if scenario == "deferred":
+        environment["FLY_G01_OWNED_DEFER_PREPARE"] = "YES"
+    else:
+        environment.pop("FLY_G01_OWNED_DEFER_PREPARE", None)
     for key in ("APPDATA", "LOCALAPPDATA", "TEMP", "TMP"):
         target = owned / key.lower()
         target.mkdir()
