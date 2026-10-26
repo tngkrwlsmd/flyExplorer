@@ -76,7 +76,7 @@ class PendingTransferIdentityContract(unittest.TestCase):
         self.assertLess(recycle.index(check),
                         recycle.index("mFileOperations.confirmRecycle("))
         self.assertIn("decision==ContentDialogResult::Primary,token,", recycle)
-        self.assertIn("approved,token,FileOperationContext(", recycle)
+        self.assertIn("FileOperationContext(ActiveWindowTab().model.activePane)", recycle)
         self.assertIn("ConfirmRecycle(recycleCount,mFileOperations.pendingConfirmationToken());", ui)
 
     def test_collision_keep_both_and_skip_require_same_dialog_token(self):
