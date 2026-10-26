@@ -65,8 +65,9 @@ def check(condition, description, seconds=12):
     return wait_until(condition, description, seconds=seconds, interval=.2)
 
 
-def run(config="Release"):
+def run(config="Release", scenario="full"):
     assert config in ("Release", "Debug")
+    assert scenario in ("baseline", "tabs", "full")
     exe = app_exe(config)
     assert exe.is_file()
     root = APP.parents[1] / "logs" / "g01-close-focused"
@@ -150,26 +151,28 @@ def run(config="Release"):
                   column + " drag did not commit")
             print("G01_OWNED_COLUMN_DRAG_PASS", column, flush=True)
 
-        drag("LeftNameColumnResizeThumb", "LeftTypeSortButton", 40)
-        drag("LeftTypeColumnResizeThumb", "LeftSizeSortButton", 28)
-        drag("LeftSizeColumnResizeThumb", "LeftDateSortButton", 20)
-        before_return = element("LeftTypeSortButton").rectangle().left
-        win.set_focus()
-        assert foreground()
-        keyboard.send_keys("^t")
-        strip = element("WindowTabStrip")
-        def tabs():
-            return [
-                item for item in strip.descendants()
-                if item.element_info.control_type == "TabItem"
-                and item.element_info.process_id == proc.pid
-            ]
-        check(lambda: len(tabs()) == 2, "second owned WindowTab not created")
-        tabs()[0].click_input()
-        check(lambda: abs(element("LeftTypeSortButton").rectangle().left -
-                          before_return) <= 4,
-              "column width not retained on WindowTab return")
-        print("G01_OWNED_TWO_WINDOWTABS_AND_DRAGS=PASS", flush=True)
+        if scenario == "full":
+            drag("LeftNameColumnResizeThumb", "LeftTypeSortButton", 40)
+            drag("LeftTypeColumnResizeThumb", "LeftSizeSortButton", 28)
+            drag("LeftSizeColumnResizeThumb", "LeftDateSortButton", 20)
+        if scenario in ("tabs", "full"):
+            before_return = element("LeftTypeSortButton").rectangle().left
+            win.set_focus()
+            assert foreground()
+            keyboard.send_keys("^t")
+            strip = element("WindowTabStrip")
+            def tabs():
+                return [
+                    item for item in strip.descendants()
+                    if item.element_info.control_type == "TabItem"
+                    and item.element_info.process_id == proc.pid
+                ]
+            check(lambda: len(tabs()) == 2, "second owned WindowTab not created")
+            tabs()[0].click_input()
+            check(lambda: abs(element("LeftTypeSortButton").rectangle().left -
+                              before_return) <= 4,
+                  "column width not retained on WindowTab return")
+        print("G01_OWNED_SCENARIO_PREPARED", scenario, flush=True)
         scenario_ready = True
     finally:
         if proc.poll() is None:
@@ -231,4 +234,5 @@ def run(config="Release"):
 
 
 if __name__ == "__main__":
-    sys.exit(run(sys.argv[1] if len(sys.argv) > 1 else "Release"))
+    sys.exit(run(sys.argv[1] if len(sys.argv) > 1 else "Release",
+                 sys.argv[2] if len(sys.argv) > 2 else "full"))
