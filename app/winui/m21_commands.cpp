@@ -31,7 +31,7 @@ void MainWindow::OnRenameSelected(
  BeginFileNameCommand(fxfile::filecommand::Kind::RenameSelected);
 }
 void MainWindow::BeginFileNameCommand(fxfile::filecommand::Kind kind){
- if(mFileOperations.busy()){
+ if(mFileOperations.busy()||mFileOperations.pendingConfirmationToken()){
   StatusText().Text(L"이전 파일 작업이 완료될 때까지 기다려 주세요.");
   return;
  }
@@ -81,7 +81,7 @@ void MainWindow::BeginFileNameCommand(fxfile::filecommand::Kind kind){
       L" (Enter 확정, Esc 취소)"));
 }
 void MainWindow::ExecuteFileCommand(fxfile::filecommand::Kind kind){
- if(mFileOperations.busy()){
+ if(mFileOperations.busy()||mFileOperations.pendingConfirmationToken()){
      StatusText().Text(L"이전 파일 작업이 완료될 때까지 기다려 주세요.");
      return;
  }
