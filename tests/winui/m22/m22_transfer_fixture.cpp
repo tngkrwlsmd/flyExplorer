@@ -91,6 +91,61 @@ int wmain(int count,wchar_t**args){
   const auto outcome=execute(request,progress);
   return outcome.error==ERROR_SUCCESS?0:23;
  }
+ if(count==3&&std::wstring(args[1])==L"--owned-isolated-collision"){
+  // The driver must supply its unique disposable local directory.
+  // No clipboard, Recycle Bin, user preferences or external locations.
+  const fs::path root(args[2]);
+  if(!root.is_absolute()||root.filename().native().rfind(
+      L"m22-isolated-owned-",0)!=0||!fs::is_directory(root)||
+     fs::is_symlink(root))return 40;
+  const auto left=root/L"owned-input",right=root/L"owned-output";
+  fs::create_directory(left);
+  fs::create_directory(right);
+  auto write=[](fs::path const& p,char const* data){
+   std::ofstream file(p,std::ios::binary|std::ios::trunc);
+   file<<data;
+   return file.good();
+  };
+  auto read=[](fs::path const& p){
+   std::ifstream file(p,std::ios::binary);
+   return std::string(std::istreambuf_iterator<char>(file),{});
+  };
+  const auto taken=left/L"충돌.txt",free=left/L"나머지.txt";
+  const auto target=right/taken.filename();
+  if(!write(taken,"original-source")||!write(free,"remaining-source")||
+     !write(target,"existing-destination"))return 41;
+  Request task{};
+  task.kind=Kind::Copy;
+  task.collision=Collision::Reject;
+  task.sourceParent=left.native();
+  task.destination=right.native();
+  task.sources={taken.native(),free.native()};
+  Progress progress{};
+  const auto rejected=executeIsolated(task,progress);
+  const bool collisionRecognized=
+   rejected.error==ERROR_ALREADY_EXISTS&&!rejected.aborted&&
+   rejected.queued==2&&rejected.collisions.size()==1&&
+   rejected.collisions[0]==target.native()&&
+   read(target)=="existing-destination"&&
+   read(taken)=="original-source"&&
+   !fs::exists(right/free.filename());
+  std::printf("M22_ISOLATED_COLLISION_PATH=%s\n",
+              collisionRecognized?"PASS":"FAIL");
+  if(!collisionRecognized)return 42;
+  // Simulate "skip existing": only the verified noncolliding source is
+  // sent back to the helper, which independently validates again.
+  task.sources={free.native()};
+  Progress retryProgress{};
+  const auto succeeded=executeIsolated(task,retryProgress);
+  const bool skippedSafely=succeeded.error==ERROR_SUCCESS&&
+   !succeeded.aborted&&succeeded.collisions.empty()&&
+   read(target)=="existing-destination"&&
+   read(right/free.filename())=="remaining-source"&&
+   read(taken)=="original-source";
+  std::printf("M22_ISOLATED_SKIP_PRESERVES_COLLISION=%s\n",
+              skippedSafely?"PASS":"FAIL");
+  return skippedSafely?0:43;
+ }
  if(count!=2&&count!=3)return 2;
  const fs::path root(args[1]),left=root/L"왼쪽",right=root/L"오른쪽";
  fs::create_directory(left);fs::create_directory(right);
