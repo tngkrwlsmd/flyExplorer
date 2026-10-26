@@ -11,10 +11,17 @@ bool validLeaf(std::wstring const& name) noexcept{
      ch==L'"'||ch==L'<'||ch==L'>'||ch==L'|')return false;
  std::wstring stem=name.substr(0,name.find(L'.'));
  for(auto& ch:stem)ch=static_cast<wchar_t>(std::towupper(ch));
- if(stem==L"CON"||stem==L"PRN"||stem==L"AUX"||stem==L"NUL")return false;
+ // These names address Win32 devices, not ordinary directory entries.
+ // Keep the check on the stem: an extension does not make a device safe.
+ if(stem==L"CON"||stem==L"PRN"||stem==L"AUX"||stem==L"NUL"||
+    stem==L"CONIN$"||stem==L"CONOUT$")return false;
  if(stem.size()==4&&((stem.substr(0,3)==L"COM")||
-                      (stem.substr(0,3)==L"LPT"))&&
-    stem[3]>=L'1'&&stem[3]<=L'9')return false;
+                      (stem.substr(0,3)==L"LPT"))){
+  const wchar_t digit=stem[3];
+  if((digit>=L'1'&&digit<=L'9')||
+     digit==L'\u00B9'||digit==L'\u00B2'||digit==L'\u00B3')
+   return false;
+ }
  return true;
 }
 bool validTextDocumentLeaf(std::wstring const& name) noexcept{
