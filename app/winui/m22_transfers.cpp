@@ -789,6 +789,13 @@ void MainWindow::ApplyTransferStartStatus(
  }
 }
 void MainWindow::StartTransfer(fxfile::shelltransfer::Request request){
+ // A pending confirmation must not be displaced by another transfer on the
+ // same visible route while its ContentDialog is awaiting a user decision.
+ if(mClosing)return;
+ if(mFileOperations.pendingConfirmationToken()){
+  StatusText().Text(L"현재 파일 작업 확인창을 완료하거나 취소한 후 다시 시도하세요.");
+  return;
+ }
  ActiveWindowTab().fileOperationNotice.clear();
  const auto side=ActiveWindowTab().model.activePane;
  const auto count=request.sources.size();
@@ -804,23 +811,31 @@ void MainWindow::StartTransfer(fxfile::shelltransfer::Request request){
 winrt::fire_and_forget MainWindow::ConfirmRecycle(
  std::size_t count,std::uint64_t token){
  const auto keep=get_strong();
- ContentDialog dialog;
- dialog.XamlRoot(RootShell().XamlRoot());
- dialog.Title(winrt::box_value(hstring(L"휴지통으로 보내기")));
- dialog.Content(winrt::box_value(hstring(
-     L"선택한 항목 "+std::to_wstring(count)+
-     L"개를 Windows 휴지통으로 이동할까요? 삭제할 항목을 확인하세요. "
-     L"휴지통을 사용할 수 없으면 영구 삭제로 전환하지 않고 작업을 중단합니다.")));
- dialog.PrimaryButtonText(L"휴지통으로 보내기");
- dialog.CloseButtonText(L"취소");
- dialog.DefaultButton(ContentDialogButton::Close);
- const bool approved=co_await dialog.ShowAsync()==ContentDialogResult::Primary;
- // An older dialog can finish after a newer request in the same folder.
- // Never apply its choice to a different pending operation.
- if(!token||mFileOperations.pendingConfirmationToken()!=token)co_return;
+ if(mClosing||!token||mFileOperations.pendingConfirmationToken()!=token)
+  co_return;
+ // ContentDialog may reject ShowAsync when a different modal is already
+ // visible. In that case fail closed as if the user chose Cancel.
+ ContentDialogResult decision=ContentDialogResult::None;
+ try{
+  ContentDialog dialog;
+  dialog.XamlRoot(RootShell().XamlRoot());
+  dialog.Title(winrt::box_value(hstring(L"휴지통으로 보내기")));
+  dialog.Content(winrt::box_value(hstring(
+      L"선택한 항목 "+std::to_wstring(count)+
+      L"개를 Windows 휴지통으로 이동할까요? 삭제할 항목을 확인하세요. "
+      L"휴지통을 사용할 수 없으면 영구 삭제로 전환하지 않고 작업을 중단합니다.")));
+  dialog.PrimaryButtonText(L"휴지통으로 보내기");
+  dialog.CloseButtonText(L"취소");
+  dialog.DefaultButton(ContentDialogButton::Close);
+  decision=co_await dialog.ShowAsync();
+ }catch(...){
+  // No dialog response can authorize a Recycle operation.
+ }
+ if(mClosing||mFileOperations.pendingConfirmationToken()!=token)co_return;
  auto weak=get_weak();
  const auto status=mFileOperations.confirmRecycle(
-  approved,token,FileOperationContext(ActiveWindowTab().model.activePane),
+  decision==ContentDialogResult::Primary,token,
+  FileOperationContext(ActiveWindowTab().model.activePane),
   operationPost(DispatcherQueue()),
   [weak](FileOperationController::TransferCompletion completion){
    if(auto ui=weak.get())ui->OnTransferCompleted(std::move(completion));
@@ -831,27 +846,33 @@ winrt::fire_and_forget MainWindow::ConfirmCollision(
  std::size_t requested,std::size_t collided,bool allowSkip,
  std::size_t previouslySkipped,std::uint64_t token){
  const auto keep=get_strong();
- ContentDialog dialog;
- dialog.XamlRoot(RootShell().XamlRoot());
- dialog.Title(winrt::box_value(hstring(L"동일한 이름이 이미 존재합니다")));
- std::wstring message=L"현재 남은 "+std::to_wstring(requested)+
-    L"개 항목 중 "+std::to_wstring(collided)+
-    L"개 이름이 대상 폴더와 충돌합니다. 기존 파일은 덮어쓰지 않습니다. "
-    L"이름을 바꿔 둘 다 유지하거나 작업을 취소할 수 있습니다.";
- if(previouslySkipped)
-  message+=L" 이전 확인에서 충돌 "+std::to_wstring(previouslySkipped)+
-           L"개는 이미 건너뛰었습니다.";
- if(allowSkip)
-  message+=L" 충돌한 항목만 건너뛰고 나머지를 처리할 수도 있습니다. "
-           L"작업 전 확인 결과이므로 아직 파일을 변경하지 않았습니다.";
- dialog.Content(winrt::box_value(hstring(message)));
- dialog.PrimaryButtonText(L"이름 바꿔 둘 다 유지");
- if(allowSkip)dialog.SecondaryButtonText(L"충돌 항목 건너뛰기");
- dialog.CloseButtonText(L"취소");
- dialog.DefaultButton(ContentDialogButton::Close);
- const auto choice=co_await dialog.ShowAsync();
- // A superseded confirmation has no authority over a newer transfer.
- if(!token||mFileOperations.pendingConfirmationToken()!=token)co_return;
+ if(mClosing||!token||mFileOperations.pendingConfirmationToken()!=token)
+  co_return;
+ ContentDialogResult choice=ContentDialogResult::None;
+ try{
+  ContentDialog dialog;
+  dialog.XamlRoot(RootShell().XamlRoot());
+  dialog.Title(winrt::box_value(hstring(L"동일한 이름이 이미 존재합니다")));
+  std::wstring message=L"현재 남은 "+std::to_wstring(requested)+
+     L"개 항목 중 "+std::to_wstring(collided)+
+     L"개 이름이 대상 폴더와 충돌합니다. 기존 파일은 덮어쓰지 않습니다. "
+     L"이름을 바꿔 둘 다 유지하거나 작업을 취소할 수 있습니다.";
+  if(previouslySkipped)
+   message+=L" 이전 확인에서 충돌 "+std::to_wstring(previouslySkipped)+
+            L"개는 이미 건너뛰었습니다.";
+  if(allowSkip)
+   message+=L" 충돌한 항목만 건너뛰고 나머지를 처리할 수도 있습니다. "
+            L"작업 전 확인 결과이므로 아직 파일을 변경하지 않았습니다.";
+  dialog.Content(winrt::box_value(hstring(message)));
+  dialog.PrimaryButtonText(L"이름 바꿔 둘 다 유지");
+  if(allowSkip)dialog.SecondaryButtonText(L"충돌 항목 건너뛰기");
+  dialog.CloseButtonText(L"취소");
+  dialog.DefaultButton(ContentDialogButton::Close);
+  choice=co_await dialog.ShowAsync();
+ }catch(...){
+  // No Shell mutation or skip decision is permitted without an answer.
+ }
+ if(mClosing||mFileOperations.pendingConfirmationToken()!=token)co_return;
  auto weak=get_weak();
  const auto context=FileOperationContext(ActiveWindowTab().model.activePane);
  const auto post=operationPost(DispatcherQueue());
