@@ -1139,6 +1139,7 @@ Report executeIsolated(Request const& task,Progress& progress) noexcept{
   bool cancelSignaled=false;
   ULONGLONG cancelStarted=0;
   bool completed=false;
+  bool filesystemCollisionReported=false;
   for(;;){
    if(progress.cancel.load(std::memory_order_relaxed)&&!cancelSignaled){
     ::SetEvent(cancelEvent.value);
@@ -1189,7 +1190,16 @@ Report executeIsolated(Request const& task,Progress& progress) noexcept{
       ::WaitForSingleObject(process.value,kTransferExitGraceMs);
       return result;
      }
-     if(frame.flags&kTransferFlagCollision)result.collisions.emplace_back();
+     if(frame.flags&kTransferFlagCollision){
+      // The v3 helper wire carries only a collision flag, not file paths.
+      // Preserve the non-filesystem KeepBoth confirmation; its dialog
+      // never offers the filesystem-only "skip existing" action.
+      if(task.sourceMode!=SourceMode::Filesystem||
+         task.destinationMode!=DestinationMode::Filesystem)
+       result.collisions.emplace_back();
+      else
+       filesystemCollisionReported=true;
+     }
      completed=true;
      break;
     }else{
@@ -1222,6 +1232,18 @@ Report executeIsolated(Request const& task,Progress& progress) noexcept{
   if(!::GetExitCodeProcess(process.value,&exitCode)||exitCode!=0){
    if(result.error==ERROR_SUCCESS)result.error=ERROR_GEN_FAILURE;
    return result;
+  }
+  if(filesystemCollisionReported&&
+     result.error==ERROR_ALREADY_EXISTS&&!result.aborted&&
+     task.collision==Collision::Reject){
+   // The helper rejected its read-only preflight before any mutation.
+   // Recheck the exact original paths locally rather than constructing an
+   // empty collision name. A changed/invalid directory fails closed, and
+   // the eventual reduced request gets another helper-side preflight.
+   auto observed=validate(task);
+   if(observed.error==ERROR_ALREADY_EXISTS&&
+      observed.queued==result.queued&&!observed.collisions.empty())
+    result.collisions.swap(observed.collisions);
   }
   if(result.error==ERROR_SUCCESS)
    progress.percent.store(100,std::memory_order_relaxed);
