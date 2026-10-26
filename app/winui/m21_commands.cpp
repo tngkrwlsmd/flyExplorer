@@ -43,12 +43,17 @@ void MainWindow::BeginFileNameCommand(fxfile::filecommand::Kind kind){
  mPendingNameEdit.reset();
  const int editSide=ActiveWindowTab().model.activePane;
  if(editSide<0||editSide>1)return;
- const auto editContext=FileOperationContext(editSide);
  auto const& editPane=ActiveWindowTab().model.panes[editSide];
- if(editContext.side!=editSide||editContext.visibleFolder.empty()||
-    editPane.active>=editPane.tabs.size()||
+ if(editPane.active>=editPane.tabs.size()||
     editPane.active>=editPane.pending.size()||
-    editPane.pending[editPane.active]){
+    editPane.active>=editPane.filesystemPaths.size()||
+    editPane.pending[editPane.active]||
+    editPane.filesystemPaths[editPane.active].empty()){
+  StatusText().Text(L"폴더를 완전히 불러온 후 이름 작업을 시작하세요.");
+  return;
+ }
+ const auto editContext=FileOperationContext(editSide);
+ if(editContext.side!=editSide||editContext.visibleFolder.empty()){
   StatusText().Text(L"폴더를 완전히 불러온 후 이름 작업을 시작하세요.");
   return;
  }
