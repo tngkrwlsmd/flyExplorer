@@ -233,7 +233,7 @@ namespace winrt::FlyExplorer::implementation
         // in-progress edit to whatever is selected when Enter is pressed.
         struct PendingNameEdit final {
             fxfile::filecommand::Kind kind;
-            FileOperationController::Context context{};
+            fxfile::previewops::FileOperationController::Context context{};
             std::wstring source{};
         };
         std::optional<PendingNameEdit> mPendingNameEdit{};
