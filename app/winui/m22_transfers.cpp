@@ -753,6 +753,9 @@ void MainWindow::ApplyTransferStartStatus(
  FileOperationController::StartStatus status,std::size_t recycleCount){
  using Start=FileOperationController::StartStatus;
  if(status==Start::Started){
+  // Do not erase a previous failure when a request is rejected or its
+  // confirmation is still pending. Clear only for an actual launch.
+  ActiveWindowTab().fileOperationNotice.clear();
   SetFileButtonsBusy(true,true);
   StatusText().Text(L"Windows Shell에서 파일 작업을 처리하고 있습니다...");
   auto progress=mFileOperations.progress();
@@ -796,7 +799,6 @@ void MainWindow::StartTransfer(fxfile::shelltransfer::Request request){
   StatusText().Text(L"현재 파일 작업 확인창을 완료하거나 취소한 후 다시 시도하세요.");
   return;
  }
- ActiveWindowTab().fileOperationNotice.clear();
  const auto side=ActiveWindowTab().model.activePane;
  const auto count=request.sources.size();
  auto weak=get_weak();
@@ -957,8 +959,20 @@ void MainWindow::OnTransferCompleted(
  }
  }
  if(disposition==Disposition::StaleContext){
-  const std::wstring notice=
-      L"파일 작업 종료: 화면이 변경됐습니다. 원본·대상 폴더를 확인하세요.";
+  // The originating tab or route is no longer active. The controller
+  // deliberately rejects further UI decisions, but the worker's result
+  // remains available: preserve it in that workspace without navigating
+  // or writing another workspace's status bar.
+  const bool succeeded=completion.report.error==ERROR_SUCCESS&&
+                       !completion.report.aborted;
+  std::wstring notice=succeeded?
+      L"파일 작업이 완료됐지만 화면이 변경됐습니다. 원본·대상 폴더를 확인하세요.":
+      L"파일 작업이 실패하거나 취소됐고 화면이 변경됐습니다. "
+      L"일부 항목이 처리됐을 수 있습니다. 원본·대상을 확인하세요. 오류: "+
+      std::to_wstring(completion.report.error);
+  if(completion.skippedCollisions)
+   notice+=L" 충돌 "+std::to_wstring(completion.skippedCollisions)+
+           L"개는 건너뛰었습니다.";
   rememberOrigin(notice);
   if(originActive)StatusText().Text(hstring(notice));
   return;
@@ -997,6 +1011,9 @@ void MainWindow::OnTransferCompleted(
  if(completion.skippedCollisions)
   message+=L" 충돌 "+std::to_wstring(completion.skippedCollisions)+
            L"개는 건너뛰고 기존 항목을 유지했습니다.";
+ // Retain accepted success across a Shell Refresh, just as failures are
+ // retained, and display it only in the originating workspace.
+ rememberOrigin(message);
  if(originActive)StatusText().Text(hstring(message));
 
 
