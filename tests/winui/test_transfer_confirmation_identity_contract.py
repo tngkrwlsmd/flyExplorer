@@ -66,13 +66,16 @@ class PendingTransferIdentityContract(unittest.TestCase):
         recycle = section(ui, "winrt::fire_and_forget MainWindow::ConfirmRecycle(",
                           "winrt::fire_and_forget MainWindow::ConfirmCollision(")
         self.assertIn("std::size_t count,std::uint64_t token", recycle)
-        self.assertIn("co_await dialog.ShowAsync()", recycle)
-        check = "if(!token||mFileOperations.pendingConfirmationToken()!=token)co_return;"
+        self.assertIn("decision=co_await dialog.ShowAsync();", recycle)
+        self.assertIn("}catch(...){", recycle)
+        self.assertIn("ContentDialogResult decision=ContentDialogResult::None;", recycle)
+        check = "if(mClosing||mFileOperations.pendingConfirmationToken()!=token)co_return;"
         self.assertIn(check, recycle)
-        self.assertLess(recycle.index("co_await dialog.ShowAsync()"),
+        self.assertLess(recycle.index("decision=co_await dialog.ShowAsync();"),
                         recycle.index(check))
         self.assertLess(recycle.index(check),
                         recycle.index("mFileOperations.confirmRecycle("))
+        self.assertIn("decision==ContentDialogResult::Primary,token,", recycle)
         self.assertIn("approved,token,FileOperationContext(", recycle)
         self.assertIn("ConfirmRecycle(recycleCount,mFileOperations.pendingConfirmationToken());", ui)
 
@@ -80,10 +83,13 @@ class PendingTransferIdentityContract(unittest.TestCase):
         ui = source("m22_transfers.cpp")
         collision = section(ui, "winrt::fire_and_forget MainWindow::ConfirmCollision(",
                             "void MainWindow::OnTransferCompleted(")
-        check = "if(!token||mFileOperations.pendingConfirmationToken()!=token)co_return;"
+        check = "if(mClosing||mFileOperations.pendingConfirmationToken()!=token)co_return;"
         self.assertIn("std::size_t previouslySkipped,std::uint64_t token", collision)
+        self.assertIn("choice=co_await dialog.ShowAsync();", collision)
+        self.assertIn("ContentDialogResult choice=ContentDialogResult::None;", collision)
+        self.assertIn("}catch(...){", collision)
         self.assertIn(check, collision)
-        self.assertLess(collision.index("co_await dialog.ShowAsync()"),
+        self.assertLess(collision.index("choice=co_await dialog.ShowAsync();"),
                         collision.index(check))
         self.assertLess(collision.index(check),
                         collision.index("mFileOperations.skipCollisions("))
@@ -106,6 +112,37 @@ class PendingTransferIdentityContract(unittest.TestCase):
         command = section(body, "FileOperationController::StartStatus FileOperationController::startFileCommand(",
                           "FileOperationController::CommandDisposition\nFileOperationController::acceptFileCommand(")
         self.assertIn("state_->pending.reset();", command)
+
+    def test_pending_dialog_blocks_new_file_mutations_without_consume(self):
+        ui = source("m22_transfers.cpp")
+        command = source("m21_commands.cpp")
+        start = section(ui, "void MainWindow::StartTransfer(",
+                        "winrt::fire_and_forget MainWindow::ConfirmRecycle(")
+        self.assertIn("if(mClosing)return;", start)
+        self.assertIn("if(mFileOperations.pendingConfirmationToken()){", start)
+        self.assertLess(start.index("if(mFileOperations.pendingConfirmationToken()){"),
+                        start.index("mFileOperations.requestTransfer("))
+        self.assertEqual(2, command.count(
+            "if(mFileOperations.busy()||mFileOperations.pendingConfirmationToken()){"))
+        self.assertNotIn("mFileOperations.confirmRecycle(", start)
+        self.assertNotIn("mFileOperations.confirmCollision(", start)
+
+    def test_modal_show_failure_defaults_to_cancellation(self):
+        ui = source("m22_transfers.cpp")
+        dialogs = section(ui, "winrt::fire_and_forget MainWindow::ConfirmRecycle(",
+                          "void MainWindow::OnTransferCompleted(")
+        recycle, collision = dialogs.split(
+            "winrt::fire_and_forget MainWindow::ConfirmCollision(", 1)
+        for body, assignment in (
+            (recycle, "decision=co_await dialog.ShowAsync();"),
+            (collision, "choice=co_await dialog.ShowAsync();"),
+        ):
+            self.assertLess(body.index("try{"), body.index(assignment))
+            self.assertLess(body.index(assignment), body.index("}catch(...){"))
+            self.assertIn("ContentDialogResult::None", body)
+            self.assertIn("if(mClosing||mFileOperations.pendingConfirmationToken()!=token)co_return;", body)
+        self.assertIn("decision==ContentDialogResult::Primary,token,", recycle)
+        self.assertIn("choice==ContentDialogResult::Primary,token,", collision)
 
     def test_no_native_mutation_is_performed_by_pending_ui_decisions(self):
         body = source("m22_transfers.cpp")
