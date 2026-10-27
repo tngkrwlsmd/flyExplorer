@@ -20,7 +20,19 @@ NavigationSidebar::NavigationSidebar(){
  InitializeComponent();
  LoadKnownFolderArtwork();
 }
+void NavigationSidebar::PrepareForClose() noexcept{
+ if(mClosing)return;
+ mClosing=true;
+ if(mTreeCancel)mTreeCancel->store(true);
+ ++mTreeGeneration;
+ mTreePending=false;
+ // Drop callbacks into MainWindow before XAML/window ownership is released.
+ mHandler={};
+ mTreeCurrent={};
+ mTreeNavigate={};
+}
 void NavigationSidebar::SetNavigateCallback(std::function<void(int)> handler){
+ if(mClosing)return;
  mHandler=std::move(handler);
 }
 void NavigationSidebar::LoadKnownFolderArtwork(){
@@ -37,7 +49,7 @@ void NavigationSidebar::LoadKnownFolderArtwork(){
               L"pictures",L"music",L"videos"},2500,16);
   if(visuals.empty())return;
   queue.TryEnqueue([weak,visuals=std::move(visuals)]() mutable {
-   if(auto self=weak.get()){
+   if(auto self=weak.get();self&&!self->mClosing){
     for(auto const& [key,visual]:visuals)
      if(!visual.bgra.empty())
       self->ApplyKnownFolderArtwork(
@@ -49,7 +61,7 @@ void NavigationSidebar::LoadKnownFolderArtwork(){
 void NavigationSidebar::ApplyKnownFolderArtwork(
  std::wstring const& key,std::vector<unsigned char> const& bgra,
  std::uint32_t width,std::uint32_t height){
- if(width!=16||height!=16||bgra.size()!=16u*16u*4u)return;
+ if(mClosing||width!=16||height!=16||bgra.size()!=16u*16u*4u)return;
  Image image{nullptr};
  FontIcon fallback{nullptr};
  if(key==L"desktop"){image=DesktopArtwork();fallback=DesktopFallbackIcon();}
@@ -76,6 +88,7 @@ void NavigationSidebar::ApplyKnownFolderArtwork(
  }catch(...){}
 }
 void NavigationSidebar::SetSelected(int target){
+ if(mClosing)return;
  Button buttons[]={HomeButton(),DocumentsButton(),DownloadsButton(),ThisPCButton(),
                    DesktopButton(),PicturesButton(),MusicButton(),VideosButton()};
  Microsoft::UI::Xaml::Media::Brush accent{nullptr};
@@ -91,45 +104,54 @@ void NavigationSidebar::SetSelected(int target){
  }
 }
 void NavigationSidebar::OnHomeClicked(IInspectable const&,RoutedEventArgs const&){
+ if(mClosing)return;
  SetSelected(0);
  if(mHandler)mHandler(0);
 }
 void NavigationSidebar::OnDocumentsClicked(IInspectable const&,RoutedEventArgs const&){
+ if(mClosing)return;
  SetSelected(1);
  if(mHandler)mHandler(1);
 }
 void NavigationSidebar::OnDownloadsClicked(IInspectable const&,RoutedEventArgs const&){
+ if(mClosing)return;
  SetSelected(2);
  if(mHandler)mHandler(2);
 }
 void NavigationSidebar::OnThisPCClicked(IInspectable const&,RoutedEventArgs const&){
+ if(mClosing)return;
  SetSelected(3);
  if(mHandler)mHandler(3);
 }
 void NavigationSidebar::OnDesktopClicked(IInspectable const&,RoutedEventArgs const&){
+ if(mClosing)return;
  SetSelected(4);
  if(mHandler)mHandler(4);
 }
 void NavigationSidebar::OnPicturesClicked(IInspectable const&,RoutedEventArgs const&){
+ if(mClosing)return;
  SetSelected(5);
  if(mHandler)mHandler(5);
 }
 void NavigationSidebar::OnMusicClicked(IInspectable const&,RoutedEventArgs const&){
+ if(mClosing)return;
  SetSelected(6);
  if(mHandler)mHandler(6);
 }
 void NavigationSidebar::OnVideosClicked(IInspectable const&,RoutedEventArgs const&){
+ if(mClosing)return;
  SetSelected(7);
  if(mHandler)mHandler(7);
 }
 void NavigationSidebar::SetTreeCallbacks(
  std::function<TreeContext()> current,
  std::function<void(std::wstring const&)> navigate){
+ if(mClosing)return;
  mTreeCurrent=std::move(current);
  mTreeNavigate=std::move(navigate);
 }
 bool NavigationSidebar::IsCurrentTreeOwner() const {
- if(!mTreeVisible||!mTreeCurrent)return false;
+ if(mClosing||!mTreeVisible||!mTreeCurrent)return false;
  auto next=mTreeCurrent();
  return next.side==mTreeOwner.side && next.tab==mTreeOwner.tab &&
         next.route!=0 && next.route==mTreeOwner.route &&
@@ -149,6 +171,7 @@ void NavigationSidebar::ResetTree(){
  FolderTreeStatus().Text(L"");
 }
 void NavigationSidebar::SyncTreeContext(){
+ if(mClosing)return;
  if(!mTreeVisible||!mTreeCurrent)return;
  auto next=mTreeCurrent();
  if(next.side==mTreeOwner.side&&next.tab==mTreeOwner.tab&&
@@ -173,6 +196,7 @@ void NavigationSidebar::SyncTreeContext(){
 }
 void NavigationSidebar::OnFolderTreeToggleClicked(
  IInspectable const&,RoutedEventArgs const&){
+ if(mClosing)return;
  mTreeVisible=!mTreeVisible;
  FolderTreePanel().Visibility(mTreeVisible?Visibility::Visible:Visibility::Collapsed);
  FolderTreeToggle().Content(winrt::box_value(
@@ -183,7 +207,7 @@ void NavigationSidebar::OnFolderTreeToggleClicked(
  if(mTreeVisible)SyncTreeContext();
 }
 void NavigationSidebar::BeginTreeLoad(TreeViewNode const& node){
- if(!IsCurrentTreeOwner()||!node||!node.HasUnrealizedChildren()||
+ if(mClosing||!IsCurrentTreeOwner()||!node||!node.HasUnrealizedChildren()||
     mTreePending||mTreeBusy->load())return;
  auto path=TreePath(node);
  if(!fxfile::foldertree::normalizedDrivePath(path))return;
@@ -203,7 +227,7 @@ void NavigationSidebar::BeginTreeLoad(TreeViewNode const& node){
   busy->store(false);
   queue.TryEnqueue([path=std::move(path),request,cancel,weak,
                     result=std::move(result)]() mutable {
-   if(auto self=weak.get()){
+   if(auto self=weak.get();self&&!self->mClosing){
     if(request.generation!=self->mTreeGeneration ||
        cancel->load() || !self->IsCurrentTreeOwner()){
       // Another expanded node may have been waiting for the one worker.
@@ -246,10 +270,12 @@ void NavigationSidebar::BeginTreeLoad(TreeViewNode const& node){
 }
 void NavigationSidebar::OnTreeExpanding(
  TreeView const&,TreeViewExpandingEventArgs const& args){
+ if(mClosing)return;
  BeginTreeLoad(args.Node());
 }
 void NavigationSidebar::OnTreeCollapsed(
  TreeView const&,TreeViewCollapsedEventArgs const& args){
+ if(mClosing)return;
  auto node=args.Node();
  auto path=TreePath(node);
  if(path.empty())return;
@@ -267,6 +293,7 @@ void NavigationSidebar::OnTreeCollapsed(
 }
 void NavigationSidebar::OnTreeSelectionChanged(
  TreeView const& sender,TreeViewSelectionChangedEventArgs const&){
+ if(mClosing)return;
  // Diagnostic stages contain no folder names or paths and are available
  // only in the explicit owned GUI fixture, not in a normal user session.
  wchar_t diagnosticFlag[8]{};
