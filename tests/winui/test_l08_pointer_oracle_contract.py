@@ -11,6 +11,10 @@ HARNESS = (ROOT / "tests/winui/test_owned_column_resize_gui.py").read_text(
     encoding="utf-8")
 PRODUCT = (ROOT / "app/winui/DetailColumnHandle.cpp").read_text(
     encoding="utf-8")
+WINDOW = (ROOT / "app/winui/MainWindow.xaml.cpp").read_text(
+    encoding="utf-8")
+WINDOW_HEADER = (ROOT / "app/winui/MainWindow.xaml.h").read_text(
+    encoding="utf-8")
 
 
 class L08PointerOracleContract(unittest.TestCase):
@@ -109,6 +113,20 @@ class L08PointerOracleContract(unittest.TestCase):
             HARNESS.index("for approach_x in (x-12,x-6,x):"),
         )
         self.assertIn('assert observed=="sizewe"', HARNESS)
+
+    def test_root_pointer_move_diagnostic_is_opt_in_and_correlated(self):
+        # A missing thumb PointerEntered alone cannot classify WinUI input.
+        # The unchanged native cursor oracle must remain a separate gate.
+        self.assertIn("mL08RootPointerMoves=0;", WINDOW_HEADER)
+        self.assertIn('UIElement::PointerMovedEvent()', WINDOW)
+        self.assertIn('L"FLYEXPLORER_COLUMN_RESIZE_DIAGNOSTIC"', WINDOW)
+        self.assertIn('if(mL08RootPointerMoves<99999)', WINDOW)
+        self.assertIn('L" rootMove="+std::to_wstring(ui->mL08RootPointerMoves)', WINDOW)
+        self.assertIn('root_move_before=routed_root_moves()', HARNESS)
+        self.assertIn('root_move_after=routed_root_moves()', HARNESS)
+        self.assertIn('print("L08_ROOT_POINTER_MOVE"', HARNESS)
+        self.assertIn('assert observed=="sizewe"', HARNESS)
+        self.assertNotIn('assert root_move_delta', HARNESS)
 
     def test_each_dwell_has_its_own_event_cursor_classification(self):
         self.assertIn("dwell_boundary=classify_l08_hover(", HARNESS)
