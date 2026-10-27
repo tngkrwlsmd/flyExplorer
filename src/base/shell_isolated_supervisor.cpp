@@ -649,7 +649,14 @@ void IsolatedShellSupervisor::runLane(std::shared_ptr<State> st,
                     item.pageOffset,item.pageLimit);
                 if(outcome.canceled||!current(lane,item))break;
                 ++result.attempts;
-                if(outcome.timeout&&attempt+1<kMaxAttempts){
+                // G01: a helper can exit without completing its pipe reply.
+                // Retry only this transient transport failure or the existing
+                // deadline case, once, using a fresh owned helper/Job.
+                // Cancellation and stale-route checks above still win.
+                const bool brokenPipe=
+                    outcome.hr==HRESULT_FROM_WIN32(ERROR_BROKEN_PIPE);
+                if((outcome.timeout||brokenPipe)&&
+                   attempt+1<kMaxAttempts){
                     result.recovered=true;
                     continue;
                 }
