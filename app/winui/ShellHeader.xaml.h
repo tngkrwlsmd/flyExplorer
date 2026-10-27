@@ -8,6 +8,8 @@ namespace winrt::FlyExplorer::implementation {
   ShellHeader();
   void SetThemeCallback(std::function<void(int)> handler);
   void RestoreTheme(int selection);
+  // Drop window callbacks before XAML closes; no XAML calls here.
+  void PrepareForClose() noexcept;
   void SetWindowTabCallbacks(std::function<void()> add,
       std::function<void(int)> activate,std::function<void(int)> close);
   void SetWindowTabs(std::vector<std::wstring> const& labels,int selected);
@@ -21,7 +23,7 @@ namespace winrt::FlyExplorer::implementation {
   void OnWindowTabCloseRequested(Microsoft::UI::Xaml::Controls::TabView const&,
       Microsoft::UI::Xaml::Controls::TabViewTabCloseRequestedEventArgs const&);
  private:
-  bool mRestoring=false,mRestoringTabs=false;
+  bool mClosing=false,mRestoring=false,mRestoringTabs=false;
   std::function<void(int)> mHandler;
   std::function<void()> mAddWindowTab;
   std::function<void(int)> mActivateWindowTab,mCloseWindowTab;
