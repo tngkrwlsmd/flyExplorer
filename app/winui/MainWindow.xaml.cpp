@@ -78,6 +78,38 @@ namespace {
         }catch(...){}
     }
 
+    // G01 initial navigation: test-owned, redacted, bounded ASCII phases.
+    // The synthetic integrated startup test alone opts in; normal users do
+    // not create or expose diagnostic files. Never log paths or pointer data.
+    void TraceG01OwnedStartup(char const* phase) noexcept
+    {
+        try{
+            wchar_t flag[8]{};
+            if(::GetEnvironmentVariableW(
+                L"FLY_G01_INTEGRATED_STARTUP_ONLY",flag,8)!=3||
+               std::wcscmp(flag,L"YES"))return;
+            wchar_t temp[MAX_PATH]{};
+            auto const n=::GetTempPathW(MAX_PATH,temp);
+            if(!n||n>=MAX_PATH)return;
+            std::wstring path(temp,n);
+            if(path.find(L"shell-owned-")==std::wstring::npos ||
+               path.find(L"\\tmp\\")==std::wstring::npos)return;
+            path+=L"fly-g01-startup-"+std::to_wstring(::GetCurrentProcessId())+
+                  L".log";
+            auto file=::CreateFileW(path.c_str(),FILE_APPEND_DATA,
+                FILE_SHARE_READ|FILE_SHARE_WRITE,nullptr,OPEN_ALWAYS,
+                FILE_ATTRIBUTE_NORMAL,nullptr);
+            if(file==INVALID_HANDLE_VALUE)return;
+            auto const bytes=static_cast<DWORD>(std::strlen(phase));
+            if(bytes&&bytes<80){
+                DWORD written{};
+                ::WriteFile(file,phase,bytes,&written,nullptr);
+                ::WriteFile(file,"\n",1,&written,nullptr);
+            }
+            ::CloseHandle(file);
+        }catch(...){}
+    }
+
     constexpr UINT_PTR kDetailColumnCursorSubclassId=0xF1E08;
     constexpr UINT_PTR kDetailColumnInputSubclassId=0xF1E09;
 
@@ -598,12 +630,15 @@ namespace winrt::FlyExplorer::implementation
         // enter the XAML thread through its actual DispatcherQueue.
         mShellNavigation=std::make_unique<fxfile::previewnav::ShellNavigationController>(
             [weak,dispatch](fxfile::shellnav::IsolatedResult answer) {
+                TraceG01OwnedStartup("RESULT_CALLBACK");
                 auto envelope=std::make_shared<fxfile::shellnav::IsolatedResult>(
                     std::move(answer));
-                dispatch.TryEnqueue([weak,envelope] {
+                const bool queued=dispatch.TryEnqueue([weak,envelope] {
                     if(auto ui=weak.get();ui&&!ui->mClosing)
                         ui->OnNativeResult(std::move(*envelope));
                 });
+                TraceG01OwnedStartup(queued?
+                    "RESULT_ENQUEUE_OK":"RESULT_ENQUEUE_REJECTED");
             },
             [weak,dispatch](std::uint64_t route,std::uint64_t token) {
                 dispatch.TryEnqueue([weak,route,token] {
@@ -1162,6 +1197,8 @@ namespace winrt::FlyExplorer::implementation
     }
     std::uint64_t MainWindow::QueuePath(int side,std::wstring path)
     {
+        if(side==0)TraceG01OwnedStartup("LEFT_SUBMIT_BEGIN");
+        else if(side==1)TraceG01OwnedStartup("RIGHT_SUBMIT_BEGIN");
         CancelTextPreview();
         ActiveWindowTab().fileOperationNotice.clear();
         mSearchController.invalidate();
@@ -1177,6 +1214,10 @@ namespace winrt::FlyExplorer::implementation
 #endif
             id=mShellNavigation->submitParsing(
                 model,side,pane.active,std::move(path),true);
+        if(side==0)TraceG01OwnedStartup(id?
+            "LEFT_SUBMIT_ACCEPTED":"LEFT_SUBMIT_REJECTED");
+        else if(side==1)TraceG01OwnedStartup(id?
+            "RIGHT_SUBMIT_ACCEPTED":"RIGHT_SUBMIT_REJECTED");
         if(id)StatusText().Text(L"폴더를 불러오는 중입니다.");
         else StatusText().Text(L"이 위치로 이동할 수 없습니다.");
         return id;
@@ -1341,7 +1382,29 @@ namespace winrt::FlyExplorer::implementation
         using Action=fxfile::shellnav::NavigationAction;
         const auto completed=mShellNavigation->accept(
             ActiveWindowTab().model,std::move(result));
-        if(completed.kind==Kind::Ignored)return;
+        if(completed.kind==Kind::Ignored){
+            TraceG01OwnedStartup("RESULT_IGNORED");
+            return;
+        }
+        if(completed.side==0){
+            switch(completed.kind){
+            case Kind::Applied:TraceG01OwnedStartup("LEFT_APPLIED");break;
+            case Kind::Failed:TraceG01OwnedStartup("LEFT_FAILED");break;
+            case Kind::Rejected:TraceG01OwnedStartup("LEFT_REJECTED");break;
+            case Kind::Extended:TraceG01OwnedStartup("LEFT_EXTENDED");break;
+            case Kind::NoChange:TraceG01OwnedStartup("LEFT_NOCHANGE");break;
+            default:break;
+            }
+        }else if(completed.side==1){
+            switch(completed.kind){
+            case Kind::Applied:TraceG01OwnedStartup("RIGHT_APPLIED");break;
+            case Kind::Failed:TraceG01OwnedStartup("RIGHT_FAILED");break;
+            case Kind::Rejected:TraceG01OwnedStartup("RIGHT_REJECTED");break;
+            case Kind::Extended:TraceG01OwnedStartup("RIGHT_EXTENDED");break;
+            case Kind::NoChange:TraceG01OwnedStartup("RIGHT_NOCHANGE");break;
+            default:break;
+            }
+        }
         // Only a successful refresh of the exact original PaneTab/folder
         // can reveal a newly created or renamed file. Navigation or a
         // failed refresh cancels the one-shot request without guessing.
