@@ -1075,6 +1075,14 @@ namespace winrt::FlyExplorer::implementation
                 winrt::FlyExplorer::implementation::NavigationSidebar>(sidebar)
                     ->PrepareForClose();
         }catch(...){}
+        // Tear down TabView's window callbacks before its selection events
+        // can run during visual-tree shutdown.
+        try{
+            auto header=HeaderView();
+            if(header)winrt::get_self<
+                winrt::FlyExplorer::implementation::ShellHeader>(header)
+                    ->PrepareForClose();
+        }catch(...){}
         // A queued drag tick must not examine XAML or apply a new width once
         // close has started. Stop every outstanding window-owned timer before
         // the input site and XAML controls are released.
