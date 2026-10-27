@@ -1150,7 +1150,7 @@ namespace winrt::FlyExplorer::implementation
         // This is limited to the close path, not normal button behavior.
         try{
             ToolTipService::SetToolTip(
-                NewTabButton(),winrt::IInspectable{nullptr});
+                NewTabButton(),winrt::Windows::Foundation::IInspectable{nullptr});
             TraceG01OwnedClose("FOCUS_TARGET_TOOLTIP_DETACHED");
         }catch(...){
             TraceG01OwnedClose("FOCUS_TARGET_TOOLTIP_DETACH_EXCEPTION");
