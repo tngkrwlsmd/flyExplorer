@@ -1,5 +1,12 @@
 # Error history
 
+## 2026-10-27 — G01 public PDB valid through DBI age and actual DbgHelp loader; deferred callback stack resolved
+
+- [Scoped Windows run #40453770619](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/40453770619) on the retained 2.5.1 app-local DLL hash showed PDB Info Age=3 but **DBI Age=1** matching PE Age=1; DbgHelp accepted official PDB as `SymType=3`, `PdbAge=1`, `PdbUnmatched=False`. The earlier strict `resolve_local_rva.py` Info-stream-only GUID/Age comparison rejected this public PDB before calling the OS loader. This was a **diagnostic validation false negative**, not evidence that the downloaded PDB was unrelated.
+- All 14 `CoreMessagingXP.dll` RVAs in the previously captured 15-address stack prefix now resolve to public symbols. The upper frame is `DispatcherQueue::DeferInvokeCallback+104`; further frames include `MessageSession::Callback_InvokeDeferInvoke`, deferred dispatch and `UserAdapter::WindowProc`. These are **candidate cross-build symbolic names**, not confirmation of a culprit user callback or a fixed app. The COMBASE stored origin/frame is not yet symbolized. Original crashing DLL was not archived; G01 OPEN.
+- Cleanup: bounded probe scratch removed and exact control-plane request slot returned to `idle` [`bf578c358df0`](https://github.com/tngkrwlsmd/personal-control-plane/commit/bf578c358df01adb1f703b1439e78c40f9e6d061). No fresh Release build, GUI, source edit or dump produced.
+
+
 ## 2026-10-27 — G01 candidate CoreMessaging PDB identity obtained, app-local binary equivalence still unverified
 
 - Installed X64 WindowsAppRuntime.2 `2.5.1.0` `CoreMessagingXP.dll` candidate PE probe **PASS** [#40450004069](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/40450004069): PDB GUID `00d48158-b4de-ee9c-4f3d-e210b378d2b1` age `1`, PE timestamp `1CFF1018`, SHA-256 `049A1379592513D05BADA39D43A46124833C2E5F6EC2EEC299927339E12D57DF`. No match claim against the actual crash-time app-local CoreMessaging DLL.
