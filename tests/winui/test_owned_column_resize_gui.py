@@ -3,6 +3,7 @@ from pathlib import Path
 from paths import APP, app_exe
 from uia_polling import wait_until
 from l08_pointer_oracle import parse_l08_pointer_help, classify_l08_hover
+from l08_pointer_oracle import classify_l08_cursor_reference
 from PIL import ImageGrab
 import ctypes,hashlib,os,re,shutil,subprocess,sys,tempfile,time
 from ctypes import wintypes
@@ -313,25 +314,42 @@ def main(config="Release"):
                               before_return)<=4,
                    "original WindowTab lost resized column width",14)
         print("OWNED_DETAIL_COLUMN_WINDOW_TAB_RESTORED",True,flush=True)
-        # Independent, non-mutating cursor positive control: ordinary WinUI
-        # text input normally uses IDC_IBEAM. If the global cursor stays Arrow
-        # here as well, do not mistake automation cursor limitations for a
-        # proved resize-grip implementation defect.
+        # An I-beam is a useful *independent* OS cursor reference only when
+        # UIA confirms our own enabled Edit at the test-owned cursor point.
+        # A failed reference is inconclusive; do not remove the strict SIZEWE
+        # assertion or turn this into a passing product acceptance.
+        owned_edit_hit=False
+        text_cursor="other"
         try:
-            search_box=element("QuickSearchBox").rectangle()
+            search=element("QuickSearchBox")
+            search_box=search.rectangle()
             search_x=(search_box.left+search_box.right)//2
             search_y=(search_box.top+search_box.bottom)//2
             mouse.move(coords=(search_x,search_y))
             time.sleep(.3)
+            hit=Desktop(backend="uia").from_point(
+                search_x,search_y).element_info
+            owned_edit_hit=(getattr(hit,"process_id",None)==proc.pid and
+                            getattr(hit,"control_type",None)=="Edit" and
+                            search.is_enabled() and owned_foreground())
             text_control=horizontal_resize_cursor(details=True)
             beam=user32.LoadCursorW(None,32513) # IDC_IBEAM
+            text_cursor=("ibeam" if text_control["active"]==beam
+                         else "arrow" if text_control["active"]==text_control["arrow"]
+                         else "other")
             print("L08_TEXTBOX_CURSOR_POSITIVE_CONTROL",
+                  "OWNED_EDIT",owned_edit_hit,
                   "OS",text_control,"IBEAM",int(beam or 0),
-                  "MATCH",text_control["active"]==beam,
+                  "MATCH",text_cursor=="ibeam",
                   "OWNED_FOREGROUND",owned_foreground(),flush=True)
         except Exception as error:
             print("L08_TEXTBOX_CURSOR_POSITIVE_CONTROL_ERROR",
                   type(error).__name__,flush=True)
+        reference=classify_l08_cursor_reference(
+            owned_edit_hit,text_cursor,
+            tuple(observation[1] for observation in cursor_observations))
+        print("L08_CURSOR_REFERENCE_CLASSIFICATION",reference,
+              "OWNED_EDIT",owned_edit_hit,flush=True)
         body=element("LeftFiles").rectangle()
         mouse.move(coords=(body.left+30,body.top+40))
         window().set_focus()
