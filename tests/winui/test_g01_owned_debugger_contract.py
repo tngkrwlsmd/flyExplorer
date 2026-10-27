@@ -29,6 +29,13 @@ class G01OwnedDebuggerContract(unittest.TestCase):
         self.assertEqual(observer.decode_v2(data[:24] + b"\xff\xff\xff\xff" +
                                                data[28:])[1], 0)
 
+    def test_long_stowed_stack_preserves_bounded_prefix(self):
+        data = struct.pack("<IIiIQIIQI4xQ", 56, 0x53453032,
+                           -2147020579, 1, 0x100AB, 8, 24, 0x2000, 0, 0)
+        self.assertEqual(observer.decode_v2(data), (0x800710DD, 16, 0x2000))
+        self.assertEqual(observer.describe_v2(data, []),
+                         ["FORM_BINARY", "WORDS_16", "STACK_TRUNCATED"])
+
     def test_classifies_stowed_form_stack_availability_and_origin(self):
         binary = struct.pack("<IIiIQIIQI4xQ", 56, 0x53453032,
                              -2147020579, 1, 0x100AB, 8, 0, 0, 0, 0)

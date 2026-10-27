@@ -294,7 +294,7 @@ def run(config="Release", scenario="full", debug_stowed=False):
                     r"FRAME_(?:0[0-9]|1[0-5])_"
                     r"(?:FLY|XAML|COMBASE|COREMSG|NTDLL)_[0-9A-F]{8}|"
                     r"FORM_(?:BINARY|TEXT|UNKNOWN)|"
-                    r"STACK_INVALID|WORDS_(?:[0-9]|1[0-6])|"
+                    r"STACK_INVALID|STACK_TRUNCATED|WORDS_(?:[0-9]|1[0-6])|"
                     r"ORIGIN_(?:FLY|XAML|COMBASE|COREMSG|NTDLL)_[0-9A-F]{8}|"
                     r"NESTED_PRESENT|MAPPED_(?:[0-9]|1[0-6]))))"
                 )

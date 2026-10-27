@@ -56,9 +56,11 @@ def decode_v2(data):
     size, signature, hr, flags, _origin, width, count, trace, _nested_type, _nested = STOWED_V2.unpack(data)
     if size != 56 or signature != 0x53453032:
         return None
-    if flags & 3 != 1 or width != 8 or count > 16 or (count and not trace):
+    if flags & 3 != 1 or width != 8 or (count and not trace):
         return (hr & 0xFFFFFFFF, 0, 0)
-    return (hr & 0xFFFFFFFF, count, trace)
+    # Valid stored backtraces can exceed this observer's read budget.
+    # Keep the first sixteen addresses, never silently drop all frames.
+    return (hr & 0xFFFFFFFF, min(count, 16), trace)
 
 
 def describe_v2(data, modules):
@@ -71,10 +73,12 @@ def describe_v2(data, modules):
     form = {1: "BINARY", 2: "TEXT"}.get(flags & 3, "UNKNOWN")
     result = [f"FORM_{form}"]
     if form == "BINARY":
-        if width != 8 or words > 16 or (words and not trace):
+        if width != 8 or (words and not trace):
             result.append("STACK_INVALID")
         else:
-            result.append(f"WORDS_{words}")
+            result.append(f"WORDS_{min(words, 16)}")
+            if words > 16:
+                result.append("STACK_TRUNCATED")
         origin_label = frame_label(origin, modules)
         if origin_label:
             result.append(f"ORIGIN_{origin_label}")
