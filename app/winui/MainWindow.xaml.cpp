@@ -16,6 +16,7 @@
 #include "../../src/base/shell_transfer_core.h"
 #include <algorithm>
 #include <cmath>
+#include <cstdio>
 #include <cwchar>
 #include <cwctype>
 #include <thread>
@@ -156,6 +157,18 @@ namespace winrt::FlyExplorer::implementation
     void TraceG01AppLifecycle(char const* stage) noexcept
     {
         TraceG01OwnedClose(stage);
+    }
+    bool G01OwnedAppDiagnosticsEnabled() noexcept
+    {
+        return G01OwnedCloseTraceEnabled();
+    }
+    void TraceG01AppUnhandledHresult(std::uint32_t code) noexcept
+    {
+        char phase[40]{};
+        const int length=std::snprintf(
+            phase,sizeof(phase),"APP_UNHANDLED_HRESULT_%08X",code);
+        if(length>0&&length<static_cast<int>(sizeof(phase)))
+            TraceG01OwnedClose(phase);
     }
 
     MainWindow::MainWindow()
