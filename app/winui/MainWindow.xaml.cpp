@@ -1634,11 +1634,18 @@ namespace winrt::FlyExplorer::implementation
         }
         if(completed.active){
             ClearFileDetails(completed.side);
-            Refresh(completed.recovered?
-                L"응답 지연 후 폴더를 불러왔습니다.":
-                completed.action==Action::Refresh?
-                L"폴더 변경 알림을 반영했습니다.":
-                L"폴더를 불러왔습니다.");
+            // PaneTab activity is not the active pane. An inactive right
+            // result must not replace the left pane's real failure with a
+            // misleading global "folder loaded" message (G01 evidence).
+            hstring activeStatus=StatusText().Text();
+            if(completed.side==ActiveWindowTab().model.activePane){
+                activeStatus=completed.recovered?
+                    L"응답 지연 후 폴더를 불러왔습니다.":
+                    completed.action==Action::Refresh?
+                    L"폴더 변경 알림을 반영했습니다.":
+                    L"폴더를 불러왔습니다.";
+            }
+            Refresh(activeStatus);
             // Navigation refresh is asynchronous and can replace the
             // file-operation warning. Reassert it after presenting the
             // touched folder; do not mistake a partial transfer for success.
