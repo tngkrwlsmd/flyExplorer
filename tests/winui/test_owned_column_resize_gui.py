@@ -457,7 +457,13 @@ def main(config="Release"):
             "PREPARE_CLOSE_EXIT","MAINWINDOW_DESTRUCTOR_ENTER",
             "MAINWINDOW_DESTRUCTOR_EXIT",
             "APP_DESTRUCTOR_ENTER","APP_DESTRUCTOR_BODY_EXIT",
+            "NATIVE_CLOSE_AV_ENTER","NATIVE_CLOSE_AV_EXIT",
         }
+        # Test-owned VEH records no raw pointers, exception parameters,
+        # stack memory, user strings, or unrestricted module names.
+        native_close_frame=re.compile(
+            r"NATIVE_CLOSE_AV_FRAME_0[0-7]_"
+            r"(?:FLY|XAML|COMBASE|COREMSG|NTDLL|OTHER)_[0-9A-F]{8}")
         trace_name=f"fly-g01-close-{proc.pid}.log"
         trace_files=(owned/"tmp"/trace_name,owned/"temp"/trace_name)
         trace_found=False
@@ -466,8 +472,10 @@ def main(config="Release"):
                 trace.stat().st_size>4096):
                 continue
             lines=trace.read_text(encoding="ascii").splitlines()
-            if len(lines)>64 or any(line not in allowed_close_phases
-                                    for line in lines):
+            if len(lines)>64 or any(
+                    line not in allowed_close_phases and
+                    native_close_frame.fullmatch(line) is None
+                    for line in lines):
                 # Keep rejected traces rejected. Publish only a fixed reason,
                 # never private phase text, user paths or raw exception data.
                 reason=("phase-count-exceeded" if len(lines)>64
