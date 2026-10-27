@@ -169,9 +169,15 @@ def main(config="Release"):
                           else "arrow" if current["active"]==current["arrow"]
                           else "other")
                 pointer_after=pointer_snapshot()
+                # Compare WinUI entry and native cursor from the SAME dwell.
+                # A late exit must not be reported as an arrow override.
+                dwell_boundary=classify_l08_hover(
+                    pointer_before,pointer_after,observed,
+                    owned_hit[0]==thumb_id)
                 print("L08_HOVER_TIMELINE",thumb_id,"DWELL_MS",elapsed,
                       "HIT",owned_hit,"CURSOR",observed,
-                      "WINUI",pointer_after,flush=True)
+                      "WINUI",pointer_after,"BOUNDARY",dwell_boundary,
+                      flush=True)
             # Print only strictly parsed, bounded test-owned event counters,
             # never arbitrary UIA HelpText from an external element.
             event_help=pointer_after
