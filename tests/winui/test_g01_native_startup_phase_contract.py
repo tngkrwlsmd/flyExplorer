@@ -40,6 +40,19 @@ class G01NativeStartupPhaseContract(unittest.TestCase):
                          re.findall(r'"([A-Z_]+)"', names))
         self.assertIn("mShellNavigation->accept(", CPP)
 
+    def test_shared_page_constructed_before_native_worker_submissions(self):
+        ctor = CPP.split("MainWindow::MainWindow()", 1)[1].split(
+            "void MainWindow::PrepareForXamlClose", 1)[0]
+        phase = ctor.index('TraceG01OwnedStartup("PREINIT");')
+        start = ctor.index("mShellNavigation->start(")
+        left = ctor.index("QueuePath(0,")
+        self.assertLess(phase, start)
+        self.assertLess(phase, left)
+        helper = CPP.split("struct G01StartupMapping final", 1)[1].split(
+            "void TraceG01OwnedStartup", 1)[0]
+        self.assertIn('std::wcsstr(temp,L"shell-owned-")', helper)
+        self.assertNotIn("std::wstring location(", helper)
+
     def test_failure_reader_is_exact_pid_and_bounded_without_attach(self):
         self.assertIn("if G01_INTEGRATED_STARTUP_ONLY and p is not None:", HARNESS)
         self.assertIn("read_g01_owned_shared_phases(p.pid)", HARNESS)
