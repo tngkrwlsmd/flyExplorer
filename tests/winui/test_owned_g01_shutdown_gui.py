@@ -21,6 +21,7 @@ import psutil
 from pywinauto import Desktop, keyboard, mouse
 
 from paths import APP, app_exe
+from g01_runtime_module_paths import classify_coremsg_paths
 from uia_polling import wait_until
 
 USER32 = ctypes.windll.user32
@@ -204,6 +205,22 @@ def run(config="Release", scenario="full", debug_stowed=False):
         scenario_ready = True
     finally:
         if proc.poll() is None:
+            # Capture only module origin *categories*, never DLL paths,
+            # other process images, or any mapped memory bytes.
+            try:
+                inspected = psutil.Process(proc.pid)
+                assert Path(inspected.exe()).resolve() == exe.resolve()
+                origins = classify_coremsg_paths(
+                    str(exe), (item.path for item in inspected.memory_maps()),
+                    os.environ["ProgramFiles"], os.environ["SystemRoot"],
+                )
+                print("G01_OWNED_COREMSG_PROVENANCE",
+                      " ".join(f"{key}={origins[key]}" for key in
+                               ("APPLOCAL", "WINDOWSAPPS", "SYSTEM", "OTHER")),
+                      flush=True)
+            except (AssertionError, psutil.Error, OSError, RuntimeError,
+                    ValueError, KeyError):
+                print("G01_OWNED_COREMSG_PROVENANCE UNAVAILABLE", flush=True)
             # Failure of UIA before HWND discovery must never strand the
             # exact test-owned flyExplorer process. A stale/reused HWND
             # must never receive a close message for an unrelated window.
