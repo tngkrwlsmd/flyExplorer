@@ -1144,6 +1144,17 @@ namespace winrt::FlyExplorer::implementation
             }
         };
         traceFocus(false);
+        // The focus-transfer target carries a XAML ToolTip. Release that
+        // attached tooltip while its ContentRoot is still alive; otherwise
+        // its final release can run after the WinUI island is dismantled.
+        // This is limited to the close path, not normal button behavior.
+        try{
+            ToolTipService::SetToolTip(
+                NewTabButton(),winrt::IInspectable{nullptr});
+            TraceG01OwnedClose("FOCUS_TARGET_TOOLTIP_DETACHED");
+        }catch(...){
+            TraceG01OwnedClose("FOCUS_TARGET_TOOLTIP_DETACH_EXCEPTION");
+        }
         // Move focus off a live TextBox before WinUI destroys input services.
         // The normal Close/Closed cleanup remains idempotent as a fallback.
         TraceG01OwnedClose("FOCUS_TRANSFER_BEGIN");
