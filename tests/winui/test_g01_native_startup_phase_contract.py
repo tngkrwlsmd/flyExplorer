@@ -69,18 +69,43 @@ class G01NativeStartupPhaseContract(unittest.TestCase):
     def test_pid_and_magic_validation_rejects_untrusted_values(self):
         slots = [1, 7, 11, 16] + [0] * 60
         raw = struct.pack(G01_SHARED_FORMAT, G01_SHARED_MAGIC,
-                          4102, 4, *slots)
+                          4102, 4, *slots, 0)
         self.assertEqual(
             decode_g01_owned_shared_phases(raw, 4102),
             [G01_SHARED_PHASES[code - 1] for code in slots[:4]])
         self.assertEqual([], decode_g01_owned_shared_phases(raw, 4103))
         self.assertEqual([], decode_g01_owned_shared_phases(raw[:-1], 4102))
-        corrupt = struct.pack(G01_SHARED_FORMAT, 0, 4102, 4, *slots)
+        corrupt = struct.pack(G01_SHARED_FORMAT, 0, 4102, 4, *slots, 0)
         self.assertEqual([], decode_g01_owned_shared_phases(corrupt, 4102))
         overflow = struct.pack(G01_SHARED_FORMAT,
-                               G01_SHARED_MAGIC, 4102, 513, *slots)
+                               G01_SHARED_MAGIC, 4102, 513, *slots, 0)
         self.assertEqual([], decode_g01_owned_shared_phases(overflow, 4102))
         self.assertEqual([], decode_g01_owned_shared_phases(raw, False))
+
+    def test_failed_left_hresult_is_exact_bounded_and_pid_matched(self):
+        # 0x80070005 is a synthetic public HRESULT, not user data.
+        slots = [1, 7, 12, 16] + [0] * 60
+        raw = struct.pack(
+            G01_SHARED_FORMAT, G01_SHARED_MAGIC, 4102, 4,
+            *slots, 0x80070005)
+        expected = [G01_SHARED_PHASES[code - 1] for code in slots[:4]]
+        self.assertEqual(
+            expected + ["LEFT_HRESULT_80070005"],
+            decode_g01_owned_shared_phases(raw, 4102))
+        self.assertEqual([], decode_g01_owned_shared_phases(raw, 4103))
+        without_failure = [1, 7, 11, 16] + [0] * 60
+        self.assertEqual(
+            [G01_SHARED_PHASES[code - 1] for code in without_failure[:4]],
+            decode_g01_owned_shared_phases(
+                struct.pack(G01_SHARED_FORMAT, G01_SHARED_MAGIC, 4102, 4,
+                            *without_failure, 0x80070005), 4102))
+        self.assertEqual(
+            ["LEFT_HRESULT_80070005"],
+            _safe_g01_startup_events(
+                ["LEFT_HRESULT_80070005", "LEFT_HRESULT_PRIVATE",
+                 "user path", "LEFT_HRESULT_00000000"]))
+        self.assertIn('static_cast<LONG>(failureHr)', CPP)
+        self.assertIn('TraceG01OwnedStartup("LEFT_FAILED",completed.hr)', CPP)
 
     def test_only_allowlisted_stages_enter_failure_evidence(self):
         bad = "C:\\Users\\example\\private.txt"
