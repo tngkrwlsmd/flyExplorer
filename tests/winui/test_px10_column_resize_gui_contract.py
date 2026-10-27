@@ -232,6 +232,36 @@ class PX10ColumnResizeGuiContract(unittest.TestCase):
         self.assertIn("len(lines)>64",gui)
         self.assertIn("trace.stat().st_size>4096",gui)
 
+    def test_close_focus_target_tooltip_detaches_before_focus(self):
+        cpp=(ROOT/"app/winui/MainWindow.xaml.cpp").read_text("utf-8")
+        xaml=(ROOT/"app/winui/MainWindow.xaml").read_text("utf-8")
+        gui=(ROOT/"tests/winui/test_owned_column_resize_gui.py").read_text(
+            "utf-8")
+        close=cpp.split(
+            "void MainWindow::PrepareXamlForClose() noexcept",1)[1].split(
+            "void MainWindow::PrepareForClose() noexcept",1)[0]
+        self.assertIn('x:Name="NewTabButton"',xaml)
+        tag=xaml.split('x:Name="NewTabButton"',1)[1].split('</Button>',1)[0]
+        self.assertIn('ToolTipService.ToolTip=',tag)
+        self.assertIn(
+            'ToolTipService::SetToolTip(\\n'
+            '                NewTabButton(),winrt::IInspectable{nullptr});',
+            close,
+        )
+        self.assertLess(close.index('ToolTipService::SetToolTip('),
+                        close.index('NewTabButton().Focus('))
+        self.assertIn('TraceG01OwnedClose("FOCUS_TARGET_TOOLTIP_DETACHED")',
+                      close)
+        self.assertIn(
+            'TraceG01OwnedClose("FOCUS_TARGET_TOOLTIP_DETACH_EXCEPTION")',
+            close)
+        self.assertIn('"FOCUS_TARGET_TOOLTIP_DETACHED"',gui)
+        self.assertIn('"FOCUS_TARGET_TOOLTIP_DETACH_EXCEPTION"',gui)
+        self.assertIn('NewTabButton().Focus(FocusState::Programmatic)',close)
+        # Do not clear all tooltips or dispose the window manually.
+        self.assertNotIn('window = nullptr;',cpp)
+        self.assertNotIn('ToolTipService::SetToolTip(RootShell()',close)
+
     def test_existing_runner_requires_the_original_independent_resize_oracles(self):
         source=(ROOT/"tools/winui/run_checks.py").read_text("utf-8")
         section=source.split('if not rc and area == "column-resize":',1)[1].split(
