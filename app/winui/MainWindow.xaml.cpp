@@ -257,7 +257,7 @@ namespace winrt::FlyExplorer::implementation
             auto timer=DispatcherQueue().CreateTimer();
             timer.Interval(std::chrono::milliseconds(40));
             timer.Tick([nativeWeak](auto const&,auto const&){
-                if(auto ui=nativeWeak.get()){
+                if(auto ui=nativeWeak.get();ui&&!ui->mClosing){
                     ++ui->mL08HoverTimerTicks;
                     const bool gripHovered=ui->ApplyDetailColumnHoverCursor();
                     ui->UpdateDetailColumnInputSite(gripHovered);
@@ -601,13 +601,14 @@ namespace winrt::FlyExplorer::implementation
                 auto envelope=std::make_shared<fxfile::shellnav::IsolatedResult>(
                     std::move(answer));
                 dispatch.TryEnqueue([weak,envelope] {
-                    if(auto ui=weak.get())
+                    if(auto ui=weak.get();ui&&!ui->mClosing)
                         ui->OnNativeResult(std::move(*envelope));
                 });
             },
             [weak,dispatch](std::uint64_t route,std::uint64_t token) {
                 dispatch.TryEnqueue([weak,route,token] {
-                    if(auto ui=weak.get())ui->OnNativeChange(route,token);
+                    if(auto ui=weak.get();ui&&!ui->mClosing)
+                        ui->OnNativeChange(route,token);
                 });
             });
         // Exact sibling of THIS preview binary, never a PATH lookup or
@@ -1327,6 +1328,7 @@ namespace winrt::FlyExplorer::implementation
     }
     void MainWindow::OnNativeResult(fxfile::shellnav::IsolatedResult result)
     {
+        if(mClosing)return;
         using Kind=fxfile::previewnav::ShellNavigationController::CompletionKind;
         using Action=fxfile::shellnav::NavigationAction;
         const auto completed=mShellNavigation->accept(
@@ -1528,6 +1530,7 @@ namespace winrt::FlyExplorer::implementation
     }
     void MainWindow::OnNativeChange(std::uint64_t route,std::uint64_t token)
     {
+        if(mClosing)return;
         using Change=fxfile::previewnav::ShellNavigationController::ChangeDisposition;
         const auto changed=mShellNavigation->handleChange(
             ActiveWindowTab().model,route,token);
