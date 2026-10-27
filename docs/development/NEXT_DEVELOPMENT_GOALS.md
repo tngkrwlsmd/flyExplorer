@@ -266,6 +266,14 @@ B의 좌우 닫기 범위, F6·목록 Tab 왕복·주소/검색·메뉴 복귀·
 
 ## L08 우선 검증 결과 (2026-10-19)
 
+
+**2026-10-27 다음 단계 — 소스 전용 이벤트/커서 판별 계약 10/10 PASS, 실제 커서 시각 수용은 OPEN:**
+
+- `DetailColumnHandle.cpp`에 존재하는 테스트 전용 `PointerEntered/PointerExited/ProtectedCursor` UIA 상태를 이용해, 단순히 마지막 `HelpText`만 읽던 테스트를 보강했다. `tests/winui/l08_pointer_oracle.py`는 길이 제한이 있는 고정 형식만 허용하고, 포인터 이동 **전·후**의 진입 횟수를 비교한다. `test_owned_column_resize_gui.py`는 각 hover 경과 시점마다 입력 이벤트 분류를 기록하되 UIA 임의 원문을 출력하지 않는다.
+- 독립적인 native `GetCursorInfo` 결과가 `arrow`라면 `새 WinUI PointerEntered 발생`과 `증가 미관찰`을 구분하고, `ProtectedCursor`가 설정되지 않았거나 UIA 상태 조회가 실패한 경우도 별도로 판정한다. 정상 드래그 구현과 기존 엄격한 `sizewe` 커서 조건은 바꾸지 않았다.
+- 정확한 [소스 `99f605f7`](https://github.com/tngkrwlsmd/flyExplorer/commit/99f605f7f45f9be133333784eb501a05c6ff9264)에서 [Windows 소스 전용 #40483128720](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/40483128720) 신규 판별 계약 **4/4**, 관련 PX10 기존 소스 계약 **6/6**, 합계 **10/10 PASS**, 임시 소유 작업공간 정리 완료. **제품 빌드, GUI 마우스 입력, 화면 픽셀·커서 시각 검증은 이번 변경에서 실행하지 않았다.** 다음 승인된 좁은 WinUI 실행에서 동일 바이너리·입력 경로의 증거를 수집하기 전까지 L08 **OPEN**. G03–G05 제외 및 G07 중단 유지.
+
+
 **2026-10-23 L08 다음 게이트 — 실제 WinUI 투영 소형 검사 스크립트 준비, 실행 미완료:**
 
 - [최근 실패 #39967597593](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39967597593)에서는 SDK WinRT `base.h`와 생성된 XAML 헤더의 버전 불일치(`C2338`), `Microsoft.UI.h` 생성 누락(`C1083`)이 확인됐다. 패키지 손상이 아닌 **생성·컴파일 범위** 문제로 분류한다.
