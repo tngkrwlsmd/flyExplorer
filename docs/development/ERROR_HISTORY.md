@@ -1,5 +1,12 @@
 # Error history
 
+## 2026-10-27 — G01 candidate CoreMessaging PDB identity obtained, app-local binary equivalence still unverified
+
+- Installed X64 WindowsAppRuntime.2 `2.5.1.0` `CoreMessagingXP.dll` candidate PE probe **PASS** [#40450004069](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/40450004069): PDB GUID `00d48158-b4de-ee9c-4f3d-e210b378d2b1` age `1`, PE timestamp `1CFF1018`, SHA-256 `049A1379592513D05BADA39D43A46124833C2E5F6EC2EEC299927339E12D57DF`. No match claim against the actual crash-time app-local CoreMessaging DLL.
+- One exact-source isolated `build.bat Release` attempted to hash the app-local DLL [#40450249499](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/40450249499) **FAIL** at NuGet restore; dependency packages were unavailable from `api.nuget.org`. No binary identity comparison performed, no GUI retest. Bounded owned scratch was removed and Windows Remote Shell request returned to `idle`. Retain prior central Release PASS evidence; retry this clean build only after concrete dependency restore recovery/preflight.
+- Loaded module origin remains exactly app-local only from the last real G01 fatal GUI #40449178219. Root caller and G01 correction remain OPEN; L08 OPEN, G03–G05 excluded, G07 stopped.
+
+
 ## 2026-10-27 — G01 crash-time CoreMessagingXP.dll is app-local only; observed crash #8/12
 
 - [Owned interactive Release diagnostic #40449178219](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/40449178219) used exact source `f87ee07883313de28e8ecbf0534e97f732ec4ea5`: seven normal exits followed by eighth `full` crash `0xC000027B`, early stop, no App destructor entry. **All 8 verified test-owned processes** mapped precisely one `CoreMessagingXP.dll` from the app-local Release directory, **zero** from WindowsApps, System32 or other. This contradicts a simultaneous mixed app-local/framework CoreMessaging image explanation in the observed owned process, without ruling out distinct code or runtime ownership defects.
