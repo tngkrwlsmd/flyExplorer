@@ -6,6 +6,7 @@ from l08_pointer_oracle import (
     PointerState, parse_l08_pointer_help, classify_l08_hover,
     classify_l08_cursor_reference,
 )
+from l08_sendinput_mouse import _normalized_point
 
 ROOT = Path(__file__).resolve().parents[2]
 HARNESS = (ROOT / "tests/winui/test_owned_column_resize_gui.py").read_text(
@@ -15,6 +16,8 @@ PRODUCT = (ROOT / "app/winui/DetailColumnHandle.cpp").read_text(
 WINDOW = (ROOT / "app/winui/MainWindow.xaml.cpp").read_text(
     encoding="utf-8")
 WINDOW_HEADER = (ROOT / "app/winui/MainWindow.xaml.h").read_text(
+    encoding="utf-8")
+SENDINPUT = (ROOT / "tests/winui/l08_sendinput_mouse.py").read_text(
     encoding="utf-8")
 
 
@@ -142,15 +145,57 @@ class L08PointerOracleContract(unittest.TestCase):
         self.assertIn('print("L08_CURSOR_REFERENCE_CLASSIFICATION"', HARNESS)
         self.assertIn('assert observed=="sizewe"', HARNESS)
 
+    def test_sendinput_virtual_desktop_mapping(self):
+        self.assertEqual(_normalized_point(0, 0, 0, 0, 1280, 768),
+                         (0, 0))
+        self.assertEqual(_normalized_point(1279, 767, 0, 0, 1280, 768),
+                         (65535, 65535))
+        self.assertEqual(_normalized_point(-20, -10, -20, -10, 2, 2),
+                         (0, 0))
+        self.assertEqual(_normalized_point(-19, -9, -20, -10, 2, 2),
+                         (65535, 65535))
+        for point in (
+            (-1, 0, 0, 0, 1280, 768),
+            (1280, 0, 0, 0, 1280, 768),
+            (0, 768, 0, 0, 1280, 768),
+            (0, 0, 0, 0, 1, 768),
+            (0, 0, 0, 0, 1280, 1),
+            (True, 0, 0, 0, 1280, 768),
+            (0.5, 0, 0, 0, 1280, 768),
+        ):
+            with self.subTest(point=point):
+                with self.assertRaises(ValueError):
+                    _normalized_point(*point)
+
+    def test_sendinput_is_bounded_and_never_falls_back_to_setcursorpos(self):
+        # The failed VM oracle used SetCursorPos; the same-session
+        # SendInput intervention delivered PointerEntered and sizewe on all
+        # three grips and an I-beam on the independently verified Edit.
+        self.assertIn("from l08_sendinput_mouse import sendinput_mouse_move",
+                      HARNESS)
+        self.assertIn("for step in range(1, 5):", SENDINPUT)
+        self.assertIn("user32.SendInput(1, ctypes.byref(move), ctypes.sizeof(move))",
+                      SENDINPUT)
+        self.assertIn("_MOUSEEVENTF_MOVE | _MOUSEEVENTF_VIRTUALDESK |",
+                      SENDINPUT)
+        self.assertIn("_MOUSEEVENTF_ABSOLUTE", SENDINPUT)
+        self.assertIn('raise ctypes.WinError()', SENDINPUT)
+        self.assertNotIn("SetCursorPos(", SENDINPUT)
+        self.assertNotIn("mouse.move(coords=", HARNESS)
+        self.assertEqual(HARNESS.count("sendinput_mouse_move(coords="), 7)
+        self.assertIn("sendinput_mouse_move(coords=(search_x,search_y))",
+                      HARNESS)
+        self.assertIn('assert observed=="sizewe"', HARNESS)
+
     def test_staged_hover_crosses_thumb_before_observation(self):
         # UIA element-from-point alone is not a routed WinUI entry event.
         # The owned GUI must advance the system mouse across the actual grip.
-        self.assertIn("mouse.move(coords=(x-24,y))", HARNESS)
+        self.assertIn("sendinput_mouse_move(coords=(x-24,y))", HARNESS)
         self.assertIn("for approach_x in (x-12,x-6,x):", HARNESS)
-        self.assertIn("mouse.move(coords=(approach_x,y))", HARNESS)
+        self.assertIn("sendinput_mouse_move(coords=(approach_x,y))", HARNESS)
         self.assertIn('assert owned_foreground(), "approach left owned window"', HARNESS)
         self.assertLess(
-            HARNESS.index("mouse.move(coords=(x-24,y))"),
+            HARNESS.index("sendinput_mouse_move(coords=(x-24,y))"),
             HARNESS.index("pointer_before=pointer_snapshot()"),
         )
         self.assertLess(
