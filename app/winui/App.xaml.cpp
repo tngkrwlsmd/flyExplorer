@@ -2,6 +2,7 @@
 #include "App.xaml.h"
 #include "MainWindow.xaml.h"
 #include <cstdio>
+#include <cstring>
 #include <cwchar>
 
 using namespace winrt;
