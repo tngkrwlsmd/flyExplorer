@@ -4,6 +4,7 @@ import unittest
 
 from l08_pointer_oracle import (
     PointerState, parse_l08_pointer_help, classify_l08_hover,
+    classify_l08_cursor_reference,
 )
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -96,6 +97,50 @@ class L08PointerOracleContract(unittest.TestCase):
             classify_l08_hover(baseline, reset, "sizewe", False),
             "non-owned-or-missed-thumb",
         )
+
+    def test_independent_cursor_reference_is_evidence_only(self):
+        self.assertEqual(
+            classify_l08_cursor_reference(
+                True, "ibeam", ("sizewe", "sizewe", "sizewe")),
+            "native-cursor-observations-match",
+        )
+        self.assertEqual(
+            classify_l08_cursor_reference(
+                True, "ibeam", ("arrow", "sizewe", "sizewe")),
+            "resize-cursor-not-observed-with-valid-reference",
+        )
+        self.assertEqual(
+            classify_l08_cursor_reference(
+                True, "arrow", ("arrow", "arrow", "arrow")),
+            "cursor-reference-ibeam-not-observed",
+        )
+        self.assertEqual(
+            classify_l08_cursor_reference(
+                False, "ibeam", ("arrow", "arrow", "arrow")),
+            "cursor-reference-target-unverified",
+        )
+        for bad in (
+            ("ibeam", ("arrow",)),
+            ("invalid", ("arrow", "arrow", "arrow")),
+            ("ibeam", ("arrow", "arrow", "secret")),
+        ):
+            self.assertEqual(
+                classify_l08_cursor_reference(True, bad[0], bad[1]),
+                "cursor-reference-evidence-invalid",
+            )
+        self.assertEqual(
+            classify_l08_cursor_reference(
+                1, "ibeam", ("sizewe", "sizewe", "sizewe")),
+            "cursor-reference-evidence-invalid",
+        )
+
+    def test_os_cursor_reference_is_scoped_to_owned_edit_without_relaxing_gate(self):
+        self.assertIn('owned_edit_hit=(getattr(hit,"process_id",None)==proc.pid', HARNESS)
+        self.assertIn('getattr(hit,"control_type",None)=="Edit"', HARNESS)
+        self.assertIn('search.is_enabled() and owned_foreground()', HARNESS)
+        self.assertIn('reference=classify_l08_cursor_reference(', HARNESS)
+        self.assertIn('print("L08_CURSOR_REFERENCE_CLASSIFICATION"', HARNESS)
+        self.assertIn('assert observed=="sizewe"', HARNESS)
 
     def test_staged_hover_crosses_thumb_before_observation(self):
         # UIA element-from-point alone is not a routed WinUI entry event.
