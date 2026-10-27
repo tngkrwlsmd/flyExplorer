@@ -78,36 +78,81 @@ namespace {
         }catch(...){}
     }
 
-    // G01 initial navigation: test-owned, redacted, bounded ASCII phases.
-    // The synthetic integrated startup test alone opts in; normal users do
-    // not create or expose diagnostic files. Never log paths or pointer data.
-    void TraceG01OwnedStartup(char const* phase) noexcept
-    {
-        try{
+    // G01 synthetic-startup diagnostics: record only fixed integer phases
+    // into a test-owned, PID-qualified read-only-observable shared page.
+    // This avoids file-open/write timing on the initial navigation path.
+    // No user paths, data, remote memory access or ordinary-app artifacts.
+    constexpr LONG kG01StartupMagic=0x47303150;
+    constexpr LONG kG01StartupCapacity=64;
+    char const* const kG01StartupPhases[]={
+        "LEFT_SUBMIT_BEGIN","RIGHT_SUBMIT_BEGIN",
+        "LEFT_SUBMIT_ACCEPTED","LEFT_SUBMIT_REJECTED",
+        "RIGHT_SUBMIT_ACCEPTED","RIGHT_SUBMIT_REJECTED",
+        "RESULT_CALLBACK","RESULT_ENQUEUE_OK",
+        "RESULT_ENQUEUE_REJECTED","RESULT_IGNORED",
+        "LEFT_APPLIED","LEFT_FAILED","LEFT_REJECTED",
+        "LEFT_EXTENDED","LEFT_NOCHANGE",
+        "RIGHT_APPLIED","RIGHT_FAILED","RIGHT_REJECTED",
+        "RIGHT_EXTENDED","RIGHT_NOCHANGE"
+    };
+    struct G01StartupPage final {
+        LONG magic=0;
+        LONG pid=0;
+        volatile LONG count=0;
+        volatile LONG events[kG01StartupCapacity]{};
+    };
+    struct G01StartupMapping final {
+        HANDLE handle=nullptr;
+        G01StartupPage* page=nullptr;
+        G01StartupMapping() noexcept {
             wchar_t flag[8]{};
             if(::GetEnvironmentVariableW(
                 L"FLY_G01_INTEGRATED_STARTUP_ONLY",flag,8)!=3||
                std::wcscmp(flag,L"YES"))return;
             wchar_t temp[MAX_PATH]{};
-            auto const n=::GetTempPathW(MAX_PATH,temp);
-            if(!n||n>=MAX_PATH)return;
-            std::wstring path(temp,n);
-            if(path.find(L"shell-owned-")==std::wstring::npos ||
-               path.find(L"\\tmp\\")==std::wstring::npos)return;
-            path+=L"fly-g01-startup-"+std::to_wstring(::GetCurrentProcessId())+
-                  L".log";
-            auto file=::CreateFileW(path.c_str(),FILE_APPEND_DATA,
-                FILE_SHARE_READ|FILE_SHARE_WRITE,nullptr,OPEN_ALWAYS,
-                FILE_ATTRIBUTE_NORMAL,nullptr);
-            if(file==INVALID_HANDLE_VALUE)return;
-            auto const bytes=static_cast<DWORD>(std::strlen(phase));
-            if(bytes&&bytes<80){
-                DWORD written{};
-                ::WriteFile(file,phase,bytes,&written,nullptr);
-                ::WriteFile(file,"\n",1,&written,nullptr);
+            const DWORD length=::GetTempPathW(MAX_PATH,temp);
+            if(!length||length>=MAX_PATH)return;
+            std::wstring location(temp,length);
+            if(location.find(L"shell-owned-")==std::wstring::npos ||
+               location.find(L"\\tmp\\")==std::wstring::npos)return;
+            wchar_t name[100]{};
+            const auto pid=::GetCurrentProcessId();
+            if(swprintf_s(name,std::size(name),
+                L"Local\\flyExplorer-G01-startup-%lu",
+                static_cast<unsigned long>(pid))<0)return;
+            handle=::CreateFileMappingW(INVALID_HANDLE_VALUE,nullptr,
+                PAGE_READWRITE,0,sizeof(G01StartupPage),name);
+            if(!handle)return;
+            page=static_cast<G01StartupPage*>(
+                ::MapViewOfFile(handle,FILE_MAP_WRITE,0,0,sizeof(G01StartupPage)));
+            if(!page)return;
+            page->magic=kG01StartupMagic;
+            page->pid=static_cast<LONG>(pid);
+            page->count=0;
+        }
+        ~G01StartupMapping() noexcept {
+            if(page)::UnmapViewOfFile(page);
+            if(handle)::CloseHandle(handle);
+        }
+        G01StartupMapping(G01StartupMapping const&)=delete;
+        G01StartupMapping& operator=(G01StartupMapping const&)=delete;
+    };
+    void TraceG01OwnedStartup(char const* phase) noexcept
+    {
+        // Construct once at the first test-owned QueuePath request.
+        static G01StartupMapping mapping;
+        if(!mapping.page||!phase)return;
+        LONG code=0;
+        for(std::size_t i=0;i<std::size(kG01StartupPhases);++i){
+            if(std::strcmp(phase,kG01StartupPhases[i])==0){
+                code=static_cast<LONG>(i+1);
+                break;
             }
-            ::CloseHandle(file);
-        }catch(...){}
+        }
+        if(!code)return;
+        const LONG pos=::InterlockedIncrement(&mapping.page->count);
+        if(pos>0&&pos<=kG01StartupCapacity)
+            ::InterlockedExchange(&mapping.page->events[pos-1],code);
     }
 
     constexpr UINT_PTR kDetailColumnCursorSubclassId=0xF1E08;
