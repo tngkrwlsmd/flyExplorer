@@ -467,7 +467,12 @@ def main(config="Release"):
             lines=trace.read_text(encoding="ascii").splitlines()
             if len(lines)>64 or any(line not in allowed_close_phases
                                     for line in lines):
-                print("G01_OWNED_CLOSE_PHASE_TRACE_INVALID",True,flush=True)
+                # Keep rejected traces rejected. Publish only a fixed reason,
+                # never private phase text, user paths or raw exception data.
+                reason=("phase-count-exceeded" if len(lines)>64
+                        else "unrecognized-phase")
+                print("G01_OWNED_CLOSE_PHASE_TRACE_INVALID",True,
+                      "REASON",reason,flush=True)
                 continue
             print("G01_OWNED_CLOSE_PHASE_TRACE",
                   ",".join(lines),flush=True)
