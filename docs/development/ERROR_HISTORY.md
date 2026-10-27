@@ -1,5 +1,11 @@
 # Error history
 
+## 2026-10-27 — G01 COMBASE public PDB request timed out after same-host PE identification
+
+- Scoped [Windows #40454286359](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/40454286359) read the current VM's `System32/combase.dll` only. SHA-256 `087F72ECC0C979A3B784AB319285AB64D053DFC0C274DF5B28FD40CF204A234F`; CodeView `4ac91d91-2238-08f3-ae6a-3164a1b8b404` / Age 1. Microsoft official public `combase.pdb` download raised `TimeoutError` at the network boundary. No COMBASE function names or PDB loader verdict; this failure does not invalidate successful CoreMessaging 14/14 function mapping in #40453770619, nor establish an app compile defect.
+- Windows request slot restored and re-read as idle [`326d4639a7c8`](https://github.com/tngkrwlsmd/personal-control-plane/commit/326d4639a7c826d2b313bddb7b730a20fb2f95f6). Avoid a blind repeat of identical HTTP request. G01 remains OPEN.
+
+
 ## 2026-10-27 — G01 public PDB valid through DBI age and actual DbgHelp loader; deferred callback stack resolved
 
 - [Scoped Windows run #40453770619](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/40453770619) on the retained 2.5.1 app-local DLL hash showed PDB Info Age=3 but **DBI Age=1** matching PE Age=1; DbgHelp accepted official PDB as `SymType=3`, `PdbAge=1`, `PdbUnmatched=False`. The earlier strict `resolve_local_rva.py` Info-stream-only GUID/Age comparison rejected this public PDB before calling the OS loader. This was a **diagnostic validation false negative**, not evidence that the downloaded PDB was unrelated.
