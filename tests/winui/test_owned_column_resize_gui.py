@@ -156,8 +156,17 @@ def main(config="Release"):
             mouse.move(coords=(body.left+30,body.top+36))
             time.sleep(.10)
             assert owned_foreground(), "diagnostic pointer left owned window"
+            # An absolute jump straight onto a narrow Grid can identify the
+            # UIA target without delivering a routed WinUI PointerEntered.
+            # Establish the pre-hover baseline beside the thumb, then cross
+            # its left edge with bounded real OS mouse moves (not UIA Invoke).
+            mouse.move(coords=(x-24,y))
+            time.sleep(.10)
             pointer_before=pointer_snapshot()
-            mouse.move(coords=(x,y))
+            for approach_x in (x-12,x-6,x):
+                mouse.move(coords=(approach_x,y))
+                time.sleep(.025)
+            assert owned_foreground(), "approach left owned window"
             elapsed=0
             pointer_after=None
             for wait_ms in (70,180,350):
