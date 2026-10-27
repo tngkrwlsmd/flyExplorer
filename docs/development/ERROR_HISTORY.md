@@ -1,5 +1,12 @@
 # Error history
 
+## 2026-10-27 — G01 stored WinRT error `0x800710DD` obtained under exact-owned external debugger
+
+- [Interactive Release run #40442357459](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/40442357459) built `fe95bc0ca8e33242b49b285de68117398e043b43` (exit 0), ran owned `plain/full/plain/full`, and ended `0x0/0x0/0x0/0xC000027B`. The last case's debugger recorded exactly one `C000027B` SE02 ResultCode **`0x800710DD`**, `HRESULT_FROM_WIN32(ERROR_INVALID_OPERATION)` (4317), with no allowlisted backtrace frames. Unlike the earlier vectored probe, the external debugger reached the fatal exception record. No causal function, WinUI task or application API can yet be inferred from the generic HRESULT.
+- Installed Microsoft WinDbg `1.2610.1001.0` in the verified interactive Windows user via official WinGet; [installation verification #40443287834](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/40443287834) PASS, one-shot task and scratch cleaned. No permanent global WER setting or dump. The follow-up `d97d50db24379bc4beb4bbc5778f3ce1e9186742` records SE02 form, declared stack-word count, allowlisted origin and frame mapping to discriminate an absent binary trace from a text-form exception; Windows source contracts 6/6 and Python syntax PASS [#40443505202](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/40443505202). The new live matrix is requested but its result is not evidence at this time.
+- G01 **OPEN** / L08 **OPEN**; G03–G05 excluded / G07 stopped.
+
+
 ## 2026-10-27 — G01 stowed Release crash reproduced despite vectored observer; native inner error remains unavailable
 
 - At exact `flyExplorer/main` `3e0efd8ad4e4dbc74908c4fe0a079dacbdd1d69c`, the interactive central `gui-g01-shutdown` scope ([run #40438475916](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/40438475916)) compiled Release once (PASS) and executed `plain/full/plain/full` on the same binary: native exits `0x0/0x0/0x0/0xC000027B`. The final `full` fixture completed, owned `WM_CLOSE` was posted and its profile/fixture guards passed; `WINDOW_CLOSED_EXIT` appeared, but `APP_DESTRUCTOR_ENTER` and all `NATIVE_STOWED_*` observer tokens were absent. The GitHub Actions green status reflects **diagnostic completion**, not product G01 acceptance.
