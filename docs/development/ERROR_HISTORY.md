@@ -1,5 +1,11 @@
 # Error history
 
+## 2026-10-27 — G01 left native request explicitly failed; right applied, dispatcher delivered both
+
+- [Windows initial Shell startup #40464399005](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/40464399005) exact `dafb8b2e`: Release compilation PASS, 5/5 first owned launches PASS, sixth failed original startup oracle. Local archive job `01e93825ba00409e813d383b2152eddd` preserved despite GitHub artifact-quota error. [Read-only bounded archive #40465069686](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/40465069686) matched both request/result SHA and captured 10 ordered PID-owned codes: `LEFT_SUBMIT_ACCEPTED` → `RESULT_CALLBACK` → `RESULT_ENQUEUE_OK` → **`LEFT_FAILED`**; separate `RIGHT_APPLIED` after the right callback. Address remained empty, left UIA ListItems 0, right 8. This establishes a **real left native failure result**, not a left UIA sampling issue or absent UI queue callback.
+- The numeric left HRESULT was not yet recorded, so do not assign blame to a specific helper spawn, pipe failure, timeout, COM/Shell HRESULT or app code line. The prior status `loaded` can be the right result overwriting shared status. New synthetic-only `LEFT_HRESULT_XXXXXXXX` shared-page evidence from `f783cfd2` is being narrowly validated; it changes no retry counts, normal-user logging, worker deadlines or pane behavior. This result preserves the separate 24/24 shutdown PASS. **G01 initial route OPEN**.
+
+
 ## 2026-10-27 — G01 shared-page trace installed; 12/12 green is not proof the intermittent left startup is fixed
 
 - Prior actual left-pane failure remains [#40459406369](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/40459406369): third of six owned initial launches failed, empty left address/0 left list UIA vs right-side progress, confirmed [read-only archive #40460353267](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/40460353267). This was not a `0xC000027B` shutdown crash.
