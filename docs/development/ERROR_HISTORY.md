@@ -1,5 +1,11 @@
 # Error history
 
+## 2026-10-27 — G01 first real stored module-RVA call prefix captured, 15 addresses, shutdown still fails
+
+- [Interactive Release #40447398090](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/40447398090): exact `4951369a8ff182e4ba7cf45e7acd6136daf7dd35`, Release build PASS. Owned matrix `plain/full/plain/full` ended `0x0/0x0/0x0/0xC000027B`, stopped at case 4 of maximum 12. One saved SE02 HRESULT `0x800710DD`, binary form, origin `combase.dll+0x5CF34`, captured first 15 allowlisted module-relative frame addresses: first `combase.dll+0x5DE97` then `CoreMessagingXP.dll+0x97968`, `+0x42F8D`, `+0x47096`, `+0x4E910` and additional CoreMessaging addresses. No app frame within this bounded prefix; this does not establish the responsible caller or source line. No raw dump, memory pointers or sensitive paths exported.
+- Central output had a separate regex prefix bug (`WORDS_1`/`MAPPED_1` not valid full counters); repaired with a source-contained two-digit regression by [control commit `add0848146727395cdb06e22655ce9c57f1a0276`](https://github.com/tngkrwlsmd/personal-control-plane/commit/add0848146727395cdb06e22655ce9c57f1a0276), not yet fully quality-confirmed at this document checkpoint. Previous owned run [#40446485192](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/40446485192) 4/4 clean is only intermittent clean evidence; G01 remains OPEN. A single test-owned, no-symbol-download preflight of Windows `CoreMessagingXP.dll`/`combase.dll` PE identities is queued. L08 remains OPEN; G03–G05 excluded; G07 paused.
+
+
 ## 2026-10-27 — G01 COMBASE origin RVA observed, invalid trace classification in older 16-frame-limited observer
 
 - [Exact-source interactive Windows diagnostic #40443865784](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/40443865784) produced `0x0/0x0/0x0/0xC000027B` after Release build PASS on `d97d50db24379bc4beb4bbc5778f3ce1e9186742`. The fourth case recorded `G01_DEBUG_STOWED_0_HRESULT_800710DD`, `FORM_BINARY`, `STACK_INVALID`, `ORIGIN_COMBASE_0005CF34`. The original backtrace still was not collected. COMBASE+RVA is not a symbolized call stack.
