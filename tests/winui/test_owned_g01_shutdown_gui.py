@@ -57,6 +57,7 @@ PHASES = {
     "APP_DESTRUCTOR_BODY_EXIT",
     "APP_UNHANDLED_EXCEPTION_ENTER",
     "APP_UNHANDLED_EXCEPTION_EXIT",
+    "NATIVE_STOWED_ENTER", "NATIVE_STOWED_EXIT",
 }
 LEGACY = (
     "fxfile.conf", "fxfile-main.conf", "fxfile-toolbar.dat",
@@ -242,7 +243,11 @@ def run(config="Release", scenario="full"):
             recognized = lambda p: (
                 p in PHASES or
                 re.fullmatch(r"APP_UNHANDLED_HRESULT_[0-9A-F]{8}", p)
-                is not None
+                is not None or
+                re.fullmatch(
+                    r"NATIVE_STOWED_FRAME_0[0-7]_(?:FLY|XAML|COMBASE|COREMSG|NTDLL|OTHER)_[0-9A-F]{8}",
+                    p,
+                ) is not None
             )
             if len(phase_log) <= 64 and all(recognized(p) for p in phase_log):
                 print("G01_OWNED_PHASE_TRACE", ",".join(phase_log), flush=True)

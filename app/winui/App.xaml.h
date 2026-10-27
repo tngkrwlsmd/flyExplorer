@@ -12,6 +12,7 @@ namespace winrt::FlyExplorer::implementation
         void OnLaunched(Microsoft::UI::Xaml::LaunchActivatedEventArgs const&);
 
     private:
+        void* mG01NativeExceptionHandler{ nullptr };
         winrt::Microsoft::UI::Xaml::Window window{ nullptr };
     };
 }
