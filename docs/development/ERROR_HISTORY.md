@@ -1,5 +1,11 @@
 # Error history
 
+## 2026-10-27 — G01 known 0xC000027B close crash no longer reproduced in exact owned Release + no-debugger conditions
+
+- [Central Windows G01 #40457595096](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/40457595096), exact `flyExplorer` source `2db07859ff52288df7dde249925a8ba430c1b389`, Release build PASS, **12/12** test-owned debugger-attached `plain/full` closes plus **12/12 without debugger**, same Release executable: all exit `0x0`, all show `WINDOW_CLOSED_EXIT=True` / `APP_DESTRUCTOR_ENTER=True`. The original crash `0xC000027B` / stowed `0x800710DD` was NOT observed across 24 attempts, including column resizing and two-window-tab `full` cases. This is stronger than earlier [#40456150522](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/40456150522) 12/12 and [#40456689191](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/40456689191) 12/12 instrumented only; [#40455570061](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/40455570061) had crashed on the fourth `full` on the sidebar-only version. The source has explicit closing flags and callback shutdown for MainWindow, ShellHeader, NavigationSidebar, with focused 13/13 source contracts PASS [#40456663779](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/40456663779).
+- **Classification:** known G01 fatal close reproducer: **FOCUSED RELEASE REGRESSION PASS** on this source/environment; monitored for intermittent recurrence. The control-plane's diagnostic `NOT_FINAL_ACCEPTANCE=1` contract is intentionally unchanged and must not be represented as complete broad GUI, installer, distribution, initial startup or cross-machine acceptance. Stowed origin in exact historical crash remains not attributable to a named app source line. No new crash-dump/security or user-profile changes were made.
+
+
 ## 2026-10-27 — G01 shutdown callback lifetime fixes: failed intermediate and clean instrumented matrices
 
 - Sidebar worker lifetime change alone was insufficient: [#40455570061](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/40455570061) on `8b3cd7a7` reproduced original `0xC000027B` / stowed `0x800710DD` on fourth `full`, same CoreMessaging/COMBASE captured frames after three clean cases. Do not conflate a green diagnostic workflow with PASS of close acceptance.
