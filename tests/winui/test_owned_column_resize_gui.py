@@ -2,6 +2,7 @@
 from pathlib import Path
 from paths import APP, app_exe
 from uia_polling import wait_until
+from l08_pointer_oracle import parse_l08_pointer_help, classify_l08_hover
 from PIL import ImageGrab
 import ctypes,hashlib,os,shutil,subprocess,sys,tempfile,time
 from ctypes import wintypes
@@ -141,16 +142,24 @@ def main(config="Release"):
                     return (info.automation_id,info.control_type)
                 except Exception as error:
                     return ("<uia-error>",type(error).__name__,"")
-            # Force a real pointer exit/entry across the 12px thumb,
-            # then measure whether WinUI applies ProtectedCursor after
-            # dispatch time. Do not treat the old immediate HCURSOR oracle
-            # as visual acceptance or override the already-passing drag.
+            # Force a real pointer exit/entry across the 12px thumb.
+            # Compare owned WinUI entered counters *before and after*
+            # moving the pointer; a nonzero historical counter alone
+            # does not prove this hover dispatched PointerEntered.
+            def pointer_snapshot():
+                try:
+                    raw=thumb.element_info.element.CurrentHelpText
+                except Exception:
+                    return None
+                return parse_l08_pointer_help(raw)
             body=element("LeftFiles").rectangle()
             mouse.move(coords=(body.left+30,body.top+36))
             time.sleep(.10)
             assert owned_foreground(), "diagnostic pointer left owned window"
+            pointer_before=pointer_snapshot()
             mouse.move(coords=(x,y))
             elapsed=0
+            pointer_after=None
             for wait_ms in (70,180,350):
                 time.sleep(wait_ms/1000.0)
                 elapsed+=wait_ms
@@ -159,15 +168,19 @@ def main(config="Release"):
                 observed=("sizewe" if current["active"]==current["sizewe"]
                           else "arrow" if current["active"]==current["arrow"]
                           else "other")
+                pointer_after=pointer_snapshot()
                 print("L08_HOVER_TIMELINE",thumb_id,"DWELL_MS",elapsed,
-                      "HIT",owned_hit,"CURSOR",observed,flush=True)
-            # UIA HelpText is emitted only by our own diagnostic Grid.
-            # Correlate event arrival with the independent native HCURSOR.
-            try:
-                event_help=thumb.element_info.element.CurrentHelpText
-            except Exception as error:
-                event_help="<uia-help-error:"+type(error).__name__+">"
+                      "HIT",owned_hit,"CURSOR",observed,
+                      "WINUI",pointer_after,flush=True)
+            # Print only strictly parsed, bounded test-owned event counters,
+            # never arbitrary UIA HelpText from an external element.
+            event_help=pointer_after
+            classification=classify_l08_hover(
+                pointer_before,pointer_after,observed,
+                owned_hit[0]==thumb_id)
             print("L08_POINTER_EVENT_HELP",thumb_id,event_help,flush=True)
+            print("L08_POINTER_BOUNDARY",thumb_id,classification,
+                  "BASELINE",pointer_before,"LATEST",pointer_after,flush=True)
             print("L08_NATIVE_CURSOR_TRACE",thumb_id,resize_status(),flush=True)
             print("COLUMN_RESIZE_HOVER_PROBE",thumb_id,
                   owned_hit,current,flush=True)
