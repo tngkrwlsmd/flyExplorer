@@ -1066,6 +1066,14 @@ namespace winrt::FlyExplorer::implementation
             return;
         }
         mClosing=true;
+        // Prevent detached sidebar workers from projecting into torn-down XAML.
+        // Cancel by generation and clear window callbacks without touching UI.
+        try{
+            auto sidebar=SidebarView();
+            if(sidebar)winrt::get_self<
+                winrt::FlyExplorer::implementation::NavigationSidebar>(sidebar)
+                    ->PrepareForClose();
+        }catch(...){}
         // A queued drag tick must not examine XAML or apply a new width once
         // close has started. Stop every outstanding window-owned timer before
         // the input site and XAML controls are released.
