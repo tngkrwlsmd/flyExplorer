@@ -33,9 +33,6 @@ class G01RecoveredStatusContract(unittest.TestCase):
     def test_inactive_pane_result_does_not_mask_active_failure(self):
         segment = UI.split("void MainWindow::OnNativeResult(", 1)[1].split(
             "void MainWindow::OnNativeChange(", 1)[0]
-        )[0] if False else UI.split(
-            "void MainWindow::OnNativeResult(", 1
-        )[1].split("void MainWindow::OnNativeChange(", 1)[0]
         self.assertIn("hstring activeStatus=StatusText().Text();", segment)
         self.assertIn(
             "if(completed.side==ActiveWindowTab().model.activePane){",
