@@ -93,6 +93,23 @@ class L08PointerOracleContract(unittest.TestCase):
             "non-owned-or-missed-thumb",
         )
 
+    def test_staged_hover_crosses_thumb_before_observation(self):
+        # UIA element-from-point alone is not a routed WinUI entry event.
+        # The owned GUI must advance the system mouse across the actual grip.
+        self.assertIn("mouse.move(coords=(x-24,y))", HARNESS)
+        self.assertIn("for approach_x in (x-12,x-6,x):", HARNESS)
+        self.assertIn("mouse.move(coords=(approach_x,y))", HARNESS)
+        self.assertIn('assert owned_foreground(), "approach left owned window"', HARNESS)
+        self.assertLess(
+            HARNESS.index("mouse.move(coords=(x-24,y))"),
+            HARNESS.index("pointer_before=pointer_snapshot()"),
+        )
+        self.assertLess(
+            HARNESS.index("pointer_before=pointer_snapshot()"),
+            HARNESS.index("for approach_x in (x-12,x-6,x):"),
+        )
+        self.assertIn('assert observed=="sizewe"', HARNESS)
+
     def test_each_dwell_has_its_own_event_cursor_classification(self):
         self.assertIn("dwell_boundary=classify_l08_hover(", HARNESS)
         self.assertIn('"BOUNDARY",dwell_boundary', HARNESS)
