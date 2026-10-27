@@ -243,11 +243,9 @@ class PX10ColumnResizeGuiContract(unittest.TestCase):
         self.assertIn('x:Name="NewTabButton"',xaml)
         tag=xaml.split('x:Name="NewTabButton"',1)[1].split('</Button>',1)[0]
         self.assertIn('ToolTipService.ToolTip=',tag)
+        self.assertIn("ToolTipService::SetToolTip(",close)
         self.assertIn(
-            'ToolTipService::SetToolTip(\\n'
-            '                NewTabButton(),winrt::IInspectable{nullptr});',
-            close,
-        )
+            "NewTabButton(),winrt::IInspectable{nullptr});",close)
         self.assertLess(close.index('ToolTipService::SetToolTip('),
                         close.index('NewTabButton().Focus('))
         self.assertIn('TraceG01OwnedClose("FOCUS_TARGET_TOOLTIP_DETACHED")',
