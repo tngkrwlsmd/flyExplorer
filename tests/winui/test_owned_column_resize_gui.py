@@ -4,7 +4,7 @@ from paths import APP, app_exe
 from uia_polling import wait_until
 from l08_pointer_oracle import parse_l08_pointer_help, classify_l08_hover
 from PIL import ImageGrab
-import ctypes,hashlib,os,shutil,subprocess,sys,tempfile,time
+import ctypes,hashlib,os,re,shutil,subprocess,sys,tempfile,time
 from ctypes import wintypes
 import psutil
 from pywinauto import Desktop,mouse,keyboard
@@ -152,6 +152,14 @@ def main(config="Release"):
                 except Exception:
                     return None
                 return parse_l08_pointer_help(raw)
+            def routed_root_moves():
+                # Only parse one bounded, test-owned native diagnostic field.
+                # Never print arbitrary StatusText or another app's UIA text.
+                status=resize_status()
+                if not status.startswith("L08_NATIVE ticks=") or len(status)>400:
+                    return None
+                match=re.search(r"\brootMove=([0-9]{1,5})(?=\s|$)",status)
+                return int(match.group(1)) if match else None
             body=element("LeftFiles").rectangle()
             mouse.move(coords=(body.left+30,body.top+36))
             time.sleep(.10)
@@ -163,6 +171,7 @@ def main(config="Release"):
             mouse.move(coords=(x-24,y))
             time.sleep(.10)
             pointer_before=pointer_snapshot()
+            root_move_before=routed_root_moves()
             for approach_x in (x-12,x-6,x):
                 mouse.move(coords=(approach_x,y))
                 time.sleep(.025)
@@ -178,6 +187,15 @@ def main(config="Release"):
                           else "arrow" if current["active"]==current["arrow"]
                           else "other")
                 pointer_after=pointer_snapshot()
+                root_move_after=routed_root_moves()
+                root_move_delta=(root_move_after-root_move_before
+                                 if root_move_before is not None and
+                                    root_move_after is not None and
+                                    root_move_after>=root_move_before else None)
+                print("L08_ROOT_POINTER_MOVE",thumb_id,
+                      "DWELL_MS",elapsed,"BASELINE",root_move_before,
+                      "AFTER",root_move_after,"DELTA",root_move_delta,
+                      flush=True)
                 # Compare WinUI entry and native cursor from the SAME dwell.
                 # A late exit must not be reported as an arrow override.
                 dwell_boundary=classify_l08_hover(
