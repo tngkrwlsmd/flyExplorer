@@ -284,6 +284,20 @@ namespace winrt::FlyExplorer::implementation
             winrt::box_value(PointerEventHandler{
                 this,&MainWindow::OnDetailColumnResizePointerCaptureLost}),
             true);
+        // L08 opt-in only: distinguish routed WinUI mouse movement from the
+        // narrow Grid's PointerEntered. This never handles or alters input.
+        if(::GetEnvironmentVariableW(
+               L"FLYEXPLORER_COLUMN_RESIZE_DIAGNOSTIC",nullptr,0)>0){
+            RootShell().AddHandler(
+                UIElement::PointerMovedEvent(),
+                winrt::box_value(PointerEventHandler{
+                    [this](IInspectable const&,
+                           Microsoft::UI::Xaml::Input::PointerRoutedEventArgs const&){
+                        if(mL08RootPointerMoves<99999)
+                            ++mL08RootPointerMoves;
+                    }}),
+                true);
+        }
         // M2.6 uses the public WinUI 3 custom-titlebar/backdrop path only.
         // Pane-local folder TabViews remain inside each pane; the titlebar now
         // hosts a separate functional WindowTab workspace strip.
@@ -353,6 +367,7 @@ namespace winrt::FlyExplorer::implementation
                             auto value=std::wstring(L"L08_NATIVE ticks=")+
                                 std::to_wstring(ui->mL08HoverTimerTicks)+
                                 L" wm="+std::to_wstring(ui->mL08HoverCursorMessages)+
+                                L" rootMove="+std::to_wstring(ui->mL08RootPointerMoves)+
                                 L" hits="+std::to_wstring(ui->mL08HoverMatches)+
                                 L" subclass="+std::to_wstring(
                                     ui->mDetailColumnHoverSubclassInstalled?1:0)+
