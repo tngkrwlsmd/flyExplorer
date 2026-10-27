@@ -9,7 +9,8 @@ from pywinauto.keyboard import send_keys
 from PIL import ImageGrab
 from profile_guard import (assert_legacy_profile_unchanged, present_count,
                            snapshot_legacy_profile)
-from gui_failure_evidence import capture_failure, _startup_status_category
+from gui_failure_evidence import (capture_failure, _startup_status_category,
+                                  read_g01_owned_shared_phases)
 from owned_process_dump import capture_owned_dump
 
 # Read-only original user profile sentinel: the preview has NO permission
@@ -860,12 +861,8 @@ except Exception as failure:
  try:
   startup_events = []
   if G01_INTEGRATED_STARTUP_ONLY and p is not None:
-   # Read only this child process's bounded phase file inside the owned tmp.
-   native = temp / ("fly-g01-startup-" + str(p.pid) + ".log")
-   if (native.is_file() and not native.is_symlink() and
-       native.stat().st_size <= 4096):
-    startup_events = native.read_text(
-        encoding="ascii", errors="replace").splitlines()[:64]
+   # Failure-only, exact child PID: read fixed safe values, no filesystem I/O.
+   startup_events = read_g01_owned_shared_phases(p.pid)
   evidence_dir = capture_failure(base=base, owned=owned, left=left, right=right,
                                  win=locals().get("win"), hwnd=hwnd,
                                  pid=p.pid if p else None, error=failure,
