@@ -1,5 +1,12 @@
 # Error history
 
+## 2026-10-27 — G01 COMBASE origin RVA observed, invalid trace classification in older 16-frame-limited observer
+
+- [Exact-source interactive Windows diagnostic #40443865784](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/40443865784) produced `0x0/0x0/0x0/0xC000027B` after Release build PASS on `d97d50db24379bc4beb4bbc5778f3ce1e9186742`. The fourth case recorded `G01_DEBUG_STOWED_0_HRESULT_800710DD`, `FORM_BINARY`, `STACK_INVALID`, `ORIGIN_COMBASE_0005CF34`. The original backtrace still was not collected. COMBASE+RVA is not a symbolized call stack.
+- **Confirmed diagnostic-code limitation:** the tested revision's `decode_v2` classifies any `StackTraceWords>16` as invalid; that conflates a safe read cap with invalid Windows data. Current main [`270eaa5b563394110c732ef408ca1af2818f0a00`](https://github.com/tngkrwlsmd/flyExplorer/commit/270eaa5b563394110c732ef408ca1af2818f0a00) clamps valid traces to the first 16 entries and marks truncation instead of dropping them. G01 targeted Windows contracts **7/7 PASS** plus syntax [#40446458254](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/40446458254); source-limited GUI rerun [#40446485192](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/40446485192) is not yet a completed result at this checkpoint.
+- Installed Microsoft WinDbg remains available; not yet used to obtain the actual caller. G01 OPEN, L08 OPEN; G03–G05 excluded; G07 paused.
+
+
 ## 2026-10-27 — G01 stored WinRT error `0x800710DD` obtained under exact-owned external debugger
 
 - [Interactive Release run #40442357459](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/40442357459) built `fe95bc0ca8e33242b49b285de68117398e043b43` (exit 0), ran owned `plain/full/plain/full`, and ended `0x0/0x0/0x0/0xC000027B`. The last case's debugger recorded exactly one `C000027B` SE02 ResultCode **`0x800710DD`**, `HRESULT_FROM_WIN32(ERROR_INVALID_OPERATION)` (4317), with no allowlisted backtrace frames. Unlike the earlier vectored probe, the external debugger reached the fatal exception record. No causal function, WinUI task or application API can yet be inferred from the generic HRESULT.
