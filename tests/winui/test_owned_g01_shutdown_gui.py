@@ -9,6 +9,7 @@ import ctypes
 from ctypes import wintypes
 import hashlib
 import os
+import re
 from pathlib import Path
 import shutil
 import subprocess
@@ -54,6 +55,8 @@ PHASES = {
     "PREPARE_CLOSE_EXIT", "MAINWINDOW_DESTRUCTOR_ENTER",
     "MAINWINDOW_DESTRUCTOR_EXIT", "APP_DESTRUCTOR_ENTER",
     "APP_DESTRUCTOR_BODY_EXIT",
+    "APP_UNHANDLED_EXCEPTION_ENTER",
+    "APP_UNHANDLED_EXCEPTION_EXIT",
 }
 LEGACY = (
     "fxfile.conf", "fxfile-main.conf", "fxfile-toolbar.dat",
@@ -236,7 +239,12 @@ def run(config="Release", scenario="full"):
             path = owned / "tmp" / f"fly-g01-close-{proc.pid}.log"
         if path.is_file() and not path.is_symlink() and path.stat().st_size <= 4096:
             phase_log = path.read_text(encoding="ascii").splitlines()
-            if len(phase_log) <= 64 and all(p in PHASES for p in phase_log):
+            recognized = lambda p: (
+                p in PHASES or
+                re.fullmatch(r"APP_UNHANDLED_HRESULT_[0-9A-F]{8}", p)
+                is not None
+            )
+            if len(phase_log) <= 64 and all(recognized(p) for p in phase_log):
                 print("G01_OWNED_PHASE_TRACE", ",".join(phase_log), flush=True)
             else:
                 print("G01_OWNED_PHASE_TRACE_INVALID", flush=True)
