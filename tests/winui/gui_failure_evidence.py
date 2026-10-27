@@ -184,6 +184,82 @@ _G01_STARTUP_PHASE = re.compile(
 )
 
 
+# Same ordered fixed ids as app/winui/MainWindow.xaml.cpp's synthetic page.
+G01_SHARED_MAGIC = 0x47303150
+G01_SHARED_PHASES = (
+    "LEFT_SUBMIT_BEGIN", "RIGHT_SUBMIT_BEGIN",
+    "LEFT_SUBMIT_ACCEPTED", "LEFT_SUBMIT_REJECTED",
+    "RIGHT_SUBMIT_ACCEPTED", "RIGHT_SUBMIT_REJECTED",
+    "RESULT_CALLBACK", "RESULT_ENQUEUE_OK",
+    "RESULT_ENQUEUE_REJECTED", "RESULT_IGNORED",
+    "LEFT_APPLIED", "LEFT_FAILED", "LEFT_REJECTED",
+    "LEFT_EXTENDED", "LEFT_NOCHANGE",
+    "RIGHT_APPLIED", "RIGHT_FAILED", "RIGHT_REJECTED",
+    "RIGHT_EXTENDED", "RIGHT_NOCHANGE",
+)
+G01_SHARED_FORMAT = "<III64I"
+
+
+def decode_g01_owned_shared_phases(raw: bytes, child_pid: int) -> list[str]:
+    """Accept only a fixed-layout, PID-matched synthetic status page."""
+    import struct
+    if (type(child_pid) is not int or child_pid <= 0 or
+            child_pid > 0xFFFFFFFF or
+            not isinstance(raw, bytes) or
+            len(raw) != struct.calcsize(G01_SHARED_FORMAT)):
+        return []
+    magic, pid, count, *slots = struct.unpack(G01_SHARED_FORMAT, raw)
+    if magic != G01_SHARED_MAGIC or pid != child_pid or count > 512:
+        return []
+    return [G01_SHARED_PHASES[code - 1] for code in slots[:min(count, 64)]
+            if 1 <= code <= len(G01_SHARED_PHASES)]
+
+
+def read_g01_owned_shared_phases(child_pid: int) -> list[str]:
+    """Failure-only: read one page from this test's exact launched child.
+
+    OpenFileMapping is named by the test-owned PID and never attaches a
+    debugger, reads unrelated process memory, or enumerates other windows.
+    """
+    if os.name != "nt" or type(child_pid) is not int or not 1 <= child_pid <= 0xFFFFFFFF:
+        return []
+    import ctypes
+    from ctypes import wintypes
+    import struct
+    handle = None
+    view = None
+    try:
+        kernel = ctypes.WinDLL("kernel32", use_last_error=True)
+        kernel.OpenFileMappingW.argtypes = (
+            wintypes.DWORD, wintypes.BOOL, wintypes.LPCWSTR)
+        kernel.OpenFileMappingW.restype = ctypes.c_void_p
+        kernel.MapViewOfFile.argtypes = (
+            ctypes.c_void_p, wintypes.DWORD, wintypes.DWORD,
+            wintypes.DWORD, ctypes.c_size_t)
+        kernel.MapViewOfFile.restype = ctypes.c_void_p
+        kernel.UnmapViewOfFile.argtypes = (ctypes.c_void_p,)
+        kernel.UnmapViewOfFile.restype = wintypes.BOOL
+        kernel.CloseHandle.argtypes = (ctypes.c_void_p,)
+        kernel.CloseHandle.restype = wintypes.BOOL
+        size = struct.calcsize(G01_SHARED_FORMAT)
+        name = f"Local\\flyExplorer-G01-startup-{child_pid}"
+        handle = kernel.OpenFileMappingW(0x0004, False, name)
+        if not handle:
+            return []
+        view = kernel.MapViewOfFile(handle, 0x0004, 0, 0, size)
+        if not view:
+            return []
+        raw = ctypes.string_at(view, size)
+        return decode_g01_owned_shared_phases(raw, child_pid)
+    except (OSError, ValueError, AttributeError):
+        return []
+    finally:
+        if view:
+            kernel.UnmapViewOfFile(view)
+        if handle:
+            kernel.CloseHandle(handle)
+
+
 def _safe_g01_startup_events(events):
     """Allow only a bounded set of path-free phases from the owned app."""
     if not isinstance(events, (list, tuple)):
