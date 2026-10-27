@@ -245,7 +245,7 @@ class PX10ColumnResizeGuiContract(unittest.TestCase):
         self.assertIn('ToolTipService.ToolTip=',tag)
         self.assertIn("ToolTipService::SetToolTip(",close)
         self.assertIn(
-            "NewTabButton(),winrt::IInspectable{nullptr});",close)
+            "NewTabButton(),winrt::Windows::Foundation::IInspectable{nullptr});",close)
         self.assertLess(close.index('ToolTipService::SetToolTip('),
                         close.index('NewTabButton().Focus('))
         self.assertIn('TraceG01OwnedClose("FOCUS_TARGET_TOOLTIP_DETACHED")',
