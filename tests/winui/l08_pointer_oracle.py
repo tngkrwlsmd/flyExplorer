@@ -1,0 +1,61 @@
+"""Redacted, read-only classification of the owned L08 WinUI hover diagnostic.
+
+Neither UI Automation's arbitrary HelpText nor raw cursor handles are logged
+by this classifier. Classification cannot replace the independent OS cursor
+acceptance assertion in the owned GUI test.
+"""
+from __future__ import annotations
+
+import re
+from typing import NamedTuple
+
+
+class PointerState(NamedTuple):
+    stage: str
+    entered: int
+    exited: int
+    cursor_set: bool
+
+
+_PATTERN = re.compile(
+    r"L08_(loaded|enter|exit) ENTER=([0-9]{1,5}) "
+    r"EXIT=([0-9]{1,5}) CURSOR_SET=([01])",
+    re.ASCII,
+)
+
+
+def parse_l08_pointer_help(value: object) -> PointerState | None:
+    """Accept only the bounded field layout emitted by DetailColumnHandle."""
+    if type(value) is not str or len(value) > 96:
+        return None
+    match = _PATTERN.fullmatch(value)
+    if match is None:
+        return None
+    stage, entered, exited, cursor_set = match.groups()
+    return PointerState(stage, int(entered), int(exited), cursor_set == "1")
+
+
+def classify_l08_hover(
+    before: PointerState | None,
+    after: PointerState | None,
+    native_cursor: str,
+    hit_expected_thumb: bool,
+) -> str:
+    """Describe evidence boundaries, not a GUI PASS or a product failure."""
+    if not hit_expected_thumb:
+        return "non-owned-or-missed-thumb"
+    if after is None:
+        return "uia-diagnostic-unavailable"
+    if not after.cursor_set:
+        return "protected-cursor-not-set"
+    if before is None:
+        return "prehover-baseline-unavailable"
+    if after.entered < before.entered or after.exited < before.exited:
+        return "diagnostic-counters-reset"
+    if after.entered == before.entered:
+        return "no-new-pointer-enter-observed"
+    if native_cursor == "sizewe":
+        return "pointer-entered-native-sizewe"
+    if native_cursor == "arrow":
+        return "pointer-entered-native-arrow"
+    return "pointer-entered-native-other"
