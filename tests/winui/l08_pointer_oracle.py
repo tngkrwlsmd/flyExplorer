@@ -64,3 +64,32 @@ def classify_l08_hover(
     if native_cursor == "arrow":
         return "pointer-entered-native-arrow"
     return "pointer-entered-native-other"
+
+
+def classify_l08_cursor_reference(
+    owned_edit_hit: bool,
+    text_cursor: str,
+    resize_cursors: tuple[str, ...],
+) -> str:
+    """Classify cursor-observation *evidence*, never override GUI acceptance.
+
+    IDC_IBEAM is an independent positive control only when the point actually
+    hits an owned, enabled Edit. A missing I-beam then prevents attributing
+    the arrow readings on resize handles solely to the product. No return
+    value from this function can satisfy the strict per-thumb SIZEWE oracle.
+    """
+    allowed = {"arrow", "ibeam", "sizewe", "other"}
+    if (type(owned_edit_hit) is not bool or
+            type(text_cursor) is not str or text_cursor not in allowed or
+            type(resize_cursors) is not tuple or
+            len(resize_cursors) != 3 or
+            any(type(item) is not str or item not in allowed
+                for item in resize_cursors)):
+        return "cursor-reference-evidence-invalid"
+    if not owned_edit_hit:
+        return "cursor-reference-target-unverified"
+    if text_cursor != "ibeam":
+        return "cursor-reference-ibeam-not-observed"
+    if any(cursor != "sizewe" for cursor in resize_cursors):
+        return "resize-cursor-not-observed-with-valid-reference"
+    return "native-cursor-observations-match"
