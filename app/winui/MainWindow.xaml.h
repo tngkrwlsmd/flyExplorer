@@ -423,6 +423,9 @@ namespace winrt::FlyExplorer::implementation
         // L08 opt-in owned GUI diagnostic counters; no persistent logging.
         std::uint32_t mL08HoverTimerTicks=0;
         std::uint32_t mL08HoverCursorMessages=0;
+        // Opt-in root XAML routed-pointer control: distinguish input delivery
+        // from a narrow DetailColumnHandle PointerEntered notification.
+        std::uint32_t mL08RootPointerMoves=0;
         std::uint32_t mL08HoverMatches=0;
         std::wstring mL08HoverLastReason=L"not-sampled";
         LONG mL08HoverLastX=0;
