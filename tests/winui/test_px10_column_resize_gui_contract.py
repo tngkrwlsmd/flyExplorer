@@ -232,6 +232,39 @@ class PX10ColumnResizeGuiContract(unittest.TestCase):
         self.assertIn("len(lines)>64",gui)
         self.assertIn("trace.stat().st_size>4096",gui)
 
+    def test_all_realized_tooltips_detach_before_xaml_close(self):
+        # Native shutdown AV stack: ToolTip::~ToolTip -> island root access.
+        # Teardown is bounded and runs only during ordinary window close.
+        cpp=(ROOT/"app/winui/MainWindow.xaml.cpp").read_text("utf-8")
+        gui=(ROOT/"tests/winui/test_owned_column_resize_gui.py").read_text(
+            "utf-8")
+        close=cpp.split(
+            "void MainWindow::PrepareXamlForClose() noexcept",1)[1].split(
+            "void MainWindow::PrepareForClose() noexcept",1)[0]
+        self.assertIn("constexpr std::size_t kMaxCloseTooltipNodes=8192;",close)
+        self.assertIn("nodes.push_back(RootShell());",close)
+        self.assertIn("VisualTreeHelper::GetChildrenCount",close)
+        self.assertIn("VisualTreeHelper::GetChild",close)
+        self.assertIn("ToolTipService::GetToolTip(*node)",close)
+        self.assertIn("ToolTipService::SetToolTip(",close)
+        self.assertIn(
+            "*node,winrt::Windows::Foundation::IInspectable{nullptr});",
+            close)
+        self.assertIn("nodes.rbegin()",close)
+        self.assertLess(close.index("VISUAL_TOOLTIP_SWEEP_RELEASED"),
+                        close.index("NewTabButton().Focus("))
+        for marker in (
+            "VISUAL_TOOLTIP_SWEEP_RELEASED",
+            "VISUAL_TOOLTIP_SWEEP_EMPTY",
+            "VISUAL_TOOLTIP_SWEEP_LIMIT",
+            "VISUAL_TOOLTIP_SWEEP_EXCEPTION",
+        ):
+            self.assertIn('TraceG01OwnedClose(',close)
+            self.assertIn('"'+marker+'"',close)
+            self.assertIn('"'+marker+'"',gui)
+        self.assertNotIn("MiniDumpWriteDump",close)
+        self.assertIn('assert observed=="sizewe"',gui)
+
     def test_close_focus_target_tooltip_detaches_before_focus(self):
         cpp=(ROOT/"app/winui/MainWindow.xaml.cpp").read_text("utf-8")
         xaml=(ROOT/"app/winui/MainWindow.xaml").read_text("utf-8")
