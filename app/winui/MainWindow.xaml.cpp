@@ -112,9 +112,8 @@ namespace {
             wchar_t temp[MAX_PATH]{};
             const DWORD length=::GetTempPathW(MAX_PATH,temp);
             if(!length||length>=MAX_PATH)return;
-            std::wstring location(temp,length);
-            if(location.find(L"shell-owned-")==std::wstring::npos ||
-               location.find(L"\\tmp\\")==std::wstring::npos)return;
+            if(!std::wcsstr(temp,L"shell-owned-") ||
+               !std::wcsstr(temp,L"\\tmp\\"))return;
             wchar_t name[100]{};
             const auto pid=::GetCurrentProcessId();
             if(swprintf_s(name,std::size(name),
@@ -251,6 +250,9 @@ namespace winrt::FlyExplorer::implementation
     MainWindow::MainWindow()
     {
         InitializeComponent();
+        // Allocate synthetic diagnostic page before starting Shell worker
+        // threads. Tracing QueuePath must not pay mapping setup latency.
+        TraceG01OwnedStartup("PREINIT");
         // ListViewItem can consume RightTapped for its own selection/menu
         // behavior. The pane's custom menu must also see handled events.
         // Register exactly once, rather than duplicating XAML bindings.
