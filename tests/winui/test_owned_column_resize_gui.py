@@ -4,6 +4,7 @@ from paths import APP, app_exe
 from uia_polling import wait_until
 from l08_pointer_oracle import parse_l08_pointer_help, classify_l08_hover
 from l08_pointer_oracle import classify_l08_cursor_reference
+from l08_sendinput_mouse import sendinput_mouse_move
 from PIL import ImageGrab
 import ctypes,hashlib,os,re,shutil,subprocess,sys,tempfile,time
 from ctypes import wintypes
@@ -162,19 +163,21 @@ def main(config="Release"):
                 match=re.search(r"\brootMove=([0-9]{1,5})(?=\s|$)",status)
                 return int(match.group(1)) if match else None
             body=element("LeftFiles").rectangle()
-            mouse.move(coords=(body.left+30,body.top+36))
+            sendinput_mouse_move(coords=(body.left+30,body.top+36))
             time.sleep(.10)
             assert owned_foreground(), "diagnostic pointer left owned window"
-            # An absolute jump straight onto a narrow Grid can identify the
-            # UIA target without delivering a routed WinUI PointerEntered.
-            # Establish the pre-hover baseline beside the thumb, then cross
-            # its left edge with bounded real OS mouse moves (not UIA Invoke).
-            mouse.move(coords=(x-24,y))
+            # pywinauto.mouse.move uses SetCursorPos. Our exact-source
+            # interactive control reproduced zero WinUI enter events with
+            # that input, while four-step SendInput produced PointerEntered,
+            # a native sizewe cursor and an independent Edit I-beam.
+            # Keep the pre-hover baseline and cross the 12px thumb with
+            # bounded OS SendInput movement; never use UIA Invoke.
+            sendinput_mouse_move(coords=(x-24,y))
             time.sleep(.10)
             pointer_before=pointer_snapshot()
             root_move_before=routed_root_moves()
             for approach_x in (x-12,x-6,x):
-                mouse.move(coords=(approach_x,y))
+                sendinput_mouse_move(coords=(approach_x,y))
                 time.sleep(.025)
             assert owned_foreground(), "approach left owned window"
             elapsed=0
@@ -265,7 +268,7 @@ def main(config="Release"):
                 steps=10
                 for step in range(1,steps+1):
                     nx=x+round(delta*step/steps)
-                    mouse.move(coords=(nx,y))
+                    sendinput_mouse_move(coords=(nx,y))
                     time.sleep(.08)
                     boundary=element(next_header_id).rectangle().left
                     print("COLUMN_RESIZE_STEP",thumb_id,step,
@@ -288,7 +291,7 @@ def main(config="Release"):
         x=(thumb.left+thumb.right)//2;y=(thumb.top+thumb.bottom)//2
         start=element("LeftTypeSortButton").rectangle().left
         mouse.press(button="left",coords=(x,y))
-        try:mouse.move(coords=(x+24,y))
+        try:sendinput_mouse_move(coords=(x+24,y))
         finally:mouse.release(button="left",coords=(x+24,y))
         eventually(lambda:element("LeftTypeSortButton").rectangle().left>=start+12,
                    "rapid resize lost its final movement",8)
@@ -325,7 +328,7 @@ def main(config="Release"):
             search_box=search.rectangle()
             search_x=(search_box.left+search_box.right)//2
             search_y=(search_box.top+search_box.bottom)//2
-            mouse.move(coords=(search_x,search_y))
+            sendinput_mouse_move(coords=(search_x,search_y))
             time.sleep(.3)
             hit=Desktop(backend="uia").from_point(
                 search_x,search_y).element_info
@@ -351,7 +354,7 @@ def main(config="Release"):
         print("L08_CURSOR_REFERENCE_CLASSIFICATION",reference,
               "OWNED_EDIT",owned_edit_hit,flush=True)
         body=element("LeftFiles").rectangle()
-        mouse.move(coords=(body.left+30,body.top+40))
+        sendinput_mouse_move(coords=(body.left+30,body.top+40))
         window().set_focus()
         eventually(owned_foreground,"owned window is not foreground for final capture",3)
         rect=window().rectangle()
