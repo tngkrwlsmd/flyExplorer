@@ -1,5 +1,12 @@
 # Error history
 
+## 2026-10-27 — G01 crash-time CoreMessagingXP.dll is app-local only; observed crash #8/12
+
+- [Owned interactive Release diagnostic #40449178219](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/40449178219) used exact source `f87ee07883313de28e8ecbf0534e97f732ec4ea5`: seven normal exits followed by eighth `full` crash `0xC000027B`, early stop, no App destructor entry. **All 8 verified test-owned processes** mapped precisely one `CoreMessagingXP.dll` from the app-local Release directory, **zero** from WindowsApps, System32 or other. This contradicts a simultaneous mixed app-local/framework CoreMessaging image explanation in the observed owned process, without ruling out distinct code or runtime ownership defects.
+- Crash record again `HRESULT 0x800710DD`, `COMBASE+0x5CF34` origin and fifteen captured frame-module RVAs beginning `COMBASE+0x5DE97` / `CoreMessagingXP+0x97968` / `+0x42F8D`. The repaired central regex reports `WORDS_16`, `STACK_TRUNCATED`, `MAPPED_15` (cap of 16 retained words, not entire stack size). Root caller remains unknown, no `FLY` frame within retained prefix. No raw dump or process memory exported; G01 and L08 remain OPEN.
+- Read-only OS preflight earlier [#40448525069](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/40448525069) confirmed System32 has no CoreMessagingXP.dll; one installed WindowsAppRuntime.2 2.5.1 X64 framework package provides a **candidate**, not the exact loaded app-local binary. Continue with verified PE/PDB identity before attempting symbol resolution.
+
+
 ## 2026-10-27 — G01 first real stored module-RVA call prefix captured, 15 addresses, shutdown still fails
 
 - [Interactive Release #40447398090](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/40447398090): exact `4951369a8ff182e4ba7cf45e7acd6136daf7dd35`, Release build PASS. Owned matrix `plain/full/plain/full` ended `0x0/0x0/0x0/0xC000027B`, stopped at case 4 of maximum 12. One saved SE02 HRESULT `0x800710DD`, binary form, origin `combase.dll+0x5CF34`, captured first 15 allowlisted module-relative frame addresses: first `combase.dll+0x5DE97` then `CoreMessagingXP.dll+0x97968`, `+0x42F8D`, `+0x47096`, `+0x4E910` and additional CoreMessaging addresses. No app frame within this bounded prefix; this does not establish the responsible caller or source line. No raw dump, memory pointers or sensitive paths exported.
