@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 from pathlib import Path
 import traceback
 from uuid import uuid4
@@ -176,6 +177,21 @@ def _safe_startup_samples(samples):
     return safe
 
 
+_G01_STARTUP_PHASE = re.compile(
+    r"(?:(?:LEFT|RIGHT)_(?:SUBMIT_BEGIN|SUBMIT_ACCEPTED|SUBMIT_REJECTED|"
+    r"APPLIED|FAILED|REJECTED|EXTENDED|NOCHANGE)|"
+    r"RESULT_(?:CALLBACK|ENQUEUE_OK|ENQUEUE_REJECTED|IGNORED))"
+)
+
+
+def _safe_g01_startup_events(events):
+    """Allow only a bounded set of path-free phases from the owned app."""
+    if not isinstance(events, (list, tuple)):
+        return []
+    return [event for event in events[:64]
+            if type(event) is str and _G01_STARTUP_PHASE.fullmatch(event)]
+
+
 def _owned_startup_summary(win, ui: dict, left: Path, right: Path) -> dict:
     """Bounded, failure-only UIA categories for the synthetic startup route.
 
@@ -236,7 +252,7 @@ def _owned_startup_summary(win, ui: dict, left: Path, right: Path) -> dict:
 
 def capture_failure(*, base: Path, owned: Path, left: Path, right: Path,
                     win, hwnd: int | None, pid: int | None, error: Exception,
-                    startup_samples=None):
+                    startup_samples=None, startup_events=None):
     """Return evidence directory. A missing app/UIA peer is an evidence fact."""
     base, owned, left, right = map(Path, (base, owned, left, right))
     if not (_inside(owned, base) and _inside(left, owned)
@@ -269,6 +285,8 @@ def capture_failure(*, base: Path, owned: Path, left: Path, right: Path,
         if str(error) == "UI-independent native core/helper was not active at startup":
             ui["Startup"]["sampled_transitions"] = _safe_startup_samples(
                 startup_samples)
+            ui["Startup"]["owned_native_events"] = _safe_g01_startup_events(
+                startup_events)
         (output / "panes.json").write_text(json.dumps(ui, ensure_ascii=False, indent=2),
                                              encoding="utf-8")
         disk = {"left": {"path": _safe_address(left, owned),
