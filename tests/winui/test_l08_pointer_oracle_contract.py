@@ -50,6 +50,23 @@ class L08PointerOracleContract(unittest.TestCase):
             "no-new-pointer-enter-observed",
         )
 
+    def test_exited_thumb_is_not_misreported_as_native_arrow_override(self):
+        baseline = PointerState("exit", 2, 2, True)
+        left_thumb = PointerState("exit", 3, 3, True)
+        reentered = PointerState("enter", 4, 3, True)
+        self.assertEqual(
+            classify_l08_hover(baseline, left_thumb, "arrow", True),
+            "pointer-entered-then-exited",
+        )
+        self.assertEqual(
+            classify_l08_hover(baseline, left_thumb, "sizewe", True),
+            "pointer-entered-then-exited",
+        )
+        self.assertEqual(
+            classify_l08_hover(baseline, reentered, "arrow", True),
+            "pointer-entered-native-arrow",
+        )
+
     def test_missing_or_stale_data_is_not_called_pointer_failure(self):
         baseline = PointerState("exit", 5, 4, True)
         reset = PointerState("loaded", 0, 0, True)
