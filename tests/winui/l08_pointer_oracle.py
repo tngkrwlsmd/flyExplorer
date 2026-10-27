@@ -54,6 +54,11 @@ def classify_l08_hover(
         return "diagnostic-counters-reset"
     if after.entered == before.entered:
         return "no-new-pointer-enter-observed"
+    # PointerEntered occurred during the sample window, but a later
+    # PointerExited means the final OS cursor need not be the thumb's.
+    # Do not misdiagnose this as a cursor override on the hovered thumb.
+    if after.stage == "exit" and after.exited > before.exited:
+        return "pointer-entered-then-exited"
     if native_cursor == "sizewe":
         return "pointer-entered-native-sizewe"
     if native_cursor == "arrow":
