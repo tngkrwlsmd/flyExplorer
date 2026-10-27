@@ -139,7 +139,7 @@ class PX10ColumnResizeGuiContract(unittest.TestCase):
         # into the same owned trace. Unhandled-exception markers are not
         # ordinary close stages and must remain outside this normal-close
         # acceptance contract.
-        app_destructor=app.split("App::~App()",1)[1].split(
+        app_destructor=app.split("\n    App::~App()\n",1)[1].split(
             "void App::OnLaunched",1)[0]
         emitted.update(re.findall(
             r'TraceG01AppLifecycle\(\s*"([A-Z_]+)"\s*\)',
@@ -190,7 +190,7 @@ class PX10ColumnResizeGuiContract(unittest.TestCase):
         self.assertIn("::RemoveVectoredExceptionHandler(handle);",app)
         self.assertNotIn(
             "RemoveVectoredExceptionHandler",
-            app.split("App::~App()",1)[1].split(
+            app.split("\n    App::~App()\n",1)[1].split(
                 "void App::OnLaunched",1)[0],
         )
         # The handler is only installed under the existing owned fixture.
