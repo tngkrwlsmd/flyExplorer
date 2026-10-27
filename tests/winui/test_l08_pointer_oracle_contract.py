@@ -93,6 +93,11 @@ class L08PointerOracleContract(unittest.TestCase):
             "non-owned-or-missed-thumb",
         )
 
+    def test_each_dwell_has_its_own_event_cursor_classification(self):
+        self.assertIn("dwell_boundary=classify_l08_hover(", HARNESS)
+        self.assertIn('"BOUNDARY",dwell_boundary', HARNESS)
+        self.assertIn('assert observed=="sizewe"', HARNESS)
+
     def test_integration_does_not_relax_existing_acceptance(self):
         for expected in (
             'from l08_pointer_oracle import parse_l08_pointer_help, '
