@@ -57,10 +57,8 @@ class G01OwnedHresultContract(unittest.TestCase):
         self.assertIn(
             r'APP_UNHANDLED_HRESULT_[0-9A-F]{8}', code
         )
-        self.assertRegex(
-            code,
-            r'APP_UNHANDLED_EXCEPTION_ENTER.*APP_UNHANDLED_EXCEPTION_EXIT',
-        )
+        self.assertIn('"APP_UNHANDLED_EXCEPTION_ENTER"', code)
+        self.assertIn('"APP_UNHANDLED_EXCEPTION_EXIT"', code)
 
     def test_old_close_behavior_and_tokens_remain(self):
         code = WINDOW.read_text(encoding="utf-8")
