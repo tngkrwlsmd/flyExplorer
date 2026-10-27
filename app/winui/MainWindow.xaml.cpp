@@ -100,6 +100,7 @@ namespace {
         LONG pid=0;
         volatile LONG count=0;
         volatile LONG events[kG01StartupCapacity]{};
+        volatile LONG leftFailureHr=0; // synthetic child only, no user data
     };
     struct G01StartupMapping final {
         HANDLE handle=nullptr;
@@ -136,7 +137,7 @@ namespace {
         G01StartupMapping(G01StartupMapping const&)=delete;
         G01StartupMapping& operator=(G01StartupMapping const&)=delete;
     };
-    void TraceG01OwnedStartup(char const* phase) noexcept
+    void TraceG01OwnedStartup(char const* phase,HRESULT failureHr=S_OK) noexcept
     {
         // Construct once at the first test-owned QueuePath request.
         static G01StartupMapping mapping;
@@ -149,6 +150,9 @@ namespace {
             }
         }
         if(!code)return;
+        if(std::strcmp(phase,"LEFT_FAILED")==0)
+            ::InterlockedExchange(&mapping.page->leftFailureHr,
+                static_cast<LONG>(failureHr));
         const LONG pos=::InterlockedIncrement(&mapping.page->count);
         if(pos>0&&pos<=kG01StartupCapacity)
             ::InterlockedExchange(&mapping.page->events[pos-1],code);
@@ -1436,7 +1440,7 @@ namespace winrt::FlyExplorer::implementation
         if(completed.side==0){
             switch(completed.kind){
             case Kind::Applied:TraceG01OwnedStartup("LEFT_APPLIED");break;
-            case Kind::Failed:TraceG01OwnedStartup("LEFT_FAILED");break;
+            case Kind::Failed:TraceG01OwnedStartup("LEFT_FAILED",completed.hr);break;
             case Kind::Rejected:TraceG01OwnedStartup("LEFT_REJECTED");break;
             case Kind::Extended:TraceG01OwnedStartup("LEFT_EXTENDED");break;
             case Kind::NoChange:TraceG01OwnedStartup("LEFT_NOCHANGE");break;
