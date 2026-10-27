@@ -70,7 +70,7 @@ def check(condition, description, seconds=12):
     return wait_until(condition, description, seconds=seconds, interval=.2)
 
 
-def run(config="Release", scenario="full"):
+def run(config="Release", scenario="full", debug_stowed=False):
     assert config in ("Release", "Debug")
     assert scenario in ("plain", "baseline", "tabs", "full")
     exe = app_exe(config)
@@ -105,11 +105,30 @@ def run(config="Release", scenario="full"):
         stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
     )
+    debugger = None
+    ready = owned / "g01-debugger-ready"
+    report = owned / "g01-debugger-events"
     hwnd = None
     phase_log = []
     timed_out = False
     scenario_ready = False
     try:
+        if debug_stowed:
+            assert config == "Release"
+            debugger = subprocess.Popen(
+                [sys.executable, "-B", str(Path(__file__).with_name(
+                    "g01_owned_debugger.py")), str(proc.pid), str(exe),
+                 str(psutil.Process(proc.pid).create_time()), str(ready), str(report)],
+                cwd=exe.parent, env=environment, stdin=subprocess.DEVNULL,
+                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+            )
+            check(lambda: ready.is_file() or debugger.poll() is not None,
+                  "G01 debugger did not attach", seconds=8)
+            assert ready.is_file() and ready.read_text(encoding="ascii") == "ATTACHED\n", (
+                "G01 owned debug attach failed"
+            )
+            print("G01_OWNED_DEBUGGER_ATTACHED True", flush=True)
+
         def window():
             nonlocal hwnd
             assert proc.poll() is None, "owned G01 process exited before close"
@@ -256,6 +275,32 @@ def run(config="Release", scenario="full"):
                 phase_log = []
         else:
             print("G01_OWNED_PHASE_TRACE_MISSING", flush=True)
+        if debugger is not None:
+            (owned / "g01-debugger-stop").write_text("STOP\n", encoding="ascii")
+            try:
+                debugger.wait(timeout=6)
+            except subprocess.TimeoutExpired:
+                debugger.terminate()
+                debugger.wait(timeout=5)
+            print("G01_OWNED_DEBUGGER_EXIT", debugger.returncode, flush=True)
+            if report.is_file() and report.stat().st_size <= 8192:
+                records = report.read_text(encoding="ascii").splitlines()
+                allowed = re.compile(
+                    r"G01_DEBUG_(?:STOWED_EXCEPTION|FAILFAST_C0000409|"
+                    r"STOWED_(?:COUNT_[1-4]|COUNT_TRUNCATED|"
+                    r"PARAMS_INVALID|ARRAY_UNREADABLE|"
+                    r"[0-3]_(?:UNREADABLE|FRAMES_UNREADABLE|"
+                    r"HRESULT_[0-9A-F]{8}|"
+                    r"FRAME_(?:0[0-9]|1[0-5])_"
+                    r"(?:FLY|XAML|COMBASE|COREMSG|NTDLL)_[0-9A-F]{8})))"
+                )
+                if len(records) <= 140 and all(allowed.fullmatch(r) for r in records):
+                    print("G01_OWNED_DEBUG_STOWED_TRACE",
+                          ",".join(records), flush=True)
+                else:
+                    print("G01_OWNED_DEBUG_STOWED_TRACE_INVALID", flush=True)
+            else:
+                print("G01_OWNED_DEBUG_STOWED_TRACE_EMPTY", flush=True)
         unchanged = all(
             (profile / name).is_file()
             and hashlib.sha256((profile / name).read_bytes()).digest() == digest
@@ -275,4 +320,5 @@ def run(config="Release", scenario="full"):
 
 if __name__ == "__main__":
     sys.exit(run(sys.argv[1] if len(sys.argv) > 1 else "Release",
-                 sys.argv[2] if len(sys.argv) > 2 else "full"))
+                 sys.argv[2] if len(sys.argv) > 2 else "full",
+                 len(sys.argv) > 3 and sys.argv[3] == "debug-stowed"))
