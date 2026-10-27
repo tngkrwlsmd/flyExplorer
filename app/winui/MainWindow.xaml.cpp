@@ -3,6 +3,7 @@
 #include <winrt/Microsoft.UI.Windowing.h>
 #include "MainWindow.xaml.h"
 #include <unordered_map>
+#include <vector>
 #include "../../src/base/shell_assoc_type_core.h"
 #include "../../src/base/shell_thumbnail_core.h"
 #if __has_include("MainWindow.g.cpp")
@@ -1154,6 +1155,49 @@ namespace winrt::FlyExplorer::implementation
             TraceG01OwnedClose("FOCUS_TARGET_TOOLTIP_DETACHED");
         }catch(...){
             TraceG01OwnedClose("FOCUS_TARGET_TOOLTIP_DETACH_EXCEPTION");
+        }
+        // Other owned buttons and realized file labels also carry attached
+        // ToolTips. The exact native shutdown fault happens inside
+        // ToolTip::~ToolTip -> GetXamlIslandRootElement after ContentRoot
+        // teardown. Release these attachments while RootShell is still
+        // connected, without changing any live-session tooltip behavior.
+        // Bounded to realized UI nodes; no user paths or content are logged.
+        try{
+            using Microsoft::UI::Xaml::Media::VisualTreeHelper;
+            constexpr std::size_t kMaxCloseTooltipNodes=8192;
+            std::vector<DependencyObject> nodes;
+            nodes.push_back(RootShell());
+            for(std::size_t index=0;
+                index<nodes.size()&&nodes.size()<kMaxCloseTooltipNodes;
+                ++index){
+                try{
+                    const auto count=VisualTreeHelper::GetChildrenCount(nodes[index]);
+                    for(int child=0;child<count&&
+                        nodes.size()<kMaxCloseTooltipNodes;++child){
+                        auto node=VisualTreeHelper::GetChild(nodes[index],child);
+                        if(node)nodes.push_back(node);
+                    }
+                }catch(...){}
+            }
+            if(nodes.size()==kMaxCloseTooltipNodes)
+                TraceG01OwnedClose("VISUAL_TOOLTIP_SWEEP_LIMIT");
+            bool released=false;
+            // Child-first removes the attached ToolTip before parent visual
+            // objects begin teardown. Holding these references temporarily
+            // keeps the visual root intact until the final detach completes.
+            for(auto node=nodes.rbegin();node!=nodes.rend();++node){
+                try{
+                    if(ToolTipService::GetToolTip(*node)){
+                        ToolTipService::SetToolTip(
+                            *node,winrt::Windows::Foundation::IInspectable{nullptr});
+                        released=true;
+                    }
+                }catch(...){}
+            }
+            TraceG01OwnedClose(released?
+                "VISUAL_TOOLTIP_SWEEP_RELEASED":"VISUAL_TOOLTIP_SWEEP_EMPTY");
+        }catch(...){
+            TraceG01OwnedClose("VISUAL_TOOLTIP_SWEEP_EXCEPTION");
         }
         // Move focus off a live TextBox before WinUI destroys input services.
         // The normal Close/Closed cleanup remains idempotent as a fallback.
