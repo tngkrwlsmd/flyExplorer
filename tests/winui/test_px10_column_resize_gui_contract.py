@@ -102,6 +102,10 @@ class PX10ColumnResizeGuiContract(unittest.TestCase):
             'FOCUS_TRANSFER_SUCCEEDED',
             'FOCUS_TRANSFER_REJECTED',
             'G01_OWNED_CLOSE_PHASE_TRACE_MISSING',
+            'G01_OWNED_CLOSE_PHASE_TRACE_INVALID',
+            'reason=("phase-count-exceeded" if len(lines)>64',
+            'else "unrecognized-phase")',
+            '"REASON",reason,flush=True)',
             'SIX_ORIGINAL_MFC_SETTINGS_IDENTICAL',
             'assert observed=="sizewe"',
         ):
