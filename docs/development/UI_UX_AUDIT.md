@@ -1,5 +1,13 @@
 # flyExplorer Windows 11 벤치마킹 및 UI/UX 점검
 
+## 2026-10-28 L08 — SendInput으로 실제 WinUI 진입·커서 인수 통과
+
+- 기존 GUI의 `pywinauto.mouse.move` / `SetCursorPos` 이동은 정확한 UIA 열 경계를 가리켜도 WinUI `PointerEntered`를 일으키지 않았으며, 왼쪽 이름·유형·크기 핸들의 네이티브 커서를 모두 `arrow`로 관측했다. 독립된 동일 사용자 세션 Windows 기본 Edit에서 `ibeam`이 정상 관측됐고, *제품 EXE를 바꾸지 않은 상태에서* `SendInput` 이동으로 전환하자 세 핸들 모두 `PointerEntered` 및 `IDC_SIZEWE`, 검색창은 독립 `IDC_IBEAM`이 확인됐다. 따라서 과거의 화살표 관측은 **제품 커서 지정 실패가 아니라 테스트 입력 경로 문제**로 좁혀졌다.
+- 테스트 수정: [`04195b2a`](https://github.com/tngkrwlsmd/flyExplorer/commit/04195b2a1a1efe9f99ea53ed75b2f88c2d235c50), [`df52ebef`](https://github.com/tngkrwlsmd/flyExplorer/commit/df52ebef85596bac0ee0522142a68178e7c2ca64), [`81759f59`](https://github.com/tngkrwlsmd/flyExplorer/commit/81759f59ba46797e8133dd36a50fc4e4a4fcf6b3), 최종 [`b5e6e11f`](https://github.com/tngkrwlsmd/flyExplorer/commit/b5e6e11fdb78ec262ee2b411cd76ff87ab9de2d7). OS SendInput 4단계 마우스 이동을 사용하며 기존 `assert observed=="sizewe"` 및 실제 드래그 수용 조건은 유지. Windows 소스 계약 **22/22 PASS**.
+- [중앙 집중 GUI #40532857035](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/40532857035)는 정확한 제품/검사 소스 `b5e6e11f`에서 **Release + L08/PX10 기능 PASS, workflow SUCCESS**. 보존된 소유 로그에서 이름·유형·크기 `pointer-entered-native-sizewe`, 검색 Edit `native-cursor-observations-match`, 세 열 드래그, WindowTab 너비 복원, 사용자 기존 6개 설정 보존, 정상 종료 0 및 픽스처 제거를 직접 재확인했다. 따라서 **왼쪽 Details 세 열의 네이티브 크기조절 커서 및 드래그는 수용 완료**.
+- 단, 커서 픽셀까지 포함한 독립 스크린샷을 확보한 것은 아니므로 **별도 시각 픽셀 수용**으로 확대하지 않는다. 오른쪽 패널 전체 동작, 진행 중 CaptureLost, 제외 G03–G05·중단 G07 등은 본 검증 밖이다. 아래 2026-10-23 `OPEN` 서술은 당시 `SetCursorPos` 경로의 역사적 기록이며, 최신 네이티브 커서 판정을 뒤집지 않는다.
+
+
 ## 2026-10-23 L08 커서 시간차 분류 — 물리적 드래그 PASS, 자동화 커서 OPEN
 
 - 기존 `98e9b283` GUI 성공 보관 로그 [#39953465234](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39953465234): 세 열의 정확한 UIA 조절 핸들 hit 및 +40/+28/+20px 열 경계 변경이 있었으나 native 커서는 `arrow`로 기록됐다.
