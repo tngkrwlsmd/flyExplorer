@@ -22,6 +22,7 @@ namespace winrt::FlyExplorer::implementation
         // Diagnostic only. The G01 owned fixture installs this observer;
         // no handler is registered during ordinary application startup.
         volatile LONG gG01StowedClaimed = 0;
+        volatile LONG gG01OwnedCloseAvClaimed = 0;
 
         char const* G01StowedModule(DWORD64 ip, DWORD64& rva) noexcept
         {
@@ -48,13 +49,31 @@ namespace winrt::FlyExplorer::implementation
             EXCEPTION_POINTERS* exception) noexcept
         {
             if (!exception || !exception->ExceptionRecord ||
-                !exception->ContextRecord ||
-                exception->ExceptionRecord->ExceptionCode != 0xC000027B)
+                !exception->ContextRecord)
                 return EXCEPTION_CONTINUE_SEARCH;
-            if (::InterlockedCompareExchange(&gG01StowedClaimed, 1, 0))
+            auto const code = exception->ExceptionRecord->ExceptionCode;
+            auto const isStowed = code == 0xC000027B;
+            auto const isCloseAv = code == 0xC0000005;
+            if (!isStowed && !isCloseAv)
+                return EXCEPTION_CONTINUE_SEARCH;
+            if (isCloseAv) {
+                // Do not observe unrelated first-chance AVs or other modules.
+                // The recorded test-owned shutdown fault is XAML + 0xAB04B.
+                DWORD64 originRva = 0;
+                if (std::strcmp(
+                        G01StowedModule(exception->ContextRecord->Rip,
+                                        originRva), "XAML") != 0 ||
+                    originRva != 0xAB04Bull)
+                    return EXCEPTION_CONTINUE_SEARCH;
+            }
+            auto* claim = isStowed ? &gG01StowedClaimed :
+                                     &gG01OwnedCloseAvClaimed;
+            if (::InterlockedCompareExchange(claim, 1, 0))
                 return EXCEPTION_CONTINUE_SEARCH;
 
-            TraceG01AppLifecycle("NATIVE_STOWED_ENTER");
+            auto const prefix = isStowed ? "NATIVE_STOWED" : "NATIVE_CLOSE_AV";
+            TraceG01AppLifecycle(
+                isStowed ? "NATIVE_STOWED_ENTER" : "NATIVE_CLOSE_AV_ENTER");
             CONTEXT frame = *exception->ContextRecord;
             // Unwind the faulting x64 context, not the observer's own stack.
             // Only approved module labels and 32-bit module-relative RVAs
@@ -66,8 +85,8 @@ namespace winrt::FlyExplorer::implementation
                     char phase[80]{};
                     auto const length = std::snprintf(
                         phase, sizeof(phase),
-                        "NATIVE_STOWED_FRAME_%02u_%s_%08X",
-                        index, module, static_cast<unsigned>(rva));
+                        "%s_FRAME_%02u_%s_%08X",
+                        prefix, index, module, static_cast<unsigned>(rva));
                     if (length > 0 && length < sizeof(phase))
                         TraceG01AppLifecycle(phase);
                 }
@@ -86,11 +105,23 @@ namespace winrt::FlyExplorer::implementation
                     (frame.Rip == previousRip && frame.Rsp <= previousRsp))
                     break;
             }
-            TraceG01AppLifecycle("NATIVE_STOWED_EXIT");
+            TraceG01AppLifecycle(
+                isStowed ? "NATIVE_STOWED_EXIT" : "NATIVE_CLOSE_AV_EXIT");
             return EXCEPTION_CONTINUE_SEARCH;
         }
     }
 #endif
+
+    // Native observer member lifetime ends after App::window's release,
+    // instead of in App::~App() before the faulting teardown boundary.
+    G01OwnedNativeExceptionSubscription::
+        ~G01OwnedNativeExceptionSubscription() noexcept
+    {
+#if defined(_M_X64)
+        if (handle)
+            ::RemoveVectoredExceptionHandler(handle);
+#endif
+    }
 
     /// <summary>
     /// Initializes the singleton application object.  This is the first line of authored code
@@ -116,8 +147,8 @@ namespace winrt::FlyExplorer::implementation
         // mark exceptions Handled, or alter the normal-user event path.
         if(G01OwnedAppDiagnosticsEnabled()){
 #if defined(_M_X64)
-            mG01NativeExceptionHandler = ::AddVectoredExceptionHandler(
-                1, &ObserveG01NativeStowed);
+            mG01NativeExceptionSubscription.handle =
+                ::AddVectoredExceptionHandler(1, &ObserveG01NativeStowed);
 #endif
             UnhandledException([](
                 IInspectable const&,
@@ -132,10 +163,6 @@ namespace winrt::FlyExplorer::implementation
 
     App::~App()
     {
-#if defined(_M_X64)
-        if (mG01NativeExceptionHandler)
-            ::RemoveVectoredExceptionHandler(mG01NativeExceptionHandler);
-#endif
         // Destruction of App::window follows this destructor body.
         // Distinguish that projected-window release boundary from the
         // already observed MainWindow destructor without changing ownership.
