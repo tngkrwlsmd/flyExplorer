@@ -61,6 +61,28 @@ def decode_v2(data):
     return (hr & 0xFFFFFFFF, count, trace)
 
 
+def describe_v2(data, modules):
+    """Emit a bounded stack-availability classification, never a raw pointer."""
+    if not data or len(data) != STOWED_V2.size:
+        return None
+    size, signature, _, flags, origin, width, words, trace, nested, _ = STOWED_V2.unpack(data)
+    if size != 56 or signature != 0x53453032:
+        return None
+    form = {1: "BINARY", 2: "TEXT"}.get(flags & 3, "UNKNOWN")
+    result = [f"FORM_{form}"]
+    if form == "BINARY":
+        if width != 8 or words > 16 or (words and not trace):
+            result.append("STACK_INVALID")
+        else:
+            result.append(f"WORDS_{words}")
+        origin_label = frame_label(origin, modules)
+        if origin_label:
+            result.append(f"ORIGIN_{origin_label}")
+    if nested:
+        result.append("NESTED_PRESENT")
+    return result
+
+
 def _api():
     k = ctypes.WinDLL("kernel32", use_last_error=True)
     p = ctypes.WinDLL("psapi", use_last_error=True)
@@ -140,16 +162,22 @@ def _decode(k, p, handle, record):
             continue
         hr, count_frames, stack_ptr = item
         result.append(f"G01_DEBUG_STOWED_{i}_HRESULT_{hr:08X}")
+        metadata = describe_v2(data, modules)
+        if metadata:
+            result.extend(f"G01_DEBUG_STOWED_{i}_{piece}" for piece in metadata)
         if count_frames:
             raw = _read(k, handle, stack_ptr, count_frames * 8)
             if raw is None:
                 result.append(f"G01_DEBUG_STOWED_{i}_FRAMES_UNREADABLE")
             else:
+                mapped = 0
                 for frame_index, ip in enumerate(
                         struct.unpack("<" + "Q" * count_frames, raw)):
                     frame = frame_label(ip, modules)
                     if frame:
+                        mapped += 1
                         result.append(f"G01_DEBUG_STOWED_{i}_FRAME_{frame_index:02d}_{frame}")
+                result.append(f"G01_DEBUG_STOWED_{i}_MAPPED_{mapped}")
     return result
 
 

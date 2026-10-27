@@ -29,6 +29,17 @@ class G01OwnedDebuggerContract(unittest.TestCase):
         self.assertEqual(observer.decode_v2(data[:24] + b"\xff\xff\xff\xff" +
                                                data[28:])[1], 0)
 
+    def test_classifies_stowed_form_stack_availability_and_origin(self):
+        binary = struct.pack("<IIiIQIIQI4xQ", 56, 0x53453032,
+                             -2147020579, 1, 0x100AB, 8, 0, 0, 0, 0)
+        self.assertEqual(observer.describe_v2(
+            binary, [(0x10000, 0x2000, "XAML")]),
+            ["FORM_BINARY", "WORDS_0", "ORIGIN_XAML_000000AB"])
+        text = struct.pack("<IIiIQIIQI4xQ", 56, 0x53453032,
+                           -2147020579, 2, 0, 0, 0, 0, 0, 0)
+        self.assertEqual(observer.describe_v2(text, []), ["FORM_TEXT"])
+        self.assertIsNone(observer.describe_v2(bytes(56), []))
+
     def test_frame_labels_drop_unlisted_modules_and_addresses(self):
         modules = [(0x10000, 0x2000, "XAML")]
         self.assertEqual(observer.frame_label(0x100AB, modules),
@@ -54,6 +65,8 @@ class G01OwnedDebuggerContract(unittest.TestCase):
         self.assertIn('"debug-stowed"', source)
         self.assertIn("G01_OWNED_DEBUGGER_ATTACHED", source)
         self.assertIn("G01_OWNED_DEBUG_STOWED_TRACE", source)
+        self.assertIn("FORM_(?:BINARY|TEXT|UNKNOWN)", source)
+        self.assertIn("MAPPED_", source)
         self.assertIn("G01_OWNED_GUI_FIXTURE_CLEANED=YES", source)
 
 
