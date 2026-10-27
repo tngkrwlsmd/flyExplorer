@@ -11,6 +11,8 @@ namespace winrt::FlyExplorer::implementation {
  struct NavigationSidebar : NavigationSidebarT<NavigationSidebar> {
   NavigationSidebar();
   void SetNavigateCallback(std::function<void(int)> handler);
+  // Called before the WinUI tree is dismantled; does not touch XAML.
+  void PrepareForClose() noexcept;
   void OnHomeClicked(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
   void OnDocumentsClicked(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
   void OnDownloadsClicked(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
@@ -59,6 +61,7 @@ namespace winrt::FlyExplorer::implementation {
   std::shared_ptr<std::atomic_bool> mTreeBusy=std::make_shared<std::atomic_bool>(false);
   std::shared_ptr<std::atomic_bool> mTreeCancel;
   std::uint64_t mTreeGeneration=1;
+  bool mClosing=false;
   bool mTreeVisible=false;
   bool mTreePending=false;
  };
