@@ -1,5 +1,12 @@
 # Error history
 
+## 2026-10-27 — G01 stowed Release crash reproduced despite vectored observer; native inner error remains unavailable
+
+- At exact `flyExplorer/main` `3e0efd8ad4e4dbc74908c4fe0a079dacbdd1d69c`, the interactive central `gui-g01-shutdown` scope ([run #40438475916](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/40438475916)) compiled Release once (PASS) and executed `plain/full/plain/full` on the same binary: native exits `0x0/0x0/0x0/0xC000027B`. The final `full` fixture completed, owned `WM_CLOSE` was posted and its profile/fixture guards passed; `WINDOW_CLOSED_EXIT` appeared, but `APP_DESTRUCTOR_ENTER` and all `NATIVE_STOWED_*` observer tokens were absent. The GitHub Actions green status reflects **diagnostic completion**, not product G01 acceptance.
+- A distinct read-only Event 1000 check ([run #40440479370](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/40440479370)) found one matching 2026-10-27 02:31:11 UTC `flyExplorer.exe` event: `CoreMessagingXP.dll`, `0xC000027B`, RVA `0x97976`. This agrees with one historical final crash signature but does not reveal the originating HRESULT or native stack.
+- Microsoft documentation specifies that `RaiseFailFastException` bypasses vectored handlers. An unobserved `0xC000027B` therefore cannot disprove a real stowed WinRT failure; the exact fatal path is unconfirmed here. Future diagnosis should use an explicitly scoped crash-time debugger/stowed-array read rather than treating failed in-process observers as causal fixes. No debugger was attached, dump captured, OS setting changed or product code modified in this investigation. Central VM request slot restored to `idle`; G01 and L08 remain OPEN.
+
+
 ## 2026-10-26 — G01 parser stage ambiguity narrowed in source, no Windows validation
 
 - The 2026-10-25 direct Windows run [#40240026806](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/40240026806) finished with `LOCAL_SYMBOL_LOOKUP_FAILED / ValueError` after downloading the full public PDB and successfully removing its test-owned temporary folder. The exact failure stage **cannot** be retroactively recovered from the coarse error; do not attribute it to WinUI or assume the public PDB's GUID is incorrect.
