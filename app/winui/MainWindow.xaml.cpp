@@ -1639,8 +1639,10 @@ namespace winrt::FlyExplorer::implementation
             // misleading global "folder loaded" message (G01 evidence).
             hstring activeStatus=StatusText().Text();
             if(completed.side==ActiveWindowTab().model.activePane){
+                // Recovery is shared by a bounded timeout retry and the
+                // G01 broken-pipe retry: do not describe both as a delay.
                 activeStatus=completed.recovered?
-                    L"응답 지연 후 폴더를 불러왔습니다.":
+                    L"일시적인 오류 후 재시도하여 폴더를 불러왔습니다.":
                     completed.action==Action::Refresh?
                     L"폴더 변경 알림을 반영했습니다.":
                     L"폴더를 불러왔습니다.";
