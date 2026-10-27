@@ -134,7 +134,7 @@ class PX10ColumnResizeGuiContract(unittest.TestCase):
         phases=ast.literal_eval(assignments[0].value)
         self.assertIsInstance(phases,set)
         emitted=set(re.findall(
-            r'TraceG01OwnedClose\\(\\s*"([A-Z_]+)"\\s*\\)',cpp))
+            r'TraceG01OwnedClose\(\s*"([A-Z_]+)"\s*\)',cpp))
         # The App destructor stages pass through TraceG01AppLifecycle(stage)
         # into the same owned trace. Unhandled-exception markers are not
         # ordinary close stages and must remain outside this normal-close
@@ -142,7 +142,7 @@ class PX10ColumnResizeGuiContract(unittest.TestCase):
         app_destructor=app.split("App::~App()",1)[1].split(
             "void App::OnLaunched",1)[0]
         emitted.update(re.findall(
-            r'TraceG01AppLifecycle\\(\\s*"([A-Z_]+)"\\s*\\)',
+            r'TraceG01AppLifecycle\(\s*"([A-Z_]+)"\s*\)',
             app_destructor))
         self.assertIn("QUEUED_XAML_TIMERS_STOPPED",emitted)
         self.assertFalse(emitted-phases,
