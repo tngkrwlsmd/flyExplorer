@@ -176,6 +176,62 @@ class PX10ColumnResizeGuiContract(unittest.TestCase):
         self.assertNotIn('window = nullptr;',app_cpp)
         self.assertNotIn('window.Close()',app_cpp)
 
+    def test_g01_exact_fault_observer_survives_window_member_release(self):
+        app_h=(ROOT/"app/winui/App.xaml.h").read_text("utf-8")
+        app=(ROOT/"app/winui/App.xaml.cpp").read_text("utf-8")
+        gui=(ROOT/"tests/winui/test_owned_column_resize_gui.py").read_text(
+            "utf-8")
+        self.assertLess(
+            app_h.index("mG01NativeExceptionSubscription{};"),
+            app_h.index("Window window{ nullptr };"),
+        )
+        self.assertIn("~G01OwnedNativeExceptionSubscription() noexcept;",app_h)
+        self.assertIn("~G01OwnedNativeExceptionSubscription() noexcept",app)
+        self.assertIn("::RemoveVectoredExceptionHandler(handle);",app)
+        self.assertNotIn(
+            "RemoveVectoredExceptionHandler",
+            app.split("App::~App()",1)[1].split(
+                "void App::OnLaunched",1)[0],
+        )
+        # The handler is only installed under the existing owned fixture.
+        self.assertIn("if(G01OwnedAppDiagnosticsEnabled())",app)
+        self.assertIn("AddVectoredExceptionHandler",app)
+        self.assertIn("code == 0xC0000005",app)
+        self.assertIn('originRva != 0xAB04Bull',app)
+        self.assertIn("NATIVE_CLOSE_AV_ENTER",app)
+        self.assertIn("NATIVE_CLOSE_AV_EXIT",app)
+        self.assertIn("EXCEPTION_CONTINUE_SEARCH",app)
+        for unsafe in ("MiniDumpWriteDump","SetUnhandledExceptionFilter"):
+            self.assertNotIn(unsafe,app)
+        # Native stack telemetry must remain a bounded redacted envelope.
+        self.assertIn("index < 8 && frame.Rip",app)
+        self.assertIn('"FLY"',app)
+        self.assertIn('"XAML"',app)
+        self.assertIn('"OTHER"',app)
+        self.assertIn("rva <= 0xFFFFFFFFull",app)
+        assignments=[
+            node for node in ast.walk(ast.parse(gui))
+            if isinstance(node,ast.Assign) and any(
+                isinstance(target,ast.Name) and
+                target.id=="native_close_frame" for target in node.targets)
+        ]
+        self.assertEqual(len(assignments),1)
+        pattern=re.compile(ast.literal_eval(assignments[0].value.args[0]))
+        self.assertIsNotNone(
+            pattern.fullmatch("NATIVE_CLOSE_AV_FRAME_00_XAML_000AB04B"))
+        for invalid in (
+            "NATIVE_CLOSE_AV_FRAME_08_XAML_000AB04B",
+            "NATIVE_CLOSE_AV_FRAME_00_PERSONAL_000AB04B",
+            "NATIVE_CLOSE_AV_FRAME_00_XAML_123456789",
+            "NATIVE_CLOSE_AV_FRAME_00_XAML_000AB04B\\nsecret",
+            "NATIVE_CLOSE_AV_FRAME_00_XAML_000AB04B C:\\\\User",
+        ):
+            self.assertIsNone(pattern.fullmatch(invalid))
+        self.assertIn("native_close_frame.fullmatch(line) is None",gui)
+        self.assertIn('"NATIVE_CLOSE_AV_ENTER","NATIVE_CLOSE_AV_EXIT"',gui)
+        self.assertIn("len(lines)>64",gui)
+        self.assertIn("trace.stat().st_size>4096",gui)
+
     def test_existing_runner_requires_the_original_independent_resize_oracles(self):
         source=(ROOT/"tools/winui/run_checks.py").read_text("utf-8")
         section=source.split('if not rc and area == "column-resize":',1)[1].split(
