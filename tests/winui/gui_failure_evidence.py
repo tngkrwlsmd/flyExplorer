@@ -180,7 +180,8 @@ def _safe_startup_samples(samples):
 _G01_STARTUP_PHASE = re.compile(
     r"(?:(?:LEFT|RIGHT)_(?:SUBMIT_BEGIN|SUBMIT_ACCEPTED|SUBMIT_REJECTED|"
     r"APPLIED|FAILED|REJECTED|EXTENDED|NOCHANGE)|"
-    r"RESULT_(?:CALLBACK|ENQUEUE_OK|ENQUEUE_REJECTED|IGNORED))"
+    r"RESULT_(?:CALLBACK|ENQUEUE_OK|ENQUEUE_REJECTED|IGNORED)|"
+    r"LEFT_HRESULT_[0-9A-F]{8})"
 )
 
 
@@ -197,7 +198,7 @@ G01_SHARED_PHASES = (
     "RIGHT_APPLIED", "RIGHT_FAILED", "RIGHT_REJECTED",
     "RIGHT_EXTENDED", "RIGHT_NOCHANGE",
 )
-G01_SHARED_FORMAT = "<III64I"
+G01_SHARED_FORMAT = "<III64II"
 
 
 def decode_g01_owned_shared_phases(raw: bytes, child_pid: int) -> list[str]:
@@ -211,8 +212,14 @@ def decode_g01_owned_shared_phases(raw: bytes, child_pid: int) -> list[str]:
     magic, pid, count, *slots = struct.unpack(G01_SHARED_FORMAT, raw)
     if magic != G01_SHARED_MAGIC or pid != child_pid or count > 512:
         return []
-    return [G01_SHARED_PHASES[code - 1] for code in slots[:min(count, 64)]
-            if 1 <= code <= len(G01_SHARED_PHASES)]
+    events = [G01_SHARED_PHASES[code - 1] for code in slots[:min(count, 64)]
+              if 1 <= code <= len(G01_SHARED_PHASES)]
+    # Only an actual left Failed event authorizes displaying this bounded
+    # 32-bit HRESULT. No paths/strings or process memory escape this page.
+    failure_hr = slots[64]
+    if "LEFT_FAILED" in events and 0x80000000 <= failure_hr <= 0xFFFFFFFF:
+        events.append(f"LEFT_HRESULT_{failure_hr:08X}")
+    return events
 
 
 def read_g01_owned_shared_phases(child_pid: int) -> list[str]:
