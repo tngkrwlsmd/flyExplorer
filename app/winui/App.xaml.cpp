@@ -12,6 +12,8 @@ namespace winrt::FlyExplorer::implementation
 {
     // Implemented in MainWindow.xaml.cpp: bounded, opt-in, test-owned only.
     void TraceG01AppLifecycle(char const* stage) noexcept;
+    bool G01OwnedAppDiagnosticsEnabled() noexcept;
+    void TraceG01AppUnhandledHresult(std::uint32_t code) noexcept;
 
     /// <summary>
     /// Initializes the singleton application object.  This is the first line of authored code
@@ -32,6 +34,19 @@ namespace winrt::FlyExplorer::implementation
             }
         });
 #endif
+        // Observe WinUI-routed HRESULTs only for the disposable G01 GUI
+        // fixture. Do not read exception messages (they may contain paths),
+        // mark exceptions Handled, or alter the normal-user event path.
+        if(G01OwnedAppDiagnosticsEnabled()){
+            UnhandledException([](
+                IInspectable const&,
+                Microsoft::UI::Xaml::UnhandledExceptionEventArgs const& e){
+                TraceG01AppLifecycle("APP_UNHANDLED_EXCEPTION_ENTER");
+                TraceG01AppUnhandledHresult(
+                    static_cast<std::uint32_t>(e.Exception().value));
+                TraceG01AppLifecycle("APP_UNHANDLED_EXCEPTION_EXIT");
+            });
+        }
     }
 
     App::~App()
