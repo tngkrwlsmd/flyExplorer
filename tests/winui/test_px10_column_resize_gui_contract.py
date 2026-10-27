@@ -1,5 +1,7 @@
 """PX10 bounded real-pointer columns and per-workspace geometry."""
 from pathlib import Path
+import ast
+import re
 import sys
 import unittest
 
@@ -112,6 +114,42 @@ class PX10ColumnResizeGuiContract(unittest.TestCase):
             self.assertIn(fragment,gui,fragment)
         self.assertNotIn('SetUnhandledExceptionFilter',cpp)
         self.assertNotIn('MiniDumpWriteDump',cpp)
+
+    def test_owned_close_phase_allowlist_covers_emitted_normal_phases(self):
+        # Read the actual Python set rather than hard-code another copied list.
+        # A newly emitted native phase must not silently invalidate every
+        # test-owned close trace and conceal the shutdown chronology.
+        cpp=(ROOT/"app/winui/MainWindow.xaml.cpp").read_text("utf-8")
+        app=(ROOT/"app/winui/App.xaml.cpp").read_text("utf-8")
+        gui=(ROOT/"tests/winui/test_owned_column_resize_gui.py").read_text(
+            "utf-8")
+        assignments=[
+            node for node in ast.walk(ast.parse(gui))
+            if isinstance(node,ast.Assign) and any(
+                isinstance(target,ast.Name) and
+                target.id=="allowed_close_phases"
+                for target in node.targets)
+        ]
+        self.assertEqual(len(assignments),1)
+        phases=ast.literal_eval(assignments[0].value)
+        self.assertIsInstance(phases,set)
+        emitted=set(re.findall(
+            r'TraceG01OwnedClose\\(\\s*"([A-Z_]+)"\\s*\\)',cpp))
+        # The App destructor stages pass through TraceG01AppLifecycle(stage)
+        # into the same owned trace. Unhandled-exception markers are not
+        # ordinary close stages and must remain outside this normal-close
+        # acceptance contract.
+        app_destructor=app.split("App::~App()",1)[1].split(
+            "void App::OnLaunched",1)[0]
+        emitted.update(re.findall(
+            r'TraceG01AppLifecycle\\(\\s*"([A-Z_]+)"\\s*\\)',
+            app_destructor))
+        self.assertIn("QUEUED_XAML_TIMERS_STOPPED",emitted)
+        self.assertFalse(emitted-phases,
+                         "Native close phases missing from GUI allowlist")
+        self.assertIn('len(lines)>64',gui)
+        self.assertIn('trace.stat().st_size>4096',gui)
+        self.assertIn('"REASON",reason,flush=True)',gui)
 
     def test_g01_app_window_member_release_boundary_is_trace_only(self):
         app_h=(ROOT/"app/winui/App.xaml.h").read_text("utf-8")
