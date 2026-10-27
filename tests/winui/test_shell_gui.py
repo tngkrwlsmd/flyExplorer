@@ -858,10 +858,19 @@ except Exception as failure:
  # Capture the running test-owned application BEFORE cleanup closes it.
  # Evidence errors do not hide the original failure.
  try:
+  startup_events = []
+  if G01_INTEGRATED_STARTUP_ONLY and p is not None:
+   # Read only this child process's bounded phase file inside the owned tmp.
+   native = temp / ("fly-g01-startup-" + str(p.pid) + ".log")
+   if (native.is_file() and not native.is_symlink() and
+       native.stat().st_size <= 4096):
+    startup_events = native.read_text(
+        encoding="ascii", errors="replace").splitlines()[:64]
   evidence_dir = capture_failure(base=base, owned=owned, left=left, right=right,
                                  win=locals().get("win"), hwnd=hwnd,
                                  pid=p.pid if p else None, error=failure,
-                                 startup_samples=locals().get("startup_samples"))
+                                 startup_samples=locals().get("startup_samples"),
+                                 startup_events=startup_events)
   print("GUI_FAILURE_EVIDENCE_DIR", evidence_dir, flush=True)
  except Exception as capture_error:
   print("GUI_FAILURE_EVIDENCE_ERROR", type(capture_error).__name__, flush=True)
