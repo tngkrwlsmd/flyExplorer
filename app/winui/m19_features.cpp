@@ -739,6 +739,7 @@ void MainWindow::OnRunSearch(
     // request itself fails validation.
     mSearchResultValid=false;
     mSearchResultPaths.clear();
+    SearchMatches().Items().Clear();
     SearchLocateButton().IsEnabled(false);
     SearchController::Request request{};
     auto context=SearchContext();
@@ -881,7 +882,6 @@ void MainWindow::OnSearchCompleted(
     mSearchResultPaths=completion.result.matches;
     mSearchResultValid=true;
     const auto& result=completion.result;
-    const auto& requested=completion.request;
     std::wstring scopeStatus=result.indexOnly?
         L"Windows 인덱스 · 위치: ":L"직접 탐색 · 위치: ";
     scopeStatus+=completion.context.scope;
