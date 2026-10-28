@@ -229,7 +229,7 @@ class OutboundDragContract(unittest.TestCase):
         for token in (
             '"keep-both-source-renamed"',
             'renamed_source = source_dir / "원본-이름변경-한글.txt"',
-            'source.rename(renamed_source)',
+            'os.rename(source, renamed_source)',
             'assert not source.exists()',
             'assert renamed_source.read_bytes() == source_bytes',
             'approve.iface_invoke.Invoke()',
@@ -241,7 +241,7 @@ class OutboundDragContract(unittest.TestCase):
         ):
             self.assertIn(token, script)
         self.assertLess(
-            script.index('source.rename(renamed_source)'),
+            script.index('os.rename(source, renamed_source)'),
             script.index('approve.iface_invoke.Invoke()'))
         self.assertLess(
             script.index('approve.iface_invoke.Invoke()'),
