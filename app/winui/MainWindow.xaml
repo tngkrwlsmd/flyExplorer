@@ -283,6 +283,11 @@
                            VerticalAlignment="Center"
                            Opacity="{ThemeResource FlyExplorerSubtleTextOpacity}"/>
             </StackPanel>
+            <TextBlock x:Name="RecentActivityStateText"
+                       Text="기록 꺼짐 · 파일 및 폴더 활동을 수집하지 않습니다."
+                       TextWrapping="Wrap"
+                       AutomationProperties.Name="최근 활동 기록 상태"
+                       Opacity="{ThemeResource FlyExplorerSubtleTextOpacity}"/>
             <StackPanel Orientation="Horizontal" Spacing="8">
                 <TextBlock Text="최근 연 파일:" VerticalAlignment="Center"/>
                 <ComboBox x:Name="RecentActivityFiles" Width="320"
