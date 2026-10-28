@@ -484,7 +484,15 @@
                           AutomationProperties.Name="최근 검색 위치 저장 선택"/>
                 <Button x:Uid="SearchRunButton" x:Name="SearchRunButton" Content="파일 찾기"
                         Click="OnRunSearch" AutomationProperties.Name="이름 조건 검색 실행"/>
+                <Button x:Name="SearchCancelButton" Content="검색 취소"
+                        IsEnabled="False" Click="OnCancelSearch"
+                        AutomationProperties.Name="진행 중인 검색 취소"/>
             </StackPanel>
+            <TextBlock x:Name="SearchActiveScopeText"
+                       Text="검색 대기 · 직접 탐색 또는 Windows 인덱스를 선택하세요."
+                       TextWrapping="Wrap" MaxLines="2"
+                       AutomationProperties.Name="현재 검색 방식과 검색 위치"
+                       Opacity="{ThemeResource FlyExplorerSubtleTextOpacity}"/>
             <StackPanel Orientation="Horizontal" Spacing="7">
                 <TextBlock Text="검색 방식:" VerticalAlignment="Center"/>
                 <ComboBox x:Name="SearchModeBox" Width="185" SelectedIndex="0"
