@@ -10,6 +10,8 @@
 #include <thread>
 #include <utility>
 #include <winrt/Windows.System.h>
+#include <winrt/Microsoft.UI.Xaml.Automation.h>
+#include <filesystem>
 using namespace winrt;
 using namespace Microsoft::UI::Xaml;
 using namespace Microsoft::UI::Xaml::Controls;
@@ -187,6 +189,164 @@ void MainWindow::EnsureExpandedPanelFits() {
         }
     }
 }
+// PX02: a single, bounded Home surface. It does not enumerate user files,
+// consult Explorer history, persist recent paths or enable activity tracking.
+void MainWindow::ShowHomeOverview(){
+    if(mClosing)return;
+    BookmarkPanel().Visibility(Visibility::Collapsed);
+    RecentActivityPanel().Visibility(Visibility::Collapsed);
+    WorkspacePanel().Visibility(Visibility::Collapsed);
+    SearchPanel().Visibility(Visibility::Collapsed);
+    FilterRulePanel().Visibility(Visibility::Collapsed);
+    HomeOverviewPanel().Visibility(Visibility::Visible);
+    RefreshHomeOverview();
+    EnsureExpandedPanelFits();
+    StatusText().Text(L"홈 · 북마크와 동의한 이 세션의 최근 활동입니다.");
+}
+void MainWindow::OnHomeFolderClicked(
+    IInspectable const&,RoutedEventArgs const&){
+    if(mClosing||HomeOverviewPanel().Visibility()!=Visibility::Visible)return;
+    OpenFolder(HomePath().native());
+}
+void MainWindow::OnHomeManageBookmarksClicked(
+    IInspectable const&,RoutedEventArgs const&){
+    if(mClosing||HomeOverviewPanel().Visibility()!=Visibility::Visible)return;
+    OnToggleBookmarks(nullptr,RoutedEventArgs{});
+}
+void MainWindow::OnHomeManageActivityClicked(
+    IInspectable const&,RoutedEventArgs const&){
+    if(mClosing||HomeOverviewPanel().Visibility()!=Visibility::Visible)return;
+    OnToggleRecentActivity(nullptr,RoutedEventArgs{});
+}
+void MainWindow::RefreshHomeOverview(){
+    if(mClosing||HomeOverviewPanel().Visibility()!=Visibility::Visible)return;
+    auto pinned=HomePinnedItems().Children();
+    auto recentButtons=HomeRecentItems().Children();
+    auto frequentButtons=HomeFrequentItems().Children();
+    pinned.Clear();
+    recentButtons.Clear();
+    frequentButtons.Clear();
+    auto appendEmpty=[](StackPanel const& panel,std::wstring const& value){
+        TextBlock message;
+        message.Text(hstring(value));
+        message.Opacity(0.65);
+        panel.Children().Append(message);
+    };
+    const auto weak=get_weak();
+    // Four preview tiles per section; the existing managers expose full lists.
+    constexpr std::size_t kPreview=4;
+    const auto& bookmarks=mBookmarks.items();
+    const auto pinnedLimit=(std::min)(bookmarks.size(),kPreview);
+    for(std::size_t i=0;i<pinnedLimit;++i){
+        auto const& entry=bookmarks[i];
+        Button button;
+        button.MaxWidth(160);
+        button.Content(box_value(hstring(entry.name)));
+        ToolTipService::SetToolTip(button,box_value(hstring(entry.path)));
+        Microsoft::UI::Xaml::Automation::AutomationProperties::SetName(
+            button,hstring(L"홈 북마크 "+entry.name));
+        const auto target=entry.path;
+        const auto name=entry.name;
+        button.Click([weak,target,name](IInspectable const&,RoutedEventArgs const&){
+            if(auto ui=weak.get()){
+                if(ui->mClosing||
+                   ui->HomeOverviewPanel().Visibility()!=Visibility::Visible)return;
+                const auto& current=ui->mBookmarks.items();
+                const auto found=std::find_if(current.begin(),current.end(),
+                    [&](auto const& item){
+                        return item.path==target&&item.name==name;
+                    });
+                if(found==current.end()){
+                    ui->StatusText().Text(L"북마크가 변경됐습니다. 홈을 다시 여세요.");
+                    ui->RefreshHomeOverview();
+                    return;
+                }
+                if(!ui->OpenFolder(target))
+                    ui->StatusText().Text(L"북마크 위치로 이동하지 못했습니다.");
+            }
+        });
+        pinned.Append(button);
+    }
+    if(bookmarks.empty())appendEmpty(HomePinnedItems(),
+        L"등록된 북마크가 없습니다. 현재 폴더를 북마크에 추가할 수 있습니다.");
+    HomePinnedStatus().Text(hstring(
+        L"등록된 북마크 "+std::to_wstring(bookmarks.size())+
+        L"개 · 처음 "+std::to_wstring(pinnedLimit)+L"개 표시"));
+
+    if(!mRecentActivity.enabled()){
+        appendEmpty(HomeRecentItems(),L"최근 활동 기록이 꺼져 있습니다.");
+        appendEmpty(HomeFrequentItems(),L"방문 기록이 꺼져 있습니다.");
+        HomeActivityPrivacyText().Text(
+            L"기록 꺼짐 · 기존 활동을 읽지 않고, 켜기 전 활동도 수집하지 않습니다.");
+        return;
+    }
+    const auto& recent=mRecentActivity.files();
+    const auto& frequent=mRecentActivity.folders();
+    const auto fileLimit=(std::min)(recent.size(),kPreview);
+    const auto folderLimit=(std::min)(frequent.size(),kPreview);
+    for(std::size_t i=0;i<fileLimit;++i){
+        const auto path=recent[i];
+        std::wstring label=path;
+        try{
+            auto name=std::filesystem::path(path).filename().native();
+            if(!name.empty())label=std::move(name);
+        }catch(...){}
+        Button button;
+        button.MaxWidth(160);
+        button.Content(box_value(hstring(label)));
+        ToolTipService::SetToolTip(button,box_value(hstring(path)));
+        Microsoft::UI::Xaml::Automation::AutomationProperties::SetName(
+            button,hstring(L"홈 최근 파일 열기 "+label));
+        button.Click([weak,path](IInspectable const&,RoutedEventArgs const&){
+            if(auto ui=weak.get()){
+                if(ui->mClosing||
+                   ui->HomeOverviewPanel().Visibility()!=Visibility::Visible)return;
+                ui->OpenRecentActivityFilePath(path);
+            }
+        });
+        recentButtons.Append(button);
+    }
+    for(std::size_t i=0;i<folderLimit;++i){
+        const auto entry=frequent[i];
+        std::wstring label=entry.path;
+        try{
+            auto name=std::filesystem::path(entry.path).filename().native();
+            if(!name.empty())label=std::move(name);
+        }catch(...){}
+        Button button;
+        button.MaxWidth(160);
+        button.Content(box_value(hstring(
+            std::to_wstring(entry.visits)+L"회 · "+label)));
+        ToolTipService::SetToolTip(button,box_value(hstring(entry.path)));
+        Microsoft::UI::Xaml::Automation::AutomationProperties::SetName(
+            button,hstring(L"홈 자주 방문한 폴더 "+entry.path));
+        const auto target=entry.path;
+        button.Click([weak,target](IInspectable const&,RoutedEventArgs const&){
+            if(auto ui=weak.get()){
+                if(ui->mClosing||!ui->mRecentActivity.enabled()||
+                   ui->HomeOverviewPanel().Visibility()!=Visibility::Visible)return;
+                const auto& folders=ui->mRecentActivity.folders();
+                const auto found=std::find_if(folders.begin(),folders.end(),
+                    [&](auto const& item){return item.path==target;});
+                if(found==folders.end()){
+                    ui->StatusText().Text(L"방문 폴더 기록이 변경됐습니다.");
+                    ui->RefreshHomeOverview();
+                    return;
+                }
+                ui->OpenFolder(target);
+            }
+        });
+        frequentButtons.Append(button);
+    }
+    if(recent.empty())appendEmpty(HomeRecentItems(),
+        L"이 세션에 최근 열었던 파일이 없습니다.");
+    if(frequent.empty())appendEmpty(HomeFrequentItems(),
+        L"이 세션에 방문한 폴더가 없습니다.");
+    HomeActivityPrivacyText().Text(hstring(
+        L"기록 켜짐 · 최근 파일 "+std::to_wstring(recent.size())+
+        L"개 · 방문 폴더 "+std::to_wstring(frequent.size())+
+        L"개 (각각 처음 최대 4개 표시) · 종료 시 삭제"));
+}
 void MainWindow::RefreshRecentActivityPanel(){
     const auto& recent=mRecentActivity.files();
     const auto& frequent=mRecentActivity.folders();
@@ -227,6 +387,8 @@ void MainWindow::RefreshRecentActivityPanel(){
         state=L"기록 켜짐 · 최근 파일 "+std::to_wstring(recent.size())+
               L"개 · 방문 폴더 "+std::to_wstring(frequent.size())+L"개";
     RecentActivityStateText().Text(hstring(state));
+    if(HomeOverviewPanel().Visibility()==Visibility::Visible)
+        RefreshHomeOverview();
 }
 void MainWindow::OnToggleRecentActivity(
     IInspectable const&,RoutedEventArgs const&){
