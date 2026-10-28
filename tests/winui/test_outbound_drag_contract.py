@@ -150,8 +150,8 @@ class OutboundDragContract(unittest.TestCase):
         script=(ROOT/"tests/winui/test_same_app_drag_regression_gui.py").read_text(
             encoding="utf-8")
         for token in (
-            '"--collision", choices=("none", "cancel", "keep-both"), default="none"',
-            'if COLLISION != "none" and (not REVERSE or ITEM_KIND != "file"):',
+            '"--collision", choices=("none", "cancel", "keep-both", "skip"), default="none"',
+            'if COLLISION != "none" and (',
             'collision_target = target_dir / source.name',
             'collision_target.write_bytes(collision_bytes)',
             'assert collision_target.read_bytes() == collision_bytes',
@@ -169,6 +169,36 @@ class OutboundDragContract(unittest.TestCase):
             script.index('preview = None'))
         self.assertIn('args.Data().RequestedOperation(DataPackageOperation::Copy)',
                       SOURCE.read_text(encoding="utf-8"))
+        self.assertNotIn('source.unlink(', script)
+        self.assertNotIn('shutil.rmtree(', script)
+
+    def test_reverse_drag_skip_preserves_collision_and_copies_clean_member(self):
+        script=(ROOT/"tests/winui/test_same_app_drag_regression_gui.py").read_text(
+            encoding="utf-8")
+        for token in (
+            'COLLISION == "skip" and ITEM_KIND != "multi-file"',
+            'COLLISION != "skip" and ITEM_KIND != "file"',
+            'second_row.click_input(pressed="control")',
+            'assert source_row.is_selected() and second_row.is_selected()',
+            'if COLLISION == "skip":',
+            'assert not (target_dir / second_source.name).exists()',
+            'skip = modal_button("충돌 항목 건너뛰기")',
+            'skip.iface_invoke.Invoke()',
+            'clean_copy = target_dir / second_source.name',
+            'eventually(clean_copy.is_file,',
+            'clean_copy.read_bytes() == second_source.read_bytes()',
+            'assert sorted(p.name for p in target_dir.iterdir()) == sorted(',
+            'assert collision_target.read_bytes() == collision_bytes',
+            'assert source.read_bytes() == source_bytes',
+            'M23_REVERSE_DRAG_COLLISION_SKIP_COPIES_ONLY_CLEAN=PASS',
+        ):
+            self.assertIn(token, script)
+        self.assertLess(
+            script.index('collision_target.write_bytes(collision_bytes)'),
+            script.index('preview = None'))
+        self.assertLess(
+            script.index('skip.iface_invoke.Invoke()'),
+            script.index('M23_REVERSE_DRAG_COLLISION_SKIP_COPIES_ONLY_CLEAN=PASS'))
         self.assertNotIn('source.unlink(', script)
         self.assertNotIn('shutil.rmtree(', script)
 
