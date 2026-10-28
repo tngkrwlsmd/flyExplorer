@@ -23,7 +23,7 @@ direction_parser.add_argument(
     help="Exact test-owned source and destination pane direction",
 )
 direction_parser.add_argument(
-    "--item-kind", choices=("file", "folder", "multi-file"), default="file",
+    "--item-kind", choices=("file", "folder", "multi-file", "mixed"), default="file",
     help="Exact test-owned physical source item type",
 )
 arguments = direction_parser.parse_args()
@@ -65,6 +65,12 @@ second_source = None
 if ITEM_KIND == "multi-file":
     second_source = source_dir / "두번째-한글.txt"
     second_source.write_bytes("owned second file\n".encode("utf-8"))
+elif ITEM_KIND == "mixed":
+    second_source = source_dir / "혼합-한글-폴더"
+    second_source.mkdir()
+    (second_source / "하위-폴더").mkdir()
+    (second_source / "하위-폴더" / "혼합-한글.txt").write_bytes(
+        "owned mixed folder content\n".encode("utf-8"))
 
 env = os.environ.copy()
 for key in ("APPDATA", "LOCALAPPDATA", "TEMP", "TMP"):
@@ -186,7 +192,7 @@ try:
     visit(SOURCE_PANE_ID, source_dir, source.name)
     source_row = row(SOURCE_PANE_ID, source.name)
     source_row.select()
-    if ITEM_KIND == "multi-file":
+    if ITEM_KIND in ("multi-file", "mixed"):
         eventually(
             lambda: row(SOURCE_PANE_ID, second_source.name) is not None,
             "second test-owned ListItem did not render", 10)
@@ -221,18 +227,18 @@ try:
     eventually(
         lambda: copied.is_dir() if ITEM_KIND == "folder" else copied.is_file(),
         "same-app private-token drag did not copy owned "+ITEM_KIND, 18)
+    def owned_tree(root):
+        assert root.is_dir() and not root.is_symlink()
+        children = {}
+        for child in sorted(root.rglob("*")):
+            assert not child.is_symlink(), "owned tree may not contain links"
+            relative = child.relative_to(root).as_posix()
+            children[relative] = (
+                ("dir", None) if child.is_dir()
+                else ("file", child.read_bytes())
+            )
+        return children
     if ITEM_KIND == "folder":
-        def owned_tree(root):
-            assert root.is_dir() and not root.is_symlink()
-            children = {}
-            for child in sorted(root.rglob("*")):
-                assert not child.is_symlink(), "owned tree may not contain links"
-                relative = child.relative_to(root).as_posix()
-                children[relative] = (
-                    ("dir", None) if child.is_dir()
-                    else ("file", child.read_bytes())
-                )
-            return children
         eventually(
             lambda: (copied / "하위-폴더" / "한글-payload.txt").is_file()
             and (copied / "root-payload.bin").is_file(),
@@ -253,6 +259,15 @@ try:
         assert second_copy.read_bytes() == second_source.read_bytes()
         assert second_source.is_file(), "multi-file drag removed original"
         print("REAL_SAME_APP_PRIVATE_DRAG_MULTI_FILE_COPY", True,
+              flush=True)
+    if ITEM_KIND == "mixed":
+        second_copy = target_dir / second_source.name
+        eventually(
+            lambda: (second_copy / "하위-폴더" / "혼합-한글.txt").is_file(),
+            "same-app mixed drag folder payload missing", 18)
+        assert owned_tree(second_copy) == owned_tree(second_source)
+        assert second_source.is_dir(), "mixed drag removed original folder"
+        print("REAL_SAME_APP_PRIVATE_DRAG_MIXED_FILE_FOLDER_COPY", True,
               flush=True)
     print("SAME_APP_DRAG_DIRECTION", DIRECTION, flush=True)
     print("SAME_APP_DRAG_ITEM_KIND", ITEM_KIND, flush=True)
