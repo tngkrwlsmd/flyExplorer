@@ -398,6 +398,7 @@ void MainWindow::OnToggleRecentActivity(
     SearchPanel().Visibility(Visibility::Collapsed);
     BookmarkPanel().Visibility(Visibility::Collapsed);
     FilterRulePanel().Visibility(Visibility::Collapsed);
+    HomeOverviewPanel().Visibility(Visibility::Collapsed);
     RecentActivityPanel().Visibility(next);
     if(next==Visibility::Visible){
         RefreshRecentActivityPanel();
@@ -540,6 +541,7 @@ void MainWindow::OnToggleWorkspaces(
     BookmarkPanel().Visibility(Visibility::Collapsed);
     FilterRulePanel().Visibility(Visibility::Collapsed);
     RecentActivityPanel().Visibility(Visibility::Collapsed);
+    HomeOverviewPanel().Visibility(Visibility::Collapsed);
     WorkspacePanel().Visibility(next);
     if(next==Visibility::Visible)EnsureExpandedPanelFits();
     if(next==Visibility::Visible)
@@ -708,6 +710,7 @@ void MainWindow::OnToggleSearch(
     BookmarkPanel().Visibility(Visibility::Collapsed);
     FilterRulePanel().Visibility(Visibility::Collapsed);
     RecentActivityPanel().Visibility(Visibility::Collapsed);
+    HomeOverviewPanel().Visibility(Visibility::Collapsed);
     SearchPanel().Visibility(next);
     if(next==Visibility::Collapsed){
         mSearchController.invalidate();
