@@ -90,6 +90,7 @@ class OutboundDragContract(unittest.TestCase):
             'nested.mkdir()',
             'write_bytes(',
             'source.write_text("owned same-app drag',
+            'copied.is_dir() if ITEM_KIND == "folder" else copied.is_file()',
             'def owned_tree(root):',
             'relative = child.relative_to(root).as_posix()',
             'assert not child.is_symlink()',
