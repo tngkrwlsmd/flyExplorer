@@ -150,7 +150,7 @@ class OutboundDragContract(unittest.TestCase):
         script=(ROOT/"tests/winui/test_same_app_drag_regression_gui.py").read_text(
             encoding="utf-8")
         for token in (
-            '"--collision", choices=("none", "cancel", "keep-both", "keep-both-late-folder", "skip", "skip-all"), default="none"',
+            '"--collision", choices=("none", "cancel", "keep-both", "keep-both-late-folder", "keep-both-late-file", "skip", "skip-all"), default="none"',
             'if COLLISION != "none" and (',
             'collision_target = target_dir / source.name',
             'collision_target.write_bytes(collision_bytes)',
@@ -176,7 +176,8 @@ class OutboundDragContract(unittest.TestCase):
         script=(ROOT/"tests/winui/test_same_app_drag_regression_gui.py").read_text(
             encoding="utf-8")
         for token in (
-            'COLLISION not in ("skip", "skip-all", "keep-both-late-folder") and ITEM_KIND not in ("file", "mixed")',
+            'COLLISION not in ("skip", "skip-all", "keep-both-late-folder", "keep-both-late-file")',
+            'and ITEM_KIND not in ("file", "mixed")',
             'if ITEM_KIND == "mixed" and COLLISION in ("cancel", "keep-both", "keep-both-late-folder"):',
             'assert owned_tree(second_source) == second_source_tree',
             'assert not (target_dir / second_source.name).exists()',
@@ -198,7 +199,8 @@ class OutboundDragContract(unittest.TestCase):
         script=(ROOT/"tests/winui/test_same_app_drag_regression_gui.py").read_text(
             encoding="utf-8")
         for token in (
-            'COLLISION not in ("skip", "skip-all", "keep-both-late-folder") and ITEM_KIND not in ("file", "mixed")',
+            'COLLISION not in ("skip", "skip-all", "keep-both-late-folder", "keep-both-late-file")',
+            'and ITEM_KIND not in ("file", "mixed")',
             'assert owned_tree(second_source) == second_source_tree',
             'approve.iface_invoke.Invoke()',
             'unique_copy = eventually(',
@@ -216,6 +218,40 @@ class OutboundDragContract(unittest.TestCase):
         self.assertLess(
             script.index('approve.iface_invoke.Invoke()'),
             script.index('M23_REVERSE_DRAG_COLLISION_MIXED_KEEP_BOTH_PRESERVES_ALL=PASS'))
+        self.assertNotIn('source.unlink(', script)
+        self.assertNotIn('shutil.rmtree(', script)
+
+    def test_late_file_collision_keep_both_preserves_all_original_file_bytes(self):
+        # One pre-existing file collision opens the modal. A second independent
+        # collision appears only while the real dialog is still visible.
+        script=(ROOT/"tests/winui/test_same_app_drag_regression_gui.py").read_text(
+            encoding="utf-8")
+        for token in (
+            '"keep-both-late-file"',
+            'COLLISION == "keep-both-late-file" and ITEM_KIND != "multi-file"',
+            'late_file = target_dir / second_source.name',
+            'late_file_bytes = b"late destination second file: preserve untouched"',
+            'late_file.write_bytes(late_file_bytes)',
+            'assert second_source.read_bytes() == second_source_bytes',
+            'assert collision_target.read_bytes() == collision_bytes',
+            'assert late_file.read_bytes() == late_file_bytes',
+            'approve.iface_invoke.Invoke()',
+            'def renamed_file_copies():',
+            'originals = {source.name, second_source.name}',
+            'if p.is_file() and p.name not in originals',
+            'return candidates if len(candidates) == 2 else None',
+            'sorted(p.read_bytes() for p in copies)',
+            'sorted((source_bytes, second_source_bytes))',
+            'copies[0].name, copies[1].name',
+            'M23_REVERSE_DRAG_LATE_FILE_COLLISION_KEEP_BOTH=PASS',
+        ):
+            self.assertIn(token, script)
+        self.assertLess(
+            script.index('late_file.write_bytes(late_file_bytes)'),
+            script.index('approve.iface_invoke.Invoke()'))
+        self.assertLess(
+            script.index('approve.iface_invoke.Invoke()'),
+            script.index('M23_REVERSE_DRAG_LATE_FILE_COLLISION_KEEP_BOTH=PASS'))
         self.assertNotIn('source.unlink(', script)
         self.assertNotIn('shutil.rmtree(', script)
 
@@ -256,7 +292,8 @@ class OutboundDragContract(unittest.TestCase):
             encoding="utf-8")
         for token in (
             'COLLISION == "skip" and ITEM_KIND not in ("multi-file", "mixed")',
-            'COLLISION not in ("skip", "skip-all", "keep-both-late-folder") and ITEM_KIND not in ("file", "mixed")',
+            'COLLISION not in ("skip", "skip-all", "keep-both-late-folder", "keep-both-late-file")',
+            'and ITEM_KIND not in ("file", "mixed")',
             'second_row.click_input(pressed="control")',
             'source_row.is_selected() and second_row.is_selected()',
             'source_bytes = source.read_bytes() if source.is_file() else None',
