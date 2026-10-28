@@ -83,11 +83,14 @@ def main(config="Release"):
 
         win = eventually(view, "Owned WinUI window did not appear", 25)
         element = lambda name: win.child_window(auto_id=name)
+        def panel_visible(name):
+            target = element(name)
+            return target.exists() and target.is_visible()
         eventually(lambda: str(start).casefold()
                    in element("AddressBox").get_value().casefold(),
                    "Test-owned initial folder not committed", 20)
-        assert element("HomeOverviewPanel").exists()
-        assert not element("HomeOverviewPanel").is_visible()
+        # WinUI may remove Collapsed content entirely from its UIA tree.
+        assert not panel_visible("HomeOverviewPanel")
 
         invoke(element("AddBookmarkButton"))
         eventually(lambda: element("BookmarkButtonsPanel").exists() and
@@ -98,7 +101,7 @@ def main(config="Release"):
         assert file.read_bytes() == original
 
         invoke(element("HomeButton"))
-        eventually(lambda: element("HomeOverviewPanel").is_visible(),
+        eventually(lambda: panel_visible("HomeOverviewPanel"),
                    "Sidebar Home did not show unified overview")
         eventually(lambda: "1개" in element("HomePinnedStatus").window_text(),
                    "Unified Home did not aggregate owned bookmark")
@@ -111,8 +114,8 @@ def main(config="Release"):
         print("PX02_HOME_BOOKMARK_AGGREGATED=PASS", flush=True)
 
         invoke(element("HomeManageActivityButton"))
-        eventually(lambda: element("RecentActivityPanel").is_visible() and
-                   not element("HomeOverviewPanel").is_visible(),
+        eventually(lambda: panel_visible("RecentActivityPanel") and
+                   not panel_visible("HomeOverviewPanel"),
                    "Recent activity management did not replace Home")
         assert "기록 꺼짐" in element("RecentActivityStateText").window_text()
         assert not element("RecentActivityFiles").is_enabled()
@@ -124,18 +127,18 @@ def main(config="Release"):
         print("PX02_HOME_SESSION_OPT_IN_EMPTY=PASS", flush=True)
 
         invoke(element("HomeButton"))
-        eventually(lambda: element("HomeOverviewPanel").is_visible(),
+        eventually(lambda: panel_visible("HomeOverviewPanel"),
                    "Home was not restored after activity management")
         assert "기록 켜짐" in element("HomeActivityPrivacyText").window_text()
         assert "최근 파일 0개" in element("HomeActivityPrivacyText").window_text()
         print("PX02_HOME_OPTED_IN_EMPTY_NO_BACKFILL=PASS", flush=True)
 
         invoke(element("HomeManageBookmarksButton"))
-        eventually(lambda: element("BookmarkPanel").is_visible() and
-                   not element("HomeOverviewPanel").is_visible(),
+        eventually(lambda: panel_visible("BookmarkPanel") and
+                   not panel_visible("HomeOverviewPanel"),
                    "Bookmark management did not replace Home")
         invoke(element("HomeButton"))
-        eventually(lambda: element("HomeOverviewPanel").is_visible(),
+        eventually(lambda: panel_visible("HomeOverviewPanel"),
                    "Home not restored after bookmark management")
 
         def owned_tile():
@@ -147,7 +150,7 @@ def main(config="Release"):
         tile = eventually(owned_tile, "Owned bookmark not present in Home")
         assert owner_pid(hwnd) == app.pid
         invoke(tile)
-        eventually(lambda: not element("HomeOverviewPanel").is_visible(),
+        eventually(lambda: not panel_visible("HomeOverviewPanel"),
                    "Home tile navigation did not dismiss overview")
         eventually(lambda: str(start).casefold() in
                    element("AddressBox").get_value().casefold(),
