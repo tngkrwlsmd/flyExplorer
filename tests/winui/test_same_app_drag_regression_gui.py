@@ -37,12 +37,12 @@ ITEM_KIND = arguments.item_kind
 COLLISION = arguments.collision
 if COLLISION != "none" and (
     not REVERSE or
-    (COLLISION == "skip" and ITEM_KIND != "multi-file") or
+    (COLLISION == "skip" and ITEM_KIND not in ("multi-file", "mixed")) or
     (COLLISION != "skip" and ITEM_KIND != "file")
 ):
     direction_parser.error(
         "collision requires right-to-left file (cancel/keep-both) "
-        "or multi-file (skip)"
+        "or multi-file/mixed (skip)"
     )
 SOURCE_PANE_ID = "RightFiles" if REVERSE else "LeftFiles"
 TARGET_PANE_ID = "LeftFiles" if REVERSE else "RightFiles"
@@ -113,6 +113,20 @@ u.PostMessageW.restype = W.BOOL
 
 def eventually(fn, label, seconds=15):
     return wait_until(fn, label, seconds=seconds, interval=.15)
+
+
+def owned_tree(root):
+    """Snapshot only the explicit, disposable fixture's relative tree/bytes."""
+    assert root.is_dir() and not root.is_symlink()
+    children = {}
+    for child in sorted(root.rglob("*")):
+        assert not child.is_symlink(), "owned tree may not contain links"
+        relative = child.relative_to(root).as_posix()
+        children[relative] = (
+            ("dir", None) if child.is_dir()
+            else ("file", child.read_bytes())
+        )
+    return children
 
 
 def foreground_root():
@@ -275,7 +289,9 @@ try:
         assert collision_target.read_bytes() == collision_bytes
         assert sorted(p.name for p in target_dir.iterdir()) == [source.name]
         if COLLISION == "skip":
-            assert second_source is not None and second_source.is_file()
+            assert second_source is not None
+            assert (second_source.is_file() if ITEM_KIND == "multi-file"
+                    else second_source.is_dir())
             assert not (target_dir / second_source.name).exists()
 
         if COLLISION == "cancel":
@@ -290,19 +306,31 @@ try:
             skip = modal_button("충돌 항목 건너뛰기")
             assert skip is not None, "skip action missing from owned WinUI modal"
             skip.iface_invoke.Invoke()
-            # Only the nonconflicting member of the test-owned pair may copy.
+            # Skip the conflicting file, copy only the nonconflicting
+            # test-owned member (file or nested Unicode folder).
             clean_copy = target_dir / second_source.name
-            eventually(clean_copy.is_file,
-                       "nonconflicting owned drag item not copied after skip", 23)
-            eventually(
-                lambda: clean_copy.read_bytes() == second_source.read_bytes(),
-                "nonconflicting owned drag item bytes incomplete", 15)
+            if ITEM_KIND == "multi-file":
+                eventually(clean_copy.is_file,
+                           "nonconflicting file missing after drag Skip", 23)
+                eventually(
+                    lambda: clean_copy.read_bytes() == second_source.read_bytes(),
+                    "nonconflicting owned file bytes incomplete", 15)
+                assert second_source.read_bytes() == b"owned second file\n"
+                print("M23_REVERSE_DRAG_COLLISION_SKIP_COPIES_ONLY_CLEAN=PASS",
+                      flush=True)
+            else:
+                assert ITEM_KIND == "mixed"
+                eventually(
+                    lambda: (clean_copy / "하위-폴더" / "혼합-한글.txt").is_file(),
+                    "nonconflicting nested folder missing after drag Skip", 23)
+                eventually(
+                    lambda: owned_tree(clean_copy) == owned_tree(second_source),
+                    "nonconflicting nested folder bytes incomplete", 15)
+                assert second_source.is_dir()
+                print("M23_REVERSE_DRAG_COLLISION_MIXED_SKIP_PRESERVES_FOLDER=PASS",
+                      flush=True)
             assert sorted(p.name for p in target_dir.iterdir()) == sorted(
                 (source.name, second_source.name))
-            assert second_source.read_bytes() == (
-                b"owned second file\n")
-            print("M23_REVERSE_DRAG_COLLISION_SKIP_COPIES_ONLY_CLEAN=PASS",
-                  flush=True)
         else:
             approve.iface_invoke.Invoke()
 
@@ -329,17 +357,7 @@ try:
         eventually(
             lambda: copied.is_dir() if ITEM_KIND == "folder" else copied.is_file(),
             "same-app private-token drag did not copy owned "+ITEM_KIND, 18)
-        def owned_tree(root):
-            assert root.is_dir() and not root.is_symlink()
-            children = {}
-            for child in sorted(root.rglob("*")):
-                assert not child.is_symlink(), "owned tree may not contain links"
-                relative = child.relative_to(root).as_posix()
-                children[relative] = (
-                    ("dir", None) if child.is_dir()
-                    else ("file", child.read_bytes())
-                )
-            return children
+        # The identical owned_tree oracle is shared with Skip above.
         if ITEM_KIND == "folder":
             eventually(
                 lambda: (copied / "하위-폴더" / "한글-payload.txt").is_file()
