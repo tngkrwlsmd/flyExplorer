@@ -219,7 +219,7 @@ class OutboundDragContract(unittest.TestCase):
             'expected_existing = sorted(',
             'elif COLLISION in ("skip", "skip-all"):',
             'skip.iface_invoke.Invoke()',
-            'lambda: "충돌한 항목을 모두 건너뛰었습니다."',
+            'lambda: "충돌한 2개 항목을 모두 건너뛰었습니다. 파일을 변경하지 않았습니다."',
             'in element("StatusText").window_text()',
             'assert sorted(p.name for p in target_dir.iterdir()) == expected_existing',
             'M23_REVERSE_DRAG_COLLISION_SKIP_ALL_PRESERVES_BOTH=PASS',
@@ -236,9 +236,9 @@ class OutboundDragContract(unittest.TestCase):
         transfer=(ROOT/"app/winui/m22_transfers.cpp").read_text(
             encoding="utf-8")
         self.assertIn('return StartStatus::AllSkipped;', controller)
-        self.assertIn(
-            '충돌한 항목을 모두 건너뛰었습니다. 이 요청에서 파일을 변경하지 않았습니다.',
-            transfer)
+        self.assertIn('L"충돌한 "+std::to_wstring(skipped)', transfer)
+        self.assertIn('개 항목을 모두 건너뛰었습니다. 파일을 변경하지 않았습니다.',
+                      transfer)
         self.assertNotIn('source.unlink(', script)
         self.assertNotIn('shutil.rmtree(', script)
 
