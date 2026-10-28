@@ -146,6 +146,32 @@ class OutboundDragContract(unittest.TestCase):
         self.assertNotIn('source.unlink(',script)
         self.assertNotIn('shutil.rmtree(',script)
 
+    def test_reverse_drag_collision_is_explicit_opt_in_and_preserves_both_files(self):
+        script=(ROOT/"tests/winui/test_same_app_drag_regression_gui.py").read_text(
+            encoding="utf-8")
+        for token in (
+            '"--collision", choices=("none", "cancel", "keep-both"), default="none"',
+            'if COLLISION != "none" and (not REVERSE or ITEM_KIND != "file"):',
+            'collision_target = target_dir / source.name',
+            'collision_target.write_bytes(collision_bytes)',
+            'assert collision_target.read_bytes() == collision_bytes',
+            'assert source.read_bytes() == source_bytes',
+            'if COLLISION == "cancel":',
+            'cancel.iface_invoke.Invoke()',
+            'M23_REVERSE_DRAG_COLLISION_CANCEL_NO_MUTATION=PASS',
+            'approve.iface_invoke.Invoke()',
+            'unique_copy = eventually(',
+            'M23_REVERSE_DRAG_COLLISION_KEEP_BOTH_PRESERVES_TARGET=PASS',
+        ):
+            self.assertIn(token, script)
+        self.assertLess(
+            script.index('collision_target.write_bytes(collision_bytes)'),
+            script.index('preview = None'))
+        self.assertIn('args.Data().RequestedOperation(DataPackageOperation::Copy)',
+                      SOURCE.read_text(encoding="utf-8"))
+        self.assertNotIn('source.unlink(', script)
+        self.assertNotIn('shutil.rmtree(', script)
+
     def test_same_app_private_drag_stays_copy_only_for_both_directions(self):
         source=compact(SOURCE.read_text(encoding="utf-8"))
         drop=source[source.index("fire_and_forget MainWindow::OnFileDrop"):]
