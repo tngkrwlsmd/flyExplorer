@@ -218,13 +218,15 @@ void MainWindow::RefreshRecentActivityPanel(){
     RecentActivityRemoveFolderButton().IsEnabled(false);
     // Empty opt-in history is distinct from privacy-off; do not imply that
     // Explorer or provider history was scanned or loaded automatically.
-    RecentActivityStateText().Text(hstring(
-        !enabled?
-          L"기록 꺼짐 · 파일 및 폴더 활동을 수집하지 않습니다.":
-        recent.empty()&&frequent.empty()?
-          L"기록 켜짐 · 이 세션에 저장된 활동이 아직 없습니다.":
-          L"기록 켜짐 · 최근 파일 "+std::to_wstring(recent.size())+
-          L"개 · 방문 폴더 "+std::to_wstring(frequent.size())+L"개"));
+    std::wstring state;
+    if(!enabled)
+        state=L"기록 꺼짐 · 파일 및 폴더 활동을 수집하지 않습니다.";
+    else if(recent.empty()&&frequent.empty())
+        state=L"기록 켜짐 · 이 세션에 저장된 활동이 아직 없습니다.";
+    else
+        state=L"기록 켜짐 · 최근 파일 "+std::to_wstring(recent.size())+
+              L"개 · 방문 폴더 "+std::to_wstring(frequent.size())+L"개";
+    RecentActivityStateText().Text(hstring(state));
 }
 void MainWindow::OnToggleRecentActivity(
     IInspectable const&,RoutedEventArgs const&){
