@@ -114,7 +114,7 @@ def main(config="Release"):
         print("PX02_HOME_BOOKMARK_AGGREGATED=PASS", flush=True)
 
         invoke(element("HomeManageActivityButton"))
-        eventually(lambda: panel_visible("RecentActivityPanel") and
+        eventually(lambda: panel_visible("RecentActivityOptIn") and
                    not panel_visible("HomeOverviewPanel"),
                    "Recent activity management did not replace Home")
         assert "기록 꺼짐" in element("RecentActivityStateText").window_text()
@@ -134,7 +134,7 @@ def main(config="Release"):
         print("PX02_HOME_OPTED_IN_EMPTY_NO_BACKFILL=PASS", flush=True)
 
         invoke(element("HomeManageBookmarksButton"))
-        eventually(lambda: panel_visible("BookmarkPanel") and
+        eventually(lambda: panel_visible("BookmarkManagerBox") and
                    not panel_visible("HomeOverviewPanel"),
                    "Bookmark management did not replace Home")
         invoke(element("HomeButton"))
