@@ -1701,6 +1701,8 @@ namespace winrt::FlyExplorer::implementation
             }
             if(RecentActivityPanel().Visibility()==Visibility::Visible)
                 RefreshRecentActivityPanel();
+            if(HomeOverviewPanel().Visibility()==Visibility::Visible)
+                RefreshHomeOverview();
         }
         if(completed.active){
             ClearFileDetails(completed.side);
