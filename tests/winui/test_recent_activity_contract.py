@@ -105,8 +105,11 @@ class RecentActivityContracts(unittest.TestCase):
             "void MainWindow::OnNativeChange(",1)[0]
         self.assertIn("completed.kind==Kind::Applied&&completed.active&&",navigation)
         self.assertIn("!continuation&&completed.action!=Action::Refresh",navigation)
-        self.assertIn("mRecentActivity.recordFolder(pane.filesystemPaths[pane.active]);",
+        self.assertIn("const auto& path=pane.filesystemPaths[pane.active];",
                       navigation)
+        self.assertIn("mRecentActivity.recordFolder(path);",navigation)
+        self.assertLess(navigation.index("const auto& path=pane.filesystemPaths[pane.active];"),
+                        navigation.index("mRecentActivity.recordFolder(path);"))
         activation=main.split("void MainWindow::OpenSelectedFolder(int side)",1)[1].split(
             "void MainWindow::OnLeftFileDoubleTapped(",1)[0]
         self.assertIn("ui->ActiveWindowTab().identity!=context.windowTabIdentity",activation)
