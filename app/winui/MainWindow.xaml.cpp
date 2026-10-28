@@ -577,7 +577,7 @@ namespace winrt::FlyExplorer::implementation
         winrt::get_self<winrt::FlyExplorer::implementation::NavigationSidebar>(
             SidebarView())->SetNavigateCallback([nativeWeak](int target){
             if(auto ui=nativeWeak.get()){
-                if(target==0)ui->OpenFolder(ui->HomePath().native());
+                if(target==0)ui->ShowHomeOverview();
                 else if(target==1)ui->OpenFolder(
                     (ui->HomePath()/L"Documents").native());
                 else if(target==2)ui->OpenFolder(
@@ -3541,6 +3541,7 @@ namespace winrt::FlyExplorer::implementation
     bool MainWindow::OpenFolder(std::wstring const& path)
     {
         if(path.empty())return false;
+        HomeOverviewPanel().Visibility(Visibility::Collapsed);
         mWorkspaceRestore.reset(ActiveWindowTab().model.activePane);
         QueuePath(ActiveWindowTab().model.activePane,path);
         return true;
@@ -4377,7 +4378,7 @@ namespace winrt::FlyExplorer::implementation
     }
     void MainWindow::OnHomeClicked(IInspectable const&,RoutedEventArgs const&)
     {
-        OpenFolder(HomePath().native());
+        ShowHomeOverview();
     }
     void MainWindow::OnDocumentsClicked(IInspectable const&,RoutedEventArgs const&)
     {
