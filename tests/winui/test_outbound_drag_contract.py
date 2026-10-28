@@ -104,6 +104,28 @@ class OutboundDragContract(unittest.TestCase):
         self.assertNotIn('source.unlink(', script)
         self.assertNotIn('shutil.rmtree(', script)
 
+    def test_multi_file_private_drag_requires_two_selected_owned_rows(self):
+        script=(ROOT/"tests/winui/test_same_app_drag_regression_gui.py").read_text(
+            encoding="utf-8")
+        for token in (
+            'choices=("file", "folder", "multi-file")',
+            'if ITEM_KIND == "multi-file":',
+            'second_source = source_dir / "두번째-한글.txt"',
+            'second_row.click_input(pressed="control")',
+            'source_row.is_selected() and second_row.is_selected()',
+            'print("M23_OWNED_MULTI_FILE_SELECTED"',
+            'second_copy = target_dir / second_source.name',
+            'second_copy.read_bytes() == second_source.read_bytes()',
+            'assert second_source.is_file()',
+            'print("REAL_SAME_APP_PRIVATE_DRAG_MULTI_FILE_COPY"',
+        ):
+            self.assertIn(token, script)
+        self.assertIn('"--direction", choices=("left-to-right", "right-to-left")',
+                      script)
+        self.assertIn('default="left-to-right"',script)
+        self.assertIn('default="file"',script)
+        self.assertNotIn('source.unlink(',script)
+
     def test_same_app_private_drag_stays_copy_only_for_both_directions(self):
         source=compact(SOURCE.read_text(encoding="utf-8"))
         drop=source[source.index("fire_and_forget MainWindow::OnFileDrop"):]
