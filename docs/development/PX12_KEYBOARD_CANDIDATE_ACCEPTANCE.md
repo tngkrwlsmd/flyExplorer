@@ -1,0 +1,21 @@
+# PX12 — bounded address candidate Up/Down acceptance (2026-10-29)
+
+## Accepted local behavior
+
+With the address editor focused and a bounded candidate list already visible, **Down** enters the first candidate, then moves to the next; **Up** moves to the previous candidate and returns to the address editor from the first. **Down** on the final candidate stays within that list. **Escape** first dismisses suggestions, then restores the last committed address. Candidate **Enter/Invoke** continues to use the existing async navigation and to retain the committed folder on a failed Shell resolution.
+
+The application only offers at most **eight in-memory** known pane/tab or already-loaded filesystem-folder candidates. Arrow keys do **not** perform new filesystem enumeration, provider/UNC resolution, or navigation. A focused TextBox or Button may mark arrow keys handled before ordinary bubbling `KeyDown`. The implementation now registers a single handled-event listener per address editor/candidate; it intercepts **unmodified Down only while suggestions are visible**, and preserves the normal editor and already-handled IME Enter cases. Candidate Up/Down/Escape remains restricted to visible candidate Buttons. The prior root preview shortcut handler is unchanged for unrelated shortcuts and no longer duplicates the address Down path.
+
+## Exact evidence
+
+- Product + tests source: [`3bbfc73b37d4218aeba725d95656bfd42e374ecd`](https://github.com/tngkrwlsmd/flyExplorer/commit/3bbfc73b37d4218aeba725d95656bfd42e374ecd). The functional change is in `app/winui/MainWindow.xaml.cpp` and `MainWindow.xaml`, with narrow PX12 contracts and the existing owned GUI oracle.
+- [Windows source result](https://github.com/tngkrwlsmd/personal-control-plane/blob/main/results/windows-vm/fly-px12-handled-arrows-source-20261029.json): **3/3 keyboard/label source contracts PASS** and **2/2 owned GUI protection contracts PASS**, exit 0, exact source SHA, isolated worktree removed. The existing unrelated source suite was not restarted.
+- [Central Windows CI #40778973319](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/40778973319): runner-health PASS, GUI dependencies PASS, **Release build PASS EXIT=0**, **functional-px12-address-candidate-chrome GUI PASS EXIT=0**, diagnostic `NOT_FINAL_ACCEPTANCE=1`. Exact SHA `3bbfc73b37d4218aeba725d95656bfd42e374ecd`. CI's isolated build workspace retired.
+- [Read-only actual GUI markers](https://github.com/tngkrwlsmd/personal-control-plane/blob/main/results/windows-vm/fly-px12-handled-arrows-accepted-log-20261029.json): `PX12_GUI_KEYBOARD_CANDIDATE_UP_DOWN=PASS`, `PX12_GUI_STALE_CANDIDATE_OFFERED=PASS`, `PX12_GUI_FAILED_CANDIDATE_COMMITTED_ADDRESS=PASS`, `PX12_GUI_FAILED_CANDIDATE_PANE_RETAINED=PASS`, `PX12_GUI_VALID_CANDIDATE_IMMEDIATE_CHROME=PASS`, `PX12_GUI_VALID_CANDIDATE_NAVIGATED=PASS`, `PX12_ADDRESS_CANDIDATE_CHROME_GUI_PASS=True`, `OWNED_WINUI_SHELL_EXIT 0`, `ORIGINAL_SIX_USER_CONFIG_SHA256_IDENTICAL True`, `OWNED_SYNTHETIC_FIXTURE_REMOVED True`.
+- **Resolved failed attempts, not PASS:** #40694301633 failed on the first Down focus assertion after Release PASS; #40695607632 repeated that failure after an oracle-only real editor focus/order change. #40697090890 also failed after a root-preview interception change (exact archived error no longer available for read-only confirmation); these are **not** accepted as GUI passes. The final narrower handled-event implementation and its exact-release owned GUI subsequently passed.
+
+## Deliberate scope boundary
+
+This accepts **one local, synthetic two-candidate keyboard navigation + existing valid/invalid click** scenario, not complete Explorer address parity, disk-wide path prediction, UNC/provider/cloud autocomplete, arbitrary path enumeration, all DPI/IME/Narrator/locales, nor pixel-perfect screenshots. The older [PX12 visual comparison](PX12_VISUAL_COMPARISON_20261023.md) remains *partial and not visually accepted*. Unrelated previous M23/PX01/PX02/PX06 tests were not replayed; excluded G03–G05 and stopped G07 remain untouched.
+
+**Do not automatically expand PX12 keyboard acceptance or rerun the successful GUI** without a reproduced regression, changed dependency or a new explicitly selected feature slice.
