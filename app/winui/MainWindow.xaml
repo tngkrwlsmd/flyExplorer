@@ -247,11 +247,14 @@
                 <StackPanel Orientation="Horizontal" Spacing="10">
                     <TextBlock Text="홈" FontSize="18" FontWeight="SemiBold"
                                VerticalAlignment="Center"/>
-                    <Button Content="사용자 폴더 열기" Click="OnHomeFolderClicked"
+                    <Button x:Name="HomeOpenFolderButton" Content="사용자 폴더 열기"
+                            Click="OnHomeFolderClicked"
                             AutomationProperties.Name="사용자 홈 폴더로 이동"/>
-                    <Button Content="북마크 관리" Click="OnHomeManageBookmarksClicked"
+                    <Button x:Name="HomeManageBookmarksButton" Content="북마크 관리"
+                            Click="OnHomeManageBookmarksClicked"
                             AutomationProperties.Name="홈에서 북마크 관리 열기"/>
-                    <Button Content="최근 활동 관리" Click="OnHomeManageActivityClicked"
+                    <Button x:Name="HomeManageActivityButton" Content="최근 활동 관리"
+                            Click="OnHomeManageActivityClicked"
                             AutomationProperties.Name="홈에서 최근 활동 관리 열기"/>
                 </StackPanel>
                 <TextBlock Text="북마크 · 이 앱에서 명시적으로 저장한 폴더"
