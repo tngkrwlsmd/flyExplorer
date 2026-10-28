@@ -192,6 +192,85 @@ class SearchControllerContracts(unittest.TestCase):
         self.assertNotIn("APPDATA\\fxfile", store)
         self.assertNotIn("scope", header)
 
+    def test_px06_cancel_search_invalidates_worker_and_visible_row_paths(self):
+        xaml=src("app/winui/MainWindow.xaml")
+        header=src("app/winui/MainWindow.xaml.h")
+        features=src("app/winui/m19_features.cpp")
+        controller=src("app/winui/search_controller.cpp")
+        self.assertIn('x:Name="SearchCancelButton" Content="검색 취소"',xaml)
+        self.assertIn('IsEnabled="False" Click="OnCancelSearch"',xaml)
+        self.assertIn('AutomationProperties.Name="진행 중인 검색 취소"',xaml)
+        self.assertIn("void OnCancelSearch(",header)
+        begin=features.split("void MainWindow::OnCancelSearch(",1)[1].split(
+            "void MainWindow::OnSearchCompleted(",1)[0]
+        for token in (
+            "mClosing",
+            "SearchPanel().Visibility()!=Visibility::Visible",
+            "!SearchCancelButton().IsEnabled()",
+            "mSearchController.invalidate();",
+            "mSearchResultValid=false;",
+            "mSearchResultPaths.clear();",
+            "SearchMatches().Items().Clear();",
+            "SearchLocateButton().IsEnabled(false);",
+            "SearchCancelButton().IsEnabled(false);",
+            "SearchRunButton().IsEnabled(true);",
+            "검색을 취소했습니다 · 표시된 결과 없음",
+        ):
+            self.assertIn(token,begin)
+        self.assertLess(begin.index("mSearchController.invalidate();"),
+                        begin.index("SearchMatches().Items().Clear();"))
+        run=features.split("void MainWindow::OnRunSearch(",1)[1].split(
+            "void MainWindow::OnCancelSearch(",1)[0]
+        self.assertIn("SearchCancelButton().IsEnabled(true);",run)
+        self.assertIn("SearchCancelButton().IsEnabled(false);",run)
+        self.assertLess(run.index("mSearchResultPaths.clear();"),
+                        run.index("mSearchController.start("))
+        self.assertLess(run.index("SearchMatches().Items().Clear();"),
+                        run.index("mSearchController.start("))
+        self.assertIn("++state_->epoch;",controller)
+        self.assertIn("if(state_->cancel)state_->cancel->store(true);",controller)
+        completed=features.split("void MainWindow::OnSearchCompleted(",1)[1].split(
+            "std::wstring MainWindow::SelectedSearchMatchPath()",1)[0]
+        self.assertLess(completed.index("if(accepted.disposition==Disposition::Ignored)return;"),
+                        completed.index("SearchCancelButton().IsEnabled(false);"))
+        self.assertIn("SearchCancelButton().IsEnabled(false);",completed)
+        self.assertIn("SearchController::sameContext(",features)
+
+    def test_px06_scope_mode_and_partial_result_ui_are_explicit(self):
+        xaml=src("app/winui/MainWindow.xaml")
+        features=src("app/winui/m19_features.cpp")
+        self.assertIn('x:Name="SearchActiveScopeText"',xaml)
+        self.assertIn('AutomationProperties.Name="현재 검색 방식과 검색 위치"',xaml)
+        run=features.split("void MainWindow::OnRunSearch(",1)[1].split(
+            "void MainWindow::OnCancelSearch(",1)[0]
+        for token in (
+            "const auto submittedScope=context.scope;",
+            "const bool useIndex=context.query.mode==",
+            'std::wstring(useIndex?L"Windows 인덱스":L"직접 탐색")',
+            'L" · 검색 중 · 위치: "+submittedScope',
+            "SearchActiveScopeText().Text(hstring(",
+        ):
+            self.assertIn(token,run)
+        done=features.split("void MainWindow::OnSearchCompleted(",1)[1].split(
+            "std::wstring MainWindow::SelectedSearchMatchPath()",1)[0]
+        for token in (
+            'L"Windows 인덱스 · 위치: ":L"직접 탐색 · 위치: "',
+            "scopeStatus+=completion.context.scope;",
+            "result.resultLimited||result.traversalLimited||",
+            "result.contentLimited||result.contentRegexLimited",
+            'L" · 일부 결과만 표시됐을 수 있습니다"',
+            'L" · 인덱싱된 항목만 검색"',
+            'L" · 설정된 탐색 한도 안에서 완료"',
+            "SearchActiveScopeText().Text(hstring(scopeStatus));",
+            "직접 탐색으로 자동 전환하지 않았습니다",
+        ):
+            self.assertIn(token,done)
+        self.assertLess(done.index("scopeStatus+=completion.context.scope;"),
+                        done.index("SearchActiveScopeText().Text(hstring(scopeStatus));"))
+        self.assertIn("SearchActiveScopeText().Text(",features.split(
+            "void MainWindow::OnToggleSearch(",1)[1].split(
+            "void MainWindow::OnRunSearch(",1)[0])
+
     def test_native_and_owned_gui_cover_compound_content_and_encoding_behavior(self):
         native = src("tests/winui/m19/m19_native_fixture.cpp")
         gui = src("tests/winui/test_m19_winui_features.py")
