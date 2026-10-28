@@ -18,6 +18,47 @@ class PX10ColumnResizeGuiContract(unittest.TestCase):
         self.assertLessEqual(limit,150)
         self.assertNotIn("FLY_G01_INTEGRATED_STARTUP_ONLY",env)
 
+    def test_right_column_resize_has_independent_scoped_runner(self):
+        left,_,left_limit=run_checks.gui_command(
+            "column-resize","Release",{})
+        right,env,right_limit=run_checks.gui_command(
+            "column-resize-right","Release",{})
+        self.assertEqual(Path(right[-3]).name,
+                         "test_owned_column_resize_gui.py")
+        self.assertEqual(right[-2:],[ "Release","right" ])
+        self.assertEqual(left[-1],"Release")
+        self.assertEqual(left_limit,right_limit)
+        self.assertLessEqual(right_limit,150)
+        self.assertNotIn("FLY_G01_INTEGRATED_STARTUP_ONLY",env)
+        runner=(ROOT/"tools/winui/run_checks.py").read_text("utf-8")
+        self.assertIn('"column-resize-right"',runner)
+        self.assertIn('if area=="column-resize-right":',runner)
+        self.assertIn('"PX10_RIGHT_OPPOSITE_WIDTH_UNCHANGED True"',runner)
+        self.assertIn('"L08_OWNED_PANE right"',runner)
+
+    def test_right_pane_input_and_opposite_width_proof(self):
+        gui=(ROOT/"tests/winui/test_owned_column_resize_gui.py").read_text(
+            "utf-8")
+        self.assertIn('def main(config="Release", pane="left"):',gui)
+        self.assertIn('if pane not in ("left","right"):',gui)
+        self.assertIn('pane_prefix="Right" if pane=="right" else "Left"',gui)
+        self.assertIn('initial_width=element(pane_prefix+"Files")',gui)
+        self.assertIn('pane_prefix+"NameColumnResizeThumb"',gui)
+        self.assertIn('pane_prefix+"TypeColumnResizeThumb"',gui)
+        self.assertIn('pane_prefix+"SizeColumnResizeThumb"',gui)
+        self.assertIn('opposite_before=(element(opposite_prefix+"TypeSortButton")',gui)
+        self.assertIn('opposite_after=element(opposite_prefix+"TypeSortButton")',gui)
+        self.assertIn('abs(opposite_after-opposite_before)<=2',gui)
+        self.assertIn('print("PX10_RIGHT_OPPOSITE_WIDTH_UNCHANGED"',gui)
+        self.assertIn('print("L08_OWNED_PANE",pane',gui)
+        self.assertIn('sendinput_mouse_move(coords=(approach_x,y))',gui)
+        self.assertIn('assert observed=="sizewe"',gui)
+        self.assertIn('if not desktop_user32.GetCursorPos(',gui)
+        self.assertIn('print("L08_INTERACTIVE_DESKTOP_UNAVAILABLE"',gui)
+        self.assertLess(gui.index('if not desktop_user32.GetCursorPos('),
+                        gui.index('proc=subprocess.Popen('))
+        self.assertIn('sys.argv[2] if len(sys.argv)>2 else "left"',gui)
+
     def test_real_pointer_workspace_and_normal_close_guards(self):
         source=(ROOT/"tests/winui/test_owned_column_resize_gui.py").read_text("utf-8")
         for fragment in ('mouse.press(button="left"',
