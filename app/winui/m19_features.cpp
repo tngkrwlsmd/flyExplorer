@@ -719,6 +719,8 @@ void MainWindow::OnToggleSearch(
         SearchMatches().Items().Clear();
         SearchLocateButton().IsEnabled(false);
         SearchRunButton().IsEnabled(true);
+        SearchCancelButton().IsEnabled(false);
+        SearchActiveScopeText().Text(L"검색 종료 · 현재 검색 결과를 지웠습니다.");
         return;
     }
     EnsureExpandedPanelFits();
@@ -726,6 +728,8 @@ void MainWindow::OnToggleSearch(
         static_cast<size_t>(ActiveWindowTab().model.activePane)];
     auto const& path=pane.filesystemPaths[pane.active];
     if(!path.empty())SearchScopeBox().Text(hstring(path));
+    SearchActiveScopeText().Text(
+        L"검색 대기 · 검색 위치와 방식을 선택한 뒤 파일 찾기를 누르세요.");
     StatusText().Text(
         L"직접 탐색은 기존 복합 조건을, Windows 인덱스는 파일명·확장자·크기(KB)·수정일 조건을 지원합니다.");
 }
@@ -741,6 +745,9 @@ void MainWindow::OnRunSearch(
     request.scope=context.scope;
     request.query=context.query;
     request.remember=SearchRememberBox().IsChecked().GetBoolean();
+    const auto submittedScope=context.scope;
+    const bool useIndex=context.query.mode==
+        fxfile::preview::SearchMode::WindowsIndex;
     const auto weak=get_weak();
     const auto status=mSearchController.start(
         std::move(request),std::move(context),
@@ -752,14 +759,20 @@ void MainWindow::OnRunSearch(
     using Start=SearchController::StartStatus;
     if(status==Start::Started){
         SearchRunButton().IsEnabled(false);
-        SearchCountText().Text(context.query.mode==
-            fxfile::preview::SearchMode::WindowsIndex?
+        SearchCancelButton().IsEnabled(true);
+        SearchActiveScopeText().Text(hstring(
+            std::wstring(useIndex?L"Windows 인덱스":L"직접 탐색")+
+            L" · 검색 중 · 위치: "+submittedScope));
+        SearchCountText().Text(useIndex?
             L"Windows Search 인덱스에서 파일명·확장자·크기·수정일을 검색하고 있습니다...":
             L"독립 스레드에서 최대 20,000개 항목을 검색하고 있습니다...");
         SearchMatches().Items().Clear();
         return;
     }
+    SearchCancelButton().IsEnabled(false);
     SearchRunButton().IsEnabled(true);
+    SearchActiveScopeText().Text(
+        L"검색을 시작하지 않았습니다 · 입력 조건을 확인하세요.");
     if(status==Start::InvalidRequest){
         StatusText().Text(
            L"검색 폴더와 하나 이상의 이름/확장자/크기/수정일/내용 조건을 입력하세요.");
@@ -799,6 +812,24 @@ void MainWindow::OnRunSearch(
         StatusText().Text(L"독립 검색 스레드를 시작할 수 없습니다.");
     }
 }
+void MainWindow::OnCancelSearch(
+    IInspectable const&,RoutedEventArgs const&){
+    if(mClosing||SearchPanel().Visibility()!=Visibility::Visible||
+       !SearchCancelButton().IsEnabled())return;
+    // Invalidate both the worker ticket and the currently displayed rows.
+    // A late callback now returns Ignored and must not repopulate results.
+    mSearchController.invalidate();
+    mSearchResultValid=false;
+    mSearchResultPaths.clear();
+    SearchMatches().Items().Clear();
+    SearchLocateButton().IsEnabled(false);
+    SearchCancelButton().IsEnabled(false);
+    SearchRunButton().IsEnabled(true);
+    SearchCountText().Text(L"검색을 취소했습니다 · 표시된 결과 없음");
+    SearchActiveScopeText().Text(
+        L"사용자가 검색을 취소했습니다 · 새 검색을 시작할 수 있습니다.");
+    StatusText().Text(L"검색 취소 · 이전 검색 결과는 적용하지 않습니다.");
+}
 void MainWindow::OnSearchCompleted(
     SearchController::Completion completion){
     const auto accepted=mSearchController.accept(
@@ -810,8 +841,15 @@ void MainWindow::OnSearchCompleted(
     mSearchResultPaths.clear();
     SearchLocateButton().IsEnabled(false);
     SearchRunButton().IsEnabled(true);
-    if(accepted.disposition==Disposition::Canceled)return;
+    SearchCancelButton().IsEnabled(false);
+    if(accepted.disposition==Disposition::Canceled){
+        SearchCountText().Text(L"검색 취소됨 · 결과 없음");
+        SearchActiveScopeText().Text(L"검색이 취소되어 결과를 적용하지 않았습니다.");
+        return;
+    }
     if(accepted.disposition==Disposition::StaleContext){
+        SearchActiveScopeText().Text(
+            L"검색 위치 또는 입력이 변경되어 이전 결과를 적용하지 않았습니다.");
         SearchCountText().Text(
             L"검색 컨텍스트가 변경되어 이전 결과를 무시했습니다.");
         StatusText().Text(
@@ -819,6 +857,8 @@ void MainWindow::OnSearchCompleted(
         return;
     }
     if(accepted.disposition==Disposition::Invalid){
+        SearchActiveScopeText().Text(
+            L"검색 위치가 유효하지 않아 결과를 표시하지 않았습니다.");
         SearchCountText().Text(
             L"검색할 폴더가 올바르지 않거나 접근할 수 없습니다.");
         StatusText().Text(
@@ -828,6 +868,8 @@ void MainWindow::OnSearchCompleted(
 
     if(completion.result.indexUnavailable||completion.result.indexTimedOut){
         SearchMatches().Items().Clear();
+        SearchActiveScopeText().Text(
+            L"Windows 인덱스를 사용할 수 없습니다 · 직접 탐색으로 자동 전환하지 않았습니다.");
         SearchCountText().Text(completion.result.indexTimedOut?
             L"Windows Search 인덱스 응답 시간 초과":
             L"Windows Search 인덱스를 사용할 수 없습니다.");
@@ -838,6 +880,18 @@ void MainWindow::OnSearchCompleted(
     mSearchResultContext=completion.context;
     mSearchResultPaths=completion.result.matches;
     mSearchResultValid=true;
+    const auto& result=completion.result;
+    const auto& requested=completion.request;
+    std::wstring scopeStatus=result.indexOnly?
+        L"Windows 인덱스 · 위치: ":L"직접 탐색 · 위치: ";
+    scopeStatus+=completion.context.scope;
+    if(result.resultLimited||result.traversalLimited||
+       result.contentLimited||result.contentRegexLimited)
+        scopeStatus+=L" · 일부 결과만 표시됐을 수 있습니다";
+    else if(result.indexOnly)
+        scopeStatus+=L" · 인덱싱된 항목만 검색";
+    else scopeStatus+=L" · 설정된 탐색 한도 안에서 완료";
+    SearchActiveScopeText().Text(hstring(scopeStatus));
     auto items=SearchMatches().Items();
     items.Clear();
     for(auto const& file:completion.result.matches){
