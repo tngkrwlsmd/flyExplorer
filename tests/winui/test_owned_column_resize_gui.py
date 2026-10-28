@@ -36,7 +36,11 @@ def horizontal_resize_cursor(details=False):
                 "position":(info.position.x,info.position.y)}
     return info.hCursor==expected
 
-def main(config="Release"):
+def main(config="Release", pane="left"):
+    if pane not in ("left","right"):
+        raise ValueError("owned resize pane must be left or right")
+    pane_prefix="Right" if pane=="right" else "Left"
+    opposite_prefix="Left" if pane=="right" else "Right"
     if os.name!="nt": return 2
     exe=app_exe(config)
     assert exe.is_file(),"Exact owned WinUI build missing"
@@ -87,10 +91,12 @@ def main(config="Release"):
         # L08 requires enough actual Details width, not a split-button
         # transition. On smaller desktop sessions (e.g. 1280x768), forcing
         # an unnecessary split click can fail before the hover oracle runs.
-        initial_width=element("LeftFiles").rectangle().width()
+        initial_width=element(pane_prefix+"Files").rectangle().width()
         rect=window().rectangle()
-        print("L08_INITIAL_PANE_GEOMETRY",initial_width,
+        print("L08_INITIAL_PANE_GEOMETRY",pane,initial_width,
               (rect.left,rect.top,rect.right,rect.bottom),flush=True)
+        if initial_width<500 and pane=="right":
+            raise AssertionError("right pane too narrow for three Details handles")
         if initial_width<500:
             eventually(lambda:element("SplitButton").exists(timeout=.2) and
                        element("SplitButton").is_visible(),
@@ -98,13 +104,13 @@ def main(config="Release"):
             element("SplitButton").click_input()
             eventually(lambda:element("LeftFiles").rectangle().width()>=500,
                        "split toggle did not provide enough Details width",8)
-        eventually(lambda:element("LeftFiles").rectangle().width()>=500,
-                   "left pane is too narrow for all Details columns",6)
+        eventually(lambda:element(pane_prefix+"Files").rectangle().width()>=500,
+                   pane+" pane is too narrow for all Details columns",6)
 
-        for auto_id in ("LeftNameColumnResizeThumb","LeftTypeColumnResizeThumb",
-                        "LeftSizeColumnResizeThumb","LeftNameSortButton",
-                        "LeftTypeSortButton","LeftSizeSortButton",
-                        "LeftDateSortButton"):
+        for auto_id in (pane_prefix+"NameColumnResizeThumb",pane_prefix+"TypeColumnResizeThumb",
+                        pane_prefix+"SizeColumnResizeThumb",pane_prefix+"NameSortButton",
+                        pane_prefix+"TypeSortButton",pane_prefix+"SizeSortButton",
+                        pane_prefix+"DateSortButton"):
             eventually(lambda a=auto_id:element(a).exists(timeout=.2) and
                        element(a).is_visible(),auto_id+" not visible",10)
         # Capture only while the exact owned app window is in the foreground.
@@ -120,6 +126,8 @@ def main(config="Release"):
             bbox=(rect.left,rect.top,rect.right,rect.bottom),
             include_layered_windows=True).save(before)
 
+        opposite_before=(element(opposite_prefix+"TypeSortButton").rectangle().width()
+                         if pane=="right" else None)
         cursor_observations=[]
         def drag_and_verify(thumb_id,next_header_id,delta):
             window().set_focus()
@@ -162,7 +170,7 @@ def main(config="Release"):
                     return None
                 match=re.search(r"\brootMove=([0-9]{1,5})(?=\s|$)",status)
                 return int(match.group(1)) if match else None
-            body=element("LeftFiles").rectangle()
+            body=element(pane_prefix+"Files").rectangle()
             sendinput_mouse_move(coords=(body.left+30,body.top+36))
             time.sleep(.10)
             assert owned_foreground(), "diagnostic pointer left owned window"
@@ -282,23 +290,23 @@ def main(config="Release"):
             end=element(next_header_id).rectangle().left
             print("COLUMN_RESIZE_DRAG_END",thumb_id,
                   "boundary",end,"delta",end-start,flush=True)
-        drag_and_verify("LeftNameColumnResizeThumb","LeftTypeSortButton",40)
-        drag_and_verify("LeftTypeColumnResizeThumb","LeftSizeSortButton",28)
-        drag_and_verify("LeftSizeColumnResizeThumb","LeftDateSortButton",20)
+        drag_and_verify(pane_prefix+"NameColumnResizeThumb",pane_prefix+"TypeSortButton",40)
+        drag_and_verify(pane_prefix+"TypeColumnResizeThumb",pane_prefix+"SizeSortButton",28)
+        drag_and_verify(pane_prefix+"SizeColumnResizeThumb",pane_prefix+"DateSortButton",20)
 
         # No artificial hold: motion shorter than the polling tick still commits.
-        thumb=element("LeftNameColumnResizeThumb").rectangle()
+        thumb=element(pane_prefix+"NameColumnResizeThumb").rectangle()
         x=(thumb.left+thumb.right)//2;y=(thumb.top+thumb.bottom)//2
-        start=element("LeftTypeSortButton").rectangle().left
+        start=element(pane_prefix+"TypeSortButton").rectangle().left
         mouse.press(button="left",coords=(x,y))
         try:sendinput_mouse_move(coords=(x+24,y))
         finally:mouse.release(button="left",coords=(x+24,y))
-        eventually(lambda:element("LeftTypeSortButton").rectangle().left>=start+12,
+        eventually(lambda:element(pane_prefix+"TypeSortButton").rectangle().left>=start+12,
                    "rapid resize lost its final movement",8)
         print("PX10_COLUMN_RAPID_TAIL_COMMITTED=True",flush=True)
         # Width belongs to the original WindowTab's pane. Check that it
         # survives an unrelated workspace activation and return.
-        before_return=element("LeftTypeSortButton").rectangle().left
+        before_return=element(pane_prefix+"TypeSortButton").rectangle().left
         strip=element("WindowTabStrip")
         def tabs():
             return [t for t in strip.descendants()
@@ -313,10 +321,16 @@ def main(config="Release"):
         window().set_focus()
         assert owned_foreground()
         tabs()[0].click_input()
-        eventually(lambda:abs(element("LeftTypeSortButton").rectangle().left-
+        eventually(lambda:abs(element(pane_prefix+"TypeSortButton").rectangle().left-
                               before_return)<=4,
                    "original WindowTab lost resized column width",14)
         print("OWNED_DETAIL_COLUMN_WINDOW_TAB_RESTORED",True,flush=True)
+        if pane=="right":
+            opposite_after=element(opposite_prefix+"TypeSortButton").rectangle().width()
+            assert abs(opposite_after-opposite_before)<=2,(
+                "left pane width changed during right pane resize",
+                opposite_before,opposite_after)
+            print("PX10_RIGHT_OPPOSITE_WIDTH_UNCHANGED",True,flush=True)
         # An I-beam is a useful *independent* OS cursor reference only when
         # UIA confirms our own enabled Edit at the test-owned cursor point.
         # A failed reference is inconclusive; do not remove the strict SIZEWE
@@ -353,7 +367,7 @@ def main(config="Release"):
             tuple(observation[1] for observation in cursor_observations))
         print("L08_CURSOR_REFERENCE_CLASSIFICATION",reference,
               "OWNED_EDIT",owned_edit_hit,flush=True)
-        body=element("LeftFiles").rectangle()
+        body=element(pane_prefix+"Files").rectangle()
         sendinput_mouse_move(coords=(body.left+30,body.top+40))
         window().set_focus()
         eventually(owned_foreground,"owned window is not foreground for final capture",3)
@@ -362,6 +376,7 @@ def main(config="Release"):
         ImageGrab.grab(
             bbox=(rect.left,rect.top,rect.right,rect.bottom),
             include_layered_windows=True).save(after)
+        print("L08_OWNED_PANE",pane,flush=True)
         print("OWNED_DETAIL_COLUMN_NAME_RESIZE",True,flush=True)
         print("OWNED_DETAIL_COLUMN_TYPE_RESIZE",True,flush=True)
         print("OWNED_DETAIL_COLUMN_SIZE_RESIZE",True,flush=True)
@@ -516,7 +531,8 @@ def main(config="Release"):
 
 if __name__=="__main__":
     try:
-        result=main(sys.argv[1] if len(sys.argv)>1 else "Release")
+        result=main(sys.argv[1] if len(sys.argv)>1 else "Release",
+                    sys.argv[2] if len(sys.argv)>2 else "left")
     except Exception:
         import traceback
         traceback.print_exc()
