@@ -131,7 +131,8 @@ def main(config="Release", pane="left"):
         window().set_focus()
         eventually(owned_foreground,"owned window is not foreground for capture",3)
         rect=window().rectangle()
-        before=root/"detail-columns-before.png"
+        before=root/("detail-columns-right-before.png" if pane=="right"
+                     else "detail-columns-before.png")
         ImageGrab.grab(
             bbox=(rect.left,rect.top,rect.right,rect.bottom),
             include_layered_windows=True).save(before)
@@ -382,7 +383,8 @@ def main(config="Release", pane="left"):
         window().set_focus()
         eventually(owned_foreground,"owned window is not foreground for final capture",3)
         rect=window().rectangle()
-        after=root/"detail-columns-after.png"
+        after=root/("detail-columns-right-after.png" if pane=="right"
+                    else "detail-columns-after.png")
         ImageGrab.grab(
             bbox=(rect.left,rect.top,rect.right,rect.bottom),
             include_layered_windows=True).save(after)
