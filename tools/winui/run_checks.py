@@ -147,6 +147,7 @@ GUI_AREAS = (
     "accessibility",
     "large-folder",
     "column-resize",
+    "column-resize-right",
     "context-selection",
     "selection-projection",
     "address-candidate-chrome",
@@ -424,13 +425,16 @@ def gui_command(area, configuration, env):
         gui_env["FLY_PX12_VISUAL_COMPARE_ONLY"] = "YES"
         gui_env["FLY_F05_VISUAL_CAPTURE"] = "NO"
         return [sys.executable, "-u", str(TESTS / "test_shell_gui.py")], gui_env, 160
-    if area == "column-resize":
-        return [
+    if area in ("column-resize","column-resize-right"):
+        command=[
             sys.executable,
             "-u",
             str(TESTS / "test_owned_column_resize_gui.py"),
             configuration,
-        ], gui_env, 150
+        ]
+        if area=="column-resize-right":
+            command.append("right")
+        return command,gui_env,150
     if area == "accessibility":
         return [
             sys.executable,
@@ -632,7 +636,7 @@ def run_gui(area, configuration, env, tag):
                         rc = 1
                         break
                     print(line,flush=True)
-    if not rc and area == "column-resize":
+    if not rc and area in ("column-resize","column-resize-right"):
         # A Windows wrapper previously reported exit=0 despite a Python
         # traceback. Require positive, independent owned-GUI evidence.
         body = (LOGS / (tag + "-" + label + ".log")).read_text(
@@ -649,6 +653,11 @@ def run_gui(area, configuration, env, tag):
             "SIX_ORIGINAL_MFC_SETTINGS_IDENTICAL True",
             "OWNED_COLUMN_RESIZE_FIXTURE_REMOVED True",
         )
+        if area=="column-resize-right":
+            required+=(
+                "L08_OWNED_PANE right",
+                "PX10_RIGHT_OPPOSITE_WIDTH_UNCHANGED True",
+            )
         lines = set(body.splitlines())
         if not all(marker in lines for marker in required) or (
             "OWNED_DETAIL_COLUMN_RESULT FAIL" in lines or
