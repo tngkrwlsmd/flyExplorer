@@ -27,7 +27,7 @@ direction_parser.add_argument(
     help="Exact test-owned physical source item type",
 )
 direction_parser.add_argument(
-    "--collision", choices=("none", "cancel", "keep-both", "skip", "skip-all"), default="none",
+    "--collision", choices=("none", "cancel", "keep-both", "keep-both-late-folder", "skip", "skip-all"), default="none",
     help="Focused right-to-left copy collision decision; never overwrite",
 )
 arguments = direction_parser.parse_args()
@@ -39,11 +39,12 @@ if COLLISION != "none" and (
     not REVERSE or
     (COLLISION == "skip" and ITEM_KIND not in ("multi-file", "mixed")) or
     (COLLISION == "skip-all" and ITEM_KIND not in ("multi-file", "mixed")) or
-    (COLLISION not in ("skip", "skip-all") and ITEM_KIND not in ("file", "mixed"))
+    (COLLISION == "keep-both-late-folder" and ITEM_KIND != "mixed") or
+    (COLLISION not in ("skip", "skip-all", "keep-both-late-folder") and ITEM_KIND not in ("file", "mixed"))
 ):
     direction_parser.error(
-        "collision requires right-to-left file/mixed (cancel/keep-both) "
-        "or multi-file/mixed (skip or skip-all)"
+        "collision requires right-to-left file/mixed (cancel/keep-both), "
+        "mixed (keep-both-late-folder), or multi-file/mixed (skip or skip-all)"
     )
 SOURCE_PANE_ID = "RightFiles" if REVERSE else "LeftFiles"
 TARGET_PANE_ID = "LeftFiles" if REVERSE else "RightFiles"
@@ -333,10 +334,27 @@ try:
         assert sorted(p.name for p in target_dir.iterdir()) == expected_existing
         if COLLISION == "skip-all":
             assert_second_collision_unchanged()
-        if ITEM_KIND == "mixed" and COLLISION in ("cancel", "keep-both"):
+        if ITEM_KIND == "mixed" and COLLISION in ("cancel", "keep-both", "keep-both-late-folder"):
             assert second_source.is_dir()
             assert owned_tree(second_source) == second_source_tree
             assert not (target_dir / second_source.name).exists()
+        late_folder = None
+        late_folder_tree = None
+        if COLLISION == "keep-both-late-folder":
+            late_folder = target_dir / second_source.name
+            assert not late_folder.exists()
+            late_folder.mkdir()
+            (late_folder / "하위-폴더").mkdir()
+            (late_folder / "하위-폴더" / "혼합-한글.txt").write_bytes(
+                b"late competing destination nested payload: preserve")
+            (late_folder / "late-original.bin").write_bytes(
+                b"late original root bytes")
+            late_folder_tree = owned_tree(late_folder)
+            assert sorted(p.name for p in target_dir.iterdir()) == sorted(
+                (source.name, second_source.name))
+            assert source.read_bytes() == source_bytes
+            assert collision_target.read_bytes() == collision_bytes
+            assert owned_tree(second_source) == second_source_tree
         if COLLISION == "skip":
             assert second_source is not None
             assert (second_source.is_file() if ITEM_KIND == "multi-file"
@@ -416,16 +434,37 @@ try:
                 lambda: unique_copy.read_bytes() == source_bytes,
                 "drag Keep Both copy bytes incomplete", 15)
             if ITEM_KIND == "mixed":
-                clean_folder = target_dir / second_source.name
-                eventually(
-                    lambda: clean_folder.is_dir() and
-                    owned_tree(clean_folder) == second_source_tree,
-                    "mixed Keep Both nested folder copy incomplete", 23)
+                if COLLISION == "keep-both-late-folder":
+                    def renamed_folder_copy():
+                        candidates = [
+                            p for p in target_dir.iterdir()
+                            if p.is_dir() and p.name != second_source.name
+                        ]
+                        return candidates[0] if len(candidates) == 1 else None
+
+                    copied_folder = eventually(
+                        renamed_folder_copy,
+                        "late collision did not produce a distinct nested folder", 23)
+                    eventually(
+                        lambda: owned_tree(copied_folder) == second_source_tree,
+                        "late collision renamed folder bytes incomplete", 15)
+                    assert owned_tree(late_folder) == late_folder_tree
+                    assert sorted(p.name for p in target_dir.iterdir()) == sorted(
+                        (source.name, unique_copy.name,
+                         second_source.name, copied_folder.name))
+                    print("M23_REVERSE_DRAG_LATE_FOLDER_COLLISION_KEEP_BOTH=PASS",
+                          flush=True)
+                else:
+                    clean_folder = target_dir / second_source.name
+                    eventually(
+                        lambda: clean_folder.is_dir() and
+                        owned_tree(clean_folder) == second_source_tree,
+                        "mixed Keep Both nested folder copy incomplete", 23)
+                    assert sorted(p.name for p in target_dir.iterdir()) == sorted(
+                        (source.name, unique_copy.name, second_source.name))
+                    print("M23_REVERSE_DRAG_COLLISION_MIXED_KEEP_BOTH_PRESERVES_ALL=PASS",
+                          flush=True)
                 assert owned_tree(second_source) == second_source_tree
-                assert sorted(p.name for p in target_dir.iterdir()) == sorted(
-                    (source.name, unique_copy.name, second_source.name))
-                print("M23_REVERSE_DRAG_COLLISION_MIXED_KEEP_BOTH_PRESERVES_ALL=PASS",
-                      flush=True)
             else:
                 assert len(list(target_dir.iterdir())) == 2
                 print("M23_REVERSE_DRAG_COLLISION_KEEP_BOTH_PRESERVES_TARGET=PASS",
@@ -436,9 +475,11 @@ try:
             assert_second_collision_unchanged()
             assert sorted(p.name for p in target_dir.iterdir()) == expected_existing
         assert source.is_file() and collision_target.is_file()
-        if ITEM_KIND == "mixed" and COLLISION in ("cancel", "keep-both"):
+        if ITEM_KIND == "mixed" and COLLISION in ("cancel", "keep-both", "keep-both-late-folder"):
             assert second_source.is_dir()
             assert owned_tree(second_source) == second_source_tree
+            if COLLISION == "keep-both-late-folder":
+                assert owned_tree(late_folder) == late_folder_tree
     else:
         copied = target_dir / source.name
         eventually(
