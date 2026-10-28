@@ -26,10 +26,17 @@ direction_parser.add_argument(
     "--item-kind", choices=("file", "folder", "multi-file", "mixed"), default="file",
     help="Exact test-owned physical source item type",
 )
+direction_parser.add_argument(
+    "--collision", choices=("none", "cancel", "keep-both"), default="none",
+    help="Focused right-to-left file collision decision; never overwrite",
+)
 arguments = direction_parser.parse_args()
 DIRECTION = arguments.direction
 REVERSE = DIRECTION == "right-to-left"
 ITEM_KIND = arguments.item_kind
+COLLISION = arguments.collision
+if COLLISION != "none" and (not REVERSE or ITEM_KIND != "file"):
+    direction_parser.error("collision cases require --direction right-to-left --item-kind file")
 SOURCE_PANE_ID = "RightFiles" if REVERSE else "LeftFiles"
 TARGET_PANE_ID = "LeftFiles" if REVERSE else "RightFiles"
 
@@ -71,6 +78,14 @@ elif ITEM_KIND == "mixed":
     (second_source / "하위-폴더").mkdir()
     (second_source / "하위-폴더" / "혼합-한글.txt").write_bytes(
         "owned mixed folder content\n".encode("utf-8"))
+
+# Only the opt-in collision case creates an already existing destination.
+# Distinct bytes make silent replacement observable before any approval.
+collision_target = target_dir / source.name
+collision_bytes = b"existing test-owned destination: must remain unchanged"
+if COLLISION != "none":
+    collision_target.write_bytes(collision_bytes)
+source_bytes = source.read_bytes() if ITEM_KIND == "file" else None
 
 env = os.environ.copy()
 for key in ("APPDATA", "LOCALAPPDATA", "TEMP", "TMP"):
@@ -223,52 +238,112 @@ try:
     finally:
         mouse.release(button="left", coords=target)
 
-    copied = target_dir / source.name
-    eventually(
-        lambda: copied.is_dir() if ITEM_KIND == "folder" else copied.is_file(),
-        "same-app private-token drag did not copy owned "+ITEM_KIND, 18)
-    def owned_tree(root):
-        assert root.is_dir() and not root.is_symlink()
-        children = {}
-        for child in sorted(root.rglob("*")):
-            assert not child.is_symlink(), "owned tree may not contain links"
-            relative = child.relative_to(root).as_posix()
-            children[relative] = (
-                ("dir", None) if child.is_dir()
-                else ("file", child.read_bytes())
-            )
-        return children
-    if ITEM_KIND == "folder":
-        eventually(
-            lambda: (copied / "하위-폴더" / "한글-payload.txt").is_file()
-            and (copied / "root-payload.bin").is_file(),
-            "same-app owned nested folder drag did not finish", 18)
-        assert owned_tree(copied) == owned_tree(source), (
-            "copied folder contents differ from owned source")
-        print("REAL_SAME_APP_PRIVATE_DRAG_NESTED_FOLDER_COPY", True,
-              flush=True)
+    if COLLISION != "none":
+        def modal_button(label):
+            matches = [
+                item for item in win.descendants()
+                if item.element_info.control_type == "Button"
+                and item.window_text().strip() == label
+                and item.element_info.process_id == preview.pid
+                and item.is_visible()
+            ]
+            return matches[0] if len(matches) == 1 else None
+
+        def collision_modal():
+            owned_visible_text = [
+                item.window_text() for item in win.descendants()
+                if item.element_info.process_id == preview.pid
+                and item.is_visible()
+            ]
+            if not any("동일한 이름이 이미 존재합니다" in text
+                       for text in owned_visible_text):
+                return None
+            return modal_button("취소")
+
+        cancel = eventually(
+            collision_modal, "drag collision confirmation not displayed", 23)
+        approve = modal_button("이름 바꿔 둘 다 유지")
+        assert approve is not None, "collision policy must be explicit"
+        assert source.read_bytes() == source_bytes
+        assert collision_target.read_bytes() == collision_bytes
+        assert sorted(p.name for p in target_dir.iterdir()) == [source.name]
+
+        if COLLISION == "cancel":
+            cancel.iface_invoke.Invoke()
+            eventually(
+                lambda: "파일 작업 확인을 취소했습니다."
+                in element("StatusText").window_text(),
+                "collision cancellation not acknowledged", 9)
+            assert sorted(p.name for p in target_dir.iterdir()) == [source.name]
+            print("M23_REVERSE_DRAG_COLLISION_CANCEL_NO_MUTATION=PASS", flush=True)
+        else:
+            approve.iface_invoke.Invoke()
+
+            def keep_both_copy():
+                other = [
+                    p for p in target_dir.iterdir()
+                    if p.is_file() and p.name != source.name
+                ]
+                return other[0] if len(other) == 1 else None
+
+            unique_copy = eventually(
+                keep_both_copy, "drag Keep Both copy missing", 23)
+            eventually(
+                lambda: unique_copy.read_bytes() == source_bytes,
+                "drag Keep Both copy bytes incomplete", 15)
+            assert len(list(target_dir.iterdir())) == 2
+            print("M23_REVERSE_DRAG_COLLISION_KEEP_BOTH_PRESERVES_TARGET=PASS",
+                  flush=True)
+        assert source.read_bytes() == source_bytes
+        assert collision_target.read_bytes() == collision_bytes
+        assert source.is_file() and collision_target.is_file()
     else:
-        assert copied.read_bytes() == source.read_bytes()
-        assert source.is_file(), "same-app copy drag must preserve source"
-    assert source.exists(), "same-app copy drag must preserve source"
-    assert source.parent == source_dir and copied.parent == target_dir
-    if ITEM_KIND == "multi-file":
-        second_copy = target_dir / second_source.name
-        eventually(lambda: second_copy.is_file(),
-                   "same-app multi-file second item missing", 18)
-        assert second_copy.read_bytes() == second_source.read_bytes()
-        assert second_source.is_file(), "multi-file drag removed original"
-        print("REAL_SAME_APP_PRIVATE_DRAG_MULTI_FILE_COPY", True,
-              flush=True)
-    if ITEM_KIND == "mixed":
-        second_copy = target_dir / second_source.name
+        copied = target_dir / source.name
         eventually(
-            lambda: (second_copy / "하위-폴더" / "혼합-한글.txt").is_file(),
-            "same-app mixed drag folder payload missing", 18)
-        assert owned_tree(second_copy) == owned_tree(second_source)
-        assert second_source.is_dir(), "mixed drag removed original folder"
-        print("REAL_SAME_APP_PRIVATE_DRAG_MIXED_FILE_FOLDER_COPY", True,
-              flush=True)
+            lambda: copied.is_dir() if ITEM_KIND == "folder" else copied.is_file(),
+            "same-app private-token drag did not copy owned "+ITEM_KIND, 18)
+        def owned_tree(root):
+            assert root.is_dir() and not root.is_symlink()
+            children = {}
+            for child in sorted(root.rglob("*")):
+                assert not child.is_symlink(), "owned tree may not contain links"
+                relative = child.relative_to(root).as_posix()
+                children[relative] = (
+                    ("dir", None) if child.is_dir()
+                    else ("file", child.read_bytes())
+                )
+            return children
+        if ITEM_KIND == "folder":
+            eventually(
+                lambda: (copied / "하위-폴더" / "한글-payload.txt").is_file()
+                and (copied / "root-payload.bin").is_file(),
+                "same-app owned nested folder drag did not finish", 18)
+            assert owned_tree(copied) == owned_tree(source), (
+                "copied folder contents differ from owned source")
+            print("REAL_SAME_APP_PRIVATE_DRAG_NESTED_FOLDER_COPY", True,
+                  flush=True)
+        else:
+            assert copied.read_bytes() == source.read_bytes()
+            assert source.is_file(), "same-app copy drag must preserve source"
+        assert source.exists(), "same-app copy drag must preserve source"
+        assert source.parent == source_dir and copied.parent == target_dir
+        if ITEM_KIND == "multi-file":
+            second_copy = target_dir / second_source.name
+            eventually(lambda: second_copy.is_file(),
+                       "same-app multi-file second item missing", 18)
+            assert second_copy.read_bytes() == second_source.read_bytes()
+            assert second_source.is_file(), "multi-file drag removed original"
+            print("REAL_SAME_APP_PRIVATE_DRAG_MULTI_FILE_COPY", True,
+                  flush=True)
+        if ITEM_KIND == "mixed":
+            second_copy = target_dir / second_source.name
+            eventually(
+                lambda: (second_copy / "하위-폴더" / "혼합-한글.txt").is_file(),
+                "same-app mixed drag folder payload missing", 18)
+            assert owned_tree(second_copy) == owned_tree(second_source)
+            assert second_source.is_dir(), "mixed drag removed original folder"
+            print("REAL_SAME_APP_PRIVATE_DRAG_MIXED_FILE_FOLDER_COPY", True,
+                  flush=True)
     print("SAME_APP_DRAG_DIRECTION", DIRECTION, flush=True)
     print("SAME_APP_DRAG_ITEM_KIND", ITEM_KIND, flush=True)
     if REVERSE:
