@@ -118,8 +118,17 @@ def main(config="Release", pane="left"):
         user32.GetForegroundWindow.restype=wintypes.HWND
         def owned_foreground():
             return int(user32.GetForegroundWindow() or 0)==int(hwnd or 0)
-        window().set_focus()
-        eventually(owned_foreground,"owned window is not foreground for capture",3)
+        def focus_owned_window():
+            # Some interactive sessions initially deny SetForegroundWindow even
+            # to our child process. Click only the test-owned file list to
+            # activate it; do not synthesize Alt+Tab or touch foreign windows.
+            window().set_focus()
+            if not owned_foreground():
+                print("L08_OWNED_FOCUS_FALLBACK",pane,flush=True)
+                element(pane_prefix+"Files").click_input(coords=(30,55))
+            eventually(owned_foreground,
+                       "owned window is not foreground for capture",3)
+        focus_owned_window()
         rect=window().rectangle()
         before=root/"detail-columns-before.png"
         ImageGrab.grab(
@@ -130,7 +139,7 @@ def main(config="Release", pane="left"):
                          if pane=="right" else None)
         cursor_observations=[]
         def drag_and_verify(thumb_id,next_header_id,delta):
-            window().set_focus()
+            focus_owned_window()
             time.sleep(.12)
             thumb=element(thumb_id)
             next_header=element(next_header_id)
@@ -313,12 +322,12 @@ def main(config="Release", pane="left"):
                     if t.element_info.control_type=="TabItem"
                     and t.element_info.process_id==proc.pid]
         eventually(lambda:len(tabs())==1,"initial owned WindowTab absent",6)
-        window().set_focus()
+        focus_owned_window()
         assert owned_foreground()
         keyboard.send_keys("^t")
         eventually(lambda:len(tabs())==2,
                    "Ctrl+T did not create second owned WindowTab",10)
-        window().set_focus()
+        focus_owned_window()
         assert owned_foreground()
         tabs()[0].click_input()
         eventually(lambda:abs(element(pane_prefix+"TypeSortButton").rectangle().left-
@@ -369,7 +378,7 @@ def main(config="Release", pane="left"):
               "OWNED_EDIT",owned_edit_hit,flush=True)
         body=element(pane_prefix+"Files").rectangle()
         sendinput_mouse_move(coords=(body.left+30,body.top+40))
-        window().set_focus()
+        focus_owned_window()
         eventually(owned_foreground,"owned window is not foreground for final capture",3)
         rect=window().rectangle()
         after=root/"detail-columns-after.png"
