@@ -167,6 +167,10 @@ void MainWindow::ShowAppFileContextMenu(
  // logical identities. A delayed click must never mutate a new selection.
  std::vector<std::uint64_t> logicalIds;
  logicalIds.reserve(count);
+ // A route can stay unchanged when a refreshed list reuses a logical row
+ // index for a different file. Remember both the index and item identity.
+ std::vector<std::pair<std::uint64_t,std::wstring>> selectedPaths;
+ selectedPaths.reserve(count);
  bool allFilesystem=true;
  bool boundedSources=true;
  std::size_t sourceUnits=0;
@@ -183,6 +187,7 @@ void MainWindow::ShowAppFileContextMenu(
    static_cast<std::size_t>(logical));
   if(!indexed||indexed->parsingName.empty())return;
   logicalIds.push_back(logical);
+  selectedPaths.emplace_back(logical,indexed->parsingName);
   const auto units=indexed->parsingName.size()+1;
   if(units>fxfile::shelltransfer::kMaxSourcePathUnits-sourceUnits)
    boundedSources=false;
@@ -200,6 +205,10 @@ void MainWindow::ShowAppFileContextMenu(
   return;
  auto expected=std::make_shared<const std::vector<std::uint64_t>>(
   std::move(logicalIds));
+ std::sort(selectedPaths.begin(),selectedPaths.end());
+ auto expectedPaths=std::make_shared<
+     const std::vector<std::pair<std::uint64_t,std::wstring>>>(
+      std::move(selectedPaths));
  const auto identity=workspace.identity;
  const bool ready=!mFileOperations.busy();
  const bool localSource=!pane.filesystemPaths[tab].empty();
@@ -257,7 +266,7 @@ void MainWindow::ShowAppFileContextMenu(
    icon.Glyph(iconGlyph);
    item.Icon(icon);
   }
-  item.Click([weak,side,identity,tab,route,expected,
+  item.Click([weak,side,identity,tab,route,expected,expectedPaths,
               sourceShellFolder,sourceFilesystemFolder,
               action=std::move(action)](IInspectable const&,
                                        RoutedEventArgs const&){
@@ -278,9 +287,17 @@ void MainWindow::ShowAppFileContextMenu(
     return;
    }
    const auto& viewState=state.fileLists[side];
-   if(viewState.visibleRoute!=route||viewState.visibleTab!=tab)return;
+   if(viewState.visibleRoute!=route||viewState.visibleTab!=tab){
+    ui->StatusText().Text(
+     L"파일 목록이 갱신됐습니다. 우클릭 메뉴를 다시 여세요.");
+    return;
+   }
    auto selectedView=side==0?ui->LeftFiles():ui->RightFiles();
-   if(selectedView.SelectedItems().Size()!=expected->size())return;
+   if(selectedView.SelectedItems().Size()!=expected->size()){
+    ui->StatusText().Text(
+     L"파일 선택이 변경됐습니다. 우클릭 메뉴를 다시 여세요.");
+    return;
+   }
    std::vector<std::uint64_t> actual;
    actual.reserve(expected->size());
    for(auto const& selected:selectedView.SelectedItems()){
@@ -294,6 +311,18 @@ void MainWindow::ShowAppFileContextMenu(
     ui->StatusText().Text(
      L"파일 선택이 변경됐습니다. 우클릭 메뉴를 다시 여세요.");
     return;
+   }
+   // Rebind logical IDs to their current parsing names before any file
+   // command, Clipboard write or external Shell handoff. This uses only the
+   // already visible model; no filesystem or provider query on the UI thread.
+   for(auto const& [logical,path]:*expectedPaths){
+    auto const* indexed=pane.tabs[tab].indexedItem(
+     static_cast<std::size_t>(logical));
+    if(!indexed||indexed->parsingName!=path){
+     ui->StatusText().Text(
+      L"선택한 파일 항목이 갱신됐습니다. 우클릭 메뉴를 다시 여세요.");
+     return;
+    }
    }
    action(*ui);
   });
