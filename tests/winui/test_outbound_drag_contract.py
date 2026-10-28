@@ -83,7 +83,7 @@ class OutboundDragContract(unittest.TestCase):
         script=(ROOT/"tests/winui/test_same_app_drag_regression_gui.py").read_text(
             encoding="utf-8")
         for token in (
-            '"--item-kind", choices=("file", "folder", "multi-file"), default="file"',
+            '"--item-kind", choices=("file", "folder", "multi-file", "mixed"), default="file"',
             'ITEM_KIND = arguments.item_kind',
             'if ITEM_KIND == "folder":',
             'source.mkdir()',
@@ -125,6 +125,26 @@ class OutboundDragContract(unittest.TestCase):
         self.assertIn('default="left-to-right"',script)
         self.assertIn('default="file"',script)
         self.assertNotIn('source.unlink(',script)
+
+    def test_mixed_file_folder_selected_and_copied_with_complete_payload(self):
+        script=(ROOT/"tests/winui/test_same_app_drag_regression_gui.py").read_text(
+            encoding="utf-8")
+        for token in (
+            '"mixed"), default="file"',
+            'elif ITEM_KIND == "mixed":',
+            'second_source = source_dir / "혼합-한글-폴더"',
+            'if ITEM_KIND in ("multi-file", "mixed"):',
+            'second_row.click_input(pressed="control")',
+            'source_row.is_selected() and second_row.is_selected()',
+            'second_copy = target_dir / second_source.name',
+            'assert owned_tree(second_copy) == owned_tree(second_source)',
+            'assert second_source.is_dir()',
+            'print("REAL_SAME_APP_PRIVATE_DRAG_MIXED_FILE_FOLDER_COPY"',
+        ):
+            self.assertIn(token, script)
+        self.assertIn('assert copied.read_bytes() == source.read_bytes()',script)
+        self.assertNotIn('source.unlink(',script)
+        self.assertNotIn('shutil.rmtree(',script)
 
     def test_same_app_private_drag_stays_copy_only_for_both_directions(self):
         source=compact(SOURCE.read_text(encoding="utf-8"))
