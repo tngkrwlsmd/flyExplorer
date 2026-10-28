@@ -336,7 +336,7 @@ class PX10ColumnResizeGuiContract(unittest.TestCase):
 
     def test_existing_runner_requires_the_original_independent_resize_oracles(self):
         source=(ROOT/"tools/winui/run_checks.py").read_text("utf-8")
-        section=source.split('if not rc and area == "column-resize":',1)[1].split(
+        section=source.split('if not rc and area in ("column-resize","column-resize-right"):',1)[1].split(
             'return fail("GUI_ACCEPTANCE_FAILURE", rc) if rc else 0',1)[0]
         for fragment in ('OWNED_DETAIL_COLUMN_RESULT PASS',
                          'OWNED_DETAIL_COLUMN_NAME_RESIZE True',
