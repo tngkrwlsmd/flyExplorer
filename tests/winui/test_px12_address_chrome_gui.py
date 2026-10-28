@@ -68,10 +68,28 @@ def run(*, win, element, focus, eventually, left, right, owned):
     eventually(lambda: element("AddressBox").has_keyboard_focus(),
                "PX12 keyboard editor not focused", 9)
     element("AddressBox").set_edit_text(str(left) + "\\PX12")
-    first = left / "PX12Nearby"
-    second = left / "PX12Vanishing"
-    eventually(lambda: candidate(first) and candidate(second),
+    nearby = left / "PX12Nearby"
+    vanishing = left / "PX12Vanishing"
+    eventually(lambda: candidate(nearby) and candidate(vanishing),
                "PX12 two owned keyboard candidates missing", 9)
+    # UIA SetValue does not guarantee real keyboard focus; explicitly ensure
+    # that the owned TextBox, not an unrelated foreground element, receives Down.
+    address = element("AddressBox")
+    address.set_focus()
+    eventually(lambda: address.has_keyboard_focus(),
+               "PX12 editor lost real focus after SetValue", 8)
+    assert candidate(nearby) and candidate(vanishing)
+    # Preserve the actual view order rather than assuming filesystem-index
+    # enumeration is lexicographic.
+    targets = {str(nearby), str(vanishing)}
+    ordered = []
+    for top in Desktop(backend="uia").windows(process=pid):
+        for button in top.descendants(control_type="Button"):
+            name = button.element_info.name or ""
+            if name.startswith("주소 후보: ") and name[7:] in targets:
+                ordered.append(Path(name[7:]))
+    assert len(ordered) == 2 and set(ordered) == {nearby, vanishing}, ordered
+    first, second = ordered
     def press(keys):
         assert owned_foreground(), "Refuse keyboard input to foreign window"
         send_keys(keys)
