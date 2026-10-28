@@ -1,5 +1,12 @@
 # flyExplorer Windows 11 벤치마킹 및 UI/UX 점검
 
+## 2026-10-28 PX10 — 오른쪽 Details 패널 전용 실측 준비, 입력 데스크톱 잠금으로 GUI 미검증
+
+- 기존 왼쪽 L08 네이티브 `sizewe` 및 드래그 수용은 그대로 유지한다. 오른쪽 이름·유형·크기 `DetailColumnHandle`/해당 헤더가 XAML에 별도로 존재하는 것을 확인하고, 동일한 `SendInput` 커서·드래그·빠른 꼬리 이동·WindowTab 복원 검사를 테스트 전용 `pane="right"` 옵션으로 연결했다. 다른 쪽(왼쪽) 열 너비가 변하지 않았는지도 독립 확인한다. 좌·우 화면 증거 파일명은 분리한다. 제품 WinUI 및 설정 코드는 변경하지 않았다.
+- 오른쪽 최초 GUI 시도는 앱 창 활성화 시점에서 실패해 드래그를 한 번도 검사하지 못했다. 확인 결과 Windows VM 로그인 세션의 입력 데스크톱이 접근 불가능(`GetCursorPos=False`, foreground HWND=0)이었다. 종료는 코드 0, 원본 설정 파일은 불변. 잠금 상태에서 GUI를 반복하지 않도록 앱 구동 이전에 입력 가능성 검사를 추가했고, 실제로 `L08_INTERACTIVE_DESKTOP_UNAVAILABLE right` / exit 2 / 테스트 앱 프로세스 0개를 확인했다.
+- [최종 소스 `76271346`](https://github.com/tngkrwlsmd/flyExplorer/commit/7627134646281e667d60e4133fab4d4b06de0676): Windows 관련 소스 검사 **24/24 PASS**, Python AST 및 diff PASS. 사용 가능한 대화형 입력 데스크톱에서 오른쪽 전용 `gui --area column-resize-right`를 실행하여 오른쪽 3개 조절 커서·드래그와 반대쪽 너비 보존을 실측하기 전에는 **오른쪽 GUI/시각 수용은 OPEN**. G03~G05 사용자 제외, G07 중단 유지.
+
+
 ## 2026-10-28 L08 — SendInput으로 실제 WinUI 진입·커서 인수 통과
 
 - 기존 GUI의 `pywinauto.mouse.move` / `SetCursorPos` 이동은 정확한 UIA 열 경계를 가리켜도 WinUI `PointerEntered`를 일으키지 않았으며, 왼쪽 이름·유형·크기 핸들의 네이티브 커서를 모두 `arrow`로 관측했다. 독립된 동일 사용자 세션 Windows 기본 Edit에서 `ibeam`이 정상 관측됐고, *제품 EXE를 바꾸지 않은 상태에서* `SendInput` 이동으로 전환하자 세 핸들 모두 `PointerEntered` 및 `IDC_SIZEWE`, 검색창은 독립 `IDC_IBEAM`이 확인됐다. 따라서 과거의 화살표 관측은 **제품 커서 지정 실패가 아니라 테스트 입력 경로 문제**로 좁혀졌다.
