@@ -121,7 +121,7 @@
                 </Grid.RowDefinitions>
                 <TextBox x:Name="AddressBox" Grid.Row="0" Height="32" Opacity="0"
                          PlaceholderText="&#xD3F4;&#xB354; &#xACBD;&#xB85C;&#xB97C; &#xC785;&#xB825;&#xD558;&#xC138;&#xC694;"
-                         KeyDown="OnAddressKeyDown" TextChanged="OnAddressTextChanged"
+                         TextChanged="OnAddressTextChanged"
                          GotFocus="OnAddressGotFocus"
                          LostFocus="OnAddressLostFocus"
                          AutomationProperties.Name="&#xD604;&#xC7AC; &#xD3F4;&#xB354; &#xC8FC;&#xC18C;"/>
