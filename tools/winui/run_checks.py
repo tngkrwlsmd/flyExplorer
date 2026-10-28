@@ -150,6 +150,7 @@ GUI_AREAS = (
     "column-resize-right",
     "context-selection",
     "home-overview",
+    "search-cancel",
     "selection-projection",
     "address-candidate-chrome",
     "address-visual-compare",
@@ -418,6 +419,9 @@ def gui_command(area, configuration, env):
     if area == "home-overview":
         return [sys.executable, "-u", str(TESTS / "test_home_overview_gui.py"),
                 configuration], gui_env, 180
+    if area == "search-cancel":
+        return [sys.executable, "-u", str(TESTS / "test_px06_search_cancel_gui.py"),
+                configuration], gui_env, 240
     if area == "selection-projection":
         gui_env["FLY_PX10_SELECTION_ONLY"] = "YES"
         gui_env["FLY_F05_VISUAL_CAPTURE"] = "NO"
