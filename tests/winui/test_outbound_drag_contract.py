@@ -177,7 +177,7 @@ class OutboundDragContract(unittest.TestCase):
             encoding="utf-8")
         for token in (
             'COLLISION not in ("skip", "skip-all", "keep-both-late-folder") and ITEM_KIND not in ("file", "mixed")',
-            'if ITEM_KIND == "mixed" and COLLISION in ("cancel", "keep-both"):',
+            'if ITEM_KIND == "mixed" and COLLISION in ("cancel", "keep-both", "keep-both-late-folder"):',
             'assert owned_tree(second_source) == second_source_tree',
             'assert not (target_dir / second_source.name).exists()',
             'cancel.iface_invoke.Invoke()',
