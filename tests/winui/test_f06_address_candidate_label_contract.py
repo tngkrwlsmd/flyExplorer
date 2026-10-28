@@ -32,7 +32,7 @@ class F06AddressCandidateLabelContract(unittest.TestCase):
             "void MainWindow::OnAddressTextChanged(",1)[0]
         for fragment in (
             "for(std::size_t candidateIndex=0;candidateIndex<choices.size();++candidateIndex)",
-            "button.KeyDown([weak,candidateIndex]",
+            "button.AddHandler(UIElement::KeyDownEvent()",
             "key!=Windows::System::VirtualKey::Escape",
             "key!=Windows::System::VirtualKey::Up",
             "key!=Windows::System::VirtualKey::Down",
@@ -50,7 +50,7 @@ class F06AddressCandidateLabelContract(unittest.TestCase):
             self.assertIn(fragment,source)
         # Arrow focus must never execute navigation or introduce a new Shell,
         # network, disk enumeration, or unbounded suggestion query.
-        handler=source.split("button.KeyDown([weak,candidateIndex]",1)[1].split(
+        handler=source.split("button.AddHandler(UIElement::KeyDownEvent()",1)[1].split(
             "rows.Children().Append(button);",1)[0]
         for forbidden in ("OpenFolder(", "QueuePidl(", "FindFirstFile",
                           "SHParseDisplayName(", "std::filesystem::exists("):
@@ -62,27 +62,35 @@ class F06AddressCandidateLabelContract(unittest.TestCase):
 
 
 
-    def test_px12_preview_catches_only_unhandled_down_in_address_editor(self):
+    def test_px12_handled_textbox_arrows_are_scoped_and_do_not_disturb_ime(self):
         main=SOURCE
-        preview=main.split("RootShell().PreviewKeyDown(",1)[1].split(
-            "// Explorer navigation keys target the active pane only.",1)[0]
+        xaml=(ROOT/"app/winui/MainWindow.xaml").read_text(encoding="utf-8")
+        constructor=main.split("MainWindow::MainWindow()",1)[1].split(
+            "// Closed set of Ctrl-only non-mutating focus shortcuts.",1)[0]
         for token in (
+            "AddressBox().AddHandler(",
+            "UIElement::KeyDownEvent()",
+            "winrt::box_value(Microsoft::UI::Xaml::Input::KeyEventHandler{",
             "key==Windows::System::VirtualKey::Down",
-            "!control&&!shift&&!alt",
-            "!ui->mClosing",
-            "ui->AddressBox().Opacity()>=0.5",
-            "ui->AddressBox().FocusState()!=FocusState::Unfocused",
-            "ui->AddressSuggestionPanel().Visibility()==Visibility::Visible",
-            "ui->AddressSuggestionRows().Children().Size()>0",
+            "ui->AddressSuggestionPanel().Visibility()!=Visibility::Visible",
             "ui->OnAddressKeyDown(nullptr,args);",
-            "if(args.Handled())return;",
+            "else if(!args.Handled()",
+            "key==Windows::System::VirtualKey::Enter",
+            "key==Windows::System::VirtualKey::Escape",
+            "}}),true);",
         ):
-            self.assertIn(token,preview)
-        self.assertLess(preview.index("ui->OnAddressKeyDown(nullptr,args);"),
-                        preview.index("// Closed set of Ctrl-only"))
-        self.assertNotIn("OpenFolder(",preview)
-        self.assertNotIn("QueuePidl(",preview)
-        self.assertNotIn("FindFirstFile",preview)
+            self.assertIn(token,constructor)
+        self.assertLess(constructor.index("AddressBox().AddHandler("),
+                        constructor.index("RootShell().PreviewKeyDown("))
+        address=xaml.split('x:Name="AddressBox"',1)[1].split("/>",1)[0]
+        self.assertNotIn('KeyDown="OnAddressKeyDown"',address)
+        self.assertIn('TextChanged="OnAddressTextChanged"',address)
+        candidate=main.split("button.AddHandler(UIElement::KeyDownEvent()",1)[1].split(
+            "rows.Children().Append(button);",1)[0]
+        self.assertIn("winrt::box_value(Input::KeyEventHandler{[weak,candidateIndex]",candidate)
+        self.assertIn("}}),true);",candidate)
+        for forbidden in ("OpenFolder(", "QueuePidl(", "FindFirstFile"):
+            self.assertNotIn(forbidden,constructor)
 
 
 if __name__=="__main__":
