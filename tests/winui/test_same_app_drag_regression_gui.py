@@ -27,7 +27,7 @@ direction_parser.add_argument(
     help="Exact test-owned physical source item type",
 )
 direction_parser.add_argument(
-    "--collision", choices=("none", "cancel", "keep-both", "keep-both-late-folder", "keep-both-late-file", "keep-both-type-folder-file", "keep-both-source-renamed", "skip", "skip-all"), default="none",
+    "--collision", choices=("none", "cancel", "keep-both", "keep-both-late-folder", "keep-both-late-file", "keep-both-type-folder-file", "keep-both-source-renamed", "close-during-dialog", "skip", "skip-all"), default="none",
     help="Focused right-to-left copy collision decision; never overwrite",
 )
 arguments = direction_parser.parse_args()
@@ -42,6 +42,7 @@ if COLLISION != "none" and (
     (COLLISION == "keep-both-late-folder" and ITEM_KIND != "mixed") or
     (COLLISION == "keep-both-late-file" and ITEM_KIND != "multi-file") or
     (COLLISION == "keep-both-type-folder-file" and ITEM_KIND != "mixed") or
+    (COLLISION == "close-during-dialog" and ITEM_KIND != "file") or
     (COLLISION not in ("skip", "skip-all", "keep-both-late-folder", "keep-both-late-file",
                        "keep-both-type-folder-file")
      and ITEM_KIND not in ("file", "mixed"))
@@ -392,7 +393,21 @@ try:
                     else second_source.is_dir())
             assert not (target_dir / second_source.name).exists()
 
-        if COLLISION == "cancel":
+        if COLLISION == "close-during-dialog":
+            # Only the freshly launched test-owned WinUI process is closed.
+            # An unconfirmed collision must not begin a Shell mutation when
+            # its originating window/context disappears.
+            owner = W.DWORD()
+            u.GetWindowThreadProcessId(W.HWND(win.handle), c.byref(owner))
+            assert owner.value == preview.pid
+            assert u.PostMessageW(W.HWND(win.handle), 0x10, 0, 0)
+            preview.wait(timeout=14)
+            assert preview.returncode == 0
+            assert source.read_bytes() == source_bytes
+            assert collision_target.read_bytes() == collision_bytes
+            assert sorted(p.name for p in target_dir.iterdir()) == [source.name]
+            print("M23_COLLISION_MODAL_WINDOW_CLOSE_NO_TRANSFER=PASS", flush=True)
+        elif COLLISION == "cancel":
             cancel.iface_invoke.Invoke()
             eventually(
                 lambda: "파일 작업 확인을 취소했습니다."
