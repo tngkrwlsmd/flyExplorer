@@ -346,10 +346,11 @@ try:
                   flush=True)
     print("SAME_APP_DRAG_DIRECTION", DIRECTION, flush=True)
     print("SAME_APP_DRAG_ITEM_KIND", ITEM_KIND, flush=True)
-    if REVERSE:
-        print("REAL_SAME_APP_PRIVATE_DRAG_RIGHT_TO_LEFT_COPY", True, flush=True)
-
-    print("REAL_SAME_APP_PRIVATE_DRAG_COPY_AFTER_OUTBOUND_SUPPORT", True, flush=True)
+    if COLLISION == "none":
+        if REVERSE:
+            print("REAL_SAME_APP_PRIVATE_DRAG_RIGHT_TO_LEFT_COPY", True, flush=True)
+        print("REAL_SAME_APP_PRIVATE_DRAG_COPY_AFTER_OUTBOUND_SUPPORT", True, flush=True)
+    print("SAME_APP_DRAG_COLLISION_POLICY", COLLISION, flush=True)
     print("SAME_APP_DRAG_REGRESSION=PASS", flush=True)
 finally:
     if preview and preview.poll() is None:
