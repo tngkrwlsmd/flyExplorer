@@ -21,6 +21,53 @@ class RecentActivityContracts(unittest.TestCase):
                           "std::thread", "ifstream", "ofstream"):
             self.assertNotIn(forbidden,model)
 
+    def test_px02_history_off_empty_and_populated_have_distinct_accessible_states(self):
+        xaml=source("app/winui/MainWindow.xaml")
+        features=source("app/winui/m19_features.cpp")
+        model=source("app/winui/recent_activity_controller.h")
+        ui=xaml.split('x:Name="RecentActivityPanel"',1)[1].split(
+            'x:Name="FilterRulePanel"',1)[0]
+        refresh=features.split("void MainWindow::RefreshRecentActivityPanel(){",1)[1].split(
+            "void MainWindow::OnToggleRecentActivity(",1)[0]
+        for term in (
+            'x:Name="RecentActivityStateText"',
+            'AutomationProperties.Name="최근 활동 기록 상태"',
+            '기록 꺼짐 · 파일 및 폴더 활동을 수집하지 않습니다.',
+        ):
+            self.assertIn(term,ui)
+        for term in (
+            'const bool enabled=mRecentActivity.enabled();',
+            'RecentActivityFiles().IsEnabled(enabled&&!recent.empty());',
+            'RecentActivityFolders().IsEnabled(enabled&&!frequent.empty());',
+            'RecentActivityClearButton().IsEnabled(',
+            'enabled&&(!recent.empty()||!frequent.empty()));',
+            'if(!enabled)',
+            'else if(recent.empty()&&frequent.empty())',
+            '기록 켜짐 · 이 세션에 저장된 활동이 아직 없습니다.',
+            '기록 켜짐 · 최근 파일 ',
+            'std::to_wstring(recent.size())',
+            'std::to_wstring(frequent.size())',
+            'RecentActivityStateText().Text(hstring(state));',
+            'RecentActivityOpenFileButton().IsEnabled(false);',
+            'RecentActivityOpenFolderButton().IsEnabled(false);',
+        ):
+            self.assertIn(term,refresh)
+        self.assertLess(
+            refresh.index('const bool enabled=mRecentActivity.enabled();'),
+            refresh.index('RecentActivityStateText().Text(hstring(state));'))
+        # Do not count a disabled/empty control as consent or silently enable
+        # persistence or scan outside this application's explicit session.
+        self.assertIn('bool enabled_=false;',model)
+        self.assertIn('if(!yes)clear();',model)
+        self.assertNotIn('CreateFile',model)
+        for operation in (
+            'void MainWindow::OnToggleRecentActivity(',
+            'void MainWindow::OnRecentActivityOptInClicked(',
+            'void MainWindow::OnClearRecentActivity(',
+        ):
+            handler=features.split(operation,1)[1].split('}\n',1)[0]
+            self.assertIn('RefreshRecentActivityPanel();',handler)
+
     def test_individual_removal_is_memory_only_and_matches_visible_selection(self):
         model=source("app/winui/recent_activity_controller.h")
         xaml=source("app/winui/MainWindow.xaml")
