@@ -203,8 +203,9 @@ try:
         mouse.release(button="left", coords=target)
 
     copied = target_dir / source.name
-    eventually(lambda: copied.is_file(),
-               "same-app private-token drag did not copy owned file", 18)
+    eventually(
+        lambda: copied.is_dir() if ITEM_KIND == "folder" else copied.is_file(),
+        "same-app private-token drag did not copy owned "+ITEM_KIND, 18)
     if ITEM_KIND == "folder":
         def owned_tree(root):
             assert root.is_dir() and not root.is_symlink()
