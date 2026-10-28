@@ -176,7 +176,7 @@ class OutboundDragContract(unittest.TestCase):
         script=(ROOT/"tests/winui/test_same_app_drag_regression_gui.py").read_text(
             encoding="utf-8")
         for token in (
-            'COLLISION == "skip" and ITEM_KIND != "multi-file"',
+            'COLLISION == "skip" and ITEM_KIND not in ("multi-file", "mixed")',
             'COLLISION != "skip" and ITEM_KIND != "file"',
             'second_row.click_input(pressed="control")',
             'source_row.is_selected() and second_row.is_selected()',
@@ -200,6 +200,39 @@ class OutboundDragContract(unittest.TestCase):
         self.assertLess(
             script.index('skip.iface_invoke.Invoke()'),
             script.index('M23_REVERSE_DRAG_COLLISION_SKIP_COPIES_ONLY_CLEAN=PASS'))
+        self.assertNotIn('source.unlink(', script)
+        self.assertNotIn('shutil.rmtree(', script)
+
+    def test_reverse_mixed_drag_skip_preserves_existing_file_and_nested_folder(self):
+        script=(ROOT/"tests/winui/test_same_app_drag_regression_gui.py").read_text(
+            encoding="utf-8")
+        for token in (
+            'COLLISION == "skip" and ITEM_KIND not in ("multi-file", "mixed")',
+            'elif ITEM_KIND == "mixed":',
+            'second_source = source_dir / "혼합-한글-폴더"',
+            'collision_target.write_bytes(collision_bytes)',
+            'if COLLISION == "skip":',
+            'second_source.is_file() if ITEM_KIND == "multi-file"',
+            'else second_source.is_dir()',
+            'skip = modal_button("충돌 항목 건너뛰기")',
+            'skip.iface_invoke.Invoke()',
+            'clean_copy = target_dir / second_source.name',
+            'if ITEM_KIND == "multi-file":',
+            'assert ITEM_KIND == "mixed"',
+            'lambda: (clean_copy / "하위-폴더" / "혼합-한글.txt").is_file()',
+            'lambda: owned_tree(clean_copy) == owned_tree(second_source)',
+            'assert sorted(p.name for p in target_dir.iterdir()) == sorted(',
+            'assert collision_target.read_bytes() == collision_bytes',
+            'assert source.read_bytes() == source_bytes',
+            'M23_REVERSE_DRAG_COLLISION_MIXED_SKIP_PRESERVES_FOLDER=PASS',
+        ):
+            self.assertIn(token, script)
+        self.assertLess(
+            script.index('collision_target.write_bytes(collision_bytes)'),
+            script.index('preview = None'))
+        self.assertLess(
+            script.index('skip.iface_invoke.Invoke()'),
+            script.index('M23_REVERSE_DRAG_COLLISION_MIXED_SKIP_PRESERVES_FOLDER=PASS'))
         self.assertNotIn('source.unlink(', script)
         self.assertNotIn('shutil.rmtree(', script)
 
