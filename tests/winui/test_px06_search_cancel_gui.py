@@ -75,7 +75,7 @@ def main(config="Release"):
         env[key] = str(sub)
     for key in ("FLY_M23_OWNED_SESSION", "FLY_M23_OWNED_DRAG_TEST"):
         env.pop(key, None)
-    app = subprocess.Popen([str(exe), str(slow)], cwd=exe.parent, env=env,
+    app = subprocess.Popen([str(exe), str(quick)], cwd=exe.parent, env=env,
                            stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
                            stderr=subprocess.DEVNULL)
     hwnd = None
@@ -94,7 +94,7 @@ def main(config="Release"):
 
         win = eventually(view, "PX06 owned WinUI window not found", 25)
         element = lambda name: win.child_window(auto_id=name)
-        eventually(lambda: str(slow).casefold() in
+        eventually(lambda: str(quick).casefold() in
                    element("AddressBox").get_value().casefold(),
                    "Owned initial PX06 search folder not active", 22)
         invoke(element("SearchPanelButton"))
