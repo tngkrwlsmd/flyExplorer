@@ -47,6 +47,8 @@ void MainWindow::RefreshBookmarks()
         empty.Opacity(0.58);
         empty.VerticalAlignment(VerticalAlignment::Center);
         children.Append(empty);
+        if(HomeOverviewPanel().Visibility()==Visibility::Visible)
+            RefreshHomeOverview();
         return;
     }
 
@@ -72,6 +74,8 @@ void MainWindow::RefreshBookmarks()
         });
         children.Append(button);
     }
+    if(HomeOverviewPanel().Visibility()==Visibility::Visible)
+        RefreshHomeOverview();
 }
 
 void MainWindow::RefreshBookmarkManager(int selected)
@@ -157,6 +161,7 @@ void MainWindow::OnToggleBookmarks(
     SearchPanel().Visibility(Visibility::Collapsed);
     FilterRulePanel().Visibility(Visibility::Collapsed);
     RecentActivityPanel().Visibility(Visibility::Collapsed);
+    HomeOverviewPanel().Visibility(Visibility::Collapsed);
     BookmarkPanel().Visibility(next);
     if (next == Visibility::Visible) {
         RefreshBookmarkManager(BookmarkManagerBox().SelectedIndex());
