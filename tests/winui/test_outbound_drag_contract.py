@@ -150,7 +150,7 @@ class OutboundDragContract(unittest.TestCase):
         script=(ROOT/"tests/winui/test_same_app_drag_regression_gui.py").read_text(
             encoding="utf-8")
         for token in (
-            '"--collision", choices=("none", "cancel", "keep-both", "keep-both-late-folder", "keep-both-late-file", "keep-both-type-folder-file", "skip", "skip-all"), default="none"',
+            '"--collision", choices=("none", "cancel", "keep-both", "keep-both-late-folder", "keep-both-late-file", "keep-both-type-folder-file", "keep-both-source-renamed", "skip", "skip-all"), default="none"',
             'if COLLISION != "none" and (',
             'collision_target = target_dir / source.name',
             'collision_target.write_bytes(collision_bytes)',
@@ -220,6 +220,32 @@ class OutboundDragContract(unittest.TestCase):
         self.assertLess(
             script.index('approve.iface_invoke.Invoke()'),
             script.index('M23_REVERSE_DRAG_COLLISION_MIXED_KEEP_BOTH_PRESERVES_ALL=PASS'))
+        self.assertNotIn('source.unlink(', script)
+        self.assertNotIn('shutil.rmtree(', script)
+
+    def test_source_renamed_during_collision_modal_fails_without_mutation(self):
+        script=(ROOT/"tests/winui/test_same_app_drag_regression_gui.py").read_text(
+            encoding="utf-8")
+        for token in (
+            '"keep-both-source-renamed"',
+            'renamed_source = source_dir / "원본-이름변경-한글.txt"',
+            'source.rename(renamed_source)',
+            'assert not source.exists()',
+            'assert renamed_source.read_bytes() == source_bytes',
+            'approve.iface_invoke.Invoke()',
+            'lambda: "일부 항목이 처리됐을 수 있습니다."',
+            'in element("StatusText").window_text()',
+            'assert sorted(p.name for p in target_dir.iterdir()) == [source.name]',
+            'assert collision_target.read_bytes() == collision_bytes',
+            'M23_REVERSE_DRAG_SOURCE_RENAMED_FAIL_CLOSED=PASS',
+        ):
+            self.assertIn(token, script)
+        self.assertLess(
+            script.index('source.rename(renamed_source)'),
+            script.index('approve.iface_invoke.Invoke()'))
+        self.assertLess(
+            script.index('approve.iface_invoke.Invoke()'),
+            script.index('M23_REVERSE_DRAG_SOURCE_RENAMED_FAIL_CLOSED=PASS'))
         self.assertNotIn('source.unlink(', script)
         self.assertNotIn('shutil.rmtree(', script)
 
