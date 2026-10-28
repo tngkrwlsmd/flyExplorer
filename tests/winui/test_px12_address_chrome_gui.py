@@ -61,6 +61,42 @@ def run(*, win, element, focus, eventually, left, right, owned):
         return item
 
     assert committed(left) and has_row("Nested") and has_row("readme.txt")
+    # PX12 keyboard-only focus path: two owned, in-memory sibling candidates.
+    # No candidate gets invoked and the committed folder must not change.
+    assert owned_foreground()
+    send_keys("^l")
+    eventually(lambda: element("AddressBox").has_keyboard_focus(),
+               "PX12 keyboard editor not focused", 9)
+    element("AddressBox").set_edit_text(str(left) + "\\PX12")
+    first = left / "PX12Nearby"
+    second = left / "PX12Vanishing"
+    eventually(lambda: candidate(first) and candidate(second),
+               "PX12 two owned keyboard candidates missing", 9)
+    def press(keys):
+        assert owned_foreground(), "Refuse keyboard input to foreign window"
+        send_keys(keys)
+    press("{DOWN}")
+    eventually(lambda: candidate(first) and candidate(first).has_keyboard_focus(),
+               "PX12 Down did not focus first candidate", 7)
+    press("{DOWN}")
+    eventually(lambda: candidate(second) and candidate(second).has_keyboard_focus(),
+               "PX12 Down did not focus second candidate", 7)
+    press("{DOWN}")
+    assert candidate(second).has_keyboard_focus(), (
+        "PX12 last candidate lost keyboard focus")
+    press("{UP}")
+    eventually(lambda: candidate(first) and candidate(first).has_keyboard_focus(),
+               "PX12 Up did not focus previous candidate", 7)
+    press("{UP}")
+    eventually(lambda: element("AddressBox").has_keyboard_focus(),
+               "PX12 Up did not restore address editor", 7)
+    assert committed(left) is False
+    press("{ESC}")
+    eventually(lambda: candidate(first) is None and candidate(second) is None,
+               "PX12 Escape failed to dismiss keyboard candidates", 8)
+    assert committed(left)
+    print("PX12_GUI_KEYBOARD_CANDIDATE_UP_DOWN=PASS", flush=True)
+
     stale = left / "PX12Vanishing"
     assert stale.is_dir() and stale.is_relative_to(owned)
     item = offer(str(left) + "\\PX12V", stale)
