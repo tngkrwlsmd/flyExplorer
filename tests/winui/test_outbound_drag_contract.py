@@ -150,7 +150,7 @@ class OutboundDragContract(unittest.TestCase):
         script=(ROOT/"tests/winui/test_same_app_drag_regression_gui.py").read_text(
             encoding="utf-8")
         for token in (
-            '"--collision", choices=("none", "cancel", "keep-both", "skip", "skip-all"), default="none"',
+            '"--collision", choices=("none", "cancel", "keep-both", "keep-both-late-folder", "skip", "skip-all"), default="none"',
             'if COLLISION != "none" and (',
             'collision_target = target_dir / source.name',
             'collision_target.write_bytes(collision_bytes)',
@@ -176,7 +176,7 @@ class OutboundDragContract(unittest.TestCase):
         script=(ROOT/"tests/winui/test_same_app_drag_regression_gui.py").read_text(
             encoding="utf-8")
         for token in (
-            'COLLISION not in ("skip", "skip-all") and ITEM_KIND not in ("file", "mixed")',
+            'COLLISION not in ("skip", "skip-all", "keep-both-late-folder") and ITEM_KIND not in ("file", "mixed")',
             'if ITEM_KIND == "mixed" and COLLISION in ("cancel", "keep-both"):',
             'assert owned_tree(second_source) == second_source_tree',
             'assert not (target_dir / second_source.name).exists()',
@@ -198,7 +198,7 @@ class OutboundDragContract(unittest.TestCase):
         script=(ROOT/"tests/winui/test_same_app_drag_regression_gui.py").read_text(
             encoding="utf-8")
         for token in (
-            'COLLISION not in ("skip", "skip-all") and ITEM_KIND not in ("file", "mixed")',
+            'COLLISION not in ("skip", "skip-all", "keep-both-late-folder") and ITEM_KIND not in ("file", "mixed")',
             'assert owned_tree(second_source) == second_source_tree',
             'approve.iface_invoke.Invoke()',
             'unique_copy = eventually(',
@@ -219,12 +219,44 @@ class OutboundDragContract(unittest.TestCase):
         self.assertNotIn('source.unlink(', script)
         self.assertNotIn('shutil.rmtree(', script)
 
+    def test_late_nested_folder_collision_keep_both_preserves_both_original_trees(self):
+        script=(ROOT/"tests/winui/test_same_app_drag_regression_gui.py").read_text(
+            encoding="utf-8")
+        for token in (
+            '"keep-both-late-folder"',
+            'COLLISION == "keep-both-late-folder" and ITEM_KIND != "mixed"',
+            'late_folder = target_dir / second_source.name',
+            'late_folder.mkdir()',
+            'late competing destination nested payload: preserve',
+            'late original root bytes',
+            'late_folder_tree = owned_tree(late_folder)',
+            'assert owned_tree(second_source) == second_source_tree',
+            'assert source.read_bytes() == source_bytes',
+            'assert collision_target.read_bytes() == collision_bytes',
+            'approve.iface_invoke.Invoke()',
+            'def renamed_folder_copy():',
+            'p.is_dir() and p.name != second_source.name',
+            'owned_tree(copied_folder) == second_source_tree',
+            'assert owned_tree(late_folder) == late_folder_tree',
+            'second_source.name, copied_folder.name',
+            'M23_REVERSE_DRAG_LATE_FOLDER_COLLISION_KEEP_BOTH=PASS',
+        ):
+            self.assertIn(token, script)
+        self.assertLess(
+            script.index('late_folder.mkdir()'),
+            script.index('approve.iface_invoke.Invoke()'))
+        self.assertLess(
+            script.index('approve.iface_invoke.Invoke()'),
+            script.index('M23_REVERSE_DRAG_LATE_FOLDER_COLLISION_KEEP_BOTH=PASS'))
+        self.assertNotIn('source.unlink(', script)
+        self.assertNotIn('shutil.rmtree(', script)
+
     def test_reverse_drag_skip_preserves_collision_and_copies_clean_member(self):
         script=(ROOT/"tests/winui/test_same_app_drag_regression_gui.py").read_text(
             encoding="utf-8")
         for token in (
             'COLLISION == "skip" and ITEM_KIND not in ("multi-file", "mixed")',
-            'COLLISION not in ("skip", "skip-all") and ITEM_KIND not in ("file", "mixed")',
+            'COLLISION not in ("skip", "skip-all", "keep-both-late-folder") and ITEM_KIND not in ("file", "mixed")',
             'second_row.click_input(pressed="control")',
             'source_row.is_selected() and second_row.is_selected()',
             'source_bytes = source.read_bytes() if source.is_file() else None',
