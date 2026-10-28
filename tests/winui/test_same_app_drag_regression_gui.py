@@ -455,7 +455,7 @@ try:
             # fail rather than copy from an unrelated/stale location.
             renamed_source = source_dir / "원본-이름변경-한글.txt"
             assert not renamed_source.exists() and source.is_file()
-            source.rename(renamed_source)
+            os.rename(source, renamed_source)
             assert not source.exists()
             assert renamed_source.read_bytes() == source_bytes
             assert sorted(p.name for p in target_dir.iterdir()) == [source.name]
