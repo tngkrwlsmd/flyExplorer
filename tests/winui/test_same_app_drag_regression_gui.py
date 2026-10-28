@@ -39,10 +39,10 @@ if COLLISION != "none" and (
     not REVERSE or
     (COLLISION == "skip" and ITEM_KIND not in ("multi-file", "mixed")) or
     (COLLISION == "skip-all" and ITEM_KIND not in ("multi-file", "mixed")) or
-    (COLLISION not in ("skip", "skip-all") and ITEM_KIND != "file")
+    (COLLISION not in ("skip", "skip-all") and ITEM_KIND not in ("file", "mixed"))
 ):
     direction_parser.error(
-        "collision requires right-to-left file (cancel/keep-both) "
+        "collision requires right-to-left file/mixed (cancel/keep-both) "
         "or multi-file/mixed (skip or skip-all)"
     )
 SOURCE_PANE_ID = "RightFiles" if REVERSE else "LeftFiles"
@@ -333,6 +333,10 @@ try:
         assert sorted(p.name for p in target_dir.iterdir()) == expected_existing
         if COLLISION == "skip-all":
             assert_second_collision_unchanged()
+        if ITEM_KIND == "mixed" and COLLISION in ("cancel", "keep-both"):
+            assert second_source.is_dir()
+            assert owned_tree(second_source) == second_source_tree
+            assert not (target_dir / second_source.name).exists()
         if COLLISION == "skip":
             assert second_source is not None
             assert (second_source.is_file() if ITEM_KIND == "multi-file"
@@ -346,7 +350,13 @@ try:
                 in element("StatusText").window_text(),
                 "collision cancellation not acknowledged", 9)
             assert sorted(p.name for p in target_dir.iterdir()) == [source.name]
-            print("M23_REVERSE_DRAG_COLLISION_CANCEL_NO_MUTATION=PASS", flush=True)
+            if ITEM_KIND == "mixed":
+                assert owned_tree(second_source) == second_source_tree
+                assert not (target_dir / second_source.name).exists()
+                print("M23_REVERSE_DRAG_COLLISION_MIXED_CANCEL_NO_MUTATION=PASS",
+                      flush=True)
+            else:
+                print("M23_REVERSE_DRAG_COLLISION_CANCEL_NO_MUTATION=PASS", flush=True)
         elif COLLISION in ("skip", "skip-all"):
             skip = modal_button("충돌 항목 건너뛰기")
             assert skip is not None, "skip action missing from owned WinUI modal"
@@ -405,15 +415,30 @@ try:
             eventually(
                 lambda: unique_copy.read_bytes() == source_bytes,
                 "drag Keep Both copy bytes incomplete", 15)
-            assert len(list(target_dir.iterdir())) == 2
-            print("M23_REVERSE_DRAG_COLLISION_KEEP_BOTH_PRESERVES_TARGET=PASS",
-                  flush=True)
+            if ITEM_KIND == "mixed":
+                clean_folder = target_dir / second_source.name
+                eventually(
+                    lambda: clean_folder.is_dir() and
+                    owned_tree(clean_folder) == second_source_tree,
+                    "mixed Keep Both nested folder copy incomplete", 23)
+                assert owned_tree(second_source) == second_source_tree
+                assert sorted(p.name for p in target_dir.iterdir()) == sorted(
+                    (source.name, unique_copy.name, second_source.name))
+                print("M23_REVERSE_DRAG_COLLISION_MIXED_KEEP_BOTH_PRESERVES_ALL=PASS",
+                      flush=True)
+            else:
+                assert len(list(target_dir.iterdir())) == 2
+                print("M23_REVERSE_DRAG_COLLISION_KEEP_BOTH_PRESERVES_TARGET=PASS",
+                      flush=True)
         assert source.read_bytes() == source_bytes
         assert collision_target.read_bytes() == collision_bytes
         if COLLISION == "skip-all":
             assert_second_collision_unchanged()
             assert sorted(p.name for p in target_dir.iterdir()) == expected_existing
         assert source.is_file() and collision_target.is_file()
+        if ITEM_KIND == "mixed" and COLLISION in ("cancel", "keep-both"):
+            assert second_source.is_dir()
+            assert owned_tree(second_source) == second_source_tree
     else:
         copied = target_dir / source.name
         eventually(
