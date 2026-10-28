@@ -23,7 +23,10 @@ class Px12GuiChromeContract(unittest.TestCase):
                          'item.iface_invoke.Invoke()', 'assert committed(left)',
                          '기존 폴더는 유지됩니다', 'PX12_GUI_VALID_CANDIDATE_NAVIGATED=PASS',
                          'PX12_GUI_FAILED_CANDIDATE_PANE_RETAINED=PASS',
-                         'PX12_GUI_VALID_CANDIDATE_IMMEDIATE_CHROME=PASS'):
+                         'PX12_GUI_VALID_CANDIDATE_IMMEDIATE_CHROME=PASS',
+                         'PX12_GUI_KEYBOARD_CANDIDATE_UP_DOWN=PASS',
+                         'candidate(first).has_keyboard_focus()',
+                         'candidate(second).has_keyboard_focus()'):
             self.assertIn(fragment, s)
         for banned in ('ImageGrab', 'SetFileAttributesW', 'net share',
                        'shutil.rmtree', 'os.system('):
