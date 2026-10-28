@@ -150,7 +150,7 @@ class OutboundDragContract(unittest.TestCase):
         script=(ROOT/"tests/winui/test_same_app_drag_regression_gui.py").read_text(
             encoding="utf-8")
         for token in (
-            '"--collision", choices=("none", "cancel", "keep-both", "keep-both-late-folder", "keep-both-late-file", "keep-both-type-folder-file", "keep-both-source-renamed", "skip", "skip-all"), default="none"',
+            '"--collision", choices=("none", "cancel", "keep-both", "keep-both-late-folder", "keep-both-late-file", "keep-both-type-folder-file", "keep-both-source-renamed", "close-during-dialog", "skip", "skip-all"), default="none"',
             'if COLLISION != "none" and (',
             'collision_target = target_dir / source.name',
             'collision_target.write_bytes(collision_bytes)',
@@ -222,6 +222,65 @@ class OutboundDragContract(unittest.TestCase):
             script.index('M23_REVERSE_DRAG_COLLISION_MIXED_KEEP_BOTH_PRESERVES_ALL=PASS'))
         self.assertNotIn('source.unlink(', script)
         self.assertNotIn('shutil.rmtree(', script)
+
+    def test_window_close_during_pending_collision_does_not_copy(self):
+        script=(ROOT/"tests/winui/test_same_app_drag_regression_gui.py").read_text(
+            encoding="utf-8")
+        for token in (
+            '"close-during-dialog"',
+            'COLLISION == "close-during-dialog" and ITEM_KIND != "file"',
+            'if COLLISION == "close-during-dialog":',
+            'u.GetWindowThreadProcessId(W.HWND(win.handle), c.byref(owner))',
+            'assert owner.value == preview.pid',
+            'u.PostMessageW(W.HWND(win.handle), 0x10, 0, 0)',
+            'preview.wait(timeout=14)',
+            'assert preview.returncode == 0',
+            'assert sorted(p.name for p in target_dir.iterdir()) == [source.name]',
+            'assert source.read_bytes() == source_bytes',
+            'assert collision_target.read_bytes() == collision_bytes',
+            'M23_COLLISION_MODAL_WINDOW_CLOSE_NO_TRANSFER=PASS',
+        ):
+            self.assertIn(token, script)
+        self.assertLess(
+            script.index('u.PostMessageW(W.HWND(win.handle), 0x10, 0, 0)'),
+            script.index('M23_COLLISION_MODAL_WINDOW_CLOSE_NO_TRANSFER=PASS'))
+
+    def test_stale_collision_confirmation_compares_live_tab_route_and_folder(self):
+        controller=(ROOT/"app/winui/file_operation_controller.cpp").read_text(
+            encoding="utf-8-sig")
+        transfer=(ROOT/"app/winui/m22_transfers.cpp").read_text(
+            encoding="utf-8-sig")
+        same=controller.split('bool FileOperationController::sameContext(', 1)[1].split(
+            'bool FileOperationController::visibleForTransfer(', 1)[0]
+        for part in (
+            'a.windowTabIdentity==b.windowTabIdentity',
+            'a.side==b.side',
+            'a.tab==b.tab',
+            'a.route==b.route',
+            'a.visibleFolder==b.visibleFolder',
+            'a.visibleShellFolder==b.visibleShellFolder',
+        ):
+            self.assertIn(part, same)
+        confirm=controller.split('FileOperationController::confirmCollision(', 1)[1].split(
+            'FileOperationController::skipCollisions(', 1)[0]
+        self.assertLess(
+            confirm.index('if(!sameContext(pending.context,liveContext))'),
+            confirm.index('pending.request.collision=fxfile::shelltransfer::Collision::KeepBoth;'))
+        self.assertLess(
+            confirm.index('return StartStatus::StaleConfirmation;'),
+            confirm.index('return launchTransfer('))
+        ui=transfer.split('winrt::fire_and_forget MainWindow::ConfirmCollision(', 1)[1].split(
+            'void MainWindow::OnTransferCompleted(', 1)[0]
+        self.assertLess(
+            ui.index('choice=co_await dialog.ShowAsync();'),
+            ui.index('if(mClosing||mFileOperations.pendingConfirmationToken()!=token)co_return;'))
+        self.assertLess(
+            ui.index('if(mClosing||mFileOperations.pendingConfirmationToken()!=token)co_return;'),
+            ui.index('FileOperationContext(ActiveWindowTab().model.activePane)'))
+        close=controller.split('FileOperationController::prepareForClose() noexcept', 1)[1].split(
+            'FileOperationController::StartStatus FileOperationController::requestTransfer(', 1)[0]
+        self.assertIn('state_->closing=true;', close)
+        self.assertIn('state_->pending.reset();', close)
 
     def test_source_renamed_during_collision_modal_fails_without_mutation(self):
         script=(ROOT/"tests/winui/test_same_app_drag_regression_gui.py").read_text(
