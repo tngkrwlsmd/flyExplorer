@@ -27,7 +27,7 @@ direction_parser.add_argument(
     help="Exact test-owned physical source item type",
 )
 direction_parser.add_argument(
-    "--collision", choices=("none", "cancel", "keep-both", "skip"), default="none",
+    "--collision", choices=("none", "cancel", "keep-both", "skip", "skip-all"), default="none",
     help="Focused right-to-left copy collision decision; never overwrite",
 )
 arguments = direction_parser.parse_args()
@@ -38,11 +38,12 @@ COLLISION = arguments.collision
 if COLLISION != "none" and (
     not REVERSE or
     (COLLISION == "skip" and ITEM_KIND not in ("multi-file", "mixed")) or
-    (COLLISION != "skip" and ITEM_KIND != "file")
+    (COLLISION == "skip-all" and ITEM_KIND != "multi-file") or
+    (COLLISION not in ("skip", "skip-all") and ITEM_KIND != "file")
 ):
     direction_parser.error(
         "collision requires right-to-left file (cancel/keep-both) "
-        "or multi-file/mixed (skip)"
+        "or multi-file/mixed (skip), multi-file (skip-all)"
     )
 SOURCE_PANE_ID = "RightFiles" if REVERSE else "LeftFiles"
 TARGET_PANE_ID = "LeftFiles" if REVERSE else "RightFiles"
@@ -92,7 +93,18 @@ collision_target = target_dir / source.name
 collision_bytes = b"existing test-owned destination: must remain unchanged"
 if COLLISION != "none":
     collision_target.write_bytes(collision_bytes)
+second_collision_target = None
+second_collision_bytes = None
+if COLLISION == "skip-all":
+    assert ITEM_KIND == "multi-file" and second_source is not None
+    second_collision_target = target_dir / second_source.name
+    second_collision_bytes = b"existing second test-owned destination: preserve me"
+    second_collision_target.write_bytes(second_collision_bytes)
 source_bytes = source.read_bytes() if source.is_file() else None
+second_source_bytes = (
+    second_source.read_bytes() if second_source is not None
+    and second_source.is_file() else None
+)
 
 env = os.environ.copy()
 for key in ("APPDATA", "LOCALAPPDATA", "TEMP", "TMP"):
@@ -287,7 +299,13 @@ try:
         assert approve is not None, "collision policy must be explicit"
         assert source.read_bytes() == source_bytes
         assert collision_target.read_bytes() == collision_bytes
-        assert sorted(p.name for p in target_dir.iterdir()) == [source.name]
+        expected_existing = sorted(
+            [source.name] + ([second_source.name] if COLLISION == "skip-all" else [])
+        )
+        assert sorted(p.name for p in target_dir.iterdir()) == expected_existing
+        if COLLISION == "skip-all":
+            assert second_collision_target.read_bytes() == second_collision_bytes
+            assert second_source.read_bytes() == second_source_bytes
         if COLLISION == "skip":
             assert second_source is not None
             assert (second_source.is_file() if ITEM_KIND == "multi-file"
@@ -302,35 +320,46 @@ try:
                 "collision cancellation not acknowledged", 9)
             assert sorted(p.name for p in target_dir.iterdir()) == [source.name]
             print("M23_REVERSE_DRAG_COLLISION_CANCEL_NO_MUTATION=PASS", flush=True)
-        elif COLLISION == "skip":
+        elif COLLISION in ("skip", "skip-all"):
             skip = modal_button("충돌 항목 건너뛰기")
             assert skip is not None, "skip action missing from owned WinUI modal"
             skip.iface_invoke.Invoke()
-            # Skip the conflicting file, copy only the nonconflicting
-            # test-owned member (file or nested Unicode folder).
-            clean_copy = target_dir / second_source.name
-            if ITEM_KIND == "multi-file":
-                eventually(clean_copy.is_file,
-                           "nonconflicting file missing after drag Skip", 23)
+            if COLLISION == "skip-all":
                 eventually(
-                    lambda: clean_copy.read_bytes() == second_source.read_bytes(),
-                    "nonconflicting owned file bytes incomplete", 15)
-                assert second_source.read_bytes() == b"owned second file\n"
-                print("M23_REVERSE_DRAG_COLLISION_SKIP_COPIES_ONLY_CLEAN=PASS",
+                    lambda: "충돌한 항목을 모두 건너뛰었습니다."
+                    in element("StatusText").window_text(),
+                    "two-collision all-skipped status not acknowledged", 12)
+                assert sorted(p.name for p in target_dir.iterdir()) == expected_existing
+                assert second_collision_target.read_bytes() == second_collision_bytes
+                assert second_source.read_bytes() == second_source_bytes
+                print("M23_REVERSE_DRAG_COLLISION_SKIP_ALL_PRESERVES_BOTH=PASS",
                       flush=True)
             else:
-                assert ITEM_KIND == "mixed"
-                eventually(
-                    lambda: (clean_copy / "하위-폴더" / "혼합-한글.txt").is_file(),
-                    "nonconflicting nested folder missing after drag Skip", 23)
-                eventually(
-                    lambda: owned_tree(clean_copy) == owned_tree(second_source),
-                    "nonconflicting nested folder bytes incomplete", 15)
-                assert second_source.is_dir()
-                print("M23_REVERSE_DRAG_COLLISION_MIXED_SKIP_PRESERVES_FOLDER=PASS",
-                      flush=True)
-            assert sorted(p.name for p in target_dir.iterdir()) == sorted(
-                (source.name, second_source.name))
+                # Skip the conflicting file, copy only the nonconflicting
+                # test-owned member (file or nested Unicode folder).
+                clean_copy = target_dir / second_source.name
+                if ITEM_KIND == "multi-file":
+                    eventually(clean_copy.is_file,
+                               "nonconflicting file missing after drag Skip", 23)
+                    eventually(
+                        lambda: clean_copy.read_bytes() == second_source.read_bytes(),
+                        "nonconflicting owned file bytes incomplete", 15)
+                    assert second_source.read_bytes() == b"owned second file\n"
+                    print("M23_REVERSE_DRAG_COLLISION_SKIP_COPIES_ONLY_CLEAN=PASS",
+                          flush=True)
+                else:
+                    assert ITEM_KIND == "mixed"
+                    eventually(
+                        lambda: (clean_copy / "하위-폴더" / "혼합-한글.txt").is_file(),
+                        "nonconflicting nested folder missing after drag Skip", 23)
+                    eventually(
+                        lambda: owned_tree(clean_copy) == owned_tree(second_source),
+                        "nonconflicting nested folder bytes incomplete", 15)
+                    assert second_source.is_dir()
+                    print("M23_REVERSE_DRAG_COLLISION_MIXED_SKIP_PRESERVES_FOLDER=PASS",
+                          flush=True)
+                assert sorted(p.name for p in target_dir.iterdir()) == sorted(
+                    (source.name, second_source.name))
         else:
             approve.iface_invoke.Invoke()
 
@@ -351,6 +380,10 @@ try:
                   flush=True)
         assert source.read_bytes() == source_bytes
         assert collision_target.read_bytes() == collision_bytes
+        if COLLISION == "skip-all":
+            assert second_source.read_bytes() == second_source_bytes
+            assert second_collision_target.read_bytes() == second_collision_bytes
+            assert sorted(p.name for p in target_dir.iterdir()) == expected_existing
         assert source.is_file() and collision_target.is_file()
     else:
         copied = target_dir / source.name
