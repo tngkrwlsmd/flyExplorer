@@ -1,6 +1,7 @@
 """Isolated OS-registered file types: bounded one-shot child, never UI Shell extension."""
 from pathlib import Path
 import unittest
+from column_resize_source_contract import assert_opt_in_pointer_observer
 
 ROOT=Path(__file__).resolve().parents[2]
 A=ROOT/"app"/"winui"
@@ -94,7 +95,7 @@ class RealFileListColumnContract(unittest.TestCase):
   self.assertNotIn('PointerMoved="OnDetailColumnResizePointerMoved"',xml)
   self.assertEqual(xml.count('Style="{StaticResource ExplorerColumnResizeThumbStyle}" Margin="0,1,0,1"'),6)
   self.assertGreaterEqual(impl.count("RootShell().AddHandler("),3)
-  self.assertNotIn("UIElement::PointerMovedEvent()",impl)
+  assert_opt_in_pointer_observer(self, impl)
   self.assertNotIn("ColumnResizeHitTarget",xml)
   self.assertNotIn("ColumnResizeHitTarget",impl)
   self.assertNotIn("OnDetailColumnResizeDragDelta",xml)
@@ -109,8 +110,12 @@ class RealFileListColumnContract(unittest.TestCase):
   self.assertNotIn('"?.txt"',owned)
   resize=(ROOT/"tests/winui/test_owned_column_resize_gui.py").read_text(
       encoding="utf-8")
-  for token in ("LeftNameColumnResizeThumb","LeftTypeColumnResizeThumb",
-                "LeftSizeColumnResizeThumb","mouse.press(button=\"left\"",
+  self.assertIn('def main(config="Release", pane="left"):',resize)
+  self.assertIn('pane_prefix="Right" if pane=="right" else "Left"',resize)
+  for token in ('pane_prefix+"NameColumnResizeThumb"',
+                'pane_prefix+"TypeColumnResizeThumb"',
+                'pane_prefix+"SizeColumnResizeThumb"',
+                "mouse.press(button=\"left\"",
                 "OWNED_DETAIL_COLUMN_NAME_RESIZE",
                 "OWNED_DETAIL_COLUMN_TYPE_RESIZE",
                 "OWNED_DETAIL_COLUMN_SIZE_RESIZE"):

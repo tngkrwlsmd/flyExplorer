@@ -1,6 +1,7 @@
 """Pure-source L08 hover correlation: not a WinUI build or GUI PASS."""
 from pathlib import Path
 import unittest
+from column_resize_source_contract import assert_opt_in_pointer_observer
 
 from l08_pointer_oracle import (
     PointerState, parse_l08_pointer_help, classify_l08_hover,
@@ -208,9 +209,7 @@ class L08PointerOracleContract(unittest.TestCase):
         # A missing thumb PointerEntered alone cannot classify WinUI input.
         # The unchanged native cursor oracle must remain a separate gate.
         self.assertIn("mL08RootPointerMoves=0;", WINDOW_HEADER)
-        self.assertIn('UIElement::PointerMovedEvent()', WINDOW)
-        self.assertIn('L"FLYEXPLORER_COLUMN_RESIZE_DIAGNOSTIC"', WINDOW)
-        self.assertIn('if(mL08RootPointerMoves<99999)', WINDOW)
+        assert_opt_in_pointer_observer(self, WINDOW)
         self.assertIn('L" rootMove="+std::to_wstring(ui->mL08RootPointerMoves)', WINDOW)
         self.assertIn('root_move_before=routed_root_moves()', HARNESS)
         self.assertIn('root_move_after=routed_root_moves()', HARNESS)

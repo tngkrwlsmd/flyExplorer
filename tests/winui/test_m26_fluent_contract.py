@@ -1,6 +1,7 @@
 """M2.6 Windows 11 Fluent shell source/architecture guardrails."""
 from pathlib import Path
 import unittest
+from column_resize_source_contract import assert_opt_in_pointer_observer
 import xml.etree.ElementTree as ET
 
 ROOT=Path(__file__).resolve().parents[2]
@@ -116,7 +117,7 @@ class FluentShellContract(unittest.TestCase):
         self.assertGreaterEqual(impl.count("RootShell().AddHandler("),3)
         constructor=impl[impl.index("MainWindow::MainWindow()"):
                          impl.index("// M2.6 uses the public WinUI 3 custom-titlebar")]
-        self.assertNotIn("UIElement::PointerMovedEvent()",constructor)
+        assert_opt_in_pointer_observer(self, constructor)
         self.assertNotIn("VisualTreeHelper::GetParent",impl)
         self.assertNotIn("ColumnResizeHitTarget",xaml)
         self.assertNotIn("ColumnResizeHitTarget",impl)

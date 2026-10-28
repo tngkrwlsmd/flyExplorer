@@ -64,7 +64,7 @@ class F04SidebarTreeContracts(unittest.TestCase):
         harness = read("tests/winui/test_shell_gui.py")
         initial = harness.index('print("REAL_WINUI_SHELL_CONTROLS"')
         focus = harness.index('if os.environ.get("FLY_F04_TREE_ONLY")=="YES":', initial)
-        standard = harness.index("startup_status=", initial)
+        standard = harness.index(" def startup_ready():", initial)
         self.assertLess(focus, standard)
         focused = harness[focus:standard]
         self.assertIn('for name in ("LeftFiles","RightFiles"):', focused)
