@@ -209,7 +209,7 @@ class OutboundDragContract(unittest.TestCase):
         script=(ROOT/"tests/winui/test_same_app_drag_regression_gui.py").read_text(
             encoding="utf-8")
         for token in (
-            'COLLISION == "skip-all" and ITEM_KIND != "multi-file"',
+            'COLLISION == "skip-all" and ITEM_KIND not in ("multi-file", "mixed")',
             'second_collision_target = target_dir / second_source.name',
             'second_collision_target.write_bytes(second_collision_bytes)',
             'second_source_bytes = (',
@@ -239,6 +239,38 @@ class OutboundDragContract(unittest.TestCase):
         self.assertIn('L"충돌한 "+std::to_wstring(skipped)', transfer)
         self.assertIn('개 항목을 모두 건너뛰었습니다. 파일을 변경하지 않았습니다.',
                       transfer)
+        self.assertNotIn('source.unlink(', script)
+        self.assertNotIn('shutil.rmtree(', script)
+
+    def test_reverse_mixed_all_collisions_skip_preserves_both_original_trees(self):
+        script=(ROOT/"tests/winui/test_same_app_drag_regression_gui.py").read_text(
+            encoding="utf-8")
+        for token in (
+            'COLLISION == "skip-all" and ITEM_KIND not in ("multi-file", "mixed")',
+            'assert ITEM_KIND in ("multi-file", "mixed") and second_source is not None',
+            'second_collision_target = target_dir / second_source.name',
+            'if ITEM_KIND == "mixed":',
+            'second_collision_target.mkdir()',
+            '(second_collision_target / "하위-폴더").mkdir()',
+            'existing destination nested folder: do not replace',
+            'existing destination root payload',
+            'second_source_tree = (',
+            'second_collision_tree = (',
+            'def assert_second_collision_unchanged():',
+            'assert owned_tree(second_source) == second_source_tree',
+            'assert owned_tree(second_collision_target) == second_collision_tree',
+            'assert_second_collision_unchanged()',
+            'lambda: "충돌한 2개 항목을 모두 건너뛰었습니다. 파일을 변경하지 않았습니다."',
+            'assert sorted(p.name for p in target_dir.iterdir()) == expected_existing',
+            'M23_REVERSE_DRAG_COLLISION_MIXED_ALL_SKIP_PRESERVES_TREES=PASS',
+        ):
+            self.assertIn(token, script)
+        self.assertLess(
+            script.index('second_collision_target.mkdir()'),
+            script.index('preview = None'))
+        self.assertLess(
+            script.index('skip.iface_invoke.Invoke()'),
+            script.index('M23_REVERSE_DRAG_COLLISION_MIXED_ALL_SKIP_PRESERVES_TREES=PASS'))
         self.assertNotIn('source.unlink(', script)
         self.assertNotIn('shutil.rmtree(', script)
 
