@@ -442,6 +442,22 @@ namespace winrt::FlyExplorer::implementation
                 const bool shift=(::GetKeyState(VK_SHIFT)&0x8000)!=0;
                 const bool alt=(::GetKeyState(VK_MENU)&0x8000)!=0;
                 const auto key=args.Key();
+                // WinUI TextBox can consume Down for caret movement before
+                // its bubbling KeyDown handler sees the key. Intercept only
+                // the focused address editor with visible, owned candidates
+                // on the existing root preview route; never open a path here.
+                if(!control&&!shift&&!alt&&
+                   key==Windows::System::VirtualKey::Down){
+                    if(auto ui=nativeWeak.get()){
+                        if(!ui->mClosing&&ui->AddressBox().Opacity()>=0.5&&
+                           ui->AddressBox().FocusState()!=FocusState::Unfocused&&
+                           ui->AddressSuggestionPanel().Visibility()==Visibility::Visible&&
+                           ui->AddressSuggestionRows().Children().Size()>0){
+                            ui->OnAddressKeyDown(nullptr,args);
+                            if(args.Handled())return;
+                        }
+                    }
+                }
                 // Closed set of Ctrl-only non-mutating focus shortcuts.
                 // File operations and F5/F6 keep their fixed bindings.
                 if(control&&!shift&&!alt){
