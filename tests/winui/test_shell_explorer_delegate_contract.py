@@ -104,6 +104,39 @@ class WindowsExplorerDelegationContracts(unittest.TestCase):
         self.assertIn("actual!=*expected",file_menu)
         self.assertIn("ui->mFileOperations.busy()",file_menu)
 
+    def test_deferred_file_menu_rebinds_selected_paths_after_list_refresh(self):
+        # Reused row indices alone do not prove the same file is selected.
+        # No stale right-click may execute Copy/Cut/Rename/Move or Shell verbs.
+        ui=source("app/winui/m22_transfers.cpp")
+        menu=ui.split("void MainWindow::ShowAppFileContextMenu(",1)[1].split(
+            "void MainWindow::ShowAppBackgroundContextMenu(",1)[0]
+        for token in (
+            "std::vector<std::pair<std::uint64_t,std::wstring>> selectedPaths;",
+            "selectedPaths.reserve(count);",
+            "selectedPaths.emplace_back(logical,indexed->parsingName);",
+            "std::sort(selectedPaths.begin(),selectedPaths.end());",
+            "auto expectedPaths=std::make_shared<",
+            "const std::vector<std::pair<std::uint64_t,std::wstring>>>",
+            "sourceShellFolder,sourceFilesystemFolder,",
+            "for(auto const& [logical,path]:*expectedPaths){",
+            "pane.tabs[tab].indexedItem(",
+            "if(!indexed||indexed->parsingName!=path){",
+            "선택한 파일 항목이 갱신됐습니다. 우클릭 메뉴를 다시 여세요.",
+            "파일 목록이 갱신됐습니다. 우클릭 메뉴를 다시 여세요.",
+        ):
+            self.assertIn(token,menu)
+        self.assertIn("item.Click([weak,side,identity,tab,route,expected,expectedPaths,",
+                      menu)
+        self.assertLess(menu.index("selectedPaths.emplace_back("),
+                        menu.index("std::sort(selectedPaths.begin(),selectedPaths.end());"))
+        self.assertLess(menu.index("if(actual!=*expected){"),
+                        menu.index("for(auto const& [logical,path]:*expectedPaths){"))
+        self.assertLess(menu.index("if(!indexed||indexed->parsingName!=path){"),
+                        menu.index("action(*ui);"))
+        callback=menu.split("item.Click([weak,side,identity,tab,route,expected,expectedPaths,",1)[1]
+        self.assertNotIn("GetFileAttributesW(",callback)
+        self.assertNotIn("std::filesystem::exists(",callback)
+
     def test_native_folder_handoff_is_explicit_and_read_only(self):
         h=source("src/base/shell_explorer_delegate.h")
         for token in (
