@@ -79,6 +79,30 @@ class OutboundDragContract(unittest.TestCase):
         self.assertNotIn('source.unlink(', script)
         self.assertNotIn('shutil.rmtree(', script)
 
+    def test_owned_nested_folder_drag_keeps_structure_bytes_and_default_file(self):
+        script=(ROOT/"tests/winui/test_same_app_drag_regression_gui.py").read_text(
+            encoding="utf-8")
+        for token in (
+            '"--item-kind", choices=("file", "folder"), default="file"',
+            'ITEM_KIND = arguments.item_kind',
+            'if ITEM_KIND == "folder":',
+            'source.mkdir()',
+            'nested.mkdir()',
+            'write_bytes(',
+            'source.write_text("owned same-app drag',
+            'def owned_tree(root):',
+            'relative = child.relative_to(root).as_posix()',
+            'assert not child.is_symlink()',
+            'assert owned_tree(copied) == owned_tree(source)',
+            'assert source.exists(), "same-app copy drag must preserve source"',
+            'print("REAL_SAME_APP_PRIVATE_DRAG_NESTED_FOLDER_COPY"',
+            'print("SAME_APP_DRAG_ITEM_KIND", ITEM_KIND',
+        ):
+            self.assertIn(token, script)
+        self.assertNotIn('source.rename(', script)
+        self.assertNotIn('source.unlink(', script)
+        self.assertNotIn('shutil.rmtree(', script)
+
     def test_same_app_private_drag_stays_copy_only_for_both_directions(self):
         source=compact(SOURCE.read_text(encoding="utf-8"))
         drop=source[source.index("fire_and_forget MainWindow::OnFileDrop"):]
