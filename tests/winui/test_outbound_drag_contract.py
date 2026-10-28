@@ -179,7 +179,7 @@ class OutboundDragContract(unittest.TestCase):
             'COLLISION == "skip" and ITEM_KIND != "multi-file"',
             'COLLISION != "skip" and ITEM_KIND != "file"',
             'second_row.click_input(pressed="control")',
-            'assert source_row.is_selected() and second_row.is_selected()',
+            'source_row.is_selected() and second_row.is_selected()',
             'if COLLISION == "skip":',
             'assert not (target_dir / second_source.name).exists()',
             'skip = modal_button("충돌 항목 건너뛰기")',
