@@ -52,6 +52,7 @@ if os.environ.get("FLY_PX12_VISUAL_COMPARE_ONLY")=="YES":
 if os.environ.get("FLY_PX12_ADDRESS_CHROME_ONLY")=="YES":
  # Both candidates belong to this temporary source fixture, not user paths.
  (left/"PX12Vanishing").mkdir()
+ (left/"PX12Nearby").mkdir()
  (inner/"PX12OwnedDestination.txt").write_text("owned PX12 success",encoding="utf-8")
  assert os.environ.get("FLY_F06_ADDRESS_SUGGEST_ONLY")!="YES"
 if os.environ.get("FLY_F05_GROUP_ONLY")=="YES" or os.environ.get("FLY_F05_PANES_ONLY")=="YES":
