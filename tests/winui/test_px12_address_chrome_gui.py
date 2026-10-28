@@ -94,7 +94,12 @@ def run(*, win, element, focus, eventually, left, right, owned):
     press("{ESC}")
     eventually(lambda: candidate(first) is None and candidate(second) is None,
                "PX12 Escape failed to dismiss keyboard candidates", 8)
-    assert committed(left)
+    # The first Escape only dismisses candidates; the second restores the
+    # last committed breadcrumb (the accepted existing address contract).
+    assert not committed(left)
+    press("{ESC}")
+    eventually(lambda: committed(left),
+               "PX12 second Escape did not restore committed address", 8)
     print("PX12_GUI_KEYBOARD_CANDIDATE_UP_DOWN=PASS", flush=True)
 
     stale = left / "PX12Vanishing"
