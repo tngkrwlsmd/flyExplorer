@@ -211,12 +211,12 @@ void MainWindow::OnHomeFolderClicked(
 void MainWindow::OnHomeManageBookmarksClicked(
     IInspectable const&,RoutedEventArgs const&){
     if(mClosing||HomeOverviewPanel().Visibility()!=Visibility::Visible)return;
-    OnToggleBookmarks(nullptr,RoutedEventArgs{});
+    OnToggleBookmarks(nullptr,RoutedEventArgs{nullptr});
 }
 void MainWindow::OnHomeManageActivityClicked(
     IInspectable const&,RoutedEventArgs const&){
     if(mClosing||HomeOverviewPanel().Visibility()!=Visibility::Visible)return;
-    OnToggleRecentActivity(nullptr,RoutedEventArgs{});
+    OnToggleRecentActivity(nullptr,RoutedEventArgs{nullptr});
 }
 void MainWindow::RefreshHomeOverview(){
     if(mClosing||HomeOverviewPanel().Visibility()!=Visibility::Visible)return;
