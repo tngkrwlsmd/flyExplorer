@@ -150,7 +150,7 @@ class OutboundDragContract(unittest.TestCase):
         script=(ROOT/"tests/winui/test_same_app_drag_regression_gui.py").read_text(
             encoding="utf-8")
         for token in (
-            '"--collision", choices=("none", "cancel", "keep-both", "skip"), default="none"',
+            '"--collision", choices=("none", "cancel", "keep-both", "skip", "skip-all"), default="none"',
             'if COLLISION != "none" and (',
             'collision_target = target_dir / source.name',
             'collision_target.write_bytes(collision_bytes)',
@@ -177,7 +177,7 @@ class OutboundDragContract(unittest.TestCase):
             encoding="utf-8")
         for token in (
             'COLLISION == "skip" and ITEM_KIND not in ("multi-file", "mixed")',
-            'COLLISION != "skip" and ITEM_KIND != "file"',
+            'COLLISION not in ("skip", "skip-all") and ITEM_KIND != "file"',
             'second_row.click_input(pressed="control")',
             'source_row.is_selected() and second_row.is_selected()',
             'source_bytes = source.read_bytes() if source.is_file() else None',
@@ -200,6 +200,45 @@ class OutboundDragContract(unittest.TestCase):
         self.assertLess(
             script.index('skip.iface_invoke.Invoke()'),
             script.index('M23_REVERSE_DRAG_COLLISION_SKIP_COPIES_ONLY_CLEAN=PASS'))
+        self.assertNotIn('source.unlink(', script)
+        self.assertNotIn('shutil.rmtree(', script)
+
+    def test_reverse_multi_drag_all_collisions_skip_preserves_every_byte(self):
+        # This distinct opt-in case creates *two* pre-existing destinations.
+        # It is not the earlier one-collision/one-clean-member scenario.
+        script=(ROOT/"tests/winui/test_same_app_drag_regression_gui.py").read_text(
+            encoding="utf-8")
+        for token in (
+            'COLLISION == "skip-all" and ITEM_KIND != "multi-file"',
+            'second_collision_target = target_dir / second_source.name',
+            'second_collision_target.write_bytes(second_collision_bytes)',
+            'second_source_bytes = (',
+            'if COLLISION == "skip-all":',
+            'assert second_collision_target.read_bytes() == second_collision_bytes',
+            'assert second_source.read_bytes() == second_source_bytes',
+            'expected_existing = sorted(',
+            'elif COLLISION in ("skip", "skip-all"):',
+            'skip.iface_invoke.Invoke()',
+            'lambda: "충돌한 항목을 모두 건너뛰었습니다."',
+            'in element("StatusText").window_text()',
+            'assert sorted(p.name for p in target_dir.iterdir()) == expected_existing',
+            'M23_REVERSE_DRAG_COLLISION_SKIP_ALL_PRESERVES_BOTH=PASS',
+        ):
+            self.assertIn(token, script)
+        self.assertLess(
+            script.index('second_collision_target.write_bytes(second_collision_bytes)'),
+            script.index('preview = None'))
+        self.assertLess(
+            script.index('skip.iface_invoke.Invoke()'),
+            script.index('M23_REVERSE_DRAG_COLLISION_SKIP_ALL_PRESERVES_BOTH=PASS'))
+        controller=(ROOT/"app/winui/file_operation_controller.cpp").read_text(
+            encoding="utf-8")
+        transfer=(ROOT/"app/winui/m22_transfers.cpp").read_text(
+            encoding="utf-8")
+        self.assertIn('return StartStatus::AllSkipped;', controller)
+        self.assertIn(
+            '충돌한 항목을 모두 건너뛰었습니다. 이 요청에서 파일을 변경하지 않았습니다.',
+            transfer)
         self.assertNotIn('source.unlink(', script)
         self.assertNotIn('shutil.rmtree(', script)
 
