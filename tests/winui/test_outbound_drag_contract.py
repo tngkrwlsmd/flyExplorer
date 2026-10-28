@@ -172,12 +172,59 @@ class OutboundDragContract(unittest.TestCase):
         self.assertNotIn('source.unlink(', script)
         self.assertNotIn('shutil.rmtree(', script)
 
+    def test_reverse_mixed_drag_cancel_preserves_original_file_and_folder(self):
+        script=(ROOT/"tests/winui/test_same_app_drag_regression_gui.py").read_text(
+            encoding="utf-8")
+        for token in (
+            'COLLISION not in ("skip", "skip-all") and ITEM_KIND not in ("file", "mixed")',
+            'if ITEM_KIND == "mixed" and COLLISION in ("cancel", "keep-both"):',
+            'assert owned_tree(second_source) == second_source_tree',
+            'assert not (target_dir / second_source.name).exists()',
+            'cancel.iface_invoke.Invoke()',
+            'lambda: "파일 작업 확인을 취소했습니다."',
+            'assert sorted(p.name for p in target_dir.iterdir()) == [source.name]',
+            'M23_REVERSE_DRAG_COLLISION_MIXED_CANCEL_NO_MUTATION=PASS',
+            'assert source.read_bytes() == source_bytes',
+            'assert collision_target.read_bytes() == collision_bytes',
+        ):
+            self.assertIn(token, script)
+        self.assertLess(
+            script.index('cancel.iface_invoke.Invoke()'),
+            script.index('M23_REVERSE_DRAG_COLLISION_MIXED_CANCEL_NO_MUTATION=PASS'))
+        self.assertNotIn('source.unlink(', script)
+        self.assertNotIn('shutil.rmtree(', script)
+
+    def test_reverse_mixed_drag_keep_both_preserves_original_and_copied_folder(self):
+        script=(ROOT/"tests/winui/test_same_app_drag_regression_gui.py").read_text(
+            encoding="utf-8")
+        for token in (
+            'COLLISION not in ("skip", "skip-all") and ITEM_KIND not in ("file", "mixed")',
+            'assert owned_tree(second_source) == second_source_tree',
+            'approve.iface_invoke.Invoke()',
+            'unique_copy = eventually(',
+            'lambda: unique_copy.read_bytes() == source_bytes',
+            'clean_folder = target_dir / second_source.name',
+            'lambda: clean_folder.is_dir() and',
+            'owned_tree(clean_folder) == second_source_tree',
+            'assert sorted(p.name for p in target_dir.iterdir()) == sorted(',
+            '(source.name, unique_copy.name, second_source.name)',
+            'M23_REVERSE_DRAG_COLLISION_MIXED_KEEP_BOTH_PRESERVES_ALL=PASS',
+            'assert source.read_bytes() == source_bytes',
+            'assert collision_target.read_bytes() == collision_bytes',
+        ):
+            self.assertIn(token, script)
+        self.assertLess(
+            script.index('approve.iface_invoke.Invoke()'),
+            script.index('M23_REVERSE_DRAG_COLLISION_MIXED_KEEP_BOTH_PRESERVES_ALL=PASS'))
+        self.assertNotIn('source.unlink(', script)
+        self.assertNotIn('shutil.rmtree(', script)
+
     def test_reverse_drag_skip_preserves_collision_and_copies_clean_member(self):
         script=(ROOT/"tests/winui/test_same_app_drag_regression_gui.py").read_text(
             encoding="utf-8")
         for token in (
             'COLLISION == "skip" and ITEM_KIND not in ("multi-file", "mixed")',
-            'COLLISION not in ("skip", "skip-all") and ITEM_KIND != "file"',
+            'COLLISION not in ("skip", "skip-all") and ITEM_KIND not in ("file", "mixed")',
             'second_row.click_input(pressed="control")',
             'source_row.is_selected() and second_row.is_selected()',
             'source_bytes = source.read_bytes() if source.is_file() else None',
