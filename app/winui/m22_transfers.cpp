@@ -210,7 +210,10 @@ void MainWindow::ShowAppFileContextMenu(
      const std::vector<std::pair<std::uint64_t,std::wstring>>>(
       std::move(selectedPaths));
  const auto identity=workspace.identity;
- const bool ready=!mFileOperations.busy();
+ // Collision confirmation is an unfinished file operation even though
+ // its worker is idle. Never enable a new file command behind that modal.
+ const bool ready=!mFileOperations.busy()&&
+                  !mFileOperations.pendingConfirmationToken();
  const bool localSource=!pane.filesystemPaths[tab].empty();
  const bool localSelection=ready&&boundedSources&&
   localSource&&allFilesystem;
@@ -281,7 +284,8 @@ void MainWindow::ShowAppFileContextMenu(
       tab>=pane.filesystemPaths.size()||
       pane.tabs[tab].snapshot().parsingName!=sourceShellFolder||
       pane.filesystemPaths[tab]!=sourceFilesystemFolder||
-      ui->mFileOperations.busy()){
+      ui->mFileOperations.busy()||
+      ui->mFileOperations.pendingConfirmationToken()){
     ui->StatusText().Text(
      L"파일 메뉴를 연 뒤 창이나 작업 상태가 변경됐습니다. 다시 선택하세요.");
     return;
