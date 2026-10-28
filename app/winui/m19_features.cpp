@@ -310,6 +310,18 @@ void MainWindow::OnOpenRecentActivityFile(
     auto display=RecentActivityFiles().SelectedItem().try_as<ComboBoxItem>();
     if(!display||unbox_value<hstring>(display.Content())!=hstring(path)||
        !fxfile::previewactivity::RecentActivityController::acceptable(path))return;
+    OpenRecentActivityFilePath(path);
+}
+void MainWindow::OpenRecentActivityFilePath(std::wstring const& path){
+    if(mClosing||!mRecentActivity.enabled()||mFileOperations.busy()||
+       !fxfile::previewactivity::RecentActivityController::acceptable(path))
+        return;
+    // Reject a stale home tile after opt-out, removal or a recent-list update.
+    const auto& recent=mRecentActivity.files();
+    if(std::find(recent.begin(),recent.end(),path)==recent.end()){
+        StatusText().Text(L"최근 파일 기록이 변경됐습니다. 홈을 다시 여세요.");
+        return;
+    }
     const int side=ActiveWindowTab().model.activePane;
     const auto context=FileOperationContext(side);
     auto weak=get_weak();
@@ -330,6 +342,8 @@ void MainWindow::OnOpenRecentActivityFile(
                     ui->mRecentActivity.recordFile(path);
                     if(ui->RecentActivityPanel().Visibility()==Visibility::Visible)
                         ui->RefreshRecentActivityPanel();
+                    if(ui->HomeOverviewPanel().Visibility()==Visibility::Visible)
+                        ui->RefreshHomeOverview();
                 }
                 ui->StatusText().Text(result==Open::Result::Opened?
                     L"기본 앱으로 최근 파일을 열었습니다.":
