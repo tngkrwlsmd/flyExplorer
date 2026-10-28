@@ -1,6 +1,7 @@
 """Focused same-app physical drag regression after outbound StorageItems support."""
 
 from pathlib import Path
+import argparse
 import ctypes as c
 from ctypes import wintypes as W
 import os
@@ -15,6 +16,17 @@ from profile_guard import assert_legacy_profile_unchanged, snapshot_legacy_profi
 from uia_polling import wait_until
 
 
+direction_parser = argparse.ArgumentParser(description=__doc__)
+direction_parser.add_argument(
+    "--direction", choices=("left-to-right", "right-to-left"),
+    default="left-to-right",
+    help="Exact test-owned source and destination pane direction",
+)
+DIRECTION = direction_parser.parse_args().direction
+REVERSE = DIRECTION == "right-to-left"
+SOURCE_PANE_ID = "RightFiles" if REVERSE else "LeftFiles"
+TARGET_PANE_ID = "LeftFiles" if REVERSE else "RightFiles"
+
 CONFIG = os.environ.get("FLY_MIGRATION_CONFIGURATION", "Release")
 assert CONFIG in ("Debug", "Release")
 EXE = app_exe(CONFIG)
@@ -28,7 +40,9 @@ left = owned / "left"
 right = owned / "right"
 left.mkdir()
 right.mkdir()
-source = left / "내부끌기-한글.txt"
+source_dir = right if REVERSE else left
+target_dir = left if REVERSE else right
+source = source_dir / "내부끌기-한글.txt"
 source.write_text("owned same-app drag\n", encoding="utf-8")
 
 env = os.environ.copy()
@@ -146,14 +160,14 @@ try:
     # Reassert both owned routes explicitly. This avoids relying on UIA peer
     # identity across an AddressBox navigation and keeps the regression focused
     # on the physical drag rather than pane-routing state.
-    visit("LeftFiles", left, source.name)
-    visit("RightFiles", right)
-    visit("LeftFiles", left, source.name)
-    source_row = row("LeftFiles", source.name)
+    visit("LeftFiles", left, source.name if not REVERSE else None)
+    visit("RightFiles", right, source.name if REVERSE else None)
+    visit(SOURCE_PANE_ID, source_dir, source.name)
+    source_row = row(SOURCE_PANE_ID, source.name)
     source_row.select()
 
     origin = source_row.rectangle().mid_point()
-    rr = element("RightFiles").rectangle()
+    rr = element(TARGET_PANE_ID).rectangle()
     target = (
         rr.left + min(150, max(40, int(rr.width() * .35))),
         rr.top + min(180, max(55, int(rr.height() * .45))),
@@ -171,11 +185,15 @@ try:
     finally:
         mouse.release(button="left", coords=target)
 
-    copied = right / source.name
+    copied = target_dir / source.name
     eventually(lambda: copied.is_file(),
                "same-app private-token drag did not copy owned file", 18)
-    assert copied.read_text(encoding="utf-8") == source.read_text(encoding="utf-8")
+    assert copied.read_bytes() == source.read_bytes()
     assert source.is_file(), "same-app copy drag must preserve source"
+    assert source.parent == source_dir and copied.parent == target_dir
+    print("SAME_APP_DRAG_DIRECTION", DIRECTION, flush=True)
+    if REVERSE:
+        print("REAL_SAME_APP_PRIVATE_DRAG_RIGHT_TO_LEFT_COPY", True, flush=True)
 
     print("REAL_SAME_APP_PRIVATE_DRAG_COPY_AFTER_OUTBOUND_SUPPORT", True, flush=True)
     print("SAME_APP_DRAG_REGRESSION=PASS", flush=True)
