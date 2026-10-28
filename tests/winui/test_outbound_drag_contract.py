@@ -88,7 +88,7 @@ class OutboundDragContract(unittest.TestCase):
         self.assertIn("mPrivateDragToken.clear()",drop)
         self.assertLess(
             drop.index("if(view.Contains(hstring(PrivateFormat)))"),
-            drop.index("else if(view.Contains(StandardDataFormats::StorageItems()))"
+            drop.index("else if(view.Contains(StandardDataFormats::StorageItems()))")
         )
         self.assertNotIn("Kind::Move", drop)
 
