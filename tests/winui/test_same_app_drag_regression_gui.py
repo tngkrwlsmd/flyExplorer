@@ -23,7 +23,7 @@ direction_parser.add_argument(
     help="Exact test-owned source and destination pane direction",
 )
 direction_parser.add_argument(
-    "--item-kind", choices=("file", "folder"), default="file",
+    "--item-kind", choices=("file", "folder", "multi-file"), default="file",
     help="Exact test-owned physical source item type",
 )
 arguments = direction_parser.parse_args()
@@ -61,6 +61,10 @@ if ITEM_KIND == "folder":
     (source / "root-payload.bin").write_bytes(b"owned folder root\x00\xfe")
 else:
     source.write_text("owned same-app drag\n", encoding="utf-8")
+second_source = None
+if ITEM_KIND == "multi-file":
+    second_source = source_dir / "두번째-한글.txt"
+    second_source.write_bytes("owned second file\n".encode("utf-8"))
 
 env = os.environ.copy()
 for key in ("APPDATA", "LOCALAPPDATA", "TEMP", "TMP"):
@@ -182,6 +186,17 @@ try:
     visit(SOURCE_PANE_ID, source_dir, source.name)
     source_row = row(SOURCE_PANE_ID, source.name)
     source_row.select()
+    if ITEM_KIND == "multi-file":
+        eventually(
+            lambda: row(SOURCE_PANE_ID, second_source.name) is not None,
+            "second test-owned ListItem did not render", 10)
+        second_row = row(SOURCE_PANE_ID, second_source.name)
+        focus_owned(win, win.handle, preview.pid)
+        second_row.click_input(pressed="control")
+        eventually(
+            lambda: source_row.is_selected() and second_row.is_selected(),
+            "two owned source rows not simultaneously selected", 5)
+        print("M23_OWNED_MULTI_FILE_SELECTED", True, flush=True)
 
     origin = source_row.rectangle().mid_point()
     rr = element(TARGET_PANE_ID).rectangle()
@@ -231,6 +246,14 @@ try:
         assert source.is_file(), "same-app copy drag must preserve source"
     assert source.exists(), "same-app copy drag must preserve source"
     assert source.parent == source_dir and copied.parent == target_dir
+    if ITEM_KIND == "multi-file":
+        second_copy = target_dir / second_source.name
+        eventually(lambda: second_copy.is_file(),
+                   "same-app multi-file second item missing", 18)
+        assert second_copy.read_bytes() == second_source.read_bytes()
+        assert second_source.is_file(), "multi-file drag removed original"
+        print("REAL_SAME_APP_PRIVATE_DRAG_MULTI_FILE_COPY", True,
+              flush=True)
     print("SAME_APP_DRAG_DIRECTION", DIRECTION, flush=True)
     print("SAME_APP_DRAG_ITEM_KIND", ITEM_KIND, flush=True)
     if REVERSE:
