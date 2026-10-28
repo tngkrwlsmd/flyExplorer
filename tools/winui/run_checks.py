@@ -595,6 +595,7 @@ def run_gui(area, configuration, env, tag):
             encoding="utf-8", errors="replace"
         )
         markers = (
+            "PX12_GUI_KEYBOARD_CANDIDATE_UP_DOWN=PASS",
             "PX12_GUI_STALE_CANDIDATE_OFFERED=PASS",
             "PX12_GUI_FAILED_CANDIDATE_COMMITTED_ADDRESS=PASS",
             "PX12_GUI_FAILED_CANDIDATE_PANE_RETAINED=PASS",
