@@ -64,6 +64,12 @@ namespace winrt::FlyExplorer::implementation
         void OnActivateLeft(IInspectable const&, Microsoft::UI::Xaml::RoutedEventArgs const&);
         void OnActivateRight(IInspectable const&, Microsoft::UI::Xaml::RoutedEventArgs const&);
         void OnHomeClicked(IInspectable const&, Microsoft::UI::Xaml::RoutedEventArgs const&);
+        void OnHomeFolderClicked(IInspectable const&, Microsoft::UI::Xaml::RoutedEventArgs const&);
+        void OnHomeManageBookmarksClicked(IInspectable const&, Microsoft::UI::Xaml::RoutedEventArgs const&);
+        void OnHomeManageActivityClicked(IInspectable const&, Microsoft::UI::Xaml::RoutedEventArgs const&);
+        void ShowHomeOverview();
+        void RefreshHomeOverview();
+        void OpenRecentActivityFilePath(std::wstring const& path);
         void OnDocumentsClicked(IInspectable const&, Microsoft::UI::Xaml::RoutedEventArgs const&);
         void OnDownloadsClicked(IInspectable const&, Microsoft::UI::Xaml::RoutedEventArgs const&);
         void OnThisPCClicked(IInspectable const&, Microsoft::UI::Xaml::RoutedEventArgs const&);
