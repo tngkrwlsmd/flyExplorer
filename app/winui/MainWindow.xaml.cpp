@@ -4041,7 +4041,8 @@ namespace winrt::FlyExplorer::implementation
                 if(known[i].isFolder()&&known[i].isFileSystem())
                     offer(known[i].parsingName);
         }
-        for(auto const& path:choices){
+        for(std::size_t candidateIndex=0;candidateIndex<choices.size();++candidateIndex){
+            auto const& path=choices[candidateIndex];
             Button button;
             // Show the identifying final folder rather than the shared
             // beginning of a long path in narrow address chrome. These are
@@ -4070,12 +4071,41 @@ namespace winrt::FlyExplorer::implementation
                 button,L"주소 후보: "+hstring(path));
             button.Click({this,&MainWindow::OnAddressSuggestionClicked});
             auto weak=get_weak();
-            button.KeyDown([weak](IInspectable const&,
+            button.KeyDown([weak,candidateIndex](IInspectable const&,
                 Input::KeyRoutedEventArgs const& args){
-                if(args.Key()!=Windows::System::VirtualKey::Escape)return;
+                const auto key=args.Key();
+                if(key!=Windows::System::VirtualKey::Escape&&
+                   key!=Windows::System::VirtualKey::Up&&
+                   key!=Windows::System::VirtualKey::Down)return;
                 if(auto ui=weak.get()){
-                    ui->HideAddressSuggestions();
-                    ui->AddressBox().Focus(FocusState::Keyboard);
+                    if(ui->mClosing)return;
+                    if(key==Windows::System::VirtualKey::Escape){
+                        ui->HideAddressSuggestions();
+                        ui->AddressBox().Focus(FocusState::Keyboard);
+                        args.Handled(true);
+                        return;
+                    }
+                    if(ui->AddressSuggestionPanel().Visibility()!=Visibility::Visible)
+                        return;
+                    const auto siblings=ui->AddressSuggestionRows().Children();
+                    if(candidateIndex>=siblings.Size())return;
+                    if(key==Windows::System::VirtualKey::Up&&candidateIndex==0){
+                        // Back to editing, without navigating a pending path.
+                        ui->AddressBox().Focus(FocusState::Keyboard);
+                        args.Handled(true);
+                        return;
+                    }
+                    const auto target=(key==Windows::System::VirtualKey::Down)?
+                        candidateIndex+1:candidateIndex-1;
+                    if(target<siblings.Size()){
+                        if(auto next=siblings.GetAt(static_cast<std::uint32_t>(target))
+                                .try_as<Button>()){
+                            ui->mAddressSuggestionKeyboardFocus=true;
+                            next.Focus(FocusState::Keyboard);
+                        }
+                    }
+                    // At the final row, stay on that row instead of allowing
+                    // the key to escape to an unrelated window control.
                     args.Handled(true);
                 }
             });
