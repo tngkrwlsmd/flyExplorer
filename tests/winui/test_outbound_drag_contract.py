@@ -83,7 +83,7 @@ class OutboundDragContract(unittest.TestCase):
         script=(ROOT/"tests/winui/test_same_app_drag_regression_gui.py").read_text(
             encoding="utf-8")
         for token in (
-            '"--item-kind", choices=("file", "folder"), default="file"',
+            '"--item-kind", choices=("file", "folder", "multi-file"), default="file"',
             'ITEM_KIND = arguments.item_kind',
             'if ITEM_KIND == "folder":',
             'source.mkdir()',
