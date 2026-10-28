@@ -27,7 +27,7 @@ direction_parser.add_argument(
     help="Exact test-owned physical source item type",
 )
 direction_parser.add_argument(
-    "--collision", choices=("none", "cancel", "keep-both", "keep-both-late-folder", "keep-both-late-file", "keep-both-type-folder-file", "skip", "skip-all"), default="none",
+    "--collision", choices=("none", "cancel", "keep-both", "keep-both-late-folder", "keep-both-late-file", "keep-both-type-folder-file", "keep-both-source-renamed", "skip", "skip-all"), default="none",
     help="Focused right-to-left copy collision decision; never overwrite",
 )
 arguments = direction_parser.parse_args()
@@ -449,6 +449,26 @@ try:
                           flush=True)
                 assert sorted(p.name for p in target_dir.iterdir()) == sorted(
                     (source.name, second_source.name))
+        elif COLLISION == "keep-both-source-renamed":
+            # Rename only the test-owned source while confirmation is open.
+            # The queued transfer still holds the original path, which must
+            # fail rather than copy from an unrelated/stale location.
+            renamed_source = source_dir / "원본-이름변경-한글.txt"
+            assert not renamed_source.exists() and source.is_file()
+            source.rename(renamed_source)
+            assert not source.exists()
+            assert renamed_source.read_bytes() == source_bytes
+            assert sorted(p.name for p in target_dir.iterdir()) == [source.name]
+            approve.iface_invoke.Invoke()
+            eventually(
+                lambda: "일부 항목이 처리됐을 수 있습니다."
+                in element("StatusText").window_text(),
+                "renamed source did not produce an explicit failed operation", 23)
+            assert renamed_source.read_bytes() == source_bytes
+            assert not source.exists()
+            assert sorted(p.name for p in target_dir.iterdir()) == [source.name]
+            assert collision_target.read_bytes() == collision_bytes
+            print("M23_REVERSE_DRAG_SOURCE_RENAMED_FAIL_CLOSED=PASS", flush=True)
         else:
             approve.iface_invoke.Invoke()
 
@@ -555,12 +575,18 @@ try:
                     assert len(list(target_dir.iterdir())) == 2
                     print("M23_REVERSE_DRAG_COLLISION_KEEP_BOTH_PRESERVES_TARGET=PASS",
                           flush=True)
-        assert source.read_bytes() == source_bytes
+        if COLLISION == "keep-both-source-renamed":
+            assert not source.exists()
+            assert renamed_source.read_bytes() == source_bytes
+        else:
+            assert source.read_bytes() == source_bytes
         assert collision_target.read_bytes() == collision_bytes
         if COLLISION == "skip-all":
             assert_second_collision_unchanged()
             assert sorted(p.name for p in target_dir.iterdir()) == expected_existing
-        assert source.is_file() and collision_target.is_file()
+        assert collision_target.is_file()
+        if COLLISION != "keep-both-source-renamed":
+            assert source.is_file()
         if ITEM_KIND == "mixed" and COLLISION in ("cancel", "keep-both", "keep-both-late-folder"):
             assert second_source.is_dir()
             assert owned_tree(second_source) == second_source_tree
