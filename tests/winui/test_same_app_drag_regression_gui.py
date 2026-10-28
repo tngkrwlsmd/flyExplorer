@@ -326,7 +326,7 @@ try:
             skip.iface_invoke.Invoke()
             if COLLISION == "skip-all":
                 eventually(
-                    lambda: "충돌한 항목을 모두 건너뛰었습니다."
+                    lambda: "충돌한 2개 항목을 모두 건너뛰었습니다. 파일을 변경하지 않았습니다."
                     in element("StatusText").window_text(),
                     "two-collision all-skipped status not acknowledged", 12)
                 assert sorted(p.name for p in target_dir.iterdir()) == expected_existing
