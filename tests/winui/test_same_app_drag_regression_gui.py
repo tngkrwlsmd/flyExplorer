@@ -27,7 +27,7 @@ direction_parser.add_argument(
     help="Exact test-owned physical source item type",
 )
 direction_parser.add_argument(
-    "--collision", choices=("none", "cancel", "keep-both", "keep-both-late-folder", "keep-both-late-file", "skip", "skip-all"), default="none",
+    "--collision", choices=("none", "cancel", "keep-both", "keep-both-late-folder", "keep-both-late-file", "keep-both-type-folder-file", "skip", "skip-all"), default="none",
     help="Focused right-to-left copy collision decision; never overwrite",
 )
 arguments = direction_parser.parse_args()
@@ -41,12 +41,15 @@ if COLLISION != "none" and (
     (COLLISION == "skip-all" and ITEM_KIND not in ("multi-file", "mixed")) or
     (COLLISION == "keep-both-late-folder" and ITEM_KIND != "mixed") or
     (COLLISION == "keep-both-late-file" and ITEM_KIND != "multi-file") or
-    (COLLISION not in ("skip", "skip-all", "keep-both-late-folder", "keep-both-late-file")
+    (COLLISION == "keep-both-type-folder-file" and ITEM_KIND != "mixed") or
+    (COLLISION not in ("skip", "skip-all", "keep-both-late-folder", "keep-both-late-file",
+                       "keep-both-type-folder-file")
      and ITEM_KIND not in ("file", "mixed"))
 ):
     direction_parser.error(
         "collision requires right-to-left file/mixed (cancel/keep-both), "
-        "mixed (keep-both-late-folder), multi-file (keep-both-late-file), "
+        "mixed (keep-both-late-folder or keep-both-type-folder-file), "
+        "multi-file (keep-both-late-file), "
         "or multi-file/mixed (skip or skip-all)"
     )
 SOURCE_PANE_ID = "RightFiles" if REVERSE else "LeftFiles"
@@ -99,10 +102,14 @@ if COLLISION != "none":
     collision_target.write_bytes(collision_bytes)
 second_collision_target = None
 second_collision_bytes = None
-if COLLISION == "skip-all":
+if COLLISION in ("skip-all", "keep-both-type-folder-file"):
     assert ITEM_KIND in ("multi-file", "mixed") and second_source is not None
     second_collision_target = target_dir / second_source.name
-    if ITEM_KIND == "mixed":
+    if COLLISION == "keep-both-type-folder-file":
+        assert ITEM_KIND == "mixed" and second_source.is_dir()
+        second_collision_bytes = b"pre-existing destination file where source is nested folder"
+        second_collision_target.write_bytes(second_collision_bytes)
+    elif ITEM_KIND == "mixed":
         second_collision_target.mkdir()
         (second_collision_target / "하위-폴더").mkdir()
         (second_collision_target / "하위-폴더" / "혼합-한글.txt").write_bytes(
@@ -332,11 +339,17 @@ try:
         assert source.read_bytes() == source_bytes
         assert collision_target.read_bytes() == collision_bytes
         expected_existing = sorted(
-            [source.name] + ([second_source.name] if COLLISION == "skip-all" else [])
+            [source.name] + ([second_source.name]
+                             if COLLISION in ("skip-all", "keep-both-type-folder-file")
+                             else [])
         )
         assert sorted(p.name for p in target_dir.iterdir()) == expected_existing
         if COLLISION == "skip-all":
             assert_second_collision_unchanged()
+        if COLLISION == "keep-both-type-folder-file":
+            assert second_collision_target.is_file()
+            assert second_collision_target.read_bytes() == second_collision_bytes
+            assert owned_tree(second_source) == second_source_tree
         if ITEM_KIND == "mixed" and COLLISION in ("cancel", "keep-both", "keep-both-late-folder"):
             assert second_source.is_dir()
             assert owned_tree(second_source) == second_source_tree
@@ -439,7 +452,38 @@ try:
         else:
             approve.iface_invoke.Invoke()
 
-            if COLLISION == "keep-both-late-file":
+            if COLLISION == "keep-both-type-folder-file":
+                def type_mismatch_copies():
+                    copied_files = [
+                        p for p in target_dir.iterdir()
+                        if p.is_file()
+                        and p.name not in (source.name, second_source.name)
+                    ]
+                    copied_folders = [
+                        p for p in target_dir.iterdir()
+                        if p.is_dir() and p.name != second_source.name
+                    ]
+                    if len(copied_files) == 1 and len(copied_folders) == 1:
+                        return copied_files[0], copied_folders[0]
+                    return None
+
+                copied_file, copied_folder = eventually(
+                    type_mismatch_copies,
+                    "type-mismatched collision did not create separate copies", 23)
+                eventually(
+                    lambda: copied_file.read_bytes() == source_bytes
+                    and owned_tree(copied_folder) == second_source_tree,
+                    "file/folder type collision copy bytes incomplete", 15)
+                assert second_collision_target.is_file()
+                assert second_collision_target.read_bytes() == second_collision_bytes
+                assert source.read_bytes() == source_bytes
+                assert owned_tree(second_source) == second_source_tree
+                assert sorted(p.name for p in target_dir.iterdir()) == sorted(
+                    (source.name, second_source.name,
+                     copied_file.name, copied_folder.name))
+                print("M23_REVERSE_DRAG_FOLDER_ON_FILE_KEEP_BOTH=PASS",
+                      flush=True)
+            elif COLLISION == "keep-both-late-file":
                 def renamed_file_copies():
                     originals = {source.name, second_source.name}
                     candidates = [
@@ -525,6 +569,9 @@ try:
         if COLLISION == "keep-both-late-file":
             assert second_source.read_bytes() == second_source_bytes
             assert late_file.read_bytes() == late_file_bytes
+        if COLLISION == "keep-both-type-folder-file":
+            assert second_collision_target.read_bytes() == second_collision_bytes
+            assert owned_tree(second_source) == second_source_tree
     else:
         copied = target_dir / source.name
         eventually(
