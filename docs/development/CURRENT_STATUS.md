@@ -1,3 +1,10 @@
+# 2026-10-28 — M23 right→left same-app physical file drag accepted
+
+- **Exact reverse GUI PASS:** Windows VM active interactive desktop (`M23_INTERACTIVE_DESKTOP_READY=True`), exact `46edc74af0cc10fb253cd66dc83802b321c25961`; direct test-owned GUI `python -X utf8 tests/winui/test_same_app_drag_regression_gui.py --direction right-to-left` emitted `SAME_APP_DRAG_DIRECTION right-to-left`, `REAL_SAME_APP_PRIVATE_DRAG_RIGHT_TO_LEFT_COPY True`, `REAL_SAME_APP_PRIVATE_DRAG_COPY_AFTER_OUTBOUND_SUPPORT True`, `SAME_APP_DRAG_REGRESSION=PASS`, exited **0** (7.03s). The fixture asserts right-side source still exists, left-side target exists, exact byte-for-byte match, and original legacy MFC settings unchanged on normal exit. Only a test-owned executable and test-owned folders were touched; no production code changes or full rebuild needed.
+- **Acceptance boundary:** right→left **one-file Copy-only private same-app physical drag** is now **ACCEPTED**. Existing left→right and outbound Explorer file drag acceptance remains intact. No implicit Move semantics. This result does not accept folder items, multi-selection, collision variants, unrelated file moves or arbitrary third-party destinations. The previous source-only `OPEN` note is retained as historical status, superseded by the direct GUI proof.
+
+---
+
 # 2026-10-28 — M23 reverse same-app file drag coverage added (source-only)
 
 - **Existing acceptance retained:** The prior left→right test-owned physical drag Copy and the flyExplorer→new owned Explorer outbound StorageItems Copy already have exact historical Windows acceptance (see `docs/development/ERROR_HISTORY.md`, 2026-10-05 / 2026-10-06). These were **not** rerun or reopened. Explicit Move and collision behavior is a separate existing file-operation path; private WinUI drag/drop remains **Copy-only** and must never silently infer Move.
