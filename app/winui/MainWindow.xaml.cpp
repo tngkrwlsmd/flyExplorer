@@ -434,6 +434,33 @@ namespace winrt::FlyExplorer::implementation
                 if(ui->mWorkspace.count()==1){ui->PrepareXamlForClose();ui->Close();return;}
                 ui->CloseWindowTab(static_cast<size_t>(index));
             }});
+        // TextBox may mark Down handled before the normal bubbling KeyDown
+        // event reaches app code. Register once for handled routed input;
+        // do not intercept ordinary caret navigation without candidates.
+        AddressBox().AddHandler(
+            UIElement::KeyDownEvent(),
+            winrt::box_value(Microsoft::UI::Xaml::Input::KeyEventHandler{
+                [nativeWeak](IInspectable const&,
+                    Microsoft::UI::Xaml::Input::KeyRoutedEventArgs const& args){
+                    if(auto ui=nativeWeak.get()){
+                        if(ui->mClosing)return;
+                        const auto key=args.Key();
+                        if(key==Windows::System::VirtualKey::Down){
+                            if((::GetKeyState(VK_CONTROL)&0x8000)!=0||
+                               (::GetKeyState(VK_SHIFT)&0x8000)!=0||
+                               (::GetKeyState(VK_MENU)&0x8000)!=0||
+                               ui->AddressBox().Opacity()<0.5||
+                               ui->AddressSuggestionPanel().Visibility()!=Visibility::Visible)
+                                return;
+                            ui->OnAddressKeyDown(nullptr,args);
+                        }else if(!args.Handled()&&
+                            (key==Windows::System::VirtualKey::Enter||
+                             key==Windows::System::VirtualKey::Escape)){
+                            // Preserve handled IME composition Enter semantics.
+                            ui->OnAddressKeyDown(nullptr,args);
+                        }
+                    }
+                }}),true);
         RootShell().PreviewKeyDown(
             Microsoft::UI::Xaml::Input::KeyEventHandler(
             [nativeWeak](IInspectable const&,
@@ -442,22 +469,6 @@ namespace winrt::FlyExplorer::implementation
                 const bool shift=(::GetKeyState(VK_SHIFT)&0x8000)!=0;
                 const bool alt=(::GetKeyState(VK_MENU)&0x8000)!=0;
                 const auto key=args.Key();
-                // WinUI TextBox can consume Down for caret movement before
-                // its bubbling KeyDown handler sees the key. Intercept only
-                // the focused address editor with visible, owned candidates
-                // on the existing root preview route; never open a path here.
-                if(!control&&!shift&&!alt&&
-                   key==Windows::System::VirtualKey::Down){
-                    if(auto ui=nativeWeak.get()){
-                        if(!ui->mClosing&&ui->AddressBox().Opacity()>=0.5&&
-                           ui->AddressBox().FocusState()!=FocusState::Unfocused&&
-                           ui->AddressSuggestionPanel().Visibility()==Visibility::Visible&&
-                           ui->AddressSuggestionRows().Children().Size()>0){
-                            ui->OnAddressKeyDown(nullptr,args);
-                            if(args.Handled())return;
-                        }
-                    }
-                }
                 // Closed set of Ctrl-only non-mutating focus shortcuts.
                 // File operations and F5/F6 keep their fixed bindings.
                 if(control&&!shift&&!alt){
@@ -4087,7 +4098,10 @@ namespace winrt::FlyExplorer::implementation
                 button,L"주소 후보: "+hstring(path));
             button.Click({this,&MainWindow::OnAddressSuggestionClicked});
             auto weak=get_weak();
-            button.KeyDown([weak,candidateIndex](IInspectable const&,
+            // Candidate Buttons can handle arrows for default focus navigation.
+            // The handled-event path keeps focus within the bounded candidate set.
+            button.AddHandler(UIElement::KeyDownEvent(),
+                winrt::box_value(Input::KeyEventHandler{[weak,candidateIndex](IInspectable const&,
                 Input::KeyRoutedEventArgs const& args){
                 const auto key=args.Key();
                 if(key!=Windows::System::VirtualKey::Escape&&
@@ -4124,7 +4138,7 @@ namespace winrt::FlyExplorer::implementation
                     // the key to escape to an unrelated window control.
                     args.Handled(true);
                 }
-            });
+            }}),true);
             rows.Children().Append(button);
         }
         if(choices.empty()){panel.Visibility(Visibility::Collapsed);return;}
