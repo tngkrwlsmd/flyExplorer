@@ -62,5 +62,28 @@ class F06AddressCandidateLabelContract(unittest.TestCase):
 
 
 
+    def test_px12_preview_catches_only_unhandled_down_in_address_editor(self):
+        main=SOURCE
+        preview=main.split("RootShell().PreviewKeyDown(",1)[1].split(
+            "// Explorer navigation keys target the active pane only.",1)[0]
+        for token in (
+            "key==Windows::System::VirtualKey::Down",
+            "!control&&!shift&&!alt",
+            "!ui->mClosing",
+            "ui->AddressBox().Opacity()>=0.5",
+            "ui->AddressBox().FocusState()!=FocusState::Unfocused",
+            "ui->AddressSuggestionPanel().Visibility()==Visibility::Visible",
+            "ui->AddressSuggestionRows().Children().Size()>0",
+            "ui->OnAddressKeyDown(nullptr,args);",
+            "if(args.Handled())return;",
+        ):
+            self.assertIn(token,preview)
+        self.assertLess(preview.index("ui->OnAddressKeyDown(nullptr,args);"),
+                        preview.index("// Closed set of Ctrl-only"))
+        self.assertNotIn("OpenFolder(",preview)
+        self.assertNotIn("QueuePidl(",preview)
+        self.assertNotIn("FindFirstFile",preview)
+
+
 if __name__=="__main__":
     unittest.main()
