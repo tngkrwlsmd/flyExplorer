@@ -22,8 +22,14 @@ direction_parser.add_argument(
     default="left-to-right",
     help="Exact test-owned source and destination pane direction",
 )
-DIRECTION = direction_parser.parse_args().direction
+direction_parser.add_argument(
+    "--item-kind", choices=("file", "folder"), default="file",
+    help="Exact test-owned physical source item type",
+)
+arguments = direction_parser.parse_args()
+DIRECTION = arguments.direction
 REVERSE = DIRECTION == "right-to-left"
+ITEM_KIND = arguments.item_kind
 SOURCE_PANE_ID = "RightFiles" if REVERSE else "LeftFiles"
 TARGET_PANE_ID = "LeftFiles" if REVERSE else "RightFiles"
 
@@ -42,8 +48,19 @@ left.mkdir()
 right.mkdir()
 source_dir = right if REVERSE else left
 target_dir = left if REVERSE else right
-source = source_dir / "내부끌기-한글.txt"
-source.write_text("owned same-app drag\n", encoding="utf-8")
+source = source_dir / (
+    "내부끌기-한글-폴더" if ITEM_KIND == "folder"
+    else "내부끌기-한글.txt"
+)
+if ITEM_KIND == "folder":
+    source.mkdir()
+    nested = source / "하위-폴더"
+    nested.mkdir()
+    (nested / "한글-payload.txt").write_bytes(
+        "owned nested same-app folder drag\n".encode("utf-8"))
+    (source / "root-payload.bin").write_bytes(b"owned folder root\x00\xfe")
+else:
+    source.write_text("owned same-app drag\n", encoding="utf-8")
 
 env = os.environ.copy()
 for key in ("APPDATA", "LOCALAPPDATA", "TEMP", "TMP"):
@@ -188,10 +205,33 @@ try:
     copied = target_dir / source.name
     eventually(lambda: copied.is_file(),
                "same-app private-token drag did not copy owned file", 18)
-    assert copied.read_bytes() == source.read_bytes()
-    assert source.is_file(), "same-app copy drag must preserve source"
+    if ITEM_KIND == "folder":
+        def owned_tree(root):
+            assert root.is_dir() and not root.is_symlink()
+            children = {}
+            for child in sorted(root.rglob("*")):
+                assert not child.is_symlink(), "owned tree may not contain links"
+                relative = child.relative_to(root).as_posix()
+                children[relative] = (
+                    ("dir", None) if child.is_dir()
+                    else ("file", child.read_bytes())
+                )
+            return children
+        eventually(
+            lambda: (copied / "하위-폴더" / "한글-payload.txt").is_file()
+            and (copied / "root-payload.bin").is_file(),
+            "same-app owned nested folder drag did not finish", 18)
+        assert owned_tree(copied) == owned_tree(source), (
+            "copied folder contents differ from owned source")
+        print("REAL_SAME_APP_PRIVATE_DRAG_NESTED_FOLDER_COPY", True,
+              flush=True)
+    else:
+        assert copied.read_bytes() == source.read_bytes()
+        assert source.is_file(), "same-app copy drag must preserve source"
+    assert source.exists(), "same-app copy drag must preserve source"
     assert source.parent == source_dir and copied.parent == target_dir
     print("SAME_APP_DRAG_DIRECTION", DIRECTION, flush=True)
+    print("SAME_APP_DRAG_ITEM_KIND", ITEM_KIND, flush=True)
     if REVERSE:
         print("REAL_SAME_APP_PRIVATE_DRAG_RIGHT_TO_LEFT_COPY", True, flush=True)
 
