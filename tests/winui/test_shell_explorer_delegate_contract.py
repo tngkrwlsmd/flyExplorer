@@ -127,6 +127,11 @@ class WindowsExplorerDelegationContracts(unittest.TestCase):
             self.assertIn(token,menu)
         self.assertIn("item.Click([weak,side,identity,tab,route,expected,expectedPaths,",
                       menu)
+        self.assertIn("const bool ready=!mFileOperations.busy()&&",menu)
+        self.assertIn("!mFileOperations.pendingConfirmationToken();",menu)
+        self.assertIn("ui->mFileOperations.pendingConfirmationToken()",menu)
+        self.assertLess(menu.index("ui->mFileOperations.pendingConfirmationToken()"),
+                        menu.index("action(*ui);"))
         self.assertLess(menu.index("selectedPaths.emplace_back("),
                         menu.index("std::sort(selectedPaths.begin(),selectedPaths.end());"))
         self.assertLess(menu.index("if(actual!=*expected){"),
