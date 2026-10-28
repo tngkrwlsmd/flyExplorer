@@ -92,7 +92,7 @@ collision_target = target_dir / source.name
 collision_bytes = b"existing test-owned destination: must remain unchanged"
 if COLLISION != "none":
     collision_target.write_bytes(collision_bytes)
-source_bytes = source.read_bytes() if ITEM_KIND == "file" else None
+source_bytes = source.read_bytes() if source.is_file() else None
 
 env = os.environ.copy()
 for key in ("APPDATA", "LOCALAPPDATA", "TEMP", "TMP"):
