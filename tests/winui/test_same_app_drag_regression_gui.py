@@ -27,16 +27,23 @@ direction_parser.add_argument(
     help="Exact test-owned physical source item type",
 )
 direction_parser.add_argument(
-    "--collision", choices=("none", "cancel", "keep-both"), default="none",
-    help="Focused right-to-left file collision decision; never overwrite",
+    "--collision", choices=("none", "cancel", "keep-both", "skip"), default="none",
+    help="Focused right-to-left copy collision decision; never overwrite",
 )
 arguments = direction_parser.parse_args()
 DIRECTION = arguments.direction
 REVERSE = DIRECTION == "right-to-left"
 ITEM_KIND = arguments.item_kind
 COLLISION = arguments.collision
-if COLLISION != "none" and (not REVERSE or ITEM_KIND != "file"):
-    direction_parser.error("collision cases require --direction right-to-left --item-kind file")
+if COLLISION != "none" and (
+    not REVERSE or
+    (COLLISION == "skip" and ITEM_KIND != "multi-file") or
+    (COLLISION != "skip" and ITEM_KIND != "file")
+):
+    direction_parser.error(
+        "collision requires right-to-left file (cancel/keep-both) "
+        "or multi-file (skip)"
+    )
 SOURCE_PANE_ID = "RightFiles" if REVERSE else "LeftFiles"
 TARGET_PANE_ID = "LeftFiles" if REVERSE else "RightFiles"
 
@@ -267,6 +274,9 @@ try:
         assert source.read_bytes() == source_bytes
         assert collision_target.read_bytes() == collision_bytes
         assert sorted(p.name for p in target_dir.iterdir()) == [source.name]
+        if COLLISION == "skip":
+            assert second_source is not None and second_source.is_file()
+            assert not (target_dir / second_source.name).exists()
 
         if COLLISION == "cancel":
             cancel.iface_invoke.Invoke()
@@ -276,6 +286,23 @@ try:
                 "collision cancellation not acknowledged", 9)
             assert sorted(p.name for p in target_dir.iterdir()) == [source.name]
             print("M23_REVERSE_DRAG_COLLISION_CANCEL_NO_MUTATION=PASS", flush=True)
+        elif COLLISION == "skip":
+            skip = modal_button("충돌 항목 건너뛰기")
+            assert skip is not None, "skip action missing from owned WinUI modal"
+            skip.iface_invoke.Invoke()
+            # Only the nonconflicting member of the test-owned pair may copy.
+            clean_copy = target_dir / second_source.name
+            eventually(clean_copy.is_file,
+                       "nonconflicting owned drag item not copied after skip", 23)
+            eventually(
+                lambda: clean_copy.read_bytes() == second_source.read_bytes(),
+                "nonconflicting owned drag item bytes incomplete", 15)
+            assert sorted(p.name for p in target_dir.iterdir()) == sorted(
+                (source.name, second_source.name))
+            assert second_source.read_bytes() == (
+                b"owned second file\n")
+            print("M23_REVERSE_DRAG_COLLISION_SKIP_COPIES_ONLY_CLEAN=PASS",
+                  flush=True)
         else:
             approve.iface_invoke.Invoke()
 
