@@ -38,12 +38,12 @@ COLLISION = arguments.collision
 if COLLISION != "none" and (
     not REVERSE or
     (COLLISION == "skip" and ITEM_KIND not in ("multi-file", "mixed")) or
-    (COLLISION == "skip-all" and ITEM_KIND != "multi-file") or
+    (COLLISION == "skip-all" and ITEM_KIND not in ("multi-file", "mixed")) or
     (COLLISION not in ("skip", "skip-all") and ITEM_KIND != "file")
 ):
     direction_parser.error(
         "collision requires right-to-left file (cancel/keep-both) "
-        "or multi-file/mixed (skip), multi-file (skip-all)"
+        "or multi-file/mixed (skip or skip-all)"
     )
 SOURCE_PANE_ID = "RightFiles" if REVERSE else "LeftFiles"
 TARGET_PANE_ID = "LeftFiles" if REVERSE else "RightFiles"
@@ -96,10 +96,18 @@ if COLLISION != "none":
 second_collision_target = None
 second_collision_bytes = None
 if COLLISION == "skip-all":
-    assert ITEM_KIND == "multi-file" and second_source is not None
+    assert ITEM_KIND in ("multi-file", "mixed") and second_source is not None
     second_collision_target = target_dir / second_source.name
-    second_collision_bytes = b"existing second test-owned destination: preserve me"
-    second_collision_target.write_bytes(second_collision_bytes)
+    if ITEM_KIND == "mixed":
+        second_collision_target.mkdir()
+        (second_collision_target / "하위-폴더").mkdir()
+        (second_collision_target / "하위-폴더" / "혼합-한글.txt").write_bytes(
+            b"existing destination nested folder: do not replace")
+        (second_collision_target / "original.bin").write_bytes(
+            b"existing destination root payload")
+    else:
+        second_collision_bytes = b"existing second test-owned destination: preserve me"
+        second_collision_target.write_bytes(second_collision_bytes)
 source_bytes = source.read_bytes() if source.is_file() else None
 second_source_bytes = (
     second_source.read_bytes() if second_source is not None
@@ -139,6 +147,26 @@ def owned_tree(root):
             else ("file", child.read_bytes())
         )
     return children
+
+
+second_source_tree = (
+    owned_tree(second_source) if second_source is not None
+    and ITEM_KIND == "mixed" else None
+)
+second_collision_tree = (
+    owned_tree(second_collision_target) if COLLISION == "skip-all"
+    and ITEM_KIND == "mixed" else None
+)
+
+
+def assert_second_collision_unchanged():
+    assert COLLISION == "skip-all"
+    if ITEM_KIND == "mixed":
+        assert owned_tree(second_source) == second_source_tree
+        assert owned_tree(second_collision_target) == second_collision_tree
+    else:
+        assert second_source.read_bytes() == second_source_bytes
+        assert second_collision_target.read_bytes() == second_collision_bytes
 
 
 def foreground_root():
@@ -304,8 +332,7 @@ try:
         )
         assert sorted(p.name for p in target_dir.iterdir()) == expected_existing
         if COLLISION == "skip-all":
-            assert second_collision_target.read_bytes() == second_collision_bytes
-            assert second_source.read_bytes() == second_source_bytes
+            assert_second_collision_unchanged()
         if COLLISION == "skip":
             assert second_source is not None
             assert (second_source.is_file() if ITEM_KIND == "multi-file"
@@ -330,10 +357,13 @@ try:
                     in element("StatusText").window_text(),
                     "two-collision all-skipped status not acknowledged", 12)
                 assert sorted(p.name for p in target_dir.iterdir()) == expected_existing
-                assert second_collision_target.read_bytes() == second_collision_bytes
-                assert second_source.read_bytes() == second_source_bytes
-                print("M23_REVERSE_DRAG_COLLISION_SKIP_ALL_PRESERVES_BOTH=PASS",
-                      flush=True)
+                assert_second_collision_unchanged()
+                if ITEM_KIND == "mixed":
+                    print("M23_REVERSE_DRAG_COLLISION_MIXED_ALL_SKIP_PRESERVES_TREES=PASS",
+                          flush=True)
+                else:
+                    print("M23_REVERSE_DRAG_COLLISION_SKIP_ALL_PRESERVES_BOTH=PASS",
+                          flush=True)
             else:
                 # Skip the conflicting file, copy only the nonconflicting
                 # test-owned member (file or nested Unicode folder).
@@ -381,8 +411,7 @@ try:
         assert source.read_bytes() == source_bytes
         assert collision_target.read_bytes() == collision_bytes
         if COLLISION == "skip-all":
-            assert second_source.read_bytes() == second_source_bytes
-            assert second_collision_target.read_bytes() == second_collision_bytes
+            assert_second_collision_unchanged()
             assert sorted(p.name for p in target_dir.iterdir()) == expected_existing
         assert source.is_file() and collision_target.is_file()
     else:
