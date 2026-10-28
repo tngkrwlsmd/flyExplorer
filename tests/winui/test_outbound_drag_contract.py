@@ -108,7 +108,7 @@ class OutboundDragContract(unittest.TestCase):
         script=(ROOT/"tests/winui/test_same_app_drag_regression_gui.py").read_text(
             encoding="utf-8")
         for token in (
-            'choices=("file", "folder", "multi-file")',
+            'choices=("file", "folder", "multi-file", "mixed")',
             'if ITEM_KIND == "multi-file":',
             'second_source = source_dir / "두번째-한글.txt"',
             'second_row.click_input(pressed="control")',
