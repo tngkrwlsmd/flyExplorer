@@ -41,6 +41,29 @@ class FileDetailControllerContract(unittest.TestCase):
                         "entry.sizeKnown=","entry.dateKnown="):
             self.assertNotIn(removed,impl)
 
+    def test_bounded_txt_icon_recovery_preserves_valid_partial_visuals(self):
+        worker=read("app/winui/file_detail_controller.cpp")
+        recovery=worker.split("std::vector<std::wstring> recover;", 1)[1].split(
+            "if(!requestedKnownFolderKeys.empty())", 1)[0]
+        # A label-only response must not suppress the sole .txt recovery.
+        self.assertIn("found->second.label.empty()||", recovery)
+        self.assertIn("found->second.bgra.empty()", recovery)
+        # Keep the existing finite recovery count and isolated helper limits.
+        self.assertIn("recover.size()>=2", recovery)
+        self.assertIn("visualHelper,{ext},1350,request.visualPixels", recovery)
+        # A failed or partial retry must not erase the original label/icon.
+        self.assertIn("if(found==one.end())continue;", recovery)
+        self.assertIn("auto& saved=windowsTypes[ext];", recovery)
+        self.assertIn("if(!found->second.label.empty())", recovery)
+        self.assertIn("saved.label=std::move(found->second.label);", recovery)
+        self.assertIn("if(!found->second.bgra.empty())", recovery)
+        self.assertIn("saved.bgra=std::move(found->second.bgra);", recovery)
+        self.assertIn("saved.width=found->second.width;", recovery)
+        self.assertIn("saved.height=found->second.height;", recovery)
+        self.assertNotIn("windowsTypes[ext]=std::move(found->second);", recovery)
+        # No new Shell API calls, cancellation, or user data access.
+        self.assertIn("if(cancelToken->load())return;", worker)
+
     def test_extensionless_dotfiles_match_sortable_metadata_type_fallback(self):
         from pathlib import PureWindowsPath
         worker=read("app/winui/file_detail_controller.cpp")

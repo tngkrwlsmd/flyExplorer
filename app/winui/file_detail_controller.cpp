@@ -109,16 +109,31 @@ bool FileDetailController::start(
                         }
                     }else{
                         auto text=std::find(extensions.begin(),extensions.end(),L".txt");
-                        if(text!=extensions.end()&&
-                           (windowsTypes.find(*text)==windowsTypes.end()||
-                            windowsTypes[*text].label.empty()))
-                            recover.push_back(*text);
+                        if(text!=extensions.end()){
+                            const auto found=windowsTypes.find(*text);
+                            // A label-only response does not make an icon
+                            // ready; one bounded recovery can fill its pixels.
+                            if(found==windowsTypes.end()||
+                               found->second.label.empty()||
+                               found->second.bgra.empty())
+                                recover.push_back(*text);
+                        }
                     }
                     for(auto const& ext:recover){
                         auto one=fxfile::filetype::queryVisuals(
                             visualHelper,{ext},1350,request.visualPixels);
                         auto found=one.find(ext);
-                        if(found!=one.end())windowsTypes[ext]=std::move(found->second);
+                        if(found==one.end())continue;
+                        // Partial recovery must not erase a valid label or
+                        // icon returned by the original batched query.
+                        auto& saved=windowsTypes[ext];
+                        if(!found->second.label.empty())
+                            saved.label=std::move(found->second.label);
+                        if(!found->second.bgra.empty()){
+                            saved.bgra=std::move(found->second.bgra);
+                            saved.width=found->second.width;
+                            saved.height=found->second.height;
+                        }
                     }
                     if(!requestedKnownFolderKeys.empty())
                         knownFolderVisuals=fxfile::filetype::queryKnownFolderVisuals(
