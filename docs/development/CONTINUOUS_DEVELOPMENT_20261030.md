@@ -184,3 +184,13 @@ ordinal shim으로 g++ C++17, Wall/Wextra/Werror/pedantic 컴파일·실행했�
 Windows 인덱스의 실제 DIRECTORY 검색, 이전 야간 일곱 기능의 실제 입력/파일
 생성/클립보드, Dark/작은 창 전체 및 실제 Windows Explorer 동등성은 이번 GUI
 범위 밖이다. 앞 절의 모든 미검증을 일괄 PASS로 바꾸지 않으며 main에는 병합하지 않는다.
+
+## 최신 후속 수용: 61624b66
+
+앞선 '후속 XAML 재빌드/재검토 전' 상태는 이 절로 대체한다. 관련 검사
+17/17 후 [증분 Release #40964770658](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/40964770658)가 PASS했다.
+실행 파일 SHA256은 `1ace409882ae68e353a0897f64001adb1d76937799dc280b30be81acfda841ba`다.
+[#40965095829](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/40965095829)에서 첫 결과 행이 검색 뷰포트 안에 온전히 들어오는 것을 확인했고 정상 종료·원본 보존·소유 fixture/profile 제거도 통과했다. 동일 실행에서 Windows 인덱스의 직접 자식 포함, 재귀 부모 포함, 얕은 부모 제외 및 잘못된 깊이 인수 거부를 실제 helper로 확인했다.
+[#40965276002](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/40965276002)의 수정 PNG를 직접 검토했다. 앞선 같은 크기의 결과 밀림이 사라졌고 기존 검색 방식 행 안의 체크박스·문구·양쪽 파일 목록은 겹치지 않는다. **Light/96 DPI/1160x692 한정 시각 수용**이다. 앞선 source ad71a5f6의 성공한 검색/선택/주소 후보 로직과 GUI 증거는 XAML 배치만 바뀌어 재사용한다. Dark·모든 창 크기·전체 제품·실제 Explorer 동등성으로 확대하지 않는다.
+
+기존 야간 일곱 기능의 Windows 입력/실제 생성/클립보드 수용은 남아 있다. 사용자 파일·설정·클립보드·실제 휴지통은 이번 검증에서 변경하지 않았으며 main에 병합하지 않는다.
