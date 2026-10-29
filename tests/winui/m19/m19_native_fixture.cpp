@@ -191,6 +191,29 @@ int wmain(int argc,wchar_t** argv){
            result.matches.size()==1&&result.matches[0]==match,
            "NATIVE_READ_ONLY_BOUNDED_SEARCH");
 
+    fxfile::preview::SearchQuery scopeQuery{};
+    scopeQuery.term=L"report";
+    const auto recursiveQuery=scopeQuery;
+    auto recursiveResult=fxfile::preview::scanFiles(left,scopeQuery,cancel);
+    scopeQuery.includeSubfolders=false;
+    auto shallowResult=fxfile::preview::scanFiles(left,scopeQuery,cancel);
+    expect(recursiveResult.valid&&recursiveResult.count==3&&
+           shallowResult.valid&&!shallowResult.truncated&&
+           shallowResult.count==2&&shallowResult.matches.size()==2&&
+           ((shallowResult.matches[0]==reportUpper&&
+             shallowResult.matches[1]==reportLower)||
+            (shallowResult.matches[1]==reportUpper&&
+             shallowResult.matches[0]==reportLower)),
+           "SEARCH_CURRENT_FOLDER_EXCLUDES_NESTED_MATCH");
+    expect(!fxfile::preview::sameSearchQuery(recursiveQuery,scopeQuery)&&
+           fxfile::preview::sameSearchQuery(scopeQuery,scopeQuery),
+           "SEARCH_DEPTH_PARTICIPATES_IN_REQUEST_IDENTITY");
+    scopeQuery.kind=fxfile::preview::SearchEntryKind::Folders;
+    auto immediateFolders=fxfile::preview::scanFiles(left,scopeQuery,cancel);
+    expect(immediateFolders.valid&&immediateFolders.count==1&&
+           immediateFolders.matches[0]==reportFolder,
+           "SEARCH_CURRENT_FOLDER_STILL_RETURNS_CHILD_FOLDER");
+
     const auto scaleRoot=root+L"\\Search Scale";
     if(!::CreateDirectoryW(scaleRoot.c_str(),nullptr))return 90;
     bool scaleFiles=true;

@@ -385,12 +385,18 @@ std::wstring sqlQuoted(std::wstring const& s) {
  }
  return escaped;
 }
-bool insideScope(std::wstring const& scope,std::wstring const& path) {
+bool insideScope(std::wstring scope,std::wstring const& path,
+                 bool includeSubfolders) {
+ // Normalize only separators/trailing separators, without filesystem calls.
+ std::replace(scope.begin(),scope.end(),L'/',L'\\');
+ while(scope.size()>3&&scope.back()==L'\\')scope.pop_back();
  if(path.size()<=scope.size())return false;
  if(::CompareStringOrdinal(
     scope.c_str(),static_cast<int>(scope.size()),
     path.c_str(),static_cast<int>(scope.size()),TRUE)!=CSTR_EQUAL)return false;
- return scope.back()==L'\\'||path[scope.size()]==L'\\';
+ if(scope.back()!=L'\\'&&path[scope.size()]!=L'\\')return false;
+ const auto child=scope.size()+(scope.back()==L'\\'?0:1);
+ return includeSubfolders||path.find(L'\\',child)==std::wstring::npos;
 }
 int runIndexedFilenameSearch(HANDLE output,
                              std::wstring const& scope,
@@ -399,7 +405,8 @@ int runIndexedFilenameSearch(HANDLE output,
                              std::wstring const& minimumKb,
                              std::wstring const& maximumKb,
                              std::wstring const& modifiedAfter,
-                             std::wstring const& modifiedBefore) {
+                             std::wstring const& modifiedBefore,
+                             bool includeSubfolders) {
  using namespace fxfile::indexwire;
  if(!extension.empty()&&extension.front()==L'.')extension.erase(0,1);
  bool hasMin=false,hasMax=false;
@@ -450,8 +457,9 @@ int runIndexedFilenameSearch(HANDLE output,
     std::wstring url=L"file:"+scope;
     std::replace(url.begin(),url.end(),L'\\',L'/');
     if(url.back()!=L'/')url+=L'/';
-    std::wstring sql=L"SELECT TOP 1001 System.ItemUrl FROM SystemIndex "
-        L"WHERE SCOPE='"+sqlQuoted(url)+L"' AND System.FileName LIKE '%"+
+    std::wstring sql=L"SELECT TOP 1001 System.ItemUrl FROM SystemIndex "+
+        std::wstring(includeSubfolders?L"WHERE SCOPE='":L"WHERE DIRECTORY='")+
+        sqlQuoted(url)+L"' AND System.FileName LIKE '%"+
         sqlQuoted(term)+L"%'";
     if(!extension.empty())
      sql+=L" AND System.FileExtension = '."+sqlQuoted(extension)+L"'";
@@ -495,7 +503,7 @@ int runIndexedFilenameSearch(HANDLE output,
         const std::wstring result=
             std::filesystem::path(url).lexically_normal().native();
         if(result.size()>fxfile::indexwire::kMaxPathUnits||
-           !insideScope(scope,result))continue;
+           !insideScope(scope,result,includeSubfolders))continue;
         auto name=std::filesystem::path(result).filename().native();
         std::wstring lowerName=name,lowerTerm=term;
         std::transform(lowerName.begin(),lowerName.end(),lowerName.begin(),
@@ -578,12 +586,17 @@ int wmain(int argc,wchar_t** argv) {
     if(argc==2&&!wcscmp(argv[1],L"--preview-read"))
         return fxfile::previewworker::runOne(
             ::GetStdHandle(STD_INPUT_HANDLE),::GetStdHandle(STD_OUTPUT_HANDLE));
-    if((argc==4||argc==5||argc==7||argc==9)&&
-       !wcscmp(argv[1],L"--indexed-filename-search"))
+    if((argc==4||argc==5||argc==7||argc==9||argc==10)&&
+       !wcscmp(argv[1],L"--indexed-filename-search")){
+        // Older callers retain recursive search. An explicit depth must be
+        // exactly 0 or 1; reject malformed input before querying the index.
+        if(argc==10&&wcscmp(argv[9],L"0")&&wcscmp(argv[9],L"1"))return 1;
         return runIndexedFilenameSearch(::GetStdHandle(STD_OUTPUT_HANDLE),
             argv[2],argv[3],argc>=5?argv[4]:L"",
             argc>=7?argv[5]:L"",argc>=7?argv[6]:L"",
-            argc==9?argv[7]:L"",argc==9?argv[8]:L"");
+            argc>=9?argv[7]:L"",argc>=9?argv[8]:L"",
+            argc<10||!wcscmp(argv[9],L"1"));
+    }
     if(argc==2&&!wcscmp(argv[1],L"--file-transfer"))
         return fxfile::shelltransfer::runIsolatedHelper(
             ::GetStdHandle(STD_INPUT_HANDLE),::GetStdHandle(STD_OUTPUT_HANDLE));

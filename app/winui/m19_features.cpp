@@ -675,6 +675,7 @@ SearchController::Context MainWindow::SearchContext(){
     context.query.contentRegex=
         SearchContentRegexBox().IsChecked().GetBoolean();
     context.query.caseSensitive=SearchCaseBox().IsChecked().GetBoolean();
+    context.query.includeSubfolders=SearchSubfoldersBox().IsChecked().GetBoolean();
     switch(SearchTargetBox().SelectedIndex()){
     case 1:
         context.query.kind=fxfile::preview::SearchEntryKind::Folders;
@@ -768,6 +769,8 @@ void MainWindow::OnRunSearch(
     const auto submittedScope=context.scope;
     const bool useIndex=context.query.mode==
         fxfile::preview::SearchMode::WindowsIndex;
+    const auto extent=context.query.includeSubfolders?
+        L" · 하위 폴더 포함":L" · 지정한 폴더만";
     const auto weak=get_weak();
     const auto status=mSearchController.start(
         std::move(request),std::move(context),
@@ -782,7 +785,7 @@ void MainWindow::OnRunSearch(
         SearchCancelButton().IsEnabled(true);
         SearchActiveScopeText().Text(hstring(
             std::wstring(useIndex?L"Windows 인덱스":L"직접 탐색")+
-            L" · 검색 중 · 위치: "+submittedScope));
+            extent+L" · 검색 중 · 위치: "+submittedScope));
         SearchCountText().Text(useIndex?
             L"Windows Search 인덱스에서 파일명·확장자·크기·수정일을 검색하고 있습니다...":
             L"독립 스레드에서 최대 20,000개 항목을 검색하고 있습니다...");
@@ -904,6 +907,8 @@ void MainWindow::OnSearchCompleted(
     std::wstring scopeStatus=result.indexOnly?
         L"Windows 인덱스 · 위치: ":L"직접 탐색 · 위치: ";
     scopeStatus+=completion.context.scope;
+    scopeStatus+=completion.request.query.includeSubfolders?
+        L" · 하위 폴더 포함":L" · 지정한 폴더만";
     if(result.resultLimited||result.traversalLimited||
        result.contentLimited||result.contentRegexLimited)
         scopeStatus+=L" · 일부 결과만 표시됐을 수 있습니다";

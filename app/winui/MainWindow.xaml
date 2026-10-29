@@ -509,6 +509,15 @@
                            VerticalAlignment="Center" Opacity="{ThemeResource FlyExplorerSubtleTextOpacity}"/>
             </StackPanel>
             <StackPanel Orientation="Horizontal" Spacing="7">
+                <TextBlock Text="검색 범위:" VerticalAlignment="Center"/>
+                <CheckBox x:Name="SearchSubfoldersBox" IsChecked="True"
+                          Content="하위 폴더 포함"
+                          AutomationProperties.Name="검색에 하위 폴더 포함"/>
+                <TextBlock Text="해제하면 지정한 폴더 안의 항목만 검색합니다."
+                           VerticalAlignment="Center"
+                           Opacity="{ThemeResource FlyExplorerSubtleTextOpacity}"/>
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" Spacing="7">
                 <CheckBox x:Name="SearchRegexBox" IsChecked="False"
                           Content="정규식"
                           AutomationProperties.Name="정규식 검색 사용"/>

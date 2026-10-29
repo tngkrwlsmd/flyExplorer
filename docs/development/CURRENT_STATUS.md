@@ -7,6 +7,22 @@
 Windows 빌드·GUI·실제 화면 검증 미수행 — 사용자 수면 중 VM 종료.
 [변경 범위와 최소 후속 검사](NIGHT_DEVELOPMENT_20261029.md)를 따른다.
 
+# 2026-10-30 — EP08 검색 범위 선택 구현, Windows 미검증
+
+- 사용자 지시에 따라 야간·06:00 종료 제한 없이 실제 기능 개발을 이어간다. 기존 PR #70에 직접 탐색/Windows 인덱스의 하위 폴더 포함 선택을 추가한다. 기본값은 기존 재귀 검색이다.
+- 얕은 직접 탐색은 하위 폴더를 대기열에 넣지 않는다. 인덱스는 공식 DIRECTORY 조건과 반환 경로 깊이 재검사로 한정한다. 범위 변경은 검색 컨텍스트가 달라진 것으로 판단한다. 저장된 검색 조건·세션 형식은 바꾸지 않는다.
+- 관련 검사 **20/20 PASS**, 이 중 1개는 실제 순수 경로/검색 조건/컨텍스트 함수 본문을 호스트 C++17로 컴파일·실행한다. ordinal 비교는 ASCII shim이며 Windows API 검증이 아니다. XAML XML 파싱과 변경 Python 문법, diff 공백 검사 PASS.
+- Windows native 사례는 준비만 했다. **Windows 빌드·실제 검색·GUI·픽셀·Explorer 실물 비교 NOT TESTED.** VM에 접근하지 않았고 main에 병합하지 않는다. 정확한 소스와 최소 후속 검증은 [계속 개발 기록](CONTINUOUS_DEVELOPMENT_20261030.md) 및 PR head를 따른다.
+
+# 2026-10-29 야간: 탐색기 단축키 별칭 구현, Windows 검증 대기
+
+`main@c563a0e0`에서 F3 검색, F4/Alt+D 주소 편집, Ctrl+R 활성 패널
+새로고침을 기존 경로에 연결했다. 새 별칭은 대화상자·메뉴·다른 텍스트 편집을
+보호하며 기존 사용자 지정 단축키와 세션 정책을 유지한다. 관련 소스 계약
+31/31 PASS, `git diff --check` PASS. 작업 브랜치의 변경이며 main 수용 아님.
+Windows 빌드·GUI·실제 화면 검증 미수행 — 사용자 수면 중 VM 종료.
+[변경 범위와 최소 후속 검사](NIGHT_DEVELOPMENT_20261029.md)를 따른다.
+
 # 2026-10-29 — EP01 request-start chrome omission fixed; scoped navigation GUI/pixels accepted
 
 - Starting main `d78cdaee42fe751558305d0f31191535342323d4`. Controller set pending, but live submit wrappers did not refresh Back/Forward/Up. Add active-pane chrome updates after successful parsing/history/page submits and when continuation completion clears pending. Product blob `MainWindow.xaml.cpp@b2cd9c729879f01cc270d265914a3c2f55cc5d56`.

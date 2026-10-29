@@ -40,6 +40,8 @@ struct SearchQuery {
     bool contentRegex=false;
     bool caseSensitive=false;
     SearchEntryKind kind=SearchEntryKind::Files;
+    // Search extent is per request, like the scope path, not a saved preset.
+    bool includeSubfolders=true;
 };
 
 enum class SearchQueryValidation {

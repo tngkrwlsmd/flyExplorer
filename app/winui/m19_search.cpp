@@ -441,7 +441,7 @@ bool sameSearchQuery(SearchQuery const& a,SearchQuery const& b) noexcept
            a.contentEncoding==b.contentEncoding&&
            a.regex==b.regex&&a.contentRegex==b.contentRegex&&
            a.caseSensitive==b.caseSensitive&&
-           a.kind==b.kind;
+           a.kind==b.kind&&a.includeSubfolders==b.includeSubfolders;
 }
 
 SearchResults scanFiles(
@@ -566,7 +566,7 @@ SearchResults scanFiles(
                 }
             }
 
-            if(folderEntry&&
+            if(query.includeSubfolders&&folderEntry&&
                (fd.dwFileAttributes&FILE_ATTRIBUTE_REPARSE_POINT)==0){
                 if(top.second<kMaxDepth)
                     pending.emplace_back(candidate,top.second+1);
@@ -686,7 +686,8 @@ SearchResults scanIndexedFiles(
       L" "+quoteArg(query.minSizeKb)+
       L" "+quoteArg(query.maxSizeKb)+
       L" "+quoteArg(query.modifiedAfter)+
-      L" "+quoteArg(query.modifiedBefore);
+      L" "+quoteArg(query.modifiedBefore)+
+      L" "+quoteArg(query.includeSubfolders?L"1":L"0");
   std::vector<wchar_t> mutableCommand(command.begin(),command.end());
   mutableCommand.push_back(0);
   PROCESS_INFORMATION created{};

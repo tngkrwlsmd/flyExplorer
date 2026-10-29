@@ -26,15 +26,18 @@ def main():
     sample=scope/"Microsoft Edge.lnk"
     assert sample.is_file(),("public index sample unavailable",sample)
     original=hashlib.sha256(sample.read_bytes()).digest()
-    def indexed(extension=None, min_kb=None, max_kb=None, after=None, before=None):
+    def indexed(extension=None, min_kb=None, max_kb=None, after=None, before=None,
+                include_subfolders=None, search_scope=None):
         command=[str(helper),"--indexed-filename-search",
-                 str(scope),"Microsoft Edge"]
-        if after is not None or before is not None:
+                 str(scope if search_scope is None else search_scope),"Microsoft Edge"]
+        if after is not None or before is not None or include_subfolders is not None:
             command.extend((extension or "",
                             str(min_kb) if min_kb is not None else "",
                             str(max_kb) if max_kb is not None else "",
                             str(after) if after is not None else "",
                             str(before) if before is not None else ""))
+            if include_subfolders is not None:
+                command.append("1" if include_subfolders else "0")
         elif min_kb is not None or max_kb is not None:
             command.extend((extension or "", str(min_kb) if min_kb is not None else "",
                             str(max_kb) if max_kb is not None else ""))
@@ -63,6 +66,20 @@ def main():
     unfiltered=indexed()
     assert str(sample).casefold() in {x.casefold() for x in unfiltered}
     print("INDEXED_NATIVE_SYSTEMINDEX_QUERY_PASS",True,flush=True)
+    shallow=indexed(include_subfolders=False)
+    assert str(sample).casefold() in {x.casefold() for x in shallow}
+    recursive_parent=indexed(include_subfolders=True,search_scope=scope.parent)
+    assert str(sample).casefold() in {x.casefold() for x in recursive_parent}
+    shallow_parent=indexed(include_subfolders=False,search_scope=scope.parent)
+    assert str(sample).casefold() not in {x.casefold() for x in shallow_parent}
+    assert all(Path(x).parent==scope.parent for x in shallow_parent)
+    for invalid_depth in ("", "2", "true", "0 extra"):
+        invalid=subprocess.run(
+            [str(helper),"--indexed-filename-search",str(scope),
+             "Microsoft Edge","","","","","",invalid_depth],
+            capture_output=True,timeout=5)
+        assert invalid.returncode!=0,(invalid_depth,invalid.returncode)
+    print("INDEXED_NATIVE_CURRENT_FOLDER_AND_DEPTH_ARGS_PASS",True,flush=True)
     matching=indexed(".LNK")
     assert str(sample).casefold() in {x.casefold() for x in matching}
     assert all(p.casefold().endswith(".lnk") for p in matching)
