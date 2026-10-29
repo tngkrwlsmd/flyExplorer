@@ -28,7 +28,7 @@ import psutil
 p = argparse.ArgumentParser()
 p.add_argument("--phase", choices=("before", "after"), required=True)
 p.add_argument("--theme", choices=("dark", "light"), required=True)
-p.add_argument("--slot", choices=("v2", "v3", "v4"), default="v3")
+p.add_argument("--slot", choices=("v2", "v3", "v4"), default="v4")
 args = p.parse_args()
 BASE = ROOT / "logs" / ("l03-dotfile-20261029-owned-" + args.slot)
 fixture = BASE / "fixture"
@@ -141,10 +141,13 @@ try:
     out["source_pane"] = side
     out["types"] = values
     out["dpi"] = u.GetDpiForWindow(hwnd)
-    out["window"] = list(win.rectangle())
+    window_rect = win.rectangle()
+    out["window"] = [window_rect.left, window_rect.top,
+                     window_rect.right, window_rect.bottom]
     assert out["dpi"] == 96, "out-of-scope DPI changed"
     assert len(el("LeftFiles").descendants(control_type="ListItem")) > 0
     assert len(el("RightFiles").descendants(control_type="ListItem")) > 0
+    win.set_focus()
     assert hwnd_pid(u.GetForegroundWindow()) == process.pid
     r = win.rectangle()
     bounds = (r.left, r.top, r.right, r.bottom)
