@@ -1,5 +1,6 @@
 #include "pch.h"
 #include <winrt/Microsoft.UI.Input.h>
+#include <winrt/Microsoft.UI.Dispatching.h>
 #include <winrt/Microsoft.UI.Windowing.h>
 #include "MainWindow.xaml.h"
 #include <unordered_map>
@@ -569,6 +570,34 @@ namespace winrt::FlyExplorer::implementation
                         ui->OnToggleFileInfoPane(nullptr,nullptr);
                         if(ui->ActiveWindowTab().fileInfoPaneVisible){
                             ui->OnRevealTextPreview(nullptr,nullptr);
+                            // A just-expanded pane may not be focusable until
+                            // XAML has arranged it. Retry once at low priority,
+                            // only while the original focus/context still owns
+                            // this gesture; never pull focus back from new input.
+                            if(ui->TextPreviewToggleButton().FocusState()==
+                                    FocusState::Unfocused){
+                                auto focused=Input::FocusManager::GetFocusedElement(
+                                    ui->RootShell().XamlRoot()).try_as<DependencyObject>();
+                                if(focused){
+                                    const auto focusOwner=winrt::make_weak(focused);
+                                    const auto workspace=ui->ActiveWindowTab().identity;
+                                    const int side=ui->ActiveWindowTab().model.activePane;
+                                    ui->DispatcherQueue().TryEnqueue(
+                                        Microsoft::UI::Dispatching::DispatcherQueuePriority::Low,
+                                        [nativeWeak,focusOwner,workspace,side]{
+                                            if(auto ui=nativeWeak.get();ui&&!ui->mClosing&&
+                                               !ui->mFileOperations.pendingConfirmationToken()&&
+                                               ui->ActiveWindowTab().identity==workspace&&
+                                               ui->ActiveWindowTab().model.activePane==side&&
+                                               ui->ActiveWindowTab().fileInfoPaneVisible){
+                                                const auto owner=focusOwner.get();
+                                                if(owner&&Input::FocusManager::GetFocusedElement(
+                                                    ui->RootShell().XamlRoot())==owner)
+                                                    ui->OnRevealTextPreview(nullptr,nullptr);
+                                            }
+                                        });
+                                }
+                            }
                         }else{
                             const int side=ui->ActiveWindowTab().model.activePane;
                             auto view=side==0?ui->LeftFiles():ui->RightFiles();

@@ -194,3 +194,21 @@ Windows 인덱스의 실제 DIRECTORY 검색, 이전 야간 일곱 기능의 실
 [#40965276002](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/40965276002)의 수정 PNG를 직접 검토했다. 앞선 같은 크기의 결과 밀림이 사라졌고 기존 검색 방식 행 안의 체크박스·문구·양쪽 파일 목록은 겹치지 않는다. **Light/96 DPI/1160x692 한정 시각 수용**이다. 앞선 source ad71a5f6의 성공한 검색/선택/주소 후보 로직과 GUI 증거는 XAML 배치만 바뀌어 재사용한다. Dark·모든 창 크기·전체 제품·실제 Explorer 동등성으로 확대하지 않는다.
 
 기존 야간 일곱 기능의 Windows 입력/실제 생성/클립보드 수용은 남아 있다. 사용자 파일·설정·클립보드·실제 휴지통은 이번 검증에서 변경하지 않았으며 main에 병합하지 않는다.
+
+## Alt+P 새 패널의 포커스 실패: 조사와 수정 후보
+
+#40965819688에서 검색/주소 별칭과 5개 보기 키/메뉴 체크는 실제 통과했지만
+Alt+P 뒤 버튼 포커스 관측에서 중단됐다. 정상 종료와 원본 설정 보존은 유지했다.
+#40966280100은 ListView 컨테이너 자체가 포커스를 소유해야 한다는 과도한
+검사 때문에 실제 Alt+P 전에 중단된 harness 실패다. 이때 제품 결함을 단정하지 않았다.
+실제 소유 행 클릭과 UIA focused element로 바꾼 #40966605541에서는 Alt+P가
+패널을 열었으나 켜기 버튼은 unfocused였다. 이미 열린 패널에서 Reveal 명령을
+실행하자 버튼 포커스가 정상 이동했다. 뒤의 close 판정은 숨겨진 Border가 UIA에서
+사라질 때 ElementNotFound를 닫힘으로 처리하지 못한 harness 실패이며 close 제품 실패로 확정하지 않는다.
+
+수정 후보는 Alt+P의 첫 포커스가 실패했을 때만 낮은 우선순위로 1회 다시
+기존 Reveal을 호출한다. 약한 UI/focus 참조, 같은 WindowTab/패널/포커스와 열린
+상태, 종료/확인창 검사를 통해 새 사용자 입력의 포커스를 빼앗지 않도록 한다.
+자동 읽기를 켜거나 반복 타이머/작업자를 추가하지 않는다. 공식 DispatcherQueue
+[우선순위 API](https://learn.microsoft.com/en-us/windows/windows-app-sdk/api/winrt/microsoft.ui.dispatching.dispatcherqueue.tryenqueue)를 사용한다.
+관련 source 25/25와 diff 검사 PASS. 이 새 후보의 Windows 빌드/실제 포커스/픽셀은 아직 검증 전이다.
