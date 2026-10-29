@@ -1377,6 +1377,7 @@ namespace winrt::FlyExplorer::implementation
             "LEFT_SUBMIT_ACCEPTED":"LEFT_SUBMIT_REJECTED");
         else if(side==1)TraceG01OwnedStartup(id?
             "RIGHT_SUBMIT_ACCEPTED":"RIGHT_SUBMIT_REJECTED");
+        if(id&&side==ActiveWindowTab().model.activePane)UpdateNavigationChrome();
         if(id)StatusText().Text(L"폴더를 불러오는 중입니다.");
         else StatusText().Text(L"이 위치로 이동할 수 없습니다.");
         return id;
@@ -1397,6 +1398,7 @@ namespace winrt::FlyExplorer::implementation
         }
         const auto id=mShellNavigation->submitActive(
             ActiveWindowTab().model,side,std::move(target),action);
+        if(id&&side==ActiveWindowTab().model.activePane)UpdateNavigationChrome();
         if(id)StatusText().Text(L"폴더를 불러오는 중입니다.");
         else StatusText().Text(L"폴더를 불러올 수 없습니다.");
     }
@@ -1486,6 +1488,7 @@ namespace winrt::FlyExplorer::implementation
             const auto id=mShellNavigation->submitPreviousPage(
                 ActiveWindowTab().model,side);
             if(id){
+                if(side==ActiveWindowTab().model.activePane)UpdateNavigationChrome();
                 StatusText().Text(
                     L"정확한 정렬을 위해 이전 폴더 항목을 다시 불러오는 중입니다.");
                 return true;
@@ -1516,6 +1519,7 @@ namespace winrt::FlyExplorer::implementation
         const auto id=mShellNavigation->submitNextPage(
             ActiveWindowTab().model,side,ceiling);
         if(id){
+            if(side==ActiveWindowTab().model.activePane)UpdateNavigationChrome();
             StatusText().Text(completeFolder?
                 (state.indexToComplete?
                     L"전체 이름 인덱스를 완성하는 중입니다.":
@@ -1587,6 +1591,7 @@ namespace winrt::FlyExplorer::implementation
             }
         }
         const bool continuation=completed.action==Action::Continue;
+        if(completed.active&&continuation)UpdateNavigationChrome();
         // Private workspace restore owns its session view. Even if the last
         // restore request settles here, do not replace that view with an
         // unrelated in-memory folder override.
@@ -2470,9 +2475,10 @@ namespace winrt::FlyExplorer::implementation
         state.streamToComplete=false;
         const auto id=mShellNavigation->submitPreviousPage(
             ActiveWindowTab().model,side);
-        if(id)
+        if(id){
+            if(side==ActiveWindowTab().model.activePane)UpdateNavigationChrome();
             StatusText().Text(L"폴더의 이전 항목 창을 불러오는 중입니다.");
-        else
+        }else
             StatusText().Text(L"이전 항목 창을 불러올 수 없습니다.");
     }
     int MainWindow::DetailLayoutProfile() const

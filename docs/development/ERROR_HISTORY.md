@@ -1,3 +1,9 @@
+## 2026-10-29 — Pending navigation predicate existed, but submit sites did not publish it
+
+Controller submit methods marked pending while MainWindow QueuePath/QueuePidl/page submit wrappers omitted UpdateNavigationChrome. Earlier contracts checked predicates/completion but missed the request-start call sites. Refresh active-pane chrome immediately after successful submit and on continuation completion. New contract catches all five live submit sites and continuation terminal paths; source 25/25, Release, bounded GUI and Light before/after pixels accepted. [Exact evidence, hashes and all failed attempts](EP01_NAVIGATION_CHROME_ACCEPTANCE_20261029.md).
+
+Do not conflate internal pending state with rendered button state or assume a missed transition is only UIA timing. The property-event attempt received no notifications, then a popup-open shortcut attempt and a right-pane setup using a left-only helper failed at separate harness boundaries. The successful case closes the popup, checks the correct pane, verifies address focus and rechecks pending at Enter. Source/build successes were reused; no Release delay injection or repeated builds. Input-desktop unavailability remains a historical environment FAIL, not PASS or a product defect.
+
 ## 2026-10-29 — Root F6 accelerator changed active pane under file confirmation
 
 #40867279736 observed a real Left→Right switch behind the still-open collision dialog: root PreviewKeyDown F6 lacked the pending-confirmation boundary already used by file commands. Guard root dispatch before all app accelerators while the token exists, leaving the event unhandled for dialog keys. Source 18/18, canonical Release and actual F6-blocked/Escape-cancel/nonmodal-F6 GUI PASS in #40867842183; four Light before/after pixels reviewed. [Exact blob/runtime and finite scope](EP05_MODAL_SHORTCUT_ACCEPTANCE_20261029.md).

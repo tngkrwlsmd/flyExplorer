@@ -1,5 +1,9 @@
 # flyExplorer Windows 11 벤치마킹 및 UI/UX 점검
 
+## 2026-10-29 EP01 — 탐색 시작/페이지 로딩 버튼 상태
+
+[정확한 소스·runtime·GUI·픽셀 기록](EP01_NAVIGATION_CHROME_ACCEPTANCE_20261029.md). 요청 시작에서 빠졌던 버튼 갱신을 연결했다. 같은 Big 8k/오른쪽 B, Light 1160×640/96 DPI에서 로딩 중 이전 Back/Up 활성 표시와 후보의 비활성을 직접 비교했다. 후보의 세 버튼 false, 실제 진행 중 새 주소 A 입력·Enter 시점 pending 및 최종 양쪽 경로/파일 보존을 확인했다. scoped GUI·Light pixels PASS. 이력 입력의 앞 단계 증거와 각 harness/environment FAIL은 별도 보존한다. 전체 PX15·다른 테마/제공자/키보드 조합으로 확대하지 않는다.
+
 ## 2026-10-29 EP05 — 충돌 확인창의 F6 패널 전환 차단
 
 [실제 전후 기록](EP05_MODAL_SHORTCUT_ACCEPTANCE_20261029.md): 기존 runtime에서 확인창 중 F6가 주소와 활성 표시를 Left→Right로 바꿨다. 공통 키 처리의 pending token guard 후 Left를 유지하고, Escape 취소 및 비모달 F6는 정상 작동했다. 같은 1160×640/96 DPI Light 실제 PNG 4장 직접 검토, 한정 GUI·픽셀 PASS. Dark/전체 modal/전체 PX15/EP01 pending navigation 수용은 아니다.

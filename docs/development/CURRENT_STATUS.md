@@ -1,3 +1,10 @@
+# 2026-10-29 — EP01 request-start chrome omission fixed; scoped navigation GUI/pixels accepted
+
+- Starting main `d78cdaee42fe751558305d0f31191535342323d4`. Controller set pending, but live submit wrappers did not refresh Back/Forward/Up. Add active-pane chrome updates after successful parsing/history/page submits and when continuation completion clears pending. Product blob `MainWindow.xaml.cpp@b2cd9c729879f01cc270d265914a3c2f55cc5d56`.
+- Source **25/25 PASS**; Release [#40871091665](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/40871091665) exit 0, EXE SHA256 `47a8c28286769ed11db582f3513e8b800eab650daa529e65847efd1d6788129b`. Reused that exact runtime for all successor GUI; no repeat builds.
+- [Finite acceptance and preserved failures](EP01_NAVIGATION_CHROME_ACCEPTANCE_20261029.md): #40874030229 candidate front stage observed all three disabled, pending Alt+Left target preserved and settled Alt history working. Aggregate FAIL remains for later popup/input harness. [#40877218273](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/40877218273) before/after/cleanup **SUCCESS**, actual address focus and Enter-while-pending, final A/opposite B preservation, normal exits, original settings/owned bytes preserved and fixture/profile retirement.
+- Same Big 8k sort-loading before/after actual Light pixels reviewed, plus candidate history/settled states: scoped **GUI + pixels PASS**. Previous unobserved-gate entries below are historical. The omission was a source call-site gap, not a conclusion that the app lacked an internal pending state. No full provider/theme/key matrix, excluded/stopped scope or whole-product acceptance.
+
 # 2026-10-29 — EP05 actual F6 modal bypass fixed; scoped Release/GUI/pixels PASS
 
 - On main `18ffecc75840b89e42e1f9ef7b86f82fc14f8379`, real F6 changed the active pane behind an open collision confirmation. Add a four-line pending-confirmation guard at root shortcut dispatch, leaving the dialog's own key processing unhandled.
