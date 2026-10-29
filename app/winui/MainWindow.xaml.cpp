@@ -2818,6 +2818,24 @@ namespace winrt::FlyExplorer::implementation
             return ::CompareStringOrdinal(
                 a.c_str(),-1,b.c_str(),-1,TRUE)==CSTR_LESS_THAN;
         };
+        // Removing hidden and nonmatching rows is a stable subsequence.
+        // Filter before sorting to compare only survivors; the final relative
+        // order, logical IDs and metadata ownership remain unchanged.
+        if(!state.showHiddenItems){
+            order.erase(std::remove_if(order.begin(),order.end(),
+                [&](size_t index){
+                    const auto flags=indexedProjection?
+                        nameIndex[index].attributes:items[index].attributes;
+                    return (flags&SFGAO_HIDDEN)!=0;
+                }),order.end());
+        }
+        if(!state.filenameFilter.empty()){
+            order.erase(std::remove_if(order.begin(),order.end(),
+                [&](size_t index){
+                    return !fxfile::filterrules::Store::matches(
+                        labelAt(index),state.filenameFilter);
+                }),order.end());
+        }
         if(mode<=1||metadataReady)
             std::stable_sort(order.begin(),order.end(),[&](size_t lhs,size_t rhs){
                 if(folderAt(lhs)!=folderAt(rhs))return folderAt(lhs);
@@ -2843,23 +2861,6 @@ namespace winrt::FlyExplorer::implementation
                 }
                 return mode==1?lessName(rhs,lhs):lessName(lhs,rhs);
             });
-        // Enumeration is stable regardless of pane option. Project only the
-        // visible Shell rows; never alter PIDLs, logical paging, or transfers.
-        if(!state.showHiddenItems){
-            order.erase(std::remove_if(order.begin(),order.end(),
-                [&](size_t index){
-                    const auto flags=indexedProjection?
-                        nameIndex[index].attributes:items[index].attributes;
-                    return (flags&SFGAO_HIDDEN)!=0;
-                }),order.end());
-        }
-        if(!state.filenameFilter.empty()){
-            order.erase(std::remove_if(order.begin(),order.end(),
-                [&](size_t index){
-                    return !fxfile::filterrules::Store::matches(
-                        labelAt(index),state.filenameFilter);
-                }),order.end());
-        }
         // F05 is an opt-in complete-model presentation only. A resident
         // suffix, partial index, stale metadata, or provider item must NEVER
         // masquerade as global grouping. Native Shell identities are kept
@@ -3529,7 +3530,7 @@ namespace winrt::FlyExplorer::implementation
         auto const& nav=pane.tabs[pane.active];
         BackButton().IsEnabled(nav.canBack()&&!pending);
         ForwardButton().IsEnabled(nav.canForward()&&!pending);
-        UpButton().IsEnabled(nav.snapshot().folder.valid()&&
+        UpButton().IsEnabled(!pending&&nav.snapshot().folder.valid()&&
                              !ILIsEmpty(nav.snapshot().folder.get()));
     }
 
@@ -3598,7 +3599,11 @@ namespace winrt::FlyExplorer::implementation
         UpdateBreadcrumb(address);
         BackButton().IsEnabled(nav.canBack() && !ActiveWindowTab().model.panes[ActiveWindowTab().model.activePane].pending[ActiveWindowTab().model.panes[ActiveWindowTab().model.activePane].active]);
         ForwardButton().IsEnabled(nav.canForward() && !ActiveWindowTab().model.panes[ActiveWindowTab().model.activePane].pending[ActiveWindowTab().model.panes[ActiveWindowTab().model.activePane].active]);
-        UpButton().IsEnabled(nav.snapshot().folder.valid() && !ILIsEmpty(nav.snapshot().folder.get()));
+        const auto& activePane=ActiveWindowTab().model.panes[side];
+        const bool navigationPending=activePane.active<activePane.pending.size()&&
+                                     activePane.pending[activePane.active]!=0;
+        UpButton().IsEnabled(!navigationPending&&nav.snapshot().folder.valid() &&
+                             !ILIsEmpty(nav.snapshot().folder.get()));
         ActivePaneText().Text(side==0?L"활성: 왼쪽":L"활성: 오른쪽");
         PrimaryPaneTitle().Content(winrt::box_value(
             hstring(side==0?L"왼쪽 창 (활성)":L"왼쪽 창")));
@@ -3675,7 +3680,10 @@ namespace winrt::FlyExplorer::implementation
         const int side=state.model.activePane;
         const auto& pane=state.model.panes[side];
         auto view=side==0?LeftFiles():RightFiles();
-        const bool idle=!mFileOperations.busy();
+        // Pending collision confirmation remains an unfinished operation
+        // even if the worker is idle; match the owned file-context menu.
+        const bool idle=!mFileOperations.busy()&&
+            !mFileOperations.pendingConfirmationToken();
         const bool ready=idle&&pane.active<pane.tabs.size()&&
             pane.active<pane.pending.size()&&
             pane.active<pane.routeIds.size()&&
@@ -4002,6 +4010,12 @@ namespace winrt::FlyExplorer::implementation
     }
     void MainWindow::OnBackClicked(IInspectable const&,RoutedEventArgs const&)
     {
+        const auto& pane=ActiveWindowTab().model.panes[
+            ActiveWindowTab().model.activePane];
+        if(pane.active>=pane.pending.size()||pane.pending[pane.active]){
+            StatusText().Text(L"현재 폴더 이동이 끝난 뒤 다시 시도하세요.");
+            return;
+        }
         if(!Current().canBack()) {
             StatusText().Text(L"이 탭에 이전 폴더가 없습니다.");return;
         }
@@ -4011,6 +4025,12 @@ namespace winrt::FlyExplorer::implementation
     }
     void MainWindow::OnForwardClicked(IInspectable const&,RoutedEventArgs const&)
     {
+        const auto& pane=ActiveWindowTab().model.panes[
+            ActiveWindowTab().model.activePane];
+        if(pane.active>=pane.pending.size()||pane.pending[pane.active]){
+            StatusText().Text(L"현재 폴더 이동이 끝난 뒤 다시 시도하세요.");
+            return;
+        }
         if(!Current().canForward()) {
             StatusText().Text(L"이 탭에 다음 폴더가 없습니다.");return;
         }
@@ -4020,6 +4040,12 @@ namespace winrt::FlyExplorer::implementation
     }
     void MainWindow::OnUpClicked(IInspectable const&,RoutedEventArgs const&)
     {
+        const auto& pane=ActiveWindowTab().model.panes[
+            ActiveWindowTab().model.activePane];
+        if(pane.active>=pane.pending.size()||pane.pending[pane.active]){
+            StatusText().Text(L"현재 폴더 이동이 끝난 뒤 다시 시도하세요.");
+            return;
+        }
         QueuePidl(ActiveWindowTab().model.activePane,Current().target(
             fxfile::shellnav::HistoryAction::Up),
             fxfile::shellnav::NavigationAction::Up);

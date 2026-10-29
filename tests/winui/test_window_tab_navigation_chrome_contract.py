@@ -61,6 +61,26 @@ class WindowTabChromeContract(unittest.TestCase):
         self.assertIn("nav.canForward()&&!pending",helper)
         self.assertIn("nav.snapshot().folder.valid()",helper)
 
+    def test_pending_navigation_disables_up_and_blocks_history_shortcuts(self):
+        code=(ROOT/"app/winui/MainWindow.xaml.cpp").read_text(encoding="utf-8-sig")
+        chrome=code.split("void MainWindow::UpdateNavigationChrome()",1)[1].split(
+            "void MainWindow::Refresh(",1)[0]
+        self.assertIn("UpButton().IsEnabled(!pending&&",chrome)
+        active=code.split("void MainWindow::ActivatePane(",1)[1].split(
+            "void MainWindow::UpdateActivePaneChrome()",1)[0]
+        self.assertIn("const bool navigationPending=",active)
+        self.assertIn("UpButton().IsEnabled(!navigationPending&&",active)
+        for start,end in (
+            ("OnBackClicked","OnForwardClicked"),
+            ("OnForwardClicked","OnUpClicked"),
+            ("OnUpClicked","HideAddressSuggestions"),
+        ):
+            body=code.split("void MainWindow::"+start+"(",1)[1].split(
+                "void MainWindow::"+end+"(",1)[0]
+            self.assertIn("pane.active>=pane.pending.size()||pane.pending[pane.active]",body)
+            self.assertLess(body.index("pane.pending[pane.active]"),body.index("QueuePidl("))
+            self.assertIn("return;",body)
+
     def test_resolved_no_change_and_errors_recompute_chrome(self):
         source=compact((ROOT/"app/winui/MainWindow.xaml.cpp").read_text(encoding="utf-8"))
         complete=source.split("void MainWindow::OnNativeResult(",1)[1].split(

@@ -397,7 +397,8 @@ void MainWindow::ShowAppBackgroundContextMenu(
  // actual folder before building a deferred background menu.
  const auto sourceShellFolder=pane.tabs[tab].snapshot().parsingName;
  const auto sourceFilesystemFolder=pane.filesystemPaths[tab];
- const bool ready=!mFileOperations.busy();
+ const bool ready=!mFileOperations.busy()&&
+                  !mFileOperations.pendingConfirmationToken();
  const bool localFolder=ready&&!pane.filesystemPaths[tab].empty();
  const int viewMode=static_cast<int>(state.fileLists[side].viewMode);
  const int sortMode=state.fileLists[side].sortMode;
@@ -412,7 +413,8 @@ void MainWindow::ShowAppBackgroundContextMenu(
           action=std::move(action)](IInspectable const&,
                                    RoutedEventArgs const&){
    auto ui=weak.get();
-   if(!ui||ui->mClosing||ui->mFileOperations.busy())return;
+   if(!ui||ui->mClosing||ui->mFileOperations.busy()||
+      ui->mFileOperations.pendingConfirmationToken())return;
    const auto& state=ui->ActiveWindowTab();
    if(state.identity!=identity||state.model.activePane!=side)return;
    const auto& pane=state.model.panes[side];
@@ -613,6 +615,10 @@ void MainWindow::UpdateSort(int selection){
  if(incomplete)QueueNextFolderPage(side,true);
 }
 void MainWindow::RunTransfer(fxfile::shelltransfer::Kind kind){
+ if(mFileOperations.pendingConfirmationToken()){
+  StatusText().Text(L"기존 파일 충돌 확인을 먼저 완료하거나 취소하세요.");
+  return;
+ }
  if(mFileOperations.busy()){
   StatusText().Text(L"이전 파일 작업이 완료될 때까지 기다려 주세요.");
   return;

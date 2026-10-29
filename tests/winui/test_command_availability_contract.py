@@ -35,6 +35,23 @@ class CommandAvailabilityContract(unittest.TestCase):
         self.assertNotIn("StatusText().Text",body)
         self.assertNotIn("::GetFileAttributesW",body)
 
+    def test_pending_collision_disables_toolbar_and_both_owned_menus(self):
+        code=(APP/"MainWindow.xaml.cpp").read_text(encoding="utf-8-sig")
+        toolbar=code.split("void MainWindow::UpdateCommandAvailability()",1)[1].split(
+            "void MainWindow::OnToggleFileInfoPane",1)[0]
+        self.assertIn("const bool idle=!mFileOperations.busy()&&",toolbar)
+        self.assertIn("!mFileOperations.pendingConfirmationToken();",toolbar)
+        transfers=(APP/"m22_transfers.cpp").read_text(encoding="utf-8-sig")
+        background=transfers.split("void MainWindow::ShowAppBackgroundContextMenu(",1)[1]
+        self.assertIn("const bool ready=!mFileOperations.busy()&&",background)
+        self.assertIn("!mFileOperations.pendingConfirmationToken();",background)
+        self.assertIn("ui->mFileOperations.pendingConfirmationToken())return;",background)
+        operation=transfers.split("void MainWindow::RunTransfer(",1)[1].split(
+            "void MainWindow::",1)[0]
+        self.assertLess(operation.index("pendingConfirmationToken()"),
+                        operation.index("if(mFileOperations.busy())"))
+        self.assertIn("return;",operation)
+
     def test_selection_change_and_pane_change_refresh_buttons(self):
         code=(APP/"MainWindow.xaml.cpp").read_text(encoding="utf-8-sig")
         footer=code.split("void MainWindow::UpdateFooterSummary()",1)[1].split(
