@@ -2,7 +2,7 @@
 
 사용자는 별도로 멈추라고 지시할 때까지 개발을 이어가도록 요청했다.
 야간·06:00 종료 조건은 해제됐다. 이번 실행은 예약 변경만 하지 않고 실제
-제품 소스를 변경했다. VM 금지·필수 Windows 검증 전 main 병합 금지는 유지한다.
+제품 소스를 변경했다. 사용자의 VM 가동 알림 후 변경 기능의 한정 Windows 검증을 진행하며, 필수 Windows 검증 전 main 병합 금지는 유지한다.
 기존 일곱 기능은 [야간 기록](NIGHT_DEVELOPMENT_20261029.md)의 증거로 보존한다.
 
 ## EP08: 현재 폴더만 또는 하위 폴더 포함 검색
@@ -212,3 +212,49 @@ Alt+P 뒤 버튼 포커스 관측에서 중단됐다. 정상 종료와 원본 �
 자동 읽기를 켜거나 반복 타이머/작업자를 추가하지 않는다. 공식 DispatcherQueue
 [우선순위 API](https://learn.microsoft.com/en-us/windows/windows-app-sdk/api/winrt/microsoft.ui.dispatching.dispatcherqueue.tryenqueue)를 사용한다.
 관련 source 25/25와 diff 검사 PASS. 이 새 후보의 Windows 빌드/실제 포커스/픽셀은 아직 검증 전이다.
+
+
+## Alt+P 후속: 지연 재시도 실패와 동기 배치 완료로 한정 수용
+
+- 지연 재시도 후보 `0a7823d34fd139378e244d0eada7db09923f7706`는
+  [증분 Release #40967100455](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/40967100455)를 통과했지만,
+  [실제 입력 #40967403181](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/40967403181)에서 버튼 포커스가 실패했다. 해결로 수용하지 않는다.
+- [#40968062339](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/40968062339)는 양쪽 시작 로딩이 끝난 뒤 실제 행 클릭의 포커스를 확인했다.
+  Alt+P 뒤 Alt 누름 중 4회/해제 뒤 4회 모두 오른쪽 폴더 탭에 포커스가 있었고, 이미 열린 Reveal 명령은 버튼을 정상 포커스했다.
+  따라서 단순 시작 로딩/Alt 해제만의 문제로 확정하지 않는다. 패널 토글은 소스에서 목록 행을 다시 구성할 수 있다.
+- 제품 `2053c6750f606a652d91fa9a320bf0da23c683f2`는 실패한 queued retry를 제거하고,
+  토글 직후 한 번 `RootShell().UpdateLayout()`한 다음 기존 포커스 명령을 호출한다.
+  [공식 API](https://learn.microsoft.com/en-us/windows/windows-app-sdk/api/winrt/microsoft.ui.xaml.uielement.updatelayout)의 명시적 배치 완료를
+  이 키 명령 한 곳에서만 사용한다. 타이머/새 상태/지연 포커스 작업은 없다. 관련 소스 계약 **17/17 PASS**, diff 검사 PASS.
+- [증분 Release #40968263254](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/40968263254) PASS.
+  EXE SHA256 `e0769ea5f70385c0afc8b24a3f5cc735f6e23cd450c2b970599b4bf4089c18d8`.
+- [집중 GUI #40968522464](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/40968522464)에서 실제 Alt+P 열기→켜기 버튼 포커스,
+  자동 읽기 OFF/본문 비어 있음, Alt+P 닫기→원래 파일 행 포커스, 재열기 직후 F3 검색 포커스 보존이 PASS했다.
+  정상 종료·원본 설정/소유 바이트 보존 및 성공한 fixture/profile 제거도 확인했다.
+- [#40968746919](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/40968746919)에서 이 GUI의 실제 PNG 두 장을 읽어 직접 검토했다.
+  앞선 같은 Light/96 DPI/1160x640 창과 비교해 켜기 버튼이 스크롤 안에 온전히 보이고 키보드 포커스 테두리가 명확하며,
+  이어지는 F3는 검색 입력에 포커스가 있고 버튼 테두리는 해제됐다. 양쪽 파일 목록과 상세 정보가 겹치지 않는다.
+  **Alt+P 변경의 이 조건 한정 기능·시각 수용**이며 전체 제품/다른 테마/실제 Explorer 동등성을 뜻하지 않는다.
+
+## Markdown Windows native 한정 결과
+
+[#40968746919](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/40968746919)에서 제품 `file_command_core.cpp`와
+소유 폴더만 쓰는 작은 native fixture를 MSVC로 컴파일·실행해 **5/5 PASS**했다.
+한글·공백 이름의 빈 .md 생성 및 실제 경로, 충돌 시 기존 sentinel 바이트 보존,
+대문자 .MD, 잘못된 이름/다른 확장자의 파일 미생성, 기존 텍스트 명령의 .txt 전용 제한을 확인했다.
+성공한 native 소유 fixture/컴파일 결과는 같은 실행에서 제거하고 작은 로그/결과만 보존했다.
+GUI 메뉴/편집/선택/취소 수용이나 클립보드 검증을 이 native 결과로 대신하지 않는다.
+
+## 남은 동작 GUI의 검사 경계
+
+[#40968622374](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/40968622374)는 F11 입력 전에
+목록의 일시적 재구성 중 빈 rows를 즉시 인덱싱해 IndexError로 중단한 **harness 실패**다.
+정상 종료와 원본 설정 보존은 확인했지만 F11/선택/Markdown은 이 실행에서 PASS가 아니다.
+후속은 각 입력 직전 실제 행을 기다리도록 바꾸며 같은 제품 binary를 재사용한다.
+
+
+[#40976493866](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/40976493866)의 수정 harness는
+F11 실제 최대화/복원·누른 키 반복 방지와 표시된 두 파일의 선택 반전/해제를 **PASS**했다.
+이 성공 단계는 재실행하지 않는다. 이어지는 Markdown 메뉴 UIA Invoke 뒤 이름 입력란 포커스가
+확인되지 않아 전체 실행은 **FAIL**이다. 편집 값·물리 클릭·수동 포커스 positive control을
+구분하는 후속 진단으로 원인을 좁히며, 아직 자동 이름 편집/GUI 생성/취소 수용으로 확대하지 않는다.
