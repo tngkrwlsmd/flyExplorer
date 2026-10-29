@@ -1,6 +1,31 @@
 # Windows 11 File Explorer parity re-audit — 2026-10-22
 
-## Scope and judgment
+## 2026-10-29 evidence reconciliation
+
+Current reconciliation baseline: `main@8ebf3d8`. Use the maintained
+[NEXT_DEVELOPMENT_GOALS.md](NEXT_DEVELOPMENT_GOALS.md) current-work section
+before selecting a task. The original 2026-10-22 comparison and its priorities
+below remain a dated snapshot; their OPEN/next-step labels do not reopen a
+subsequently accepted scenario. This update does not perform a new Explorer
+comparison, product build, GUI or pixel review.
+
+| Area | Latest scoped result | Remaining difference or unverified scope |
+| --- | --- | --- |
+| PX02 Home | [Bounded unified Home accepted](PX02_HOME_OVERVIEW_ACCEPTANCE.md), `66b2c6a4`, Release + owned GUI | Populated activity tiles, separate pixels and full Explorer/cloud Home are outside that acceptance. |
+| PX06 Search | [Local in-flight Cancel accepted](PX06_SEARCH_CANCEL_STATUS.md), `6bbc94f4`, central #40691104646 | Full indexed/provider/cloud search, app-scale performance and separate visual acceptance remain distinct. |
+| PX10/L08 Columns | [Left and right native cursor + physical resize accepted](UI_UX_AUDIT.md), left `b5e6e11f` and right `e887f64d` | Independent pointer-pixel review and untested drag transitions are not certified. Historical Arrow/locked-desktop results are not the current native-cursor verdict. |
+| PX12 Address | [Bounded keyboard candidates accepted](PX12_KEYBOARD_CANDIDATE_ACCEPTANCE.md), exact `3bbfc73b`, central #40778973319 | Arbitrary disk/provider autocomplete remains broader than the implementation; the older visual comparison remains PARTIAL. |
+| PX14/G01 Stability | [Focused startup and ToolTip-close issues completed](CURRENT_STATUS.md); #68 and #69 closed | Preserve exact scenario boundaries and reopen only on new matching evidence, without claiming every lifecycle path is fixed. |
+| M23 Copy / source gate | [Finite local Copy scope accepted](M23_ACCEPTANCE_BOUNDARY.md); [source-contract repair 8ebf3d8](https://github.com/tngkrwlsmd/flyExplorer/commit/8ebf3d8980864c19d935a1532faabb779d1586b9) local product-source 301/301 | Local source PASS is not new central CI/Release/GUI acceptance; retain historical failed runs. |
+
+Current recommended queue: scoped Home visual/usability review first; one
+bounded local app-performance scenario next; then choose one unmet PX17/PX08
+feature after checking existing implementation and OS delegation. PX11's hybrid
+state ownership is already decided; per-tab view/column persistence is a new
+product choice. Preserve user-excluded G03–G05 and stopped G07. Optional Gallery,
+cloud, preview and Undo extensions are not mandatory blockers.
+
+## Original 2026-10-22 scope and judgment
 
 Product source checked against flyExplorer main 5cf79f56b27e7d86a1fd82cc6ae171d75e04d98e
 (the 2026-10-22 follow-up documentation changes did not edit UI/native product source).
@@ -26,7 +51,7 @@ gap, not proof that a shell integration cannot perform the action.
 WindowTab/PaneTab differentiation; "perfect clone" and binary/pixel equivalence
 are not valid acceptance claims.
 
-## Current versus Windows 11 Explorer — gap ledger
+## Historical 2026-10-22 Explorer gap ledger
 
 Status meanings: **DIFFERENT** = evidenced product architectural/interaction
 difference; **PARTIAL** = implementation exists but its covered behavior is
@@ -55,7 +80,7 @@ unaccepted behavior; **INTENTIONAL** = accepted deliberate divergence.
 | PX17 / EP11 | New-item flyout, templates, device-dependent extensions | **PARTIAL** — New Folder and New Text File present; generalized provider templates not accepted | Show supported new item types, collision guard and failure state; no claim of full template ecosystem |
 | PX18 / EP09 | Quick access integration with OS-pinned folder entries | **PARTIAL** — private bookmarks, not established as native Explorer Quick access database or full history | Map visibility and ordering in the private app, never silently write or import OS Explorer profile |
 
-## Priorities and acceptance policy
+## Historical 2026-10-22 priorities and acceptance policy
 
 - **P0 functional correctness:** G01 unresolved intermittent navigation/shutdown; never label it fully fixed from a single PASS.
 - **P1 visible parity:** PX01, PX02, PX06, PX08, PX10, PX11, PX12, PX15, PX17, PX18. Reuse the accepted F01–F06/R1 evidence and existing changed code.

@@ -111,9 +111,12 @@ instructions.
 The maintained, prioritized incomplete-work register is
 docs/development/NEXT_DEVELOPMENT_GOALS.md. It distinguishes verified
 architecture/behavior gaps from untested environments, deliberate safety
-limits, optional Explorer parity and publication gates. In particular, the
-existing pane-shared folder-tab sort behavior differs from the documented
-PaneTab sort ownership; decide the intended contract before changing it.
+limits, optional Explorer parity and publication gates. Use its dated current
+summary before older historical OPEN/next-step labels. The accepted ownership
+contract is independent PaneTab sort with v4 persistence; view/display options
+and column widths remain per pane within each WindowTab, and grouping uses a
+transient route/tab cache. Per-tab view/column persistence is a separate product
+choice, not an unresolved defect in the accepted sort behavior.
 Previously accepted F01-F06 and R1 sort-menu work must not be reopened from
 older historical plans without new evidence.
 

@@ -6,8 +6,9 @@ application and its current engineering requirements.
 ## Current documents
 
 - CURRENT_STATUS.md — accepted product state, latest evidence and open gates.
-- NEXT_DEVELOPMENT_GOALS.md — prioritized uncompleted goals, verified design gaps,
-  environment-dependent checks for private use; planning, not authorization.
+- NEXT_DEVELOPMENT_GOALS.md — current dated work queue, scoped completed items,
+  unverified gaps and product choices; historical plans remain below the current
+  summary and do not reopen accepted work. Planning, not authorization.
 - ARCHITECTURE.md — current WinUI/native-core/Shell-isolation architecture.
 - AGENT_EFFICIENCY.md — mandatory bounded tool/build/test strategy.
 - VERIFICATION_PROFILE.md — central CI scopes, failure taxonomy, FAST/STANDARD/FINAL profiles and high-cost fixture policy.
@@ -20,8 +21,12 @@ application and its current engineering requirements.
   acceptance criteria, priorities and scoped local build/run evidence.
 - WINUI_EXPLORER_VISUAL_BENCHMARK_20261001.md — measured Explorer baseline.
 - WIN11_EXPLORER_FEATURE_BENCHMARK_20261012.md — sourced feature-gap matrix, priorities and acceptance boundaries.
-- WIN11_PARITY_REAUDIT_20261022.md — current Windows 11 Explorer functional/UX
-  difference ledger (PX01–PX18); no blanket equivalence claim.
+- WIN11_PARITY_REAUDIT_20261022.md — original dated Explorer comparison with a
+  2026-10-29 evidence reconciliation; use NEXT_DEVELOPMENT_GOALS.md for the live
+  work queue, not the historical OPEN labels. No blanket equivalence claim.
+- PX02_HOME_OVERVIEW_ACCEPTANCE.md, PX06_SEARCH_CANCEL_STATUS.md,
+  PX12_KEYBOARD_CANDIDATE_ACCEPTANCE.md and M23_ACCEPTANCE_BOUNDARY.md — finite
+  feature acceptance records; preserve their explicit runtime/visual limits.
 - UI_VISUAL_RETEST.md — current owned GUI/visual verification workflow.
 
 The root README, AGENTS.md and editable .agent-policy/PROJECT.md are also

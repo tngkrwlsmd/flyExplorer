@@ -1,3 +1,12 @@
+# 2026-10-29 — Development backlog reconciled with accepted evidence (DOCS ONLY)
+
+- Reconciled root AGENTS.md, NEXT_DEVELOPMENT_GOALS, Explorer requirements, the dated parity audit and documentation index against baseline `8ebf3d8` and the existing exact-SHA evidence. The active queue now separates scoped completion, visual/performance gaps and optional product choices.
+- Preserved historical failed runs and dated plans, explicitly marking old OPEN/next-step labels as historical where later scoped acceptance exists. Clarified current PaneTab sort ownership, unified Home and Windows-delegated archive direction; no accepted scenario was reopened.
+- Next recommended scope is Home-only visual/usability review, followed by one bounded local app-performance scenario and a separately selected unmet feature. No new application functionality or acceptance is asserted by that queue.
+- Documentation changes only: reviewed changed scope, whitespace and local relative links. No source-suite, product build, GUI or pixel checks were run. G03–G05 remain user-excluded, G07 stopped, and public distribution is not an active goal.
+
+---
+
 # 2026-10-29 — Product source contract drift repaired (LOCAL SOURCE PASS)
 
 - **Test-only repair:** on baseline `76c435d429572fde19cb53fb40d06fa4fca0ef4a`, the current local product source gate reproduced **301 tests, failures=2, errors=1**. F04 still searched for removed `startup_status=` instead of the current `startup_ready` boundary; Fluent/file-type contracts rejected the already accepted opt-in L08 movement observer; the same file-type test also retained left-only GUI identifiers after the accepted pane-parameterized harness change.
