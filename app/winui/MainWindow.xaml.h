@@ -194,6 +194,7 @@ namespace winrt::FlyExplorer::implementation
             Microsoft::UI::Xaml::Input::RightTappedRoutedEventArgs const&);
         void OnFileSelectionChanged(IInspectable const&,
             Microsoft::UI::Xaml::Controls::SelectionChangedEventArgs const&);
+        void ChangeFileSelection(bool invert);
         void OnFileSelectionKeyUp(IInspectable const&,
             Microsoft::UI::Xaml::Input::KeyRoutedEventArgs const&);
         void OnFileDragItemsStarting(IInspectable const&,

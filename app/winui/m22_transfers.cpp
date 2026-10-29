@@ -1436,6 +1436,52 @@ void MainWindow::StartInternalPaste(){
                              fxfile::shelltransfer::Kind::Copy;
  StartTransfer(std::move(request));
 }
+void MainWindow::ChangeFileSelection(bool invert){
+ if(mClosing||mPopulatingFileLists||mFileOperations.busy()||
+    mFileOperations.pendingConfirmationToken())return;
+ auto const& window=ActiveWindowTab();
+ const int side=window.model.activePane;
+ if(side<0||side>1||(side==1&&!window.model.split))return;
+ auto const& pane=window.model.panes[side];
+ const auto tab=pane.active;
+ auto const& shown=window.fileLists[side];
+ if(tab>=pane.tabs.size()||tab>=pane.pending.size()||
+    tab>=pane.routeIds.size()||pane.pending[tab]||
+    shown.visibleTab!=tab||shown.visibleRoute!=pane.routeIds[tab]||
+    shown.renderedFolder!=pane.tabs[tab].snapshot().parsingName)return;
+ auto view=side==0?LeftFiles():RightFiles();
+ try{
+  if(!view.Tag()||unbox_value<std::uint64_t>(view.Tag())!=window.identity)return;
+ }catch(...){return;}
+ // Snapshot the complement before clearing; group headers have no file Tag.
+ // Only rows already in this rendered page participate. Do not fetch pages.
+ std::vector<IInspectable> next;
+ if(invert){
+  next.reserve(view.Items().Size());
+  for(auto const& value:view.Items()){
+   auto row=value.try_as<ListViewItem>();
+   if(!row||!row.Tag())continue;
+   std::uint64_t logical{};
+   try{logical=unbox_value<std::uint64_t>(row.Tag());}
+   catch(...){return;}
+   if(!pane.tabs[tab].indexedItem(static_cast<std::size_t>(logical)))return;
+   if(!row.IsSelected())next.push_back(value);
+  }
+ }
+ {
+  // One selection publication instead of per-row preview/counter updates.
+  mPopulatingFileLists=true;
+  struct Reset final{bool& flag;~Reset(){flag=false;}} reset{mPopulatingFileLists};
+  view.SelectedItems().Clear();
+  for(auto const& item:next)view.SelectedItems().Append(item);
+ }
+ UpdateSelectionChrome();
+ UpdateFooterSummary();
+ QueueTextPreview();
+ view.Focus(Microsoft::UI::Xaml::FocusState::Keyboard);
+ StatusText().Text(invert?L"현재 표시된 항목의 선택을 반전했습니다.":
+                          L"파일 선택을 해제했습니다.");
+}
 void MainWindow::HandleFileShortcut(
  int side,Microsoft::UI::Xaml::Input::KeyRoutedEventArgs const& args){
  if(side!=ActiveWindowTab().model.activePane)ActivatePane(side);

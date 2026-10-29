@@ -19,6 +19,8 @@ struct FileToolbar : FileToolbarT<FileToolbar> {
  void OnCreateFolder(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
  void OnNewFolderMenu(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
  void OnNewTextFileMenu(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
+ void OnClearFileSelection(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
+ void OnInvertFileSelection(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
  void OnRenameSelected(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
  void OnWindowsCut(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
  void OnWindowsCopy(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
