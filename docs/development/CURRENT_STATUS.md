@@ -1,3 +1,9 @@
+# 2026-10-29 — F03 long-text Preview keeps complete Unicode characters at its cap
+
+- Reproduced a new boundary defect on `138587bd`: valid UTF-8 whose supplementary character crosses the existing 8192 UTF-16-unit display cap left a lone high surrogate (`0xD83D`) and a broken square. Back off one unit at this boundary; preserve the cap, partial-file feedback, opt-in, worker/read safety and original bytes.
+- Source **6/6 PASS**, focused Release + GUI [#40825054933](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/40825054933) **PASS**: exact complete 8191-unit prefix, no lone surrogate, normal exit, unchanged original settings/owned bytes and fixture/profile removal. Light/Dark 1220×700/960×519 before/after Preview pixels reviewed. Existing basic Preview/reveal acceptance was reused.
+- [Exact blobs, EXE hashes, raw fixture correction and finite limits](F03_PREVIEW_PANE.md). This closes this Unicode cutoff defect, not full PX15, grapheme-cluster segmentation or additional formats. Exclusions and PX11 policy remain unchanged.
+
 # 2026-10-29 — PX15 compact search preserves both file panes
 
 - Confirmed on `3c22b424` Release: opening search then restoring to 960×519 hid both file lists and clipped the result-folder action. Search now scrolls within the available height, reserving 160 XAML units for file panes on open/resize. Search execution/cancellation and tab/session ownership are unchanged.

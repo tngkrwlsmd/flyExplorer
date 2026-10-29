@@ -1,5 +1,73 @@
 # F03 — bounded local Preview pane development boundary
 
+## 2026-10-29 — Long-text cutoff preserves complete UTF-16 characters
+
+On `main@138587bd821d9533aeb0f6a9f24f6a4cbcd8ee07`, a valid UTF-8 file
+can end its 8192-unit Preview display with an unpaired high surrogate.
+The reproduced owned file has 8191 BMP units followed by U+1F600 and a
+suffix (8213 UTF-8 bytes, 8211 UTF-16 units). The old display ended in
+`0xD83D`; actual Light/Dark wide/compact pixels showed a broken square.
+This is a newly reproduced long-content boundary defect, separate from
+accepted reveal/opt-in/selection behavior, which was not reopened.
+
+Only the final clipping step in `m24_preview.cpp` changes: retain the
+existing 8192-unit cap, backing off to 8191 when the final included unit
+is a high surrogate. Keep the existing partial-file status, explicit opt-in,
+worker/read limits, cancellation and stale-selection checks. Original files
+are never rewritten. This preserves complete Unicode scalar values at this
+cutoff; it does not add full grapheme-cluster segmentation or new formats.
+
+- Reviewed product blob: `f1169ae8bbde3806f8a0a6941c792b0f947a17ce`.
+- Focused GUI blob: `4c3759ebe4ffb6265da8969774b6b2abf6d51b51`.
+- Before EXE SHA256:
+  `ccc88f0fc24981b44cab6712da21823228f85c18bd0991859f42e2b8086bc431`.
+- After EXE SHA256:
+  `00a5a56c12475580cf4d9796d59863dd734b090e4f97f1e1ec203052e82fc63d`.
+- Local source contracts `test_f03_winui_controller_contract.py` **6/6 PASS**;
+  GUI Python syntax and `git diff --check` PASS.
+- [Exact raw-byte baseline #40824713875](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/40824713875):
+  diagnostic completed successfully and **reproduced the product defect**;
+  display 8192 units, lone surrogate true. Normal exit 0, original settings
+  and fixture bytes unchanged, disposable profile/fixture removed.
+- [Focused Release + GUI #40825054933](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/40825054933):
+  **PASS**. Display 8191 units, exactly the complete expected prefix, no
+  unpaired surrogate; partial-file status unchanged, two scrollable viewports.
+  Normal exit 0, original settings/owned bytes unchanged, fixture/profiles
+  removed. Built from the above base main plus the two exact reviewed blobs;
+  do not describe this as a clean final documentation-commit build. Retained
+  intermediates/cache were reused; LTCG reported IPDB/IOBJ mismatch and
+  full-function compilation fallback, not a purely incremental link.
+- Actual pixels **PASS for this Preview boundary**: inspected all four
+  matched before and four after Light/Dark 1220×700/960×519 images. The
+  final broken square disappeared; Preview text, partial-file feedback and
+  both file panes remain visible. Some compact captures contain the existing
+  reveal-action tooltip near the title/toolbar area (also present before);
+  this is not titlebar/tooltip acceptance or a claim of full visual QA.
+
+Environment: approved central Windows VM, Windows 11 build 26300, x64
+Release, 96 DPI; rectangles `(20,20,1240,720)` and `(20,20,980,539)`.
+The owned long text has 90 line breaks and an ASCII tail before the boundary.
+Only the owned foreground app HWND was captured within the actual desktop.
+ScrollViewer automation positioned the outer Details and inner text viewports
+at their ends; this is not new physical-wheel/keyboard acceptance. Reuse the
+prior basic F03 interaction evidence. Full PX15 and other content/OS/font/DPI
+conditions remain separate. Excluded G03–G05 and stopped G07 stay unchanged.
+
+The first diagnostic [#40824567414](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/40824567414)
+completed with normal exit/preservation and usable long-scroll pixels, but
+Python text writing converted 90 LF breaks to CRLF. Its stored fixture was
+8303 UTF-8 bytes / 8301 UTF-16 units, while its reported unit count (8211)
+came from the pre-write string. It did not hit the intended Unicode boundary
+and is **not boundary acceptance**. The harness now writes exact UTF-8 bytes,
+asserts byte equality and counts units from the stored file before execution.
+The corrected baseline reused the exact Release without rebuilding.
+
+To reproduce only this owned long-content boundary against a reviewed Release:
+
+```powershell
+python tests/winui/test_f03_long_text_gui.py --phase after
+```
+
 ## 2026-10-15 F03 interactive window DPI/High Contrast inventory — real 100% observed, higher DPI NOT TESTED
 
 - **Exact test-only source SHA:** `7a84b40022d67468dcfd7273b28fb0271ad175c1`.

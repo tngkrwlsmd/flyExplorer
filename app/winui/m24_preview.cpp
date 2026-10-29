@@ -171,7 +171,12 @@ void MainWindow::QueueTextPreview() {
                 auto decoded=winrt::to_hstring(utf8);
                 std::wstring display(decoded.c_str(),decoded.size());
                 bool clipped=display.size()>8192;
-                if(clipped)display.resize(8192);
+                if(clipped){
+                    // Valid UTF-8 may decode to a UTF-16 surrogate pair.
+                    // Never expose only its leading unit at the display cap.
+                    const auto last=display[8191];
+                    display.resize(last>=0xD800&&last<=0xDBFF?8191:8192);
+                }
                 ui->TextPreviewBody().Text(hstring(display));
                 ui->TextPreviewStatus().Text(clipped?
                     L"파일 앞부분만 표시합니다.":L"텍스트 파일 미리보기");
