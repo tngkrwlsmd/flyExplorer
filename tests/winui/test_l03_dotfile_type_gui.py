@@ -93,40 +93,44 @@ try:
     win = wait(get_win, "owned WinUI window absent")
     el = lambda name: win.child_window(auto_id=name, visible_only=False)
 
+    def inspect_side(side):
+        rows = el(side + "Files").descendants(control_type="ListItem")
+        values = {}
+        for row in rows:
+            caption = row.window_text()
+            name = caption.split("|", 1)[0].strip()
+            if not name.startswith("[파일]"):
+                continue
+            name = name[len("[파일]"):].strip()
+            if name in names:
+                values[name] = extract_type(caption)
+        return values
+
     def selected_side():
         for side in ("Left", "Right"):
-            try:
-                rows = el(side + "Files").descendants(control_type="ListItem")
-                values = {name: extract_type(next(
-                    (r.window_text() for r in rows
-                     if r.window_text().startswith("[파일]") and
-                        name in r.window_text().split("|")[0]), ""))
-                          for name in names}
-                if all(values.values()):
-                    return (side, values)
-            except (LookupError, ValueError):
-                continue
+            values = inspect_side(side)
+            if all(values.get(name) for name in names):
+                return (side, values)
         return None
 
-    # Require the async detail worker's .txt association rather than transient
-    # initial metadata labels before capturing the before/after comparison.
-    def ready():
-        item = selected_side()
-        if item is None:
-            return None
-        _side, values = item
-        if values["readme.txt"] in ("파일", "txt 파일"):
-            return None
-        return item
-
-    side, values = wait(ready, "owned file type details never materialized", 30)
+    # The registered .txt label is an async decoration; it is not a
+    # prerequisite for the dotfile fallback being independently observable.
+    try:
+        side, values = wait(selected_side, "owned file rows missing", 22)
+    except AssertionError:
+        print("L03_OWNED_UIA_DIAGNOSTIC=" + json.dumps({
+            side: [r.window_text() for r in
+                   el(side + "Files").descendants(control_type="ListItem")][:12]
+            for side in ("Left", "Right")}, ensure_ascii=True), flush=True)
+        raise
+    time.sleep(1.0)
     win.set_focus()
     assert hwnd_pid(u.GetForegroundWindow()) == process.pid
     assert u.MoveWindow(hwnd, 20, 20, 1160, 640, True)
     el("ThemePicker").select(1 if args.theme == "light" else 2)
     wait(lambda: ("라이트" if args.theme == "light" else "다크")
          in el("ThemeStateText").window_text(), "theme state mismatch")
-    side, values = wait(ready, "owned type labels missing after theme change", 15)
+    side, values = wait(selected_side, "owned type labels missing after theme change", 15)
     if args.phase == "after":
         for name in (".gitignore", ".env"):
             assert values[name] == "파일", (name, values[name])
