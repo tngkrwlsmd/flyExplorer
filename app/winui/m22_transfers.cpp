@@ -829,6 +829,9 @@ void MainWindow::ApplyTransferStartStatus(
   SetFileButtonsBusy(false,false);
   StatusText().Text(L"별도 Shell 파일 작업 스레드를 시작하지 못했습니다.");
  }
+ // Cancellation/AllSkipped can settle a confirmation without a worker
+ // completion callback. Recompute readiness after its token was cleared.
+ UpdateCommandAvailability();
 }
 void MainWindow::StartTransfer(fxfile::shelltransfer::Request request){
  // A pending confirmation must not be displaced by another transfer on the

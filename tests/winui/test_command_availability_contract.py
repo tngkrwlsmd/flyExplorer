@@ -52,6 +52,16 @@ class CommandAvailabilityContract(unittest.TestCase):
                         operation.index("if(mFileOperations.busy())"))
         self.assertIn("return;",operation)
 
+    def test_confirmation_settlement_recomputes_instead_of_forcing_buttons(self):
+        code=(APP/"m22_transfers.cpp").read_text(encoding="utf-8-sig")
+        body=code.split("void MainWindow::ApplyTransferStartStatus(",1)[1].split(
+            "void MainWindow::StartTransfer(",1)[0]
+        self.assertGreater(body.rindex("UpdateCommandAvailability();"),
+                           body.index("status==Start::Cancelled"))
+        self.assertGreater(body.rindex("UpdateCommandAvailability();"),
+                           body.index("status==Start::AllSkipped"))
+        self.assertNotIn(".IsEnabled(true)",body)
+
     def test_selection_change_and_pane_change_refresh_buttons(self):
         code=(APP/"MainWindow.xaml.cpp").read_text(encoding="utf-8-sig")
         footer=code.split("void MainWindow::UpdateFooterSummary()",1)[1].split(

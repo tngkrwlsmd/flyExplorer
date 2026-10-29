@@ -1,3 +1,7 @@
+## 2026-10-29 — Collision Cancel cleared its token without restoring commands
+
+After pending-confirmation readiness was tightened in `7e28366c`, Cancel took a no-worker terminal path and left toolbar commands disabled (#40856964667). Recompute `UpdateCommandAvailability()` after terminal `ApplyTransferStartStatus` handling instead of forcing controls enabled. Source 12/12, Release and Light/Dark collision recovery PASS for exact blob `0c8e8cd7…` / EXE `bf2de6ba…`; [full evidence and preserved failures](EP05_CANCEL_RECOVERY_20261029.md). Aggregate #40857952150 remains FAIL for separate native cmd quoting and late navigation observation defects; no filter timings were produced there. Successor #40859732626 remains pending at this checkpoint. Do not duplicate an active request or repeat the passed collision/build stages.
+
 # Error history
 
 ## 2026-10-29 — PX13 follow-up request rewrote the baseline-result reference

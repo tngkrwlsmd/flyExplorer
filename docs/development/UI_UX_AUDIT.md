@@ -1,5 +1,9 @@
 # flyExplorer Windows 11 벤치마킹 및 UI/UX 점검
 
+## 2026-10-29 EP05 — 충돌 확인 취소 후 명령 복구
+
+[정확한 source/blob/EXE와 실제 화면 6장](EP05_CANCEL_RECOVERY_20261029.md): Release `bf2de6ba…`, Light/Dark 1160×640, 96 DPI에서 충돌 확인 중 8개 명령 비활성·취소 후 복구와 두 패널 보존을 확인했다. 한정 GUI와 독립 픽셀 검토 PASS. 빈 배경 메뉴/직접 backend 실행, AllSkipped 및 전체 PX15 수용으로 확대하지 않는다. 후속 navigation/필터 결과 0개 검토는 중앙 #40859732626 결과 대기다.
+
 ## 2026-10-29 L03/EP04 — 확장자 없는 점파일의 '유형' 문구 수정
 
 - 실제 Windows UIA와 Dark 화면에서 `.gitignore` → `txtfile`, `.env` → `ENV 파일`을 확인했다. 파일명 전체의 마지막 점이 아닌 파일명 확장자 규칙으로 변경한 후 둘 다 `파일`로 표시됐고, `.env.local`/일반 `.txt`의 기존 등록 유형은 유지됐다.
