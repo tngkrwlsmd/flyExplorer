@@ -41,6 +41,34 @@ class FileDetailControllerContract(unittest.TestCase):
                         "entry.sizeKnown=","entry.dateKnown="):
             self.assertNotIn(removed,impl)
 
+    def test_extensionless_dotfiles_match_sortable_metadata_type_fallback(self):
+        from pathlib import PureWindowsPath
+        worker=read("app/winui/file_detail_controller.cpp")
+        metadata=read("app/winui/file_metadata_controller.cpp")
+        self.assertIn("std::filesystem::path(path).extension().native()", metadata)
+        # Visual description and the bounded Windows type lookup must use
+        # the same filename-only extension rule as sortable metadata.
+        self.assertEqual(
+            worker.count("std::filesystem::path(path).extension().native()"), 2)
+        self.assertIn("if(!fxfile::filetype::safeExtension(ext))continue;", worker)
+        self.assertIn('entry.typeLabel=ext.size()>1&&ext.size()<=17?', worker)
+        self.assertIn('ext.substr(1)+L" 파일":L"파일"', worker)
+        self.assertIn("if(!ext.empty()){", worker)
+        # Python's Windows path model mirrors the intended path cases;
+        # real C++/Windows display remains a separate validation gate.
+        cases={
+            r"C:\owned\.gitignore": "",
+            r"C:\owned\.env": "",
+            r"C:\owned\.env.local": ".local",
+            r"C:\owned\report.txt": ".txt",
+            r"C:\owned\archive.tar.gz": ".gz",
+            r"C:\owned\trailing.": "",
+            r"C:\parent.with.dot\readme": "",
+        }
+        for path, suffix in cases.items():
+            with self.subTest(path=path):
+                self.assertEqual(PureWindowsPath(path).suffix, suffix)
+
     def test_network_and_removable_details_use_snapshot_hints_and_isolated_thumbnail_path(self):
         header=read("app/winui/file_detail_controller.h")
         worker=read("app/winui/file_detail_controller.cpp")

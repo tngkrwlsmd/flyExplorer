@@ -77,11 +77,9 @@ bool FileDetailController::start(
             }
             std::vector<std::wstring> extensions{L".flyfolder"};
             for(auto const& path:request.paths){
-                const auto dot=path.find_last_of(L'.');
-                const auto slash=path.find_last_of(L"\\/");
-                if(dot==std::wstring::npos||
-                   (slash!=std::wstring::npos&&dot<slash))continue;
-                auto ext=path.substr(dot);
+                // Match sortable metadata's filename-only extension rule:
+                // .gitignore has no extension; .env.local has .local.
+                auto ext=std::filesystem::path(path).extension().native();
                 if(!fxfile::filetype::safeExtension(ext))continue;
                 std::transform(ext.begin(),ext.end(),ext.begin(),
                    [](wchar_t c){return static_cast<wchar_t>(::towlower(c));});
@@ -216,15 +214,10 @@ bool FileDetailController::start(
                         }
                     }
                 }else{
-                    const auto dot=path.find_last_of(L'.');
-                    const auto slash=path.find_last_of(L"\\/");
-                    entry.typeLabel=dot!=std::wstring::npos&&
-                         (slash==std::wstring::npos||dot>slash)&&
-                         dot+1<path.size()&&path.size()-dot<=17?
-                         path.substr(dot+1)+L" 파일":L"파일";
-                    if(dot!=std::wstring::npos&&
-                       (slash==std::wstring::npos||dot>slash)){
-                        auto ext=path.substr(dot);
+                    auto ext=std::filesystem::path(path).extension().native();
+                    entry.typeLabel=ext.size()>1&&ext.size()<=17?
+                        ext.substr(1)+L" 파일":L"파일";
+                    if(!ext.empty()){
                         std::transform(ext.begin(),ext.end(),ext.begin(),
                            [](wchar_t c){return static_cast<wchar_t>(::towlower(c));});
                         auto found=windowsTypes.find(ext);
