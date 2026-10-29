@@ -591,6 +591,10 @@ Attempt oneAttempt(
                 outcome.hr=HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
                 break;
             }
+            // Drain a producing helper without adding one poll delay per
+            // 64 KiB chunk. The next iteration still checks cancellation,
+            // deadline and frame bounds; only an idle pipe needs to wait.
+            if(readProgress)continue;
             ::WaitForSingleObject(lane->wake,kPollMs);
         }
     }

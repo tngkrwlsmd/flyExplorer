@@ -9,6 +9,19 @@ ISO=UI/"helper"
 TESTS=ROOT/"tests"/"winui"
 def read(path):return path.read_text(encoding="utf-8-sig")
 class RealWinUIIsolationContract(unittest.TestCase):
+    def test_streaming_pipe_waits_only_without_read_progress(self):
+        code=read(SRC/"shell_isolated_supervisor.cpp")
+        drain=code.split("size_t expected=0;",1)[1].split("cleanup:",1)[0]
+        progress=drain.index("if(readProgress)continue;")
+        wait=drain.index("::WaitForSingleObject(lane->wake,kPollMs);")
+        self.assertLess(progress,wait)
+        for check in ("if(!current(lane,job))", "::GetTickCount64()-started>=kDeadlineMs",
+                      "available>kWireMax-frame.size()", "frame.size()>expected",
+                      "if(bad)"):
+            self.assertLess(drain.index(check),progress)
+        self.assertIn("if(!bad&&exitCode==0&&readProgress&&",drain)
+        self.assertIn("outcome.hr=parse(frame,outcome.snapshot,outcome.path);",drain)
+
     def test_two_bounded_native_supervisor_lanes_and_owned_job(self):
         code=read(SRC/"shell_isolated_supervisor.cpp")
         hdr=read(SRC/"shell_isolated_supervisor.h")

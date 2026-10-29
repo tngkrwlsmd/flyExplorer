@@ -1,5 +1,18 @@
 # Error history
 
+## 2026-10-29 — PX13 follow-up request rewrote the baseline-result reference
+
+Run #40819854610 failed before product patch/build: global before/after string
+replacement also changed the Python precondition from result-before.json to the
+not-yet-created result-after.json. This was an agent request-assembly/preflight
+defect, not product or build acceptance failure. Preserve it as FAIL. Restore the
+baseline input reference, use a distinct successor output, parse the extracted
+Python worker and assert both input/output references before submission. The
+completed predecessor's baseline data was reused; #40819991289 passed the changed
+product Release/native/app measurements and owned cleanup. Prefer field-specific
+request assembly to cross-language global replacements. Exact evidence is in
+PX13_PIPE_DRAIN_PERFORMANCE_20261029.md.
+
 ## 2026-10-29 — PX17 submenu harness confused accessible name with displayed text
 
 The first owned caption/PX17 run #40803819387 built Release, captured matched

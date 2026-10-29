@@ -1,3 +1,12 @@
+# 2026-10-29 — PX13/G08 productive Shell-pipe draining: measured native and app improvement
+
+- Found an unconditional 20ms wait after each productive <=64KiB pipe read while the helper was alive. Continue immediately after read progress; preserve cancellation/generation/deadline checks on every iteration, idle waits, strict frame/checksum/EOF handling and owned child boundaries.
+- Matched 8k native/app observations: direct helper **814.279 → 717.787ms**; actual supervisor 8-page sum **3,420.413 → 998.107ms**; whole-app descending name-sort observation **4,289.049 → 1,738.200ms** (observed ~59.47% reduction). First app row **1,161.104 → 886.527ms**. Single paired observations, uncontrolled caches/load; not a whole-product speed guarantee or final-pixel timing.
+- Related source **20/20 PASS**, actual MSVC native supervisor 200/8k integrity PASS, canonical Release exit 0, focused app 200/8k sort/scroll/in-flight navigation/normal exit/settings+bytes preservation PASS. Retained outputs reused; LTCG reported full-function fallback. Test-owned native bins/data/profiles and app fixtures retired. No XAML/layout change or unrelated GUI/pixel/excluded tests.
+- [Full exact blobs/runtime, phase definitions and evidence](PX13_PIPE_DRAIN_PERFORMANCE_20261029.md): baseline [#40819475053](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/40819475053), accepted candidate [#40819991289](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/40819991289). Request-assembly #40819854610 remains FAIL before product execution. This closes this transport bottleneck, not every PX13/G08 scenario. Move to separately selected unmet work rather than re-expanding accepted timing variants.
+
+---
+
 # 2026-10-29 — PX13/G08 in-sort input responsiveness: bounded three-trial acceptance
 
 - Actual current Release runtime at `e6219777`, clean Windows VM checkout: 200-file lifecycle preflight followed by three owned 8k trials. Native UI-thread message p95 **54.350 / 53.415 / 41.527ms**, maximum **105.602ms**, **0 failed sends / 230 samples**. Separate real in-flight Ctrl+L focus observations **202.669 / 225.635 / 252.667ms**. All three met the predeclared response budgets.
