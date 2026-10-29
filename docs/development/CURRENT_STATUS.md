@@ -1,3 +1,9 @@
+# 2026-10-29 — F03 focused Preview button stays visible after compact restore
+
+- Newly reproduced on `60e6336c`: keyboard-focused Preview opt-in remains focused but goes offscreen when restoring 1220×700 → 960×519. The Details viewport now brings that already-focused button into view on size change; it does not assign focus, opt in, read bytes or change tabs/session policy.
+- Focused source **7/7 PASS**, Release + Light/Dark GUI [#40827143249](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/40827143249) **PASS**. Compact rect `(725,456,885,488)`, focus retained and offscreen=false, Preview still OFF/body empty; actual Light before/after and additional Dark after pixels reviewed. Normal exits, original settings/owned bytes preserved and test profiles/fixtures removed.
+- [Exact source blobs, runtime hashes, diagnostics and limits](F03_PREVIEW_PANE.md). Prior title-area tooltip persistence was not reproduced under physical hover/Enter; no tooltip change or G01 retest. Request #40826756087 remains FAIL before source application/build due to a mixed patch terminator. This is not full PX15 or all-focus acceptance; exclusions and PX11 policy remain unchanged.
+
 # 2026-10-29 — F03 long-text Preview keeps complete Unicode characters at its cap
 
 - Reproduced a new boundary defect on `138587bd`: valid UTF-8 whose supplementary character crosses the existing 8192 UTF-16-unit display cap left a lone high surrogate (`0xD83D`) and a broken square. Back off one unit at this boundary; preserve the cap, partial-file feedback, opt-in, worker/read safety and original bytes.

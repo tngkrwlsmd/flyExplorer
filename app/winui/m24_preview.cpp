@@ -27,6 +27,16 @@ void MainWindow::OnRevealTextPreview(
     button.StartBringIntoView();
 }
 
+void MainWindow::OnFileInfoViewportSizeChanged(
+    IInspectable const&,SizeChangedEventArgs const&) {
+    auto pane=FileInfoPane();
+    if(mClosing||!pane||pane.Visibility()!=Visibility::Visible)return;
+    auto button=TextPreviewToggleButton();
+    // Preserve the existing focus; resizing must never opt in or read bytes.
+    if(button&&button.FocusState()!=FocusState::Unfocused)
+        button.StartBringIntoView();
+}
+
 void MainWindow::OnToggleTextPreview(
     IInspectable const&,RoutedEventArgs const&) {
     if(mClosing||!ActiveWindowTab().fileInfoPaneVisible)return;

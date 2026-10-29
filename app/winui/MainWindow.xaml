@@ -806,7 +806,8 @@
                     Background="{ThemeResource ApplicationPageBackgroundThemeBrush}"
                     AutomationProperties.Name="선택 항목 상세 정보 창">
                 <ScrollViewer VerticalScrollBarVisibility="Auto"
-                              HorizontalScrollBarVisibility="Disabled">
+                              HorizontalScrollBarVisibility="Disabled"
+                              SizeChanged="OnFileInfoViewportSizeChanged">
                     <StackPanel Spacing="9">
                         <TextBlock Text="상세 정보" FontSize="17" FontWeight="SemiBold"/>
                         <TextBlock x:Name="FileInfoHint" Text="항목 하나를 선택하세요."

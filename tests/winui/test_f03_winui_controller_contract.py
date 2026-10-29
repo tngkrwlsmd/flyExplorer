@@ -102,6 +102,17 @@ class F03WinUIControllerContract(unittest.TestCase):
         self.assertIn('screenshot("top")',gui)
         self.assertIn('screenshot("focused")',gui)
 
+    def test_viewport_resize_preserves_focus_without_reading_or_opting_in(self):
+        self.assertIn('SizeChanged="OnFileInfoViewportSizeChanged"', XAML)
+        handler=ROUTER.split('void MainWindow::OnFileInfoViewportSizeChanged(',1)[1].split(
+            'void MainWindow::OnToggleTextPreview(',1)[0]
+        self.assertIn('mClosing||!pane||pane.Visibility()!=Visibility::Visible',handler)
+        self.assertIn('FocusState()!=FocusState::Unfocused',handler)
+        self.assertIn('button.StartBringIntoView();',handler)
+        for forbidden in ('QueueTextPreview(', 'OnToggleTextPreview(',
+                          'mTextPreviewEnabled=', 'button.Focus(', 'ReadFile('):
+            self.assertNotIn(forbidden,handler)
+
     def test_build_and_xaml_structure(self):
         tree=ET.parse(APP/"flyExplorer.project-template.xml")
         compiles={x.get("Include","").replace("\\","/")

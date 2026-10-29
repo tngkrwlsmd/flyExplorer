@@ -1,5 +1,75 @@
 # F03 — bounded local Preview pane development boundary
 
+## 2026-10-29 — Keep the focused Preview opt-in visible after compact restore
+
+On `main@60e6336c7ef0d3d9d32dc8592f4dac8537701a62`, keyboard Enter on the
+upper Preview shortcut focuses the lower opt-in button. Restoring the owned
+window from 1220×700 to 960×519 leaves that same button focused but offscreen:
+UIA `CurrentHasKeyboardFocus=true`, `CurrentIsOffscreen=true`, rect `(0,0,0,0)`.
+This is a newly observed resize/focus boundary, not a reopened basic F03 or
+G01 close acceptance.
+
+The Details ScrollViewer now handles its viewport SizeChanged event. Only
+when the Details pane is visible and the opt-in button already has focus,
+request `StartBringIntoView()` for that button. Do not assign focus, opt in,
+read bytes, change tabs/session ownership or alter the prior Unicode cutoff.
+The hidden/uninitialized/closing-pane guards avoid touching startup/teardown.
+
+- Candidate base: the full main SHA above plus these reviewed blobs:
+  - `MainWindow.xaml`: `68296601323f158969e90063621a914890c411b6`.
+  - `MainWindow.xaml.h`: `c0de372b3d3df1a15117cdf00efe96b00744df48`.
+  - `m24_preview.cpp`: `408012a24435e4c3ac951b3b863b998246239b16`.
+  - `test_f03_preview_resize_gui.py`: `67bd9cefe5d554c64a93cde1fc1118281ae15f7f`.
+  - `test_f03_winui_controller_contract.py`: `85a91b24749208a4d248864f9da058d57ca25c1f`.
+- Before EXE SHA256:
+  `00a5a56c12475580cf4d9796d59863dd734b090e4f97f1e1ec203052e82fc63d`.
+- After EXE SHA256:
+  `dfe89bff43e7ed218e9feb252f6ccb564a80675d4d0df2edb219ee26916d54c8`.
+- Focused cloud source **7/7 PASS**, GUI Python syntax and diff checks PASS.
+- [Initial physical pointer/keyboard diagnostic #40826144315](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/40826144315):
+  Light tooltip opened near the owned shortcut on hover and disappeared after
+  real Enter. The previously observed title-area tooltip persistence was
+  **not reproduced in this condition**; no tooltip product change was made.
+  Four actual owned-window PNGs were inspected and showed the compact button
+  disappearance. Normal exit 0, original settings/owned bytes preserved and
+  fixture/profiles removed.
+- [Focused-property diagnostic #40826403530](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/40826403530):
+  confirmed focus retained on the offscreen button after compact restore and
+  after moving the pointer away. These diagnostics completed successfully
+  while reproducing the product defect; they are not product acceptance.
+- Request [#40826756087](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/40826756087)
+  remains **FAIL before source application/build**. Request assembly appended
+  Windows CRLF to an otherwise LF-only patch, breaking the final context
+  line. The exact patch passed an isolated base-index check in the cloud;
+  the successor writes an explicit LF terminator. No product execution or
+  acceptance was performed in the failed request.
+- [Focused Release + Light/Dark GUI #40827143249](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/40827143249):
+  **PASS**. Both themes retain keyboard focus with `CurrentIsOffscreen=false`;
+  compact button rect `(725,456,885,488)` is entirely inside Details. The
+  opt-in label remains OFF and the body remains empty. Both apps exit 0,
+  original settings/owned bytes unchanged, both fixture/profiles removed.
+  Build exit 0 reused retained outputs/cache but reported LTCG IPDB/IOBJ
+  mismatch and full-function fallback. Tested identity is the recorded base
+  plus exact blobs, not a clean final documentation-commit build.
+- Actual pixels **PASS for this resize/focus boundary**: inspected four Light
+  before images and all eight Light/Dark after images (hover, keyboard reveal,
+  compact restore, pointer away). The small window now scrolls Details to
+  expose the same focused button; focus outline, label and both file panes
+  remain readable. Unfocused resize behavior and full tooltip QA are separate.
+
+Environment: approved central Windows VM, Windows 11 build 26300, x64 Release,
+96 DPI, Light before/after and additional Dark after; owned window rectangles
+`(20,20,1240,720)` and `(20,20,980,539)`. One owned TXT fixture, no selected
+file, Preview OFF throughout. Real pointer hover and Enter are used for the
+shortcut; native HWND resize is programmatic. No OS settings, clipboard or
+Recycle Bin changes. This does not certify all focus targets, all resizing,
+full PX15, the tooltip anomaly's cause, or excluded/stopped environments.
+
+```powershell
+python tests/winui/test_f03_preview_resize_gui.py --phase after --theme light
+python tests/winui/test_f03_preview_resize_gui.py --phase after --theme dark
+```
+
 ## 2026-10-29 — Long-text cutoff preserves complete UTF-16 characters
 
 On `main@138587bd821d9533aeb0f6a9f24f6a4cbcd8ee07`, a valid UTF-8 file
