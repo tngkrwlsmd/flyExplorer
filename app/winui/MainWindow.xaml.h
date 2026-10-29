@@ -316,7 +316,7 @@ namespace winrt::FlyExplorer::implementation
         void HandleFileShortcut(int side,
             Microsoft::UI::Xaml::Input::KeyRoutedEventArgs const& args);
         void StartInternalPaste();
-        bool CopySelectedToWindowsClipboard(int side,bool cut);
+        bool CopySelectedToWindowsClipboard(int side,bool cut,bool pathsOnly=false);
         void PasteFromWindowsClipboard();
 
         using FileOperationController=fxfile::previewops::FileOperationController;

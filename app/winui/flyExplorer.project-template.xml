@@ -149,6 +149,7 @@
     </ClInclude>
     <ClInclude Include="..\..\src\base\shell_transfer_core.h" />
     <ClInclude Include="..\..\src\base\shell_clipboard_core.h" />
+    <ClInclude Include="..\..\src\base\quoted_paths_text.h" />
     <ClInclude Include="..\..\src\base\shell_assoc_type_core.h" />
     <ClInclude Include="..\..\src\base\shell_thumbnail_core.h" />
     <ClInclude Include="..\..\src\base\shell_context_core.h" />

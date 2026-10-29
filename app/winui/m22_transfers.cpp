@@ -357,6 +357,8 @@ void MainWindow::ShowAppFileContextMenu(
      [side](MainWindow& ui){ui.CopySelectedToWindowsClipboard(side,true);}));
  menu.Items().Append(make(L"복사",L"\uE8C8",localSelection,
      [side](MainWindow& ui){ui.CopySelectedToWindowsClipboard(side,false);}));
+ menu.Items().Append(make(L"경로 복사",L"\uE8C8",localSelection,
+     [side](MainWindow& ui){ui.CopySelectedToWindowsClipboard(side,false,true);}));
  menu.Items().Append(make(L"이름 바꾸기",L"\uE8AC",canRename,
      [](MainWindow& ui){
       ui.BeginFileNameCommand(fxfile::filecommand::Kind::RenameSelected);
@@ -1064,12 +1066,25 @@ void MainWindow::OnTransferCompleted(
 
 
 }
-bool MainWindow::CopySelectedToWindowsClipboard(int side,bool cut){
- auto const& pane=ActiveWindowTab().model.panes[side];
+bool MainWindow::CopySelectedToWindowsClipboard(int side,bool cut,bool pathsOnly){
+ if(mClosing||side<0||side>1||(pathsOnly&&cut)||mFileOperations.busy()||
+    mFileOperations.pendingConfirmationToken())return false;
+ auto const& window=ActiveWindowTab();
+ if(window.model.activePane!=side)return false;
+ auto const& pane=window.model.panes[side];
+ const auto tab=pane.active;
+ auto const& shown=window.fileLists[side];
+ if(tab>=pane.tabs.size()||tab>=pane.pending.size()||
+    tab>=pane.routeIds.size()||tab>=pane.filesystemPaths.size()||
+    shown.visibleTab!=tab||shown.visibleRoute!=pane.routeIds[tab]||
+    shown.renderedFolder!=pane.tabs[tab].snapshot().parsingName)return false;
  if(pane.pending[pane.active]||pane.filesystemPaths[pane.active].empty()){
   StatusText().Text(L"폴더를 완전히 불러온 후 항목을 선택하세요.");return false;
  }
  const auto view=side==0?LeftFiles():RightFiles();
+ try{
+  if(!view.Tag()||unbox_value<std::uint64_t>(view.Tag())!=window.identity)return false;
+ }catch(...){return false;}
  const auto& session=pane.tabs[pane.active];
  fxfile::shellclipboard::Payload item{};
  item.move=cut;
@@ -1103,12 +1118,13 @@ bool MainWindow::CopySelectedToWindowsClipboard(int side,bool cut){
   StatusText().Text(L"현재 WinUI 창을 활성화한 후 다시 시도하세요.");
   return false;
  }
- const auto err=fxfile::shellclipboard::write(hwnd,item);
+ const auto err=pathsOnly?fxfile::shellclipboard::writePathsText(hwnd,item):
+                          fxfile::shellclipboard::write(hwnd,item);
  if(err!=ERROR_SUCCESS){
-  StatusText().Text(L"Windows 클립보드에 파일 목록을 쓰지 못했습니다.");
+  StatusText().Text(L"Windows 클립보드에 선택 항목을 쓰지 못했습니다.");
   return false;
  }
- StatusText().Text(cut?
+ StatusText().Text(pathsOnly?L"선택한 파일 경로를 텍스트로 복사했습니다.":cut?
   L"선택한 파일을 Windows 클립보드에 잘라내기로 저장했습니다.":
   L"선택한 파일을 Windows 클립보드에 복사했습니다.");
  return true;
@@ -1517,6 +1533,9 @@ void MainWindow::HandleFileShortcut(
  auto view=side==0?LeftFiles():RightFiles();
  if(ctrl&&vk==Windows::System::VirtualKey::A){
   view.SelectAll();args.Handled(true);return;
+ }
+ if(ctrl&&shift&&!alt&&vk==Windows::System::VirtualKey::C){
+  CopySelectedToWindowsClipboard(side,false,true);args.Handled(true);return;
  }
  if(ctrl&&(vk==Windows::System::VirtualKey::C||
            vk==Windows::System::VirtualKey::X)){

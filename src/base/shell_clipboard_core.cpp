@@ -2,6 +2,7 @@
 #include "shell_clipboard_core.h"
 #include "shell_transfer_core.h"
 #include "file_command_core.h"
+#include "quoted_paths_text.h"
 #include <shellapi.h>
 #include <shlobj.h>
 #include <filesystem>
@@ -140,6 +141,33 @@ DWORD write(HWND owner,Payload const& payload) noexcept{
   ::GlobalFree(effect); // never report cut succeeded as copy
  }
  ::CloseClipboard();
+ return answer;
+}
+DWORD writePathsText(HWND owner,Payload const& payload) noexcept{
+ std::wstring text;
+ if(!owner||!::IsWindow(owner)||payload.move||!valid(payload)||
+    !formatQuotedPaths(payload.paths,
+        shelltransfer::kMaxSourcePathUnits+4*MaxItems,text))
+  return ERROR_INVALID_PARAMETER;
+ // Allocate and populate before opening/emptying the user's clipboard.
+ const auto bytes=(text.size()+1)*sizeof(wchar_t);
+ HGLOBAL memory=::GlobalAlloc(GMEM_MOVEABLE,bytes);
+ if(!memory)return ERROR_NOT_ENOUGH_MEMORY;
+ auto dest=::GlobalLock(memory);
+ if(!dest){::GlobalFree(memory);return ERROR_NOT_ENOUGH_MEMORY;}
+ std::memcpy(dest,text.c_str(),bytes);
+ ::GlobalUnlock(memory);
+ if(!::OpenClipboard(owner)){::GlobalFree(memory);return ERROR_BUSY;}
+ DWORD answer=ERROR_SUCCESS;
+ if(!::EmptyClipboard()){
+  answer=::GetLastError();
+  if(answer==ERROR_SUCCESS)answer=ERROR_ACCESS_DENIED;
+ }else if(!::SetClipboardData(CF_UNICODETEXT,memory)){
+  answer=::GetLastError();
+  if(answer==ERROR_SUCCESS)answer=ERROR_WRITE_FAULT;
+ }else memory=nullptr; // Windows owns the successfully published handle.
+ ::CloseClipboard();
+ if(memory)::GlobalFree(memory);
  return answer;
 }
 DWORD read(Payload& payload) noexcept{
