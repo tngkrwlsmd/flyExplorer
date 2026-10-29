@@ -96,8 +96,13 @@ try:
 
     win = wait(view, "owned window absent")
     el = lambda name: win.child_window(auto_id=name, visible_only=False)
-    wait(lambda: el("LeftFiles").descendants(control_type="ListItem"),
-         "owned file rows not displayed")
+    def has_owned_row(name):
+        return any("search-owned-one.txt" in row.window_text()
+                   for row in el(name).descendants(control_type="ListItem"))
+    wait(lambda: has_owned_row("LeftFiles") or has_owned_row("RightFiles"),
+         "no owned file rows in either pane")
+    result["startup_owned_left"] = bool(has_owned_row("LeftFiles"))
+    result["startup_owned_right"] = bool(has_owned_row("RightFiles"))
     win.set_focus()
     assert pid(u.GetForegroundWindow()) == app.pid
     sw, sh = u.GetSystemMetrics(0), u.GetSystemMetrics(1)
@@ -108,6 +113,8 @@ try:
     assert u.MoveWindow(hwnd, 20, 20, 960, 519, True)
     el("SearchPanelButton").invoke()
     wait(lambda: el("SearchTermBox").is_visible(), "search panel closed")
+    # Search the exact owned folder, independent of the initial active pane.
+    el("SearchScopeBox").set_edit_text(str(fixture))
     el("SearchTermBox").set_edit_text("search-owned-one")
     el("SearchRunButton").invoke()
     wait(lambda: len(el("SearchMatches").descendants(control_type="ListItem")) == 1,
