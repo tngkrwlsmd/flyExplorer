@@ -1,3 +1,12 @@
+# 2026-10-29 야간: 탐색기 단축키 별칭 구현, Windows 검증 대기
+
+`main@c563a0e0`에서 F3 검색, F4/Alt+D 주소 편집, Ctrl+R 활성 패널
+새로고침을 기존 경로에 연결했다. 새 별칭은 대화상자·메뉴·다른 텍스트 편집을
+보호하며 기존 사용자 지정 단축키와 세션 정책을 유지한다. 관련 소스 계약
+31/31 PASS, `git diff --check` PASS. 작업 브랜치의 변경이며 main 수용 아님.
+Windows 빌드·GUI·실제 화면 검증 미수행 — 사용자 수면 중 VM 종료.
+[변경 범위와 최소 후속 검사](NIGHT_DEVELOPMENT_20261029.md)를 따른다.
+
 # 2026-10-29 — EP01 request-start chrome omission fixed; scoped navigation GUI/pixels accepted
 
 - Starting main `d78cdaee42fe751558305d0f31191535342323d4`. Controller set pending, but live submit wrappers did not refresh Back/Forward/Up. Add active-pane chrome updates after successful parsing/history/page submits and when continuation completion clears pending. Product blob `MainWindow.xaml.cpp@b2cd9c729879f01cc270d265914a3c2f55cc5d56`.

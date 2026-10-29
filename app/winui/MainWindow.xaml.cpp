@@ -473,6 +473,47 @@ namespace winrt::FlyExplorer::implementation
                 const bool shift=(::GetKeyState(VK_SHIFT)&0x8000)!=0;
                 const bool alt=(::GetKeyState(VK_MENU)&0x8000)!=0;
                 const auto key=args.Key();
+                const bool addressAlias=!control&&!shift&&
+                    ((!alt&&key==Windows::System::VirtualKey::F4)||
+                     (alt&&key==Windows::System::VirtualKey::D));
+                const bool searchAlias=!control&&!shift&&!alt&&
+                    key==Windows::System::VirtualKey::F3;
+                const bool refreshAlias=control&&!shift&&!alt&&
+                    key==Windows::System::VirtualKey::R;
+                if(addressAlias||searchAlias||refreshAlias){
+                    auto ui=nativeWeak.get();
+                    if(!ui||ui->mClosing)return;
+                    // Keep modal/menu/combo input and inline file-name edits
+                    // local. Address/search editors may use focus aliases;
+                    // Ctrl+R must not refresh underneath any text editor.
+                    auto node=args.OriginalSource().try_as<DependencyObject>();
+                    while(node){
+                        if(node.try_as<PasswordBox>()||
+                           node.try_as<RichEditBox>()||
+                           node.try_as<ComboBox>()||
+                           node.try_as<AutoSuggestBox>()||
+                           node.try_as<MenuFlyoutPresenter>()||
+                           node.try_as<ContentDialog>())return;
+                        if(auto box=node.try_as<TextBox>();box&&
+                           (refreshAlias||
+                            (box!=ui->AddressBox()&&box!=ui->QuickSearchBox())))
+                            return;
+                        node=Microsoft::UI::Xaml::Media::VisualTreeHelper::
+                            GetParent(node);
+                    }
+                    if(addressAlias){
+                        ui->OnAddressDisplayClicked(nullptr,nullptr);
+                        args.Handled(true);
+                        return;
+                    }
+                    if(searchAlias){
+                        auto search=ui->QuickSearchBox();
+                        search.Focus(Microsoft::UI::Xaml::FocusState::Keyboard);
+                        search.SelectAll();
+                        args.Handled(true);
+                        return;
+                    }
+                }
                 // Closed set of Ctrl-only non-mutating focus shortcuts.
                 // File operations and F5/F6 keep their fixed bindings.
                 if(control&&!shift&&!alt){
@@ -534,8 +575,8 @@ namespace winrt::FlyExplorer::implementation
                     }
                     return;
                 }
-                if(!control&&!shift&&!alt&&
-                   key==Windows::System::VirtualKey::F5){
+                if((!control&&!shift&&!alt&&
+                    key==Windows::System::VirtualKey::F5)||refreshAlias){
                     if(auto ui=nativeWeak.get()){
                         const int side=ui->ActiveWindowTab().model.activePane;
                         auto const& pane=ui->ActiveWindowTab().model.panes[side];

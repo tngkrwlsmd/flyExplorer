@@ -14,6 +14,48 @@ def compact(text: str) -> str:
 
 
 class ShortcutSemanticsContract(unittest.TestCase):
+    def test_explorer_aliases_preserve_editor_modal_and_file_boundaries(self):
+        window = compact(WINDOW.read_text(encoding="utf-8"))
+        aliases = window.split("const bool addressAlias=", 1)[1].split(
+            "// Closed set of Ctrl-only", 1
+        )[0]
+        guard = aliases.split("if(addressAlias){", 1)[0]
+        # New focus aliases may leave address/search fields, but not steal an
+        # inline rename, password, combo or modal/menu interaction.
+        for control in ("PasswordBox", "RichEditBox", "ComboBox",
+                        "AutoSuggestBox", "MenuFlyoutPresenter", "ContentDialog"):
+            self.assertIn(f"node.try_as<{control}>()", guard)
+        self.assertIn("box!=ui->AddressBox()&&box!=ui->QuickSearchBox()", guard)
+        self.assertIn("(refreshAlias||", guard)
+        for forbidden in ("RunTransfer(", "OpenFolder(", "StartSearch(",
+                          "PersistPreferences("):
+            self.assertNotIn(forbidden, aliases)
+        self.assertIn("OnAddressDisplayClicked(nullptr,nullptr)", aliases)
+        self.assertIn("search.SelectAll()", aliases)
+        root = window.split("RootShell().PreviewKeyDown(", 1)[1]
+        self.assertLess(root.index("pendingConfirmationToken()"),
+                        root.index("const bool addressAlias="))
+
+    def test_explorer_alias_bindings_do_not_replace_configurable_shortcuts(self):
+        window = compact(WINDOW.read_text(encoding="utf-8"))
+        aliases = window.split("const bool addressAlias=", 1)[1].split(
+            "// Closed set of Ctrl-only", 1
+        )[0]
+        for binding in (
+            "!control&&!shift&& ((!alt&&key==Windows::System::VirtualKey::F4)|| (alt&&key==Windows::System::VirtualKey::D))",
+            "searchAlias=!control&&!shift&&!alt&& key==Windows::System::VirtualKey::F3",
+            "refreshAlias=control&&!shift&&!alt&& key==Windows::System::VirtualKey::R",
+        ):
+            self.assertIn(binding, aliases)
+        # Ctrl+R joins the same active-pane refresh branch, rather than
+        # creating another navigation request implementation.
+        refresh = window.split("key==Windows::System::VirtualKey::F5", 1)[1].split(
+            "key==Windows::System::VirtualKey::F6", 1
+        )[0]
+        self.assertIn(")||refreshAlias)", refresh)
+        self.assertIn("QueuePidl(side", refresh)
+        self.assertIn("NavigationAction::Refresh", refresh)
+
     def test_f5_is_window_preview_refresh_not_file_transfer(self):
         window = compact(WINDOW.read_text(encoding="utf-8"))
         preview = window.split("RootShell().PreviewKeyDown(", 1)[1].split(
