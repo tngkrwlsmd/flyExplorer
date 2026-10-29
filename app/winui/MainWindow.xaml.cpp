@@ -26,6 +26,7 @@
 #include <limits>
 #include <system_error>
 #include <winrt/Windows.System.h>
+#include <winrt/Windows.UI.Core.h>
 #include <winrt/Windows.UI.Text.h>
 #include <winrt/Microsoft.UI.Xaml.Input.h>
 #include <winrt/Microsoft.UI.Xaml.Automation.h>
@@ -482,6 +483,8 @@ namespace winrt::FlyExplorer::implementation
                     key==Windows::System::VirtualKey::R;
                 const bool previewAlias=alt&&!control&&!shift&&
                     key==Windows::System::VirtualKey::P;
+                const bool windowAlias=!control&&!shift&&!alt&&
+                    key==Windows::System::VirtualKey::F11;
                 // Explorer's supported view keys reuse the menu's pane-local
                 // owner. Extra-large icons, Tiles and Content are not modes here.
                 int viewShortcut=-1;
@@ -500,12 +503,12 @@ namespace winrt::FlyExplorer::implementation
                     default:break;
                     }
                 }
-                if(addressAlias||searchAlias||refreshAlias||viewShortcut>=0||previewAlias){
+                if(addressAlias||searchAlias||refreshAlias||viewShortcut>=0||previewAlias||windowAlias){
                     auto ui=nativeWeak.get();
                     if(!ui||ui->mClosing)return;
                     // Keep modal/menu/combo input and inline file-name edits
                     // local. Address/search editors may use focus aliases;
-                    // Refresh/view/panel changes must not run beneath any text editor.
+                    // Refresh/view/panel/window changes stay out of text editors.
                     auto node=args.OriginalSource().try_as<DependencyObject>();
                     while(node){
                         if(node.try_as<PasswordBox>()||
@@ -515,7 +518,7 @@ namespace winrt::FlyExplorer::implementation
                            node.try_as<MenuFlyoutPresenter>()||
                            node.try_as<ContentDialog>())return;
                         if(auto box=node.try_as<TextBox>();box&&
-                           (refreshAlias||viewShortcut>=0||previewAlias||
+                           (refreshAlias||viewShortcut>=0||previewAlias||windowAlias||
                             (box!=ui->AddressBox()&&box!=ui->QuickSearchBox())))
                             return;
                         node=Microsoft::UI::Xaml::Media::VisualTreeHelper::
@@ -535,6 +538,28 @@ namespace winrt::FlyExplorer::implementation
                     }
                     if(viewShortcut>=0){
                         ui->UpdateView(viewShortcut);
+                        args.Handled(true);
+                        return;
+                    }
+                    if(windowAlias){
+                        using namespace Microsoft::UI::Windowing;
+                        try{
+                            auto presenter=ui->AppWindow().Presenter().
+                                try_as<OverlappedPresenter>();
+                            if(!presenter)return;
+                            // One physical press, one transition. Never replace
+                            // a FullScreen/CompactOverlay presenter to implement F11.
+                            if(!args.KeyStatus().WasKeyDown){
+                                if(presenter.State()==OverlappedPresenterState::Maximized)
+                                    presenter.Restore();
+                                else if(presenter.State()==OverlappedPresenterState::Restored&&
+                                        presenter.IsMaximizable())
+                                    presenter.Maximize();
+                                else return;
+                            }
+                        }catch(winrt::hresult_error const&){
+                            ui->StatusText().Text(L"창 크기를 변경할 수 없습니다.");
+                        }
                         args.Handled(true);
                         return;
                     }

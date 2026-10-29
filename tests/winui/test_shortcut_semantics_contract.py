@@ -14,6 +14,35 @@ def compact(text: str) -> str:
 
 
 class ShortcutSemanticsContract(unittest.TestCase):
+    def test_f11_uses_window_state_and_ignores_held_key_repeats(self):
+        window = compact(WINDOW.read_text(encoding="utf-8"))
+        self.assertIn('#include <winrt/Windows.UI.Core.h>', window)
+        root = window.split("RootShell().PreviewKeyDown(", 1)[1]
+        self.assertIn("windowAlias=!control&&!shift&&!alt&& key==Windows::System::VirtualKey::F11", root)
+        self.assertLess(root.index("pendingConfirmationToken()"),
+                        root.index("const bool windowAlias="))
+        aliases = root.split("if(addressAlias||", 1)[1].split(
+            "// Closed set of Ctrl-only", 1
+        )[0]
+        self.assertIn("previewAlias||windowAlias||", aliases)
+        self.assertLess(aliases.index("GetParent(node)"),
+                        aliases.index("if(windowAlias){"))
+        command = aliases.split("if(windowAlias){", 1)[1].split(
+            "if(previewAlias){", 1
+        )[0]
+        for token in ("ui->AppWindow().Presenter(). try_as<OverlappedPresenter>()",
+                      "if(!presenter)return;", "if(!args.KeyStatus().WasKeyDown)",
+                      "OverlappedPresenterState::Maximized", "presenter.Restore()",
+                      "OverlappedPresenterState::Restored&& presenter.IsMaximizable()",
+                      "presenter.Maximize()", "catch(winrt::hresult_error const&)",
+                      "args.Handled(true)"):
+            self.assertIn(token, command)
+        self.assertLess(command.index("if(!args.KeyStatus().WasKeyDown)"),
+                        command.index("presenter.Restore()"))
+        for forbidden in ("SetPresenter(", "MoveAndResize(", "QueuePidl(",
+                          "PersistPreferences(", "ActivateWindowTab(", "Focus("):
+            self.assertNotIn(forbidden, command)
+
     def test_alt_p_reuses_preview_pane_without_bypassing_optin(self):
         window = compact(WINDOW.read_text(encoding="utf-8"))
         root = window.split("RootShell().PreviewKeyDown(", 1)[1]
