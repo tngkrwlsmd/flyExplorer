@@ -14,6 +14,51 @@ def compact(text: str) -> str:
 
 
 class ShortcutSemanticsContract(unittest.TestCase):
+    def test_view_shortcuts_match_supported_explorer_modes(self):
+        window = WINDOW.read_text(encoding="utf-8")
+        block = window.split("int viewShortcut=-1;", 1)[1].split(
+            "if(addressAlias||", 1
+        )[0]
+        self.assertIn("if(control&&shift&&!alt)", block)
+        bindings = dict(re.findall(
+            r"case Windows::System::VirtualKey::Number(\d):\s*"
+            r"viewShortcut=static_cast<int>\(FileViewMode::(\w+)\);break;",
+            block,
+        ))
+        self.assertEqual(bindings, {
+            "2": "LargeIcons", "3": "MediumIcons", "4": "SmallIcons",
+            "5": "List", "6": "Details",
+        })
+        self.assertNotIn("NumberPad", block)
+        self.assertNotIn("UpdateView(", block)
+
+    def test_view_shortcuts_use_existing_owner_after_input_guards(self):
+        window = compact(WINDOW.read_text(encoding="utf-8"))
+        root = window.split("RootShell().PreviewKeyDown(", 1)[1]
+        aliases = root.split("if(addressAlias||", 1)[1].split(
+            "// Closed set of Ctrl-only", 1
+        )[0]
+        self.assertIn("refreshAlias||viewShortcut>=0||", aliases)
+        self.assertIn("node.try_as<TextBox>()", aliases)
+        for control in ("PasswordBox", "RichEditBox", "ComboBox",
+                        "AutoSuggestBox", "MenuFlyoutPresenter", "ContentDialog"):
+            self.assertIn(f"node.try_as<{control}>()", aliases)
+        self.assertLess(root.index("pendingConfirmationToken()"),
+                        root.index("int viewShortcut=-1;"))
+        self.assertLess(aliases.index("GetParent(node)"),
+                        aliases.index("ui->UpdateView(viewShortcut)"))
+        command = aliases.split("if(viewShortcut>=0){", 1)[1]
+        self.assertTrue(command.startswith(
+            " ui->UpdateView(viewShortcut); args.Handled(true); return;"
+        ))
+        self.assertNotIn("PersistPreferences(", aliases)
+        self.assertNotIn("pane.active=", aliases)
+        owner = compact((ROOT / "app/winui/m20_shell.cpp").read_text(encoding="utf-8"))
+        owner = owner.split("void MainWindow::UpdateView(int selection)", 1)[1]
+        self.assertIn("const int side=ActiveWindowTab().model.activePane", owner)
+        self.assertIn("ActiveWindowTab().fileLists[side].viewMode=", owner)
+        self.assertIn("fileBar()->SetViewIndex(selection)", owner)
+
     def test_explorer_aliases_preserve_editor_modal_and_file_boundaries(self):
         window = compact(WINDOW.read_text(encoding="utf-8"))
         aliases = window.split("const bool addressAlias=", 1)[1].split(
@@ -180,3 +225,4 @@ class ShortcutSemanticsContract(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+

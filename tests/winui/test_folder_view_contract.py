@@ -1,4 +1,4 @@
-"""F14 source-contract expectations; deliberately NOT executed this turn."""
+"""F14 source contracts; these do not certify Windows runtime behavior."""
 from pathlib import Path
 import unittest
 
@@ -45,7 +45,7 @@ class FolderViewContracts(unittest.TestCase):
                       "fileBar()->SetViewIndex(remembered)"):
             self.assertIn(token,nav)
         self.assertLess(nav.index("mFolderViews.lookup(path,remembered)"),
-                        nav.index("Refresh(completed.recovered?"))
+                        nav.index("Refresh(activeStatus);"))
         self.assertIn("mPreferencesCoordinator.setDefaultViewMode(selection)",
                       src("app/winui/m20_shell.cpp"))
         self.assertNotIn("mPreferencesCoordinator.setDefaultViewMode",
@@ -66,3 +66,4 @@ class FolderViewContracts(unittest.TestCase):
 
 if __name__=="__main__":
     unittest.main()
+
