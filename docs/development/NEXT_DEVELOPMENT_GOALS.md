@@ -35,7 +35,7 @@ Windows 11 탐색기 기능 호환의 구체적인 개발 계약·관련 파일�
 | 3 PX11 | **기존 v4 정책 유지, 기능 추가 보류** — PaneTab별 정렬/패널별 보기·열 너비는 의도된 계약. 임의의 v5 마이그레이션 없음 | [기존 제품 결정 제안](PX11_TAB_PRESENTATION_PROPOSAL.md). 탭별 보기 저장은 미채택·미구현 |
 | 4 PX13/G08 | **제품 수정 + 결정적 모델 검사 통과** — 숨김/파일명 필터 먼저, 기존 안정 정렬 나중. 8개 모드·8천 합성 항목의 최종 항목 순서 동등 | [코드·검사](FOUR_PRIORITY_EP05_EP01_PX11_PX13_20261029.md), 2/2. 실제 Windows 성능·GUI·Shell 콜레이션 미검증 |
 
-위 집중 소스 계약 합계 **18/18 PASS**, [중앙 #40844041193](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/40844041193). 지난 완료 항목의 전체 회귀를 다시 요구하지 않으며 실제 Windows 빌드/GUI 검사는 해당 변경 기능의 후속 게이트로만 둔다. PX11 상태 소유 규칙을 사용자 승인 없이 전환하지 않는다.
+집중 18/18 [중앙 #40844041193](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/40844041193) + 기존 영향 의존 계약 26/26 [중앙 #40844503080](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/40844503080), **44/44 소스/모델 PASS**. 지난 완료 항목의 전체 회귀를 다시 요구하지 않으며 실제 Windows 빌드/GUI 검사는 해당 변경 기능의 후속 게이트로만 둔다. PX11 상태 소유 규칙을 사용자 승인 없이 전환하지 않는다.
 
 ### 완료 상태로 보존할 작업
 

@@ -1,4 +1,4 @@
-# 2026-10-29 — EP05/PX01, EP01, PX11, PX13/G08 priorities 1–4: focused source 18/18 PASS, GUI pending
+# 2026-10-29 — EP05/PX01, EP01, PX11, PX13/G08 priorities 1–4: affected source contracts 44/44 PASS, GUI pending
 
 - Requested batch product/source commit [`7e28366c`](https://github.com/tngkrwlsmd/flyExplorer/commit/7e28366c10a365d9102e54aaf3460282b511b037). [Exact central Windows source-only run #40844041193](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/40844041193): active-pane command availability **3/3**, navigation chrome and history handlers **13/13**, filter-before-sort source and 8k-equivalence model **2/2**, combined **18/18 PASS**; central VM request retired to idle.
 - **1 / EP05/PX01:** toolbar and blank-background context menu block new actions during pending file collision confirmation; direct transfer handler independently rejects that modal state. Prior selection menu already had protection. No clipboard/recycle or selected-item route/state changes.

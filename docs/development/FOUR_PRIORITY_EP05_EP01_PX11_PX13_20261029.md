@@ -33,6 +33,8 @@
 - [Windows VM 소스 계약 #40844041193](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/40844041193), 정확한 제품 `7e28366c10a365d9102e54aaf3460282b511b037`: 상단/메뉴 명령 계약 3/3, 탐색 크롬·경계 계약 13/13, 필터-정렬 안정 부분 수열과 8천 합성 항목 2/2로 **18/18 PASS**.
 - 위 값은 Python 소스/결정적 모델 계약이다. 실제 C++ 컴파일, UI 행동, 사용자가 관찰하는 체감 성능 또는 시간 개선 증거가 아니다. 기존 Windows 검증 요청 슬롯은 완료 후 idle로 복원했다.
 
+- Additional **26/26 dependent Python contracts PASS** under [central #40844503080](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/40844503080): selected/external file context menu 8/8, metadata controller 8/8, large-folder streaming 10/10. Thus combined affected-source checks **44/44 PASS**. A predecessor [#40844372803](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/40844372803) stopped before tests because the VM product checkout correctly remained on `7e28366c` while the request erroneously required documentation-only `2271b915`. Do not treat this as product failure or overwrite it with PASS. The corrected job verified exact product source `7e28366c`. No native build, GUI or measured speed gain.
+
 ## 검증·수용 경계
 
 대상 변경은 `MainWindow.xaml.cpp`, `m22_transfers.cpp`, 집중 Python 소스 계약 및 이 문서로 한정한다. 현시점에서 **Windows Release 빌드, 실제 GUI, 키보드·메뉴 입력, 처리 속도 실측은 별도 검증 전까지 미검증**이다. 명시적으로 제외된 G03/G04/G05, 중단된 G07은 재개하지 않는다. 향후 집중 확인 시 소유 로컬 fixture에서 충돌 확인 중의 활성화·직접 작업 차단, pending 상태의 상위/뒤로/앞으로와 실패 후 경로 보존, 파일명 필터+복수 정렬의 실제 표시만 검증한다. 이미 수용된 M23 Copy 충돌 *완성 시나리오*나 기존 PX13 8k 이름 정렬은 다시 실행하지 않는다.
