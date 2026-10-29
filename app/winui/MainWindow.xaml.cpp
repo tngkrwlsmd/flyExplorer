@@ -465,6 +465,10 @@ namespace winrt::FlyExplorer::implementation
             Microsoft::UI::Xaml::Input::KeyEventHandler(
             [nativeWeak](IInspectable const&,
                 Microsoft::UI::Xaml::Input::KeyRoutedEventArgs const& args){
+                // A file confirmation owns input until its token settles.
+                // Leave the event unhandled for the dialog's Enter/Escape/Tab.
+                if(auto ui=nativeWeak.get(); !ui||
+                   ui->mFileOperations.pendingConfirmationToken())return;
                 const bool control=(::GetKeyState(VK_CONTROL)&0x8000)!=0;
                 const bool shift=(::GetKeyState(VK_SHIFT)&0x8000)!=0;
                 const bool alt=(::GetKeyState(VK_MENU)&0x8000)!=0;

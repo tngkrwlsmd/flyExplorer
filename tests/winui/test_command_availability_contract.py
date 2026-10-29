@@ -6,6 +6,15 @@ ROOT=Path(__file__).resolve().parents[2]
 APP=ROOT/"app"/"winui"
 
 class CommandAvailabilityContract(unittest.TestCase):
+    def test_file_confirmation_owns_root_shortcuts_without_swallowing_dialog_keys(self):
+        code=(APP/"MainWindow.xaml.cpp").read_text(encoding="utf-8-sig")
+        root=code.split("RootShell().PreviewKeyDown(",1)[1]
+        guard=root.split("const bool control=",1)[0]
+        self.assertIn("ui->mFileOperations.pendingConfirmationToken())return;",guard)
+        self.assertNotIn("args.Handled",guard)
+        self.assertLess(root.index("pendingConfirmationToken()"),
+                        root.index("VirtualKey::F6"))
+
     def test_selection_controls_are_active_pane_local(self):
         code=(APP/"MainWindow.xaml.cpp").read_text(encoding="utf-8-sig")
         body=code.split("void MainWindow::UpdateCommandAvailability()",1)[1].split(

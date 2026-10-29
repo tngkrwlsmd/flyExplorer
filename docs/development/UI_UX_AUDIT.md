@@ -1,5 +1,9 @@
 # flyExplorer Windows 11 벤치마킹 및 UI/UX 점검
 
+## 2026-10-29 EP05 — 충돌 확인창의 F6 패널 전환 차단
+
+[실제 전후 기록](EP05_MODAL_SHORTCUT_ACCEPTANCE_20261029.md): 기존 runtime에서 확인창 중 F6가 주소와 활성 표시를 Left→Right로 바꿨다. 공통 키 처리의 pending token guard 후 Left를 유지하고, Escape 취소 및 비모달 F6는 정상 작동했다. 같은 1160×640/96 DPI Light 실제 PNG 4장 직접 검토, 한정 GUI·픽셀 PASS. Dark/전체 modal/전체 PX15/EP01 pending navigation 수용은 아니다.
+
 ## 2026-10-29 — 선정한 빈 결과 화면과 실패한 새 주소
 
 - [8k 필터 결과 0개](PX13_FILTER_SORT_ZERO_RESULTS_20261029.md): 같은 후보 Release, Light/Dark 1160×640·96 DPI, 왼쪽 0개/오른쪽 제한 페이지 공존·확정 경로·필터 해제 복구 GUI PASS, 실제 PNG 2장 독립 검토 PASS. 새 UI 수정은 필요하지 않았다. 이 한 건을 전체 PX15 수용으로 확대하지 않는다.

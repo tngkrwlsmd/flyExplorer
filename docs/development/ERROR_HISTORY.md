@@ -1,3 +1,9 @@
+## 2026-10-29 — Root F6 accelerator changed active pane under file confirmation
+
+#40867279736 observed a real Left→Right switch behind the still-open collision dialog: root PreviewKeyDown F6 lacked the pending-confirmation boundary already used by file commands. Guard root dispatch before all app accelerators while the token exists, leaving the event unhandled for dialog keys. Source 18/18, canonical Release and actual F6-blocked/Escape-cancel/nonmodal-F6 GUI PASS in #40867842183; four Light before/after pixels reviewed. [Exact blob/runtime and finite scope](EP05_MODAL_SHORTCUT_ACCEPTANCE_20261029.md).
+
+The baseline job's later Copy-always-enabled recovery expectation was invalid after changing active panes/selections. Preserve its FAIL; do not classify that assertion as a separate cancellation defect. The successor uses dialog closure/Up readiness and an independent nonmodal F6 positive control. Owned current and baseline fixture/profile cleanup completed; original settings/bytes preserved.
+
 ## 2026-10-29 — Navigation identity probe compared late type metadata; owned cleanup path used host separators
 
 #40862156427 recorded identical committed paths and filenames before/after an invalid address, while the opposite row's fallback type completed from `txt 파일` to `텍스트 문서`. Comparing whole accessible row labels was a harness error; compare stable file identity instead. The two pending-state observation approaches still captured no transition; keep pending history input/pixels NOT TESTED and stop speculative repeats. [Bounded evidence](EP01_NAVIGATION_BOUNDARY_20261029.md).

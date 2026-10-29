@@ -1,3 +1,10 @@
+# 2026-10-29 — EP05 actual F6 modal bypass fixed; scoped Release/GUI/pixels PASS
+
+- On main `18ffecc75840b89e42e1f9ef7b86f82fc14f8379`, real F6 changed the active pane behind an open collision confirmation. Add a four-line pending-confirmation guard at root shortcut dispatch, leaving the dialog's own key processing unhandled.
+- Related source **18/18 PASS**; [central #40867842183](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/40867842183) **Release + focused F6/Escape GUI SUCCESS**. Exact product blob `MainWindow.xaml.cpp@600c69c7b74a5ab43822d21722e369873b09f307`, EXE `0d8fa7d377ac6a13aefa043a0abb39c1ce320fe27f82a3b786c2ce6a94ef9bd4`. F6 leaves Left active during confirmation; Escape closes it; non-modal F6 switches to Right. Normal exit, original settings/owned files preserved and both current/failed fixtures/profiles retired.
+- [Before/after evidence and four reviewed screenshots](EP05_MODAL_SHORTCUT_ACCEPTANCE_20261029.md): scoped Light pixels PASS. Baseline #40867279736 remains FAIL for its later invalid Copy-enabled recovery assertion; its prior F6 bypass observation is valid. No clipboard/recycle mutation, confirmed transfer, unrelated GUI or packaging.
+- Other menus/backend, Dark/all shortcuts and EP01 pending-navigation acceptance are not implied. Reused existing performance evidence; v4 stays unchanged. Additional Markdown creation is a concrete **proposal only**, not adopted/implemented; no external Share operation.
+
 # 2026-10-29 — Five-step continuation: filter/native and zero-result review complete; pending-history UI remains unobserved
 
 - Starting main `ad86618f1a7d31408014fd10649a216668085e62`; product remains unchanged in this continuation. Reused Release EXE SHA256 `bf2de6ba515c072cf30bb075052e7380b0a74479bd2d5dc23b42f348492929a2` and prior scoped collision acceptance; no rebuild or accepted-case rerun.
