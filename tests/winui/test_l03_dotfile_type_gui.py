@@ -28,13 +28,15 @@ import psutil
 p = argparse.ArgumentParser()
 p.add_argument("--phase", choices=("before", "after"), required=True)
 p.add_argument("--theme", choices=("dark", "light"), required=True)
-p.add_argument("--slot", choices=("v2", "v3", "v4"), default="v2")
+p.add_argument("--slot", choices=("v2", "v3", "v4"), default="v3")
 args = p.parse_args()
 BASE = ROOT / "logs" / ("l03-dotfile-20261029-owned-" + args.slot)
 fixture = BASE / "fixture"
 assert fixture.is_dir() and fixture.resolve().parent == BASE.resolve()
-names = (".gitignore", ".env", ".env.local", "readme.txt", "archive.tar.gz")
-assert sorted(x.name for x in fixture.iterdir()) == sorted(names)
+# An archive can be a virtual Shell folder; it is not a file-type row.
+names = (".gitignore", ".env", ".env.local", "readme.txt")
+fixture_names = names + ("archive.tar.gz",)
+assert sorted(x.name for x in fixture.iterdir()) == sorted(fixture_names)
 before_hashes = {x.name: hashlib.sha256(x.read_bytes()).hexdigest()
                  for x in fixture.iterdir()}
 run_id = args.phase + "-" + args.theme
