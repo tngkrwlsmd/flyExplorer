@@ -37,6 +37,7 @@ Windows 11 탐색기 기능 호환의 구체적인 개발 계약·관련 파일�
 | M23 앱 내부 로컬 Copy | 명시한 파일/폴더·충돌·대화상자 안전 시나리오 수용 완료 | [유한 수용 경계](M23_ACCEPTANCE_BOUNDARY.md). 자동으로 충돌 변형을 늘리거나 모든 Move/제공자로 확대하지 않는다. |
 | G01 집중 시작·종료 문제 | 초기 탐색 #68과 열 조절 후 ToolTip 종료 충돌 #69의 집중 이슈는 완료로 닫힘 | [현재 상태](CURRENT_STATUS.md)·[오류 이력](ERROR_HISTORY.md). 기록된 초기 탐색 12/12·종료 24/24와 별도 ToolTip 종료 수정 범위다. 전체 경로의 무결함은 아니며 새 동일 조건 재현이 있을 때만 해당 경계를 재개한다. |
 | G02/G06 키보드·탭 포커스 | 기존 로컬 범위 수용 완료 | [현재 상태](CURRENT_STATUS.md)의 시작 순회·메뉴 복귀·두 수준 탭 결과를 보존한다. 전체 음성/화면 수용은 아니다. |
+| EP04/L03 점파일 유형 문구 | 정확한 로컬 점파일 유형 변경/기존 확장자 유형 유지·화면 수용 완료 | [한정 Windows 증거](L03_DOTFILE_TYPE_ACCEPTANCE_20261029.md): 소스 11/11, Release + 이전 Dark·변경 후 Dark/Light GUI PASS, 실제 PNG 3장. `.gitignore`·`.env`는 `파일`로 표시하고 `.env.local`·`.txt` 등록 유형 보존. 모든 아이콘/파일 유형/Explorer parity 수용은 아니다. |
 | 오래된 소스 계약 실패 | 테스트 관련 파일 5개 수정 반영, 로컬 제품 소스 301/301·집중 계약 47/47 PASS | [커밋 8ebf3d8](https://github.com/tngkrwlsmd/flyExplorer/commit/8ebf3d8980864c19d935a1532faabb779d1586b9). 로컬 소스 증거다. 과거 중앙 실패·새 중앙 CI·빌드/GUI 상태를 소급 변경하지 않는다. |
 
 ### 남은 작업의 권장 순서
