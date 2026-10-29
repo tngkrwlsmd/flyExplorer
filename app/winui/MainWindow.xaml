@@ -472,7 +472,7 @@
         </StackPanel>
         <ScrollViewer Grid.Row="6" x:Name="SearchPanel" Visibility="Collapsed"
                       MaxHeight="400" VerticalScrollBarVisibility="Auto"
-                      HorizontalScrollBarVisibility="Disabled"
+                      HorizontalScrollBarVisibility="Auto"
                       SizeChanged="OnSearchPanelSizeChanged"
                       AutomationProperties.Name="파일 검색 조건과 결과">
           <StackPanel Spacing="5" Padding="14,3,14,5">

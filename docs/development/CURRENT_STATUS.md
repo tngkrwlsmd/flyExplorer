@@ -1,3 +1,10 @@
+# 2026-10-29 — PX15 compact Search wide rows: source fix, GUI/pixel pending
+
+- The prior owned compact Search review documented some long explanatory rows remaining clipped. The current `SearchPanel` is vertically scrollable but disables horizontal scroll while child form rows use fixed-width horizontal controls. At compact widths those rows can extend beyond the viewport.
+- Scoped XAML change: enable horizontal scrolling on the **Search panel only**, keeping vertical overflow, 400-unit maximum height, the 160-unit file-pane reserve, all existing search commands/controls, active-pane ownership and session policy unchanged. Long rows can now be scrolled in principle rather than being permanently clipped. No automatic search, file access, navigation or settings change is introduced.
+- Narrow source regression contract checks both scroll directions, existing height bound and pane separation. The changed strings and exact XAML structural boundaries were inspected before commit; **no new Windows Release, functional GUI, before/after pixels or actual small-window scroll measurement was run**. Treat runtime/UI/visual acceptance as **NOT TESTED**, not PASS. Older PX15 #40823403517 remains accepted only for its original scenario; this change invalidates its pixels for the changed Search surface.
+- Follow-up if explicitly authorized: one owned 960×519 Light/Dark compact Search scenario confirming horizontal overflow reachability, vertical scrolling, visible left/right file rows, normal exit and test-owned settings/files preservation. Do not rerun unchanged Home, Copy, PX06 Cancel, PX11 or excluded/stopped checks.
+
 # 2026-10-29 — F03 focused Preview button stays visible after compact restore
 
 - Newly reproduced on `60e6336c`: keyboard-focused Preview opt-in remains focused but goes offscreen when restoring 1220×700 → 960×519. The Details viewport now brings that already-focused button into view on size change; it does not assign focus, opt in, read bytes or change tabs/session policy.

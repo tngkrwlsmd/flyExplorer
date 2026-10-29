@@ -17,6 +17,8 @@ class SearchControllerContracts(unittest.TestCase):
         search = next(node for node in root.iter() if node.get(name) == "SearchPanel")
         self.assertTrue(search.tag.endswith("}ScrollViewer"))
         self.assertEqual(search.get("VerticalScrollBarVisibility"), "Auto")
+        self.assertEqual(search.get("HorizontalScrollBarVisibility"), "Auto")
+        self.assertEqual(search.get("MaxHeight"), "400")
         self.assertEqual(search.get("SizeChanged"), "OnSearchPanelSizeChanged")
         children = {node.get(name) for node in search.iter()}
         self.assertTrue({"SearchRunButton", "SearchCancelButton", "SearchMatches",
