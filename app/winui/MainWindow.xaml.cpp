@@ -480,6 +480,8 @@ namespace winrt::FlyExplorer::implementation
                     key==Windows::System::VirtualKey::F3;
                 const bool refreshAlias=control&&!shift&&!alt&&
                     key==Windows::System::VirtualKey::R;
+                const bool previewAlias=alt&&!control&&!shift&&
+                    key==Windows::System::VirtualKey::P;
                 // Explorer's supported view keys reuse the menu's pane-local
                 // owner. Extra-large icons, Tiles and Content are not modes here.
                 int viewShortcut=-1;
@@ -498,12 +500,12 @@ namespace winrt::FlyExplorer::implementation
                     default:break;
                     }
                 }
-                if(addressAlias||searchAlias||refreshAlias||viewShortcut>=0){
+                if(addressAlias||searchAlias||refreshAlias||viewShortcut>=0||previewAlias){
                     auto ui=nativeWeak.get();
                     if(!ui||ui->mClosing)return;
                     // Keep modal/menu/combo input and inline file-name edits
                     // local. Address/search editors may use focus aliases;
-                    // Refresh/view changes must not run beneath any text editor.
+                    // Refresh/view/panel changes must not run beneath any text editor.
                     auto node=args.OriginalSource().try_as<DependencyObject>();
                     while(node){
                         if(node.try_as<PasswordBox>()||
@@ -513,7 +515,7 @@ namespace winrt::FlyExplorer::implementation
                            node.try_as<MenuFlyoutPresenter>()||
                            node.try_as<ContentDialog>())return;
                         if(auto box=node.try_as<TextBox>();box&&
-                           (refreshAlias||viewShortcut>=0||
+                           (refreshAlias||viewShortcut>=0||previewAlias||
                             (box!=ui->AddressBox()&&box!=ui->QuickSearchBox())))
                             return;
                         node=Microsoft::UI::Xaml::Media::VisualTreeHelper::
@@ -533,6 +535,20 @@ namespace winrt::FlyExplorer::implementation
                     }
                     if(viewShortcut>=0){
                         ui->UpdateView(viewShortcut);
+                        args.Handled(true);
+                        return;
+                    }
+                    if(previewAlias){
+                        // Reuse the shared Details/Preview pane and its existing
+                        // opt-in/cancellation rules; do not enable file reading.
+                        ui->OnToggleFileInfoPane(nullptr,nullptr);
+                        if(ui->ActiveWindowTab().fileInfoPaneVisible){
+                            ui->OnRevealTextPreview(nullptr,nullptr);
+                        }else{
+                            const int side=ui->ActiveWindowTab().model.activePane;
+                            auto view=side==0?ui->LeftFiles():ui->RightFiles();
+                            view.Focus(Microsoft::UI::Xaml::FocusState::Keyboard);
+                        }
                         args.Handled(true);
                         return;
                     }

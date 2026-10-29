@@ -14,6 +14,35 @@ def compact(text: str) -> str:
 
 
 class ShortcutSemanticsContract(unittest.TestCase):
+    def test_alt_p_reuses_preview_pane_without_bypassing_optin(self):
+        window = compact(WINDOW.read_text(encoding="utf-8"))
+        root = window.split("RootShell().PreviewKeyDown(", 1)[1]
+        self.assertIn("previewAlias=alt&&!control&&!shift&& key==Windows::System::VirtualKey::P", root)
+        aliases = root.split("if(addressAlias||", 1)[1].split(
+            "// Closed set of Ctrl-only", 1
+        )[0]
+        self.assertIn("refreshAlias||viewShortcut>=0||previewAlias||", aliases)
+        self.assertLess(root.index("pendingConfirmationToken()"),
+                        root.index("const bool previewAlias="))
+        self.assertLess(aliases.index("GetParent(node)"),
+                        aliases.index("if(previewAlias){"))
+        handler = aliases.split("if(previewAlias){", 1)[1]
+        for token in ("OnToggleFileInfoPane(nullptr,nullptr)",
+                      "ActiveWindowTab().fileInfoPaneVisible",
+                      "OnRevealTextPreview(nullptr,nullptr)",
+                      "ActiveWindowTab().model.activePane",
+                      "side==0?ui->LeftFiles():ui->RightFiles()",
+                      "view.Focus(Microsoft::UI::Xaml::FocusState::Keyboard)",
+                      "args.Handled(true)"):
+            self.assertIn(token, handler)
+        for forbidden in ("OnToggleTextPreview(", "mTextPreviewEnabled=",
+                          "QueueTextPreview(", "ReadFile(", "PersistPreferences("):
+            self.assertNotIn(forbidden, handler)
+        close = window.split("void MainWindow::OnToggleFileInfoPane(", 1)[1].split(
+            "void MainWindow::ApplyFileInfoPaneLayout()", 1
+        )[0]
+        self.assertIn("if(!state.fileInfoPaneVisible){ mTextPreviewEnabled=false; CancelTextPreview();", close)
+
     def test_view_shortcuts_match_supported_explorer_modes(self):
         window = WINDOW.read_text(encoding="utf-8")
         block = window.split("int viewShortcut=-1;", 1)[1].split(
