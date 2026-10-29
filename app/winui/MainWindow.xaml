@@ -240,6 +240,7 @@
         <!-- PX02: one bounded overview; no implicit Explorer history or filesystem scan. -->
         <ScrollViewer Grid.Row="4" x:Name="HomeOverviewPanel"
                       Visibility="Collapsed" MaxHeight="280"
+                      SizeChanged="OnHomeOverviewSizeChanged"
                       HorizontalScrollBarVisibility="Disabled"
                       VerticalScrollBarVisibility="Auto"
                       AutomationProperties.Name="홈 대시보드 · 북마크와 세션 활동">

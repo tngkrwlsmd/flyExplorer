@@ -4334,6 +4334,7 @@ namespace winrt::FlyExplorer::implementation
     void MainWindow::OnShellSizeChanged(IInspectable const&,
         SizeChangedEventArgs const& args)
     {
+        OnHomeOverviewSizeChanged(nullptr,args);
         const auto width=args.NewSize().Width;mShellWidth=width;
         NavigationColumn().Width(GridLength{width<1040?156.0:188.0,GridUnitType::Pixel});
         QuickSearchBox().Width(width<820?120.0:(width<1060?150.0:220.0));
@@ -4344,6 +4345,26 @@ namespace winrt::FlyExplorer::implementation
                 if(mColumnControlsReady&&!ActiveWindowTab().model.panes[side].tabs.empty())FillFiles(side);
             }else ApplyDetailColumnLayout(side);
         }
+    }
+    void MainWindow::OnHomeOverviewSizeChanged(IInspectable const&,
+        SizeChangedEventArgs const&)
+    {
+        auto home=HomeOverviewPanel();
+        if(mClosing||!home||home.Visibility()!=Visibility::Visible)return;
+        const auto root=RootShell();
+        if(root.ActualHeight()<=0)return;
+        const auto rows=root.RowDefinitions();
+        double chrome=0.0;
+        for(std::uint32_t i=0;i<rows.Size();++i){
+            // Home and the file panes share only the remaining height.
+            if(i!=4&&i!=7)chrome+=rows.GetAt(i).ActualHeight();
+        }
+        // Keep the tab/header plus actual file rows usable when restoring a
+        // compact window. The existing Home ScrollViewer exposes overflow.
+        constexpr double minimumFilePane=160.0;
+        const double maximum=(std::clamp)(
+            root.ActualHeight()-chrome-minimumFilePane,0.0,280.0);
+        if(std::abs(home.MaxHeight()-maximum)>0.5)home.MaxHeight(maximum);
     }
     void MainWindow::OpenFolderInNewPaneTab(int side,std::wstring path)
     {

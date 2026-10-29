@@ -1,5 +1,9 @@
 # PX02 unified Home overview — scoped acceptance (2026-10-28)
 
+## Later scoped viewport/visual acceptance (2026-10-29)
+
+[Home compact viewport review](PX02_HOME_VISUAL_REVIEW_20261029.md) records a separately observed restore/shrink clipping defect, its bounded layout fix, exact tested blobs and incremental Release, actual Light/Dark screens, Dark bookmark focus, and normal-exit/data-preservation evidence. It preserves the original functional acceptance below; only that documented screen slice is newly accepted. Populated history, other displays and whole-product visual acceptance remain outside scope.
+
 ## Shipped behavior
 
 The Home command on the main navigation bar and the sidebar now opens **one bounded top-of-pane Home overview**, rather than silently navigating to the user's home folder. A dedicated **사용자 폴더 열기** button preserves the old destination. The overview combines:

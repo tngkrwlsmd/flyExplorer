@@ -34,6 +34,31 @@ class HomeOverviewContracts(unittest.TestCase):
         self.assertNotIn('IsChecked="True"', home)
         self.assertNotIn('WebView', home)
 
+    def test_compact_home_reflows_after_open_and_window_restore(self):
+        xaml = read("app/winui/MainWindow.xaml")
+        main = read("app/winui/MainWindow.xaml.cpp")
+        header = read("app/winui/MainWindow.xaml.h")
+        home = xaml.split('x:Name="HomeOverviewPanel"', 1)[1].split(
+            'x:Name="BookmarkPanel"', 1)[0]
+        self.assertIn('SizeChanged="OnHomeOverviewSizeChanged"', home)
+        self.assertIn('VerticalScrollBarVisibility="Auto"', home)
+        self.assertIn("void OnHomeOverviewSizeChanged(", header)
+        resize = main.split("void MainWindow::OnShellSizeChanged(", 1)[1].split(
+            "void MainWindow::OnHomeOverviewSizeChanged(", 1)[0]
+        self.assertIn("OnHomeOverviewSizeChanged(nullptr,args);", resize)
+        layout = main.split("void MainWindow::OnHomeOverviewSizeChanged(", 1)[1].split(
+            "void MainWindow::OpenFolderInNewPaneTab(", 1)[0]
+        for token in ("mClosing||!home||home.Visibility()!=Visibility::Visible",
+                      "root.ActualHeight()<=0", "root.RowDefinitions()",
+                      "if(i!=4&&i!=7)", "rows.GetAt(i).ActualHeight()",
+                      "constexpr double minimumFilePane=160.0;",
+                      "root.ActualHeight()-chrome-minimumFilePane,0.0,280.0",
+                      "std::abs(home.MaxHeight()-maximum)>0.5"):
+            self.assertIn(token, layout)
+        for forbidden in ("AppWindow().Resize", "OpenFolder(", "mRecentActivity.enable",
+                          "std::filesystem", "SetWindowPos"):
+            self.assertNotIn(forbidden, layout)
+
     def test_home_entry_points_share_one_view_and_preserve_folder_navigation(self):
         main = read("app/winui/MainWindow.xaml.cpp")
         features = read("app/winui/m19_features.cpp")

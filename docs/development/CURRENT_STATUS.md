@@ -1,3 +1,12 @@
+# 2026-10-29 — PX02 Home compact viewport fix: focused Release + visual review accepted
+
+- **Observed and fixed:** restoring an open Home from a wide window to about 945×511 hid both panes' file rows. Home now recalculates its bounded height on Home/root size changes and reserves 160 XAML units for file panes; overflow remains scrollable.
+- **Actual scoped evidence:** Home/recent-activity contracts **11/11 PASS** locally and on Windows; compatible retained intermediates reused for incremental x64 Release, exit 0. Actual Light/Dark wide and compact screens showed all three owned fixture items in both panes; Home footer remained scrollable. Dark bookmark keyboard focus was visible.
+- **Exit/data integrity:** [Windows collection #40800979406](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/40800979406) confirms before/after normal exit 0, six legacy settings unchanged, owned bytes preserved, temporary fixture/profiles removed and owned worker task retired.
+- **Provenance and finite boundary:** [PX02/PX15 Home visual review](PX02_HOME_VISUAL_REVIEW_20261029.md) records baseline b5f09e6 plus four exact tested blobs, before/after EXE hashes and build runs. This accepts that Home viewport slice, not all PX15, populated history, Light keyboard focus, DPI or whole-product GUI. Low-contrast Light caption icons remain a separate observed candidate. Existing accepted functions and excluded G03–G05/stopped G07 are preserved.
+
+---
+
 # 2026-10-29 — Development backlog reconciled with accepted evidence (DOCS ONLY)
 
 - Reconciled root AGENTS.md, NEXT_DEVELOPMENT_GOALS, Explorer requirements, the dated parity audit and documentation index against baseline `8ebf3d8` and the existing exact-SHA evidence. The active queue now separates scoped completion, visual/performance gaps and optional product choices.
