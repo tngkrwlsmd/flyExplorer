@@ -1,3 +1,9 @@
+# 2026-10-29 — Remaining work and continuation guidance reconciled against latest main
+
+- Documentation-only checkpoint at `3cb5b7691a11910b2d71f5a7b0e112205f341baf`; product changes `7e28366c` have affected-source/model **44/44 PASS**, but their Release/GUI/pixels and measured performance remain pending. This update ran no Windows job, build, GUI or new product tests.
+- [Current queue](NEXT_DEVELOPMENT_GOALS.md): build the changed C++ first, then focused collision-confirmation and navigation GUI, filtered-sort correctness/performance; afterwards remaining PX15 gaps, optional PX11 extension decisions and unadopted feature candidates. Root `AGENTS.md` routes continuation to these completion/stop conditions.
+- Preserved latest L03/M24/search-horizontal acceptance and all dated history/failures. Completed finite scenarios are outside the remaining queue. Removed stale Home→old-performance→New-menu recommendations from the current Explorer summaries; no product/session policy or acceptance was changed.
+
 # 2026-10-29 — EP05/PX01, EP01, PX11, PX13/G08 priorities 1–4: affected source contracts 44/44 PASS, GUI pending
 
 - Requested batch product/source commit [`7e28366c`](https://github.com/tngkrwlsmd/flyExplorer/commit/7e28366c10a365d9102e54aaf3460282b511b037). [Exact central Windows source-only run #40844041193](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/40844041193): active-pane command availability **3/3**, navigation chrome and history handlers **13/13**, filter-before-sort source and 8k-equivalence model **2/2**, combined **18/18 PASS**; central VM request retired to idle.

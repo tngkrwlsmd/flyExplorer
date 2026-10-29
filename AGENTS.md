@@ -127,6 +127,28 @@ source/binary/environment-scoped acceptance, and the existing project/user
 approval boundaries. Update goal status only when its actual completion
 criteria and evidence have been checked.
 
+### Current continuation rule (2026-10-29)
+
+Use the **앞으로 진행할 작업** section in
+`docs/development/NEXT_DEVELOPMENT_GOALS.md` as the single current queue.
+Keep scoped completions outside that queue. Complete the pending validation
+for already changed product code before selecting a new feature or visual unit;
+the register owns the exact targets, source identities and verification states.
+Reuse successful evidence and select at most one important uncovered PX15 action.
+Do not invent accepted-case variants or whole-product test matrices merely to
+continue working. PX11's proposal is complete; retain v4 unless its unadopted
+per-tab presentation extension is explicitly chosen. Additional PX17 templates,
+PX08 Share and later candidates are not automatically adopted by a generic
+continue request. After a changed performance unit is accepted, reopen its older
+acceptance only for new symptoms or a new evidenced bottleneck. If no justified
+executable unit remains, report the decision/blocker instead of expanding scope.
+The register defines completion and stop conditions.
+
+Use Work cloud development and the approved central `windows-vm` path; do not
+access personal PCs/local desktops, use RDC, or use `chatgpt-codex-connector`.
+Documentation-only planning does not require Windows execution/build/GUI.
+Preserve existing exclusions, user-data protections and separate GUI/pixel gates.
+
 ### Explicit user exclusions (2026-10-19)
 
 Do **not** pursue, schedule, perform, re-propose or treat as release blockers

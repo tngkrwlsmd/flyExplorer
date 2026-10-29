@@ -2,7 +2,7 @@
 
 ## 2026-10-29 evidence reconciliation
 
-Current reconciliation baseline: `main@8ebf3d8`. Use the maintained
+Current reconciliation baseline: `main@3cb5b7691a11910b2d71f5a7b0e112205f341baf`. Use the maintained
 [NEXT_DEVELOPMENT_GOALS.md](NEXT_DEVELOPMENT_GOALS.md) current-work section
 before selecting a task. The original 2026-10-22 comparison and its priorities
 below remain a dated snapshot; their OPEN/next-step labels do not reopen a
@@ -11,19 +11,31 @@ comparison, product build, GUI or pixel review.
 
 | Area | Latest scoped result | Remaining difference or unverified scope |
 | --- | --- | --- |
-| PX02 Home | [Bounded unified Home accepted](PX02_HOME_OVERVIEW_ACCEPTANCE.md), `66b2c6a4`, Release + owned GUI | Populated activity tiles, separate pixels and full Explorer/cloud Home are outside that acceptance. |
-| PX06 Search | [Local in-flight Cancel accepted](PX06_SEARCH_CANCEL_STATUS.md), `6bbc94f4`, central #40691104646 | Full indexed/provider/cloud search, app-scale performance and separate visual acceptance remain distinct. |
+| PX02 Home | [Bounded unified Home accepted](PX02_HOME_OVERVIEW_ACCEPTANCE.md), `66b2c6a4`, Release + owned GUI | Home compact Light/Dark pixels were subsequently accepted in the [Home visual review](PX02_HOME_VISUAL_REVIEW_20261029.md). Populated activity and full Explorer/cloud Home remain outside that scope. |
+| PX06 Search | [Local in-flight Cancel accepted](PX06_SEARCH_CANCEL_STATUS.md), `6bbc94f4`, central #40691104646 | Full indexed/provider/cloud search remains separate. Later [compact-panel pixels](PX15_COMPACT_SEARCH_REVIEW_20261029.md) have their own finite acceptance; [folder browsing/sort performance](PX13_PIPE_DRAIN_PERFORMANCE_20261029.md) does not certify search-engine timing. |
 | PX10/L08 Columns | [Left and right native cursor + physical resize accepted](UI_UX_AUDIT.md), left `b5e6e11f` and right `e887f64d` | Independent pointer-pixel review and untested drag transitions are not certified. Historical Arrow/locked-desktop results are not the current native-cursor verdict. |
 | PX12 Address | [Bounded keyboard candidates accepted](PX12_KEYBOARD_CANDIDATE_ACCEPTANCE.md), exact `3bbfc73b`, central #40778973319 | Arbitrary disk/provider autocomplete remains broader than the implementation; the older visual comparison remains PARTIAL. |
 | PX14/G01 Stability | [Focused startup and ToolTip-close issues completed](CURRENT_STATUS.md); #68 and #69 closed | Preserve exact scenario boundaries and reopen only on new matching evidence, without claiming every lifecycle path is fixed. |
 | M23 Copy / source gate | [Finite local Copy scope accepted](M23_ACCEPTANCE_BOUNDARY.md); [source-contract repair 8ebf3d8](https://github.com/tngkrwlsmd/flyExplorer/commit/8ebf3d8980864c19d935a1532faabb779d1586b9) local product-source 301/301 | Local source PASS is not new central CI/Release/GUI acceptance; retain historical failed runs. |
 
-Current recommended queue: scoped Home visual/usability review first; one
-bounded local app-performance scenario next; then choose one unmet PX17/PX08
-feature after checking existing implementation and OS delegation. PX11's hybrid
-state ownership is already decided; per-tab view/column persistence is a new
-product choice. Preserve user-excluded G03–G05 and stopped G07. Optional Gallery,
-cloud, preview and Undo extensions are not mandatory blockers.
+The additional accepted units since the earlier `8ebf3d8` reconciliation are
+Home compact restore, local app/Shell-pipe performance, Light caption contrast,
+PX17's local New menu, compact search, and F03 Unicode cutoff/resize focus.
+Use [CURRENT_STATUS.md](CURRENT_STATUS.md) for their exact finite evidence;
+this document does not recertify their binaries or widen their acceptance.
+The Home pixels/performance/New-menu sequence formerly recommended here has
+been completed in its selected scope and is no longer the next-work queue.
+
+The single current queue is [NEXT_DEVELOPMENT_GOALS.md](NEXT_DEVELOPMENT_GOALS.md),
+**앞으로 진행할 작업**. First finish Release, focused collision/navigation GUI and
+filtered-sort runtime/performance checks for product `7e28366c`. Its 44/44
+source/model PASS is not native, GUI or measured-speed acceptance. Later scoped
+L03 Type, M24 .txt icon-ready and horizontal-search pixels are accepted in their
+own feature records; do not replay them to validate this different source change.
+After those gates: one important uncovered PX15 action, a PX11 adoption decision,
+then a separately chosen unmet PX17/PX08 candidate. No automatic feature adoption;
+keep current v4 ownership, excluded G03–G05 and stopped G07. Subsequent performance
+work needs new symptoms/evidence. Preserve the original comparison below.
 
 ## Original 2026-10-22 scope and judgment
 
