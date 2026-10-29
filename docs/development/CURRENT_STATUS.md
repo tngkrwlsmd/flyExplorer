@@ -1,3 +1,11 @@
+# 2026-10-29 — PX13/G08 in-sort input responsiveness: bounded three-trial acceptance
+
+- Actual current Release runtime at `e6219777`, clean Windows VM checkout: 200-file lifecycle preflight followed by three owned 8k trials. Native UI-thread message p95 **54.350 / 53.415 / 41.527ms**, maximum **105.602ms**, **0 failed sends / 230 samples**. Separate real in-flight Ctrl+L focus observations **202.669 / 225.635 / 252.667ms**. All three met the predeclared response budgets.
+- [Central #40818196646](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/40818196646) PASS: exact EXE/helper reused, normal exit, original settings/owned bytes preserved and temporary profiles/fixtures/worker task removed. Metric calculation **3/3 local tests PASS**, Python syntax/whitespace PASS. No C++/XAML change, build, old GUI or pixel rerun.
+- [Precise timing definitions, raw trial summaries, source/binary identity and limits](PX13_UI_RESPONSIVENESS_20261029.md). WM_NULL is not frame timing; Ctrl+L includes UIA observation cost. Overall sort still **5.18–5.68s** with added probes/input and uncontrolled caches/load, so it is not a directly comparable regression result against the earlier 4.354s sample. This closes the bounded input slice, **not all PX13/G08**; do not add further accepted-input variants by default.
+
+---
+
 # 2026-10-29 — Light caption contrast and PX17 toolbar New menu: focused acceptance
 
 - Light/Dark native caption colors follow the root's actual theme through the public AppWindowTitleBar API. Matched actual pixels show Light icons becoming legible and Dark remaining legible. Windows standard minimize/maximize/restore and normal exit 0 observed on the owned HWND.
