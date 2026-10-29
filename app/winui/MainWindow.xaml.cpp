@@ -4246,13 +4246,42 @@ namespace winrt::FlyExplorer::implementation
                 if(choices.size()==8)break;
             }
         }
-        auto const& pane=model.panes[static_cast<size_t>(model.activePane)];
-        if(pane.active<pane.tabs.size()){
-            auto const& known=pane.tabs[pane.active].nameIndex();
+        // Reuse committed snapshots from other open folder tabs as well.
+        // Only inspect caches whose folder can overlap the typed prefix;
+        // unrelated active folders must not exhaust the shared work budget.
+        size_t inspected=0;
+        auto offerChildren=[&](int side,size_t tab){
+            if(choices.size()>=8||inspected>=2048||
+               (side==1&&!model.split))return;
+            auto const& pane=model.panes[static_cast<size_t>(side)];
+            if(tab>=pane.tabs.size()||
+               (tab<pane.pending.size()&&pane.pending[tab]))return;
+            auto const& folder=pane.tabs[tab].snapshot().parsingName;
+            if(folder.empty()||folder.rfind(L"shell:",0)==0)return;
+            const auto shared=(std::min)(prefix.size(),folder.size());
+            if(::CompareStringOrdinal(folder.c_str(),static_cast<int>(shared),
+                prefix.c_str(),static_cast<int>(shared),TRUE)!=CSTR_EQUAL)return;
+            if(prefix.size()>folder.size()&&folder.back()!=L'\\'&&
+               folder.back()!=L'/'&&prefix[folder.size()]!=L'\\'&&
+               prefix[folder.size()]!=L'/')return;
+            auto const& known=pane.tabs[tab].nameIndex();
             const auto limit=(std::min)(known.size(),static_cast<size_t>(2048));
-            for(size_t i=0;i<limit&&choices.size()<8;++i)
+            for(size_t i=0;i<limit&&choices.size()<8&&inspected<2048;
+                ++i,++inspected)
                 if(known[i].isFolder()&&known[i].isFileSystem())
                     offer(known[i].parsingName);
+        };
+        const int activeSide=model.activePane;
+        auto const& activePane=model.panes[static_cast<size_t>(activeSide)];
+        offerChildren(activeSide,activePane.active);
+        for(int side=0;side<2&&choices.size()<8&&inspected<2048;++side){
+            if(side==1&&!model.split)continue;
+            auto const& pane=model.panes[static_cast<size_t>(side)];
+            for(size_t tab=0;tab<pane.tabs.size()&&
+                choices.size()<8&&inspected<2048;++tab){
+                if(side==activeSide&&tab==activePane.active)continue;
+                offerChildren(side,tab);
+            }
         }
         for(std::size_t candidateIndex=0;candidateIndex<choices.size();++candidateIndex){
             auto const& path=choices[candidateIndex];
