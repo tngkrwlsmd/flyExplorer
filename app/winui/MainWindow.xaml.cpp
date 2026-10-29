@@ -1489,6 +1489,7 @@ namespace winrt::FlyExplorer::implementation
         else if(side==1)TraceG01OwnedStartup(id?
             "RIGHT_SUBMIT_ACCEPTED":"RIGHT_SUBMIT_REJECTED");
         if(id&&side==ActiveWindowTab().model.activePane)UpdateNavigationChrome();
+        if(id)ActiveWindowTab().fileLists[side].fileCommandReveal.clear();
         if(id)StatusText().Text(L"폴더를 불러오는 중입니다.");
         else StatusText().Text(L"이 위치로 이동할 수 없습니다.");
         return id;
@@ -1679,15 +1680,29 @@ namespace winrt::FlyExplorer::implementation
             default:break;
             }
         }
-        // Only a successful refresh of the exact original PaneTab/folder
-        // can reveal a newly created or renamed file. Navigation or a
-        // failed refresh cancels the one-shot request without guessing.
+        // A search locate needs its exact accepted navigation; create/rename
+        // still needs its original refresh. Neither can select by an old index.
         if(completed.active&&completed.side>=0&&completed.side<2){
             auto const& pane=ActiveWindowTab().model.panes[completed.side];
             auto& reveal=ActiveWindowTab().fileLists[completed.side]
                 .fileCommandReveal;
             if(!reveal.target.empty()){
-                if(completed.action==Action::Refresh){
+                if(reveal.navigationRequest){
+                    const bool validTab=pane.active<pane.tabs.size()&&
+                        pane.active<pane.routeIds.size();
+                    const bool sameFolder=validTab&&
+                        ::CompareStringOrdinal(reveal.folder.c_str(),-1,
+                            pane.tabs[pane.active].snapshot().parsingName.c_str(),
+                            -1,TRUE)==CSTR_EQUAL;
+                    reveal.completeNavigation(completed.request,
+                        validTab?pane.routeIds[pane.active]:0,pane.active,
+                        (completed.kind==Kind::Applied||
+                         completed.kind==Kind::NoChange)&&
+                            completed.action==Action::Open,
+                        sameFolder);
+                    if(reveal.afterRefresh)
+                        reveal.folder=pane.tabs[pane.active].snapshot().parsingName;
+                }else if(completed.action==Action::Refresh){
                     if(completed.kind==Kind::Applied&&
                        pane.active<pane.tabs.size()&&
                        pane.active<pane.routeIds.size()&&
@@ -1714,6 +1729,14 @@ namespace winrt::FlyExplorer::implementation
             if(restoreSettled)QueueNextWorkspaceTab(completed.side);
         };
         if(completed.kind==Kind::NoChange){
+            if(completed.active&&ActiveWindowTab().fileLists[completed.side]
+                    .fileCommandReveal.afterRefresh){
+                // Opening the already current folder keeps its history and
+                // snapshot, but a matching search locate can still select it.
+                FillFiles(completed.side);
+                UpdateSelectionChrome();
+                UpdateFooterSummary();
+            }
             // Request completion can clear pending without changing the
             // folder snapshot. Keep history buttons in sync with that state.
             if(completed.active)UpdateNavigationChrome();
@@ -2800,6 +2823,10 @@ namespace winrt::FlyExplorer::implementation
         const auto& nameIndex=session.nameIndex();
         auto& state=ActiveWindowTab().fileLists[side];
         const auto nextRoute=pane.routeIds[pane.active];
+        if(!state.fileCommandReveal.target.empty()&&
+           (state.fileCommandReveal.route!=nextRoute||
+            state.fileCommandReveal.tab!=pane.active))
+            state.fileCommandReveal.clear();
         // Route identity stays stable through navigation on one PaneTab;
         // distinguish a same-folder refresh from a different folder.
         bool sameWindowTab=false;
@@ -3570,6 +3597,7 @@ namespace winrt::FlyExplorer::implementation
         mShellNavigation->suspend(state.model);
         for(int side=0;side<2;++side){
             mFileDetails.cancel(side);
+            state.fileLists[side].fileCommandReveal.clear();
             state.fileLists[side].invalidate();
             mWorkspaceRestore.reset(side);
         }

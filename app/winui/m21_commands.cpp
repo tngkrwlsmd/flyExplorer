@@ -279,6 +279,7 @@ void MainWindow::OnFileCommandCompleted(
     pane.active<pane.routeIds.size()&&
     pane.routeIds[pane.active]==completion.context.route){
      auto& reveal=ActiveWindowTab().fileLists[side].fileCommandReveal;
+     reveal.clear();
      reveal.target=completion.result.target;
      reveal.folder=completion.context.visibleShellFolder;
      reveal.route=completion.context.route;

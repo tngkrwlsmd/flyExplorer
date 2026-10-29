@@ -976,6 +976,10 @@ void MainWindow::OnSearchMatchSelectionChanged(
 }
 void MainWindow::OnLocateSearchMatch(
     IInspectable const&,RoutedEventArgs const&){
+    if(mFileOperations.busy()||mFileOperations.pendingConfirmationToken()){
+        StatusText().Text(L"파일 작업이 끝난 뒤 검색 결과로 이동해 주세요.");
+        return;
+    }
     const auto match=SelectedSearchMatchPath();
     if(match.empty()){
         SearchLocateButton().IsEnabled(false);
@@ -999,8 +1003,16 @@ void MainWindow::OnLocateSearchMatch(
     // QueuePath uses the established isolated Shell navigation, including
     // late-result and failed-navigation guards; never call Shell on the UI
     // thread or launch the file merely to reveal its parent.
-    if(!QueuePath(mSearchResultContext.side,std::move(containingFolder)))
-        return;
+    const auto request=QueuePath(mSearchResultContext.side,containingFolder);
+    if(!request)return;
+    auto& reveal=ActiveWindowTab().fileLists[mSearchResultContext.side]
+        .fileCommandReveal;
+    reveal.clear();
+    reveal.target=match;
+    reveal.folder=std::move(containingFolder);
+    reveal.route=mSearchResultContext.route;
+    reveal.tab=mSearchResultContext.tab;
+    reveal.navigationRequest=request;
     SearchPanel().Visibility(Visibility::Collapsed);
     mSearchResultValid=false;
     mSearchResultPaths.clear();
