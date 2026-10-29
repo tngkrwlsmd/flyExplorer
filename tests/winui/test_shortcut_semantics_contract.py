@@ -14,20 +14,16 @@ def compact(text: str) -> str:
 
 
 class ShortcutSemanticsContract(unittest.TestCase):
-    def test_alt_p_failed_initial_focus_retries_once_without_stealing_focus(self):
+    def test_alt_p_settles_changed_layout_before_focus_without_deferred_input(self):
         source = compact(WINDOW.read_text(encoding="utf-8"))
         command = source.split("if(previewAlias){", 1)[1].split("args.Handled(true);", 1)[0]
-        for token in ("TextPreviewToggleButton().FocusState()== FocusState::Unfocused",
-                      "winrt::make_weak(focused)", "DispatcherQueuePriority::Low",
-                      "ui->ActiveWindowTab().identity==workspace",
-                      "ui->ActiveWindowTab().model.activePane==side",
-                      "ui->ActiveWindowTab().fileInfoPaneVisible",
-                      "!ui->mFileOperations.pendingConfirmationToken()",
-                      "const auto owner=focusOwner.get();",
-                      "ui->RootShell().XamlRoot())==owner"):
-            self.assertIn(token, command)
-        self.assertEqual(command.count("TryEnqueue("), 1)
-        for token in ("std::thread", "QueueTextPreview(", "mTextPreviewEnabled=", "Sleep("):
+        self.assertLess(command.index("OnToggleFileInfoPane(nullptr,nullptr)"),
+                        command.index("RootShell().UpdateLayout()"))
+        self.assertLess(command.index("RootShell().UpdateLayout()"),
+                        command.index("OnRevealTextPreview(nullptr,nullptr)"))
+        self.assertEqual(command.count("UpdateLayout()"), 1)
+        for token in ("TryEnqueue(", "std::thread", "QueueTextPreview(",
+                      "mTextPreviewEnabled=", "Sleep("):
             self.assertNotIn(token, command)
 
     def test_f11_uses_window_state_and_ignores_held_key_repeats(self):
