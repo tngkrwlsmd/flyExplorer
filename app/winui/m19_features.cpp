@@ -5,6 +5,7 @@
 #include <shellapi.h>
 #include <algorithm>
 #include <atomic>
+#include <cmath>
 #include <cwchar>
 #include <memory>
 #include <thread>
@@ -701,6 +702,24 @@ void MainWindow::RefreshRecentSearchOptions(){
     RecentCountText().Text(hstring(
         L"저장 "+std::to_wstring(recent.size())+L"개"));
     mPopulatingRecents=false;
+}
+void MainWindow::OnSearchPanelSizeChanged(
+    IInspectable const&, SizeChangedEventArgs const&) {
+    auto search=SearchPanel();
+    if(mClosing||!search||search.Visibility()!=Visibility::Visible)return;
+    const auto root=RootShell();
+    if(root.ActualHeight()<=0)return;
+    const auto rows=root.RowDefinitions();
+    double chrome=0.0;
+    for(std::uint32_t i=0;i<rows.Size();++i){
+        if(i!=6&&i!=7)chrome+=rows.GetAt(i).ActualHeight();
+    }
+    // Search overflow scrolls independently; preserve file tabs and rows
+    // after opening search or restoring a compact window.
+    constexpr double minimumFilePane=160.0;
+    const double maximum=(std::clamp)(
+        root.ActualHeight()-chrome-minimumFilePane,0.0,400.0);
+    if(std::abs(search.MaxHeight()-maximum)>0.5)search.MaxHeight(maximum);
 }
 void MainWindow::OnToggleSearch(
     IInspectable const&,RoutedEventArgs const&) {

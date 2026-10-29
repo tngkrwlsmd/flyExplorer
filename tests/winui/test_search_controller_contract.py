@@ -10,6 +10,28 @@ def src(path):
 
 
 class SearchControllerContracts(unittest.TestCase):
+    def test_compact_search_preserves_file_panes_and_scrolls_overflow(self):
+        import xml.etree.ElementTree as ET
+        root = ET.fromstring(src("app/winui/MainWindow.xaml"))
+        name = "{http://schemas.microsoft.com/winfx/2006/xaml}Name"
+        search = next(node for node in root.iter() if node.get(name) == "SearchPanel")
+        self.assertTrue(search.tag.endswith("}ScrollViewer"))
+        self.assertEqual(search.get("VerticalScrollBarVisibility"), "Auto")
+        self.assertEqual(search.get("SizeChanged"), "OnSearchPanelSizeChanged")
+        children = {node.get(name) for node in search.iter()}
+        self.assertTrue({"SearchRunButton", "SearchCancelButton", "SearchMatches",
+                         "SearchLocateButton"} <= children)
+        self.assertTrue({"LeftFiles", "RightFiles"}.isdisjoint(children))
+        layout = src("app/winui/m19_features.cpp").split(
+            "void MainWindow::OnSearchPanelSizeChanged(", 1)[1].split(
+            "void MainWindow::OnToggleSearch(", 1)[0]
+        self.assertIn("root.ActualHeight()-chrome-minimumFilePane", layout)
+        self.assertIn("if(i!=6&&i!=7)", layout)
+        self.assertIn("minimumFilePane=160.0", layout)
+        self.assertNotIn("AppWindow().Resize", layout)
+        main = src("app/winui/MainWindow.xaml.cpp")
+        self.assertIn("OnSearchPanelSizeChanged(nullptr,args);", main)
+
     def test_f11_search_result_location_is_scoped_and_nonmutating(self):
         xaml=src("app/winui/MainWindow.xaml")
         header=src("app/winui/MainWindow.xaml.h")

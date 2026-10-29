@@ -1,3 +1,9 @@
+# 2026-10-29 — PX15 compact search preserves both file panes
+
+- Confirmed on `3c22b424` Release: opening search then restoring to 960×519 hid both file lists and clipped the result-folder action. Search now scrolls within the available height, reserving 160 XAML units for file panes on open/resize. Search execution/cancellation and tab/session ownership are unchanged.
+- Scoped source **18/18 PASS**, Release exit 0, final focused GUI **PASS** in central [#40823403517](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/40823403517). Matched Light before/after and additional Dark after pixels reviewed: two file lists (93px each), scrollable result selection/action, folder navigation, normal exit and original settings/owned bytes preservation. Separate earlier harness/preflight failures remain FAIL.
+- [Exact source blobs, retained EXE, screenshots and boundaries](PX15_COMPACT_SEARCH_REVIEW_20261029.md). Covers 1220×700/960×519 at 96 DPI with three owned files and one match; **not full PX15 acceptance**. Other unreviewed surfaces remain separate; PX11 policy and excluded/stopped checks remain unchanged.
+
 # 2026-10-29 — PX13/G08 productive Shell-pipe draining: measured native and app improvement
 
 - Found an unconditional 20ms wait after each productive <=64KiB pipe read while the helper was alive. Continue immediately after read progress; preserve cancellation/generation/deadline checks on every iteration, idle waits, strict frame/checksum/EOF handling and owned child boundaries.

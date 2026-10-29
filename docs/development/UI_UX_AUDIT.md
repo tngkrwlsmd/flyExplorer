@@ -1,5 +1,12 @@
 # flyExplorer Windows 11 벤치마킹 및 UI/UX 점검
 
+## 2026-10-29 PX15 — 작은 창 검색 패널의 파일 목록 가림 수정
+
+- 실제 Light 변경 전 960×519에서 양쪽 파일 목록과 결과 이동 버튼이 가려졌다. 검색 영역만 높이를 제한하고 세로 스크롤을 제공해 파일 패널 160 XAML 단위를 보존한다.
+- 관련 소스 18/18·Release·[집중 GUI #40823403517](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/40823403517) PASS. Light 전후 및 Dark 변경 후 실제 PNG 6장 검토에서 파일 목록(93px), 결과 선택·폴더 이동 버튼 접근과 테마 표시를 한정 수용했다. 정상 종료·설정/소유 데이터 불변.
+- [정확한 후보 blobs·EXE·실패 경계·환경](PX15_COMPACT_SEARCH_REVIEW_20261029.md). 고급 조건/결과는 스크롤하며 일부 긴 설명 문구의 기존 가로 잘림은 남는다. 전체 PX15·다른 창 크기·미리보기 시각 수용은 별개다. Home/열 조절/검색 취소 수용은 다시 열지 않는다.
+
+
 ## 2026-10-28 PX10 — 오른쪽 Details 네이티브 커서와 실물 드래그 수용 완료
 
 - 이전 오른쪽 GUI 실행은 입력 데스크톱 잠금으로 중단됐지만, 이번에는 동일 Windows VM 사용자 입력 세션이 복구되어 **정확한 소스 `e887f64dfbac5cb20f42434a94d243e580023bdc`**에서 오른쪽 전용 테스트 `test_owned_column_resize_gui.py Release right`를 실제 실행했다. 결과는 **GUI 프로세스 exit 0 / `OWNED_DETAIL_COLUMN_RESULT PASS`**.

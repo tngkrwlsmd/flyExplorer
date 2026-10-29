@@ -4346,6 +4346,7 @@ namespace winrt::FlyExplorer::implementation
         SizeChangedEventArgs const& args)
     {
         OnHomeOverviewSizeChanged(nullptr,args);
+        OnSearchPanelSizeChanged(nullptr,args);
         const auto width=args.NewSize().Width;mShellWidth=width;
         NavigationColumn().Width(GridLength{width<1040?156.0:188.0,GridUnitType::Pixel});
         QuickSearchBox().Width(width<820?120.0:(width<1060?150.0:220.0));
