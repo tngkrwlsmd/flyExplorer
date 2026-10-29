@@ -48,8 +48,13 @@ class FileDetailControllerContract(unittest.TestCase):
         self.assertIn("std::filesystem::path(path).extension().native()", metadata)
         # Visual description and the bounded Windows type lookup must use
         # the same filename-only extension rule as sortable metadata.
-        self.assertEqual(
-            worker.count("std::filesystem::path(path).extension().native()"), 2)
+        self.assertIn(
+            "auto ext=std::filesystem::path(path).extension().native();",
+            worker.split('std::vector<std::wstring> extensions{L".flyfolder"};', 1)[1]
+                  .split("std::unordered_map<std::wstring", 1)[0])
+        self.assertIn(
+            "auto ext=std::filesystem::path(path).extension().native();",
+            worker.split("auto& entry=details[i];", 1)[1])
         self.assertIn("if(!fxfile::filetype::safeExtension(ext))continue;", worker)
         self.assertIn('entry.typeLabel=ext.size()>1&&ext.size()<=17?', worker)
         self.assertIn('ext.substr(1)+L" 파일":L"파일"', worker)
@@ -62,7 +67,7 @@ class FileDetailControllerContract(unittest.TestCase):
             r"C:\owned\.env.local": ".local",
             r"C:\owned\report.txt": ".txt",
             r"C:\owned\archive.tar.gz": ".gz",
-            r"C:\owned\trailing.": "",
+            r"C:\owned\trailing.": ".",
             r"C:\parent.with.dot\readme": "",
         }
         for path, suffix in cases.items():
