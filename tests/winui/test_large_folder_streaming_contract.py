@@ -7,6 +7,23 @@ def read(path):
     return (ROOT/path).read_text(encoding="utf-8-sig")
 
 class LargeFolderStreamingContracts(unittest.TestCase):
+    def test_global_stream_queues_before_rebuilding_rows_but_settles_failures(self):
+        main=read("app/winui/MainWindow.xaml.cpp")
+        extended=main[main.index("if(completed.kind==Kind::Extended){"):
+                      main.index("if(completed.kind==Kind::Applied&&completed.active&&")]
+        chain=extended.index("if(state.streamToComplete&&incomplete){")
+        render=extended.index("FillFiles(completed.side);")
+        self.assertLess(extended.index("ClearFileDetails(completed.side);"),chain)
+        self.assertLess(chain,render)
+        early=extended[chain:render]
+        self.assertIn("if(QueueNextFolderPage(completed.side,true))return;",early)
+        self.assertIn("if(state.fullModelLimitReached)return;",early)
+        self.assertIn("state.streamToComplete=false;",early)
+        self.assertIn("state.indexToComplete=false;",early)
+        self.assertIn("if(!incomplete){",early)
+        self.assertIn("UpdateSelectionChrome();",extended[render:])
+        self.assertIn("UpdateFooterSummary();",extended[render:])
+
     def test_supervisor_returns_one_page_not_aggregated_snapshot(self):
         h=read("src/base/shell_isolated_supervisor.h")
         cpp=read("src/base/shell_isolated_supervisor.cpp")

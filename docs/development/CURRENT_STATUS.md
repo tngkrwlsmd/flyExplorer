@@ -1,3 +1,12 @@
+# 2026-10-29 — PX13/G08 first owned whole-app samples and deferred intermediate projection
+
+- Actual Windows 11/Release app UIA samples on 8,000 owned files: first row **1,166.521 → 1,162.695ms**, global descending name sort **4,713.890 → 4,353.953ms**, sampled app peak RSS **160.586 → 154.789MiB**. Scroll remained about 104–106ms; busy-folder supersede was **511.662 → 647.492ms**. One sample per revision, uncontrolled caches and UIA overhead: no statistical or final-pixel performance claim.
+- During complete-model sorting/filtering, queue the next accepted Shell page before rebuilding intermediate XAML rows. Keep cache invalidation, manual browsing, final projection, failures, route safety and existing limits. Focused streaming contracts **10/10 PASS**; Python syntax and whitespace PASS.
+- [Before #40802920908](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/40802920908) and [after #40803247788](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/40803247788) passed the same 200/8k owned lifecycle, in-flight supersede, normal exit and settings/file preservation with fixture/profile cleanup. Release succeeded; retained outputs were reused but LTCG reported full-function compilation after IPDB/IOBJ mismatch.
+- [Exact source/blob/runtime and finite evidence](PX13_APP_PERFORMANCE_20261029.md) distinguish the baseline HEAD plus reviewed product blob from a clean HEAD binary. **Whole PX13/G08 acceptance remains PARTIAL**: 8k sorting still exceeds 4 seconds; repeat distributions, input stalls and final pixels were not measured. Proceed to the separately requested caption/PX17 scopes without expanding accepted tests.
+
+---
+
 # 2026-10-29 — PX02 Home compact viewport fix: focused Release + visual review accepted
 
 - **Observed and fixed:** restoring an open Home from a wide window to about 945×511 hid both panes' file rows. Home now recalculates its bounded height on Home/root size changes and reserves 160 XAML units for file panes; overflow remains scrollable.

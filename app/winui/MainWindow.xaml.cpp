@@ -1685,6 +1685,16 @@ namespace winrt::FlyExplorer::implementation
                     state.indexToComplete=false;
                 }
                 ClearFileDetails(completed.side);
+                // A global sort/filter needs the complete model. Queue its
+                // next page before rebuilding XAML rows: intermediate pages
+                // cannot be the final ordering and only delay the next IPC.
+                // Manual browsing still projects each accepted resident page.
+                if(state.streamToComplete&&incomplete){
+                    if(QueueNextFolderPage(completed.side,true))return;
+                    if(state.fullModelLimitReached)return;
+                    state.streamToComplete=false;
+                    state.indexToComplete=false;
+                }
                 if(!incomplete){
                     ScheduleFileMetadata(completed.side);
                     ScheduleFileDetails(completed.side);
@@ -1692,12 +1702,6 @@ namespace winrt::FlyExplorer::implementation
                 FillFiles(completed.side);
                 UpdateSelectionChrome();
                 UpdateFooterSummary();
-                if(state.streamToComplete&&incomplete){
-                    if(QueueNextFolderPage(completed.side,true))return;
-                    if(state.fullModelLimitReached)return;
-                    state.streamToComplete=false;
-                    state.indexToComplete=false;
-                }
                 StatusText().Text(
                     completed.pageDirection==PageDirection::Backward?
                     L"폴더의 이전 항목 창을 불러왔습니다.":
