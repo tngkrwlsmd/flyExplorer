@@ -12,7 +12,7 @@ class RenameSelectionContract(unittest.TestCase):
         for token in (
             "BeginNameEdit(int action,hstring const& initial,bool isFolder)",
             "name.find_last_of(L'.')",
-            "(action==1||action==2)&&!isFolder",
+            "(action==1||action==2||action==3)&&!isFolder",
             "dot>0&&dot+1<name.size()",
             "box.Select(0,static_cast<int>(dot))",
             "else box.SelectAll()",

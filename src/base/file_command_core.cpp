@@ -28,6 +28,10 @@ bool validTextDocumentLeaf(std::wstring const& name) noexcept{
  return validLeaf(name)&&name.size()>4&&
   ::CompareStringOrdinal(name.c_str()+name.size()-4,4,L".txt",4,TRUE)==CSTR_EQUAL;
 }
+bool validMarkdownDocumentLeaf(std::wstring const& name) noexcept{
+ return validLeaf(name)&&name.size()>3&&
+  ::CompareStringOrdinal(name.c_str()+name.size()-3,3,L".md",3,TRUE)==CSTR_EQUAL;
+}
 Result execute(Request const& task) noexcept{
  Result result{};
  if(!validLeaf(task.name)||task.parent.empty()||
@@ -54,8 +58,9 @@ Result execute(Request const& task) noexcept{
    else result.error=::GetLastError();
    return result;
   }
-  if(task.kind==Kind::CreateTextFile){
-   if(!validTextDocumentLeaf(task.name)){
+  if(task.kind==Kind::CreateTextFile||task.kind==Kind::CreateMarkdownFile){
+   if(task.kind==Kind::CreateTextFile?!validTextDocumentLeaf(task.name):
+                                    !validMarkdownDocumentLeaf(task.name)){
     result.error=ERROR_INVALID_NAME;return result;
    }
    // Limit creation to a local drive and reject reparse ancestors. No UNC,

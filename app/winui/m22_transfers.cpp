@@ -501,6 +501,10 @@ void MainWindow::ShowAppBackgroundContextMenu(
      [](MainWindow& ui){
       ui.BeginFileNameCommand(fxfile::filecommand::Kind::CreateTextFile);
      }));
+ create.Items().Append(make(L"Markdown 문서 (.md)",L"\uE8A5",localFolder,
+     [](MainWindow& ui){
+      ui.BeginFileNameCommand(fxfile::filecommand::Kind::CreateMarkdownFile);
+     }));
  menu.Items().Append(create);
  Microsoft::UI::Xaml::Controls::Primitives::FlyoutShowOptions options;
  options.Position(position);

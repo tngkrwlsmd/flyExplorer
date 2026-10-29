@@ -108,6 +108,7 @@
                 <MenuFlyoutSubItem Text="새로 만들기" AutomationProperties.Name="현재 폴더에 새 항목 만들기">
                     <MenuFlyoutItem x:Name="NewFolderMenuItem" Text="폴더" Click="OnNewFolderMenu" AutomationProperties.Name="현재 폴더에 새 폴더 만들기"/>
                     <MenuFlyoutItem x:Name="NewTextFileMenuItem" Text="텍스트 문서 (.txt)" Click="OnNewTextFileMenu" AutomationProperties.Name="현재 폴더에 빈 텍스트 문서 만들기"/>
+                    <MenuFlyoutItem x:Name="NewMarkdownFileMenuItem" Text="Markdown 문서 (.md)" Click="OnNewMarkdownFileMenu" AutomationProperties.Name="현재 폴더에 빈 Markdown 문서 만들기"/>
                 </MenuFlyoutSubItem>
                 <MenuFlyoutSubItem Text="선택" AutomationProperties.Name="활성 패널 파일 선택">
                     <MenuFlyoutItem Text="선택 해제" Click="OnClearFileSelection" AutomationProperties.Name="활성 패널 파일 선택 해제"/>

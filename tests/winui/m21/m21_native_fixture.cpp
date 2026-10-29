@@ -3,6 +3,8 @@
 #include <windows.h>
 #include <filesystem>
 #include <cstdio>
+#include <fstream>
+#include <string>
 using namespace fxfile;
 int wmain(int argc,wchar_t**argv){
  setvbuf(stdout,nullptr,_IONBF,0);
@@ -140,6 +142,30 @@ int wmain(int argc,wchar_t**argv){
  req.parent=L"shell:MyComputerFolder";req.name=L"virtual.txt";
  chk(filecommand::execute(req).error!=ERROR_SUCCESS,
      "text_document_denies_virtual_parent");
+ // Markdown uses the same no-replace local creation path, with its own suffix.
+ req.parent=dir.native();req.kind=filecommand::Kind::CreateMarkdownFile;
+ req.name=L"새 문서.md";
+ chk(filecommand::execute(req).error==ERROR_SUCCESS&&
+     std::filesystem::is_regular_file(dir/req.name)&&
+     std::filesystem::file_size(dir/req.name)==0,
+     "create_empty_unicode_markdown_document");
+ { std::ofstream existing(dir/req.name,std::ios::binary);existing<<"owned markdown"; }
+ const auto duplicateMarkdown=filecommand::execute(req);
+ { std::ifstream existing(dir/req.name,std::ios::binary);std::string retained;
+   std::getline(existing,retained);
+   chk(duplicateMarkdown.error!=ERROR_SUCCESS&&retained=="owned markdown",
+       "markdown_never_overwrites_existing"); }
+ req.name=L"메모.MD";
+ chk(filecommand::execute(req).error==ERROR_SUCCESS&&
+     std::filesystem::file_size(dir/req.name)==0,
+     "markdown_case_insensitive_extension");
+ bool markdownNamesRejected=true;
+ for(auto const* leaf:{L".md",L"wrong.txt",L"..\\escape.md",L"CON.md",L"a.md ",L"a.md.exe"}){
+  req.name=leaf;
+  markdownNamesRejected=markdownNamesRejected&&
+     filecommand::execute(req).error==ERROR_INVALID_NAME;
+ }
+ chk(markdownNamesRejected,"markdown_rejects_unsafe_or_other_suffix_names");
  req.parent=dir.native();req.kind=static_cast<filecommand::Kind>(99);
  chk(filecommand::execute(req).error==ERROR_INVALID_PARAMETER,"unknown_mutation_denied");
  std::printf("M21_NATIVE_SUMMARY %d passed, %d failed.\n",pass,fail);
