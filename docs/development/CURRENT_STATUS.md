@@ -1,3 +1,12 @@
+# 2026-10-29 — Light caption contrast and PX17 toolbar New menu: focused acceptance
+
+- Light/Dark native caption colors follow the root's actual theme through the public AppWindowTitleBar API. Matched actual pixels show Light icons becoming legible and Dark remaining legible. Windows standard minimize/maximize/restore and normal exit 0 observed on the owned HWND.
+- **More → New → Folder / Text document (.txt)** reuses existing anchored name-edit/controller/native commands. Actual GUI passed empty .txt creation, collision preservation, invalid path rejection, Escape cancellation and creation/display in the active right pane's owned subfolder.
+- Fluent source **17/17**, file-command/availability **17/17**, then the accessibility-name contract refinement's file-command source **15/15 PASS**. Release exit 0, with retained outputs and recorded LTCG full-function fallback. [Final GUI #40816798955](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/40816798955) reused the exact EXE, preserved original settings/files and removed successful profiles/fixtures and scheduled worker.
+- [Exact blobs, binaries, pixel comparison, failures and limits](CAPTION_PX17_ACCEPTANCE_20261029.md). Earlier #40803819387/#40816557383 remain **FAIL** for their harness boundaries. This closes only caption contrast and the local toolbar text-document slice, **not full PX15/PX17**, all tab races, Snap Layouts, excluded G03–G05 or stopped G07.
+
+---
+
 # 2026-10-29 — PX13/G08 first owned whole-app samples and deferred intermediate projection
 
 - Actual Windows 11/Release app UIA samples on 8,000 owned files: first row **1,166.521 → 1,162.695ms**, global descending name sort **4,713.890 → 4,353.953ms**, sampled app peak RSS **160.586 → 154.789MiB**. Scroll remained about 104–106ms; busy-folder supersede was **511.662 → 647.492ms**. One sample per revision, uncontrolled caches and UIA overhead: no statistical or final-pixel performance claim.

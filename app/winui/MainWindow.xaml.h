@@ -75,6 +75,7 @@ namespace winrt::FlyExplorer::implementation
         void OnDownloadsClicked(IInspectable const&, Microsoft::UI::Xaml::RoutedEventArgs const&);
         void OnThisPCClicked(IInspectable const&, Microsoft::UI::Xaml::RoutedEventArgs const&);
         void ApplyThemeChoice(int selection);
+        void UpdateCaptionButtonTheme();
         void ExecuteFileCommand(fxfile::filecommand::Kind kind);
         void BeginFileNameCommand(fxfile::filecommand::Kind kind);
         void ToggleNameFilter(int side);

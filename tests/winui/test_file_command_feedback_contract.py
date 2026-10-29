@@ -6,6 +6,29 @@ ROOT=Path(__file__).resolve().parents[2]
 APP=ROOT/"app"/"winui"
 
 class FileCommandFeedbackContract(unittest.TestCase):
+    def test_toolbar_new_item_menu_reuses_anchored_name_edit_commands(self):
+        import xml.etree.ElementTree as ET
+        xaml=(APP/"FileToolbar.xaml").read_text(encoding="utf-8-sig")
+        tree=ET.fromstring(xaml)
+        ns="{http://schemas.microsoft.com/winfx/2006/xaml}Name"
+        controls={node.get(ns):node for node in tree.iter() if node.get(ns)}
+        self.assertEqual(controls["NewFolderMenuItem"].get("Click"),"OnNewFolderMenu")
+        self.assertEqual(controls["NewTextFileMenuItem"].get("Click"),"OnNewTextFileMenu")
+        self.assertEqual(controls["CreateFolderButton"].get("Click"),"OnCreateFolder")
+        submenu=next(node for node in tree.iter()
+                     if node.get("AutomationProperties.Name")=="현재 폴더에 새 항목 만들기")
+        gui=(ROOT/"tests/winui/test_px17_new_item_menu_gui.py").read_text(encoding="utf-8")
+        self.assertIn('if node.window_text()=="'+submenu.get("AutomationProperties.Name")+'"',gui)
+        toolbar=(APP/"FileToolbar.xaml.cpp").read_text(encoding="utf-8-sig")
+        self.assertIn("OnNewFolderMenu(IInspectable const&,RoutedEventArgs const&){if(action_)action_(0);}",toolbar)
+        self.assertIn("OnNewTextFileMenu(IInspectable const&,RoutedEventArgs const&){if(action_)action_(17);}",toolbar)
+        window=(APP/"MainWindow.xaml.cpp").read_text(encoding="utf-8-sig")
+        command=window.split("else if(command==17)",1)[1].split("else if",1)[0]
+        self.assertIn("BeginFileNameCommand(",command)
+        self.assertIn("Kind::CreateTextFile",command)
+        self.assertNotIn("ExecuteFileCommand",command)
+        self.assertNotIn("CreateFileW",toolbar)
+
     def test_stale_completion_is_not_silent_or_claimed_success(self):
         body=(APP/"m21_commands.cpp").read_text(encoding="utf-8-sig")
         completion=body.split("void MainWindow::OnFileCommandCompleted(",1)[1]

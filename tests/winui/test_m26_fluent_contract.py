@@ -20,6 +20,25 @@ def attr_values(name):
     return {v for e in root.iter() for v in e.attrib.values() if v}
 
 class FluentShellContract(unittest.TestCase):
+    def test_caption_buttons_follow_actual_app_theme_without_custom_window_commands(self):
+        main=text("MainWindow.xaml.cpp")
+        shell=text("m20_shell.cpp")
+        self.assertIn("RootShell().ActualThemeChanged([nativeWeak]",main)
+        self.assertIn("UpdateCaptionButtonTheme();",main)
+        body=shell[shell.index("void MainWindow::UpdateCaptionButtonTheme()"):
+                   shell.index("void MainWindow::RememberCurrentFolderView")]
+        self.assertIn("RootShell().ActualTheme()==ElementTheme::Dark",body)
+        self.assertIn("IsCustomizationSupported()",body)
+        self.assertIn("if(mClosing||",body)
+        self.assertIn("HCF_HIGHCONTRASTON",body)
+        for prop in ("Foreground", "InactiveForeground", "Background",
+                     "InactiveBackground", "HoverForeground", "HoverBackground",
+                     "PressedForeground", "PressedBackground"):
+            self.assertIn("title.Button"+prop+"Color(nullptr);",body)
+            self.assertIn("title.Button"+prop+"Color(",body)
+        self.assertNotIn("SendMessage",body)
+        self.assertNotIn("SetWindowLong",body)
+
     def test_public_custom_titlebar_and_mica_with_safe_fallback(self):
         xaml=text("MainWindow.xaml")
         header=text("ShellHeader.xaml")

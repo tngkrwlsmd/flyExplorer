@@ -1,5 +1,22 @@
 # Error history
 
+## 2026-10-29 — PX17 submenu harness confused accessible name with displayed text
+
+The first owned caption/PX17 run #40803819387 built Release, captured matched
+Light/Dark captions and created a text file, then failed reopening the submenu
+through a focus-dependent Home/Right sequence. Keep that run FAIL. The next
+harness used UIA expansion but #40816557383 incorrectly searched for displayed
+`새로 만들기`; the submenu explicitly exposes AutomationProperties.Name
+`현재 폴더에 새 항목 만들기`. This was a fixture lookup defect, not missing product UI.
+Resolve that actual accessible name and expand the freshly resolved owned peer;
+source-contract coverage now compares the fixture selector with the XAML name.
+Same product EXE, no rebuild: #40816798955 passed creation, collision, invalid
+name, cancellation, active-right-pane targeting, native caption commands, normal
+exit and original data preservation. Failed-run settings/files were preserved;
+successful fixtures/profiles and worker tasks were retired. Exact blobs/binary
+and separate pixel review are in CAPTION_PX17_ACCEPTANCE_20261029.md. Do not
+promote either failed run to PASS or rerun unrelated accepted features.
+
 ## 2026-10-27 — G01 WinUI ToolTip final-release AV resolved for the focused close
 
 - Faulting WinUI crash at `Microsoft.UI.Xaml.dll+0xAB04B` was captured in test-owned exception context, with public PDB matching WinUI 3.2.3.0 revealing `VisualTree::GetContentRootForElement` through `DirectUI::ToolTip::~ToolTip` and `DependencyObject::OnFinalRelease`. The app focus-target-only ToolTip detach **did not** fix it: exact `d3db03a4` [Windows #40523256217](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/40523256217) logged the detach but repeated native AV `0xC0000005`.

@@ -657,6 +657,11 @@ namespace winrt::FlyExplorer::implementation
                 ElementTheme::Dark:
             preferences.theme==fxfile::uisettings::Theme::Light?
                 ElementTheme::Light:ElementTheme::Default);
+        RootShell().ActualThemeChanged([nativeWeak](
+            FrameworkElement const&,IInspectable const&){
+            if(auto ui=nativeWeak.get())ui->UpdateCaptionButtonTheme();
+        });
+        UpdateCaptionButtonTheme();
         winrt::get_self<winrt::FlyExplorer::implementation::ShellHeader>(
             HeaderView())->SetThemeCallback([nativeWeak](int selection){
                 if(auto ui=nativeWeak.get())ui->ApplyThemeChoice(selection);
@@ -688,6 +693,8 @@ namespace winrt::FlyExplorer::implementation
                 else if(command==10)ui->ExecuteFileCommand(
                     fxfile::filecommand::Kind::RenameSelected);
                 else if(command==16)ui->ExecuteFileCommand(
+                    fxfile::filecommand::Kind::CreateTextFile);
+                else if(command==17)ui->BeginFileNameCommand(
                     fxfile::filecommand::Kind::CreateTextFile);
                 else if(command>=11&&command<=13){
                     const int theme=command-11;

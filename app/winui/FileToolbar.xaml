@@ -104,7 +104,13 @@
         </Button>
         <Button x:Name="MoreButton" Grid.Column="5" Width="32" Height="32" Padding="0" Background="Transparent" CornerRadius="4" ToolTipService.ToolTip="&#xB354; &#xBCF4;&#xAE30;" AutomationProperties.Name="&#xB354; &#xBCF4;&#xAE30;">
             <FontIcon Glyph="&#xE712;" FontSize="16"/>
-            <Button.Flyout><MenuFlyout><MenuFlyoutItem Text="&#xC67C;&#xCABD; &#xC774;&#xB984; &#xD544;&#xD130;" Click="OnToggleLeftFilter"/><MenuFlyoutItem Text="&#xC624;&#xB978;&#xCABD; &#xC774;&#xB984; &#xD544;&#xD130;" Click="OnToggleRightFilter"/><MenuFlyoutSeparator/><MenuFlyoutSubItem Text="&#xD14C;&#xB9C8;"><MenuFlyoutItem Text="&#xC2DC;&#xC2A4;&#xD15C;" Click="OnThemeSystem"/><MenuFlyoutItem Text="&#xB77C;&#xC774;&#xD2B8;" Click="OnThemeLight"/><MenuFlyoutItem Text="&#xB2E4;&#xD06C;" Click="OnThemeDark"/></MenuFlyoutSubItem></MenuFlyout></Button.Flyout>
+            <Button.Flyout><MenuFlyout>
+                <MenuFlyoutSubItem Text="새로 만들기" AutomationProperties.Name="현재 폴더에 새 항목 만들기">
+                    <MenuFlyoutItem x:Name="NewFolderMenuItem" Text="폴더" Click="OnNewFolderMenu" AutomationProperties.Name="현재 폴더에 새 폴더 만들기"/>
+                    <MenuFlyoutItem x:Name="NewTextFileMenuItem" Text="텍스트 문서 (.txt)" Click="OnNewTextFileMenu" AutomationProperties.Name="현재 폴더에 빈 텍스트 문서 만들기"/>
+                </MenuFlyoutSubItem>
+                <MenuFlyoutSeparator/>
+                <MenuFlyoutItem Text="&#xC67C;&#xCABD; &#xC774;&#xB984; &#xD544;&#xD130;" Click="OnToggleLeftFilter"/><MenuFlyoutItem Text="&#xC624;&#xB978;&#xCABD; &#xC774;&#xB984; &#xD544;&#xD130;" Click="OnToggleRightFilter"/><MenuFlyoutSeparator/><MenuFlyoutSubItem Text="&#xD14C;&#xB9C8;"><MenuFlyoutItem Text="&#xC2DC;&#xC2A4;&#xD15C;" Click="OnThemeSystem"/><MenuFlyoutItem Text="&#xB77C;&#xC774;&#xD2B8;" Click="OnThemeLight"/><MenuFlyoutItem Text="&#xB2E4;&#xD06C;" Click="OnThemeDark"/></MenuFlyoutSubItem></MenuFlyout></Button.Flyout>
         </Button>
         <ProgressBar x:Name="OperationProgress" Grid.Column="6" Width="48" Height="3" Minimum="0" Maximum="100" Value="0" VerticalAlignment="Center" AutomationProperties.Name="&#xD30C;&#xC77C; &#xC791;&#xC5C5; &#xC9C4;&#xD589;&#xB960;"/>
         <Border Grid.ColumnSpan="7" Height="1" VerticalAlignment="Bottom" Background="{ThemeResource SystemControlForegroundBaseLowBrush}" Opacity="{ThemeResource FlyExplorerToolbarSeparatorOpacity}"/>

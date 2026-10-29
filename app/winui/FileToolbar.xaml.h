@@ -17,6 +17,8 @@ struct FileToolbar : FileToolbarT<FileToolbar> {
  void BeginNameEdit(int action,winrt::hstring const& initial,bool isFolder);
  void EndNameEdit();
  void OnCreateFolder(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
+ void OnNewFolderMenu(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
+ void OnNewTextFileMenu(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
  void OnRenameSelected(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
  void OnWindowsCut(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
  void OnWindowsCopy(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);

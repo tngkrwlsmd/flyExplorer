@@ -1,5 +1,7 @@
 #include "pch.h"
 #include "MainWindow.xaml.h"
+#include <winrt/Microsoft.UI.Windowing.h>
+#include <winrt/Windows.UI.h>
 using namespace winrt;
 using namespace Microsoft::UI::Xaml;
 namespace winrt::FlyExplorer::implementation {
@@ -24,6 +26,39 @@ void MainWindow::ApplyThemeChoice(int selection){
     using Theme=fxfile::uisettings::Theme;if(selection<0||selection>2)return;
     const auto chosen=selection==2?Theme::Dark:selection==1?Theme::Light:Theme::System;
     mPreferencesCoordinator.setTheme(chosen);RootShell().RequestedTheme(chosen==Theme::Dark?ElementTheme::Dark:chosen==Theme::Light?ElementTheme::Light:ElementTheme::Default);PersistPreferences();
+}
+void MainWindow::UpdateCaptionButtonTheme(){
+    if(mClosing||!Microsoft::UI::Windowing::AppWindowTitleBar::IsCustomizationSupported())return;
+    auto title=AppWindow().TitleBar();
+    HIGHCONTRASTW contrast{sizeof(HIGHCONTRASTW)};
+    if(!::SystemParametersInfoW(SPI_GETHIGHCONTRAST,sizeof(contrast),&contrast,0)||
+       (contrast.dwFlags&HCF_HIGHCONTRASTON)!=0){
+        // Leave contrast-theme caption colors entirely to Windows.
+        title.ButtonForegroundColor(nullptr);
+        title.ButtonInactiveForegroundColor(nullptr);
+        title.ButtonBackgroundColor(nullptr);
+        title.ButtonInactiveBackgroundColor(nullptr);
+        title.ButtonHoverForegroundColor(nullptr);
+        title.ButtonHoverBackgroundColor(nullptr);
+        title.ButtonPressedForegroundColor(nullptr);
+        title.ButtonPressedBackgroundColor(nullptr);
+        return;
+    }
+    using Windows::UI::Color;
+    const bool dark=RootShell().ActualTheme()==ElementTheme::Dark;
+    const Color foreground=dark?Color{255,255,255,255}:Color{255,32,32,32};
+    title.ButtonForegroundColor(foreground);
+    title.ButtonInactiveForegroundColor(
+        dark?Color{255,160,160,160}:Color{255,104,104,104});
+    title.ButtonBackgroundColor(Color{0,0,0,0});
+    title.ButtonInactiveBackgroundColor(Color{0,0,0,0});
+    title.ButtonHoverForegroundColor(foreground);
+    title.ButtonHoverBackgroundColor(
+        dark?Color{255,50,50,50}:Color{255,229,229,229});
+    title.ButtonPressedForegroundColor(foreground);
+    title.ButtonPressedBackgroundColor(
+        dark?Color{255,70,70,70}:Color{255,204,204,204});
+    // Windows still draws/handles Minimize, Maximize, Close and Snap Layouts.
 }
 void MainWindow::RememberCurrentFolderView(bool remember){
     if(mClosing)return;
