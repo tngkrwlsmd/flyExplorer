@@ -24,6 +24,9 @@ class SearchScopeContracts(unittest.TestCase):
         control = next(n for n in root.iter() if n.get(name) == "SearchSubfoldersBox")
         self.assertEqual(control.get("IsChecked"), "True")
         self.assertEqual(control.get("Content"), "하위 폴더 포함")
+        mode = next(n for n in root.iter() if n.get(name) == "SearchModeBox")
+        self.assertTrue(any(mode in list(n) and control in list(n) for n in root.iter()),
+                        "Depth option must share the existing mode row to preserve result height")
         self.assertIn("bool includeSubfolders=true;", src("app/winui/m19_search.h"))
         features = src("app/winui/m19_features.cpp")
         self.assertIn("context.query.includeSubfolders=SearchSubfoldersBox().IsChecked().GetBoolean();", features)

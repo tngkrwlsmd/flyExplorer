@@ -157,3 +157,30 @@ ordinal shim으로 g++ C++17, Wall/Wextra/Werror/pedantic 컴파일·실행했�
 포함된다. 나머지는 소스 연결/구조 검사다. Windows API는 실제 실행하지 않았다.
 변경 Python 문법과 `git diff --check`도 통과했다. 기존 야간 일곱 기능 전체나
 전체 제품 수용을 다시 실행·선언한 것이 아니다. Windows/GUI/픽셀 미검증은 유지한다.
+
+## VM 가동 후 한정 검증과 검색 화면 후속 수정
+
+사용자가 VM 가동을 알린 뒤 기존 제어 경로로 실행했다. 상태 확인
+#40963601008에서 clean main, 실행 앱 없음, 로그인 화면 1개와 기존 runtime을
+확인했다. 기존 runtime은 logs/parity-20261030-ad71/baseline-runtime에 보존했다.
+
+- 소스 `ad71a5f623e76a8a586db62d7199ef02b744aa36`의 증분 Release
+  [#40963818178](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/40963818178) PASS.
+  EXE SHA256 `a8ee38d33876244782d7a91c59268b8181f0cd8a58f1d8e920677d142c95d953`,
+  helper `a0c979ae9af50de741137674dd30afaec21e42191677aee6e61a3f34099b0218`.
+- 소유 fixture의 이전/이후 실행
+  [#40964235043](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/40964235043) PASS.
+  직접 탐색 재귀 2개/얕은 1개, 다른 폴더 및 같은 폴더의 정확한 항목 선택,
+  반대 패널의 캐시 주소 후보와 이동을 관측했다. 이전/이후 정상 종료,
+  원본 설정/소유 바이트 보존과 fixture/profile 제거도 확인했다.
+- Light/96 DPI/실제 HWND 1160x692의 소유 PNG 5장을
+  [#40964418895](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/40964418895)에서
+  읽어 직접 검토했다. 선택 행과 주소 후보는 확인했지만 별도 범위 행이 검색
+  결과를 뷰포트 아래로 더 밀어낸 시각 회귀를 발견했다. **이 화면은 수용하지 않았다.**
+- 후속 변경은 체크박스를 기존 검색 방식 행으로 옮기고 설명을 툴팁으로
+  제공한다. 추가 세로 행을 없애며 검색 엔진/조건/선택 로직은 변경하지 않는다.
+  관련 검사 17/17 PASS, diff 검사 PASS. **이 후속 XAML은 아직 재빌드/화면 재검토 전**이다.
+
+Windows 인덱스의 실제 DIRECTORY 검색, 이전 야간 일곱 기능의 실제 입력/파일
+생성/클립보드, Dark/작은 창 전체 및 실제 Windows Explorer 동등성은 이번 GUI
+범위 밖이다. 앞 절의 모든 미검증을 일괄 PASS로 바꾸지 않으며 main에는 병합하지 않는다.
