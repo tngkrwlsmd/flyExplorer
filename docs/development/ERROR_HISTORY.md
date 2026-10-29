@@ -1,3 +1,9 @@
+## 2026-10-29 — Navigation identity probe compared late type metadata; owned cleanup path used host separators
+
+#40862156427 recorded identical committed paths and filenames before/after an invalid address, while the opposite row's fallback type completed from `txt 파일` to `텍스트 문서`. Comparing whole accessible row labels was a harness error; compare stable file identity instead. The two pending-state observation approaches still captured no transition; keep pending history input/pixels NOT TESTED and stop speculative repeats. [Bounded evidence](EP01_NAVIGATION_BOUNDARY_20261029.md).
+
+#40863066296 passed the failed-address GUI checks, normal exit and original settings, then a post-GUI `str(relative_path)` check failed on Windows backslashes. Normalize with `.as_posix()`; a PureWindowsPath check verifies that lower boundary without another GUI rerun. Independent cleanup verified exact names/bytes and retired 14 owned directories / 123,968,260 bytes with errors 0. Aggregate FAILs remain FAIL; do not relabel them as full acceptance. Filter/native/zero-result successes of #40859732626 remain valid.
+
 ## 2026-10-29 — Collision Cancel cleared its token without restoring commands
 
 After pending-confirmation readiness was tightened in `7e28366c`, Cancel took a no-worker terminal path and left toolbar commands disabled (#40856964667). Recompute `UpdateCommandAvailability()` after terminal `ApplyTransferStartStatus` handling instead of forcing controls enabled. Source 12/12, Release and Light/Dark collision recovery PASS for exact blob `0c8e8cd7…` / EXE `bf2de6ba…`; [full evidence and preserved failures](EP05_CANCEL_RECOVERY_20261029.md). Aggregate #40857952150 remains FAIL for separate native cmd quoting and late navigation observation defects; no filter timings were produced there. Successor #40859732626 remains pending at this checkpoint. Do not duplicate an active request or repeat the passed collision/build stages.

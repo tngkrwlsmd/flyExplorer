@@ -44,10 +44,15 @@ Windows VM 대화형 사용자, x64 Release, 96 DPI, 1160×640, 테스트 소유
 - #40856964667: 위의 실제 제품 취소 복구 결함.
 - #40857952150: native는 vcvars64.bat의 cmd quoting 오류로 C++ 실행 전 실패. navigation은 동기 관측 시 pending이 이미 끝나 관측 실패. filter는 앞 단계 fixture 잔존으로 미실행. 성능/제품 회귀로 판정하지 않는다.
 
-### 계속할 체크포인트 (미완료)
+### 당시 계속할 체크포인트 (이후 결과는 아래 최신 기록 참조)
 
 [중앙 #40859732626](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/40859732626), request commit `05e56c6cf014af87a0312078e535fa5386ecfaa5`. 이 기록 시점에 실행 중이다. 대상은 main `6eaa6384` + 위 복구 blob, EXE `bf2de6ba…`. 충돌 Light/Dark를 반복하지 않고 batch 파일로 native compile, 독립 COM MTA의 pending 관측, 별도 fixture-navigation / fixture-filter로 남은 검증을 수행한다.
 
 8,000개 실파일→keep-* 80개, 실제 앱 이름 오름/내림차순 각3회 시간·RSS와 순서, native 비교자 8모드, 후보 Light/Dark 0개 화면 및 필터 해제 복구가 대상이다. **후속 결과를 아직 받지 않았으므로 PASS/개선값을 주장하지 않는다.** 새 test/benchmark 스크립트는 검증 완료 전이므로 main에 넣지 않는다.
 
 다음에는 최신 main과 이 실행 완료 결과를 먼저 대조하고, 성공한 충돌 시험이나 빌드를 반복하지 않는다. 이미지를 독립 검토하고 미완료 영역만 수정한다. 종료 후 소유 fixture/실패 profile과 비교용 runtime의 소유권·hash·비 reparse·앱 부재를 확인해 정리하고, VM의 이번에 확인한 patch만 main에 동기화하고 request slot을 idle로 돌린다. 실행 중 슬롯은 덮어쓰지 않는다. 전체 5개 항목·성능·전체 PX15 완료는 아직 선언하지 않는다.
+
+
+## 최신 후속 판정
+
+위 실행 중 표기는 당시 기록이다. #40859732626은 완료됐고, native/필터/빈 결과 단계 PASS·navigation harness FAIL이다. [필터 실측·빈 화면](PX13_FILTER_SORT_ZERO_RESULTS_20261029.md), [탐색 진단·실패 주소 수용·소유 정리](EP01_NAVIGATION_BOUNDARY_20261029.md)가 최신 결과다. #40862156427도 완료됐으며 미관측 pending 경계를 PASS로 바꾸지 않았다. #40863066296에서 소유 fixture/profile과 비교 runtime 정리(오류 0)를 마쳤다. 성공한 충돌 취소·빌드·필터 계측을 반복하지 않는다.

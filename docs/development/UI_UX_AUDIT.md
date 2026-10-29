@@ -1,5 +1,10 @@
 # flyExplorer Windows 11 벤치마킹 및 UI/UX 점검
 
+## 2026-10-29 — 선정한 빈 결과 화면과 실패한 새 주소
+
+- [8k 필터 결과 0개](PX13_FILTER_SORT_ZERO_RESULTS_20261029.md): 같은 후보 Release, Light/Dark 1160×640·96 DPI, 왼쪽 0개/오른쪽 제한 페이지 공존·확정 경로·필터 해제 복구 GUI PASS, 실제 PNG 2장 독립 검토 PASS. 새 UI 수정은 필요하지 않았다. 이 한 건을 전체 PX15 수용으로 확대하지 않는다.
+- [실패 주소 보존](EP01_NAVIGATION_BOUNDARY_20261029.md): Light에서 존재하지 않는 소유 경로 제출 전/후 실제 2장 검토, 확정 B 주소·양쪽 파일명과 실패 안내 확인. 기능 GUI와 이 화면만 수용. 진행 중 버튼 상태는 관측하지 못했으며 pending pixels는 미검증이다. 전체 job FAIL의 후처리 경로 구분자 오류는 별도 보존한다.
+
 ## 2026-10-29 EP05 — 충돌 확인 취소 후 명령 복구
 
 [정확한 source/blob/EXE와 실제 화면 6장](EP05_CANCEL_RECOVERY_20261029.md): Release `bf2de6ba…`, Light/Dark 1160×640, 96 DPI에서 충돌 확인 중 8개 명령 비활성·취소 후 복구와 두 패널 보존을 확인했다. 한정 GUI와 독립 픽셀 검토 PASS. 빈 배경 메뉴/직접 backend 실행, AllSkipped 및 전체 PX15 수용으로 확대하지 않는다. 후속 navigation/필터 결과 0개 검토는 중앙 #40859732626 결과 대기다.

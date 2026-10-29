@@ -1,0 +1,251 @@
+{
+  "native": {
+    "items": 8000,
+    "matches": 80,
+    "seed": 20261029,
+    "trials": 5,
+    "modes": [
+      {
+        "mode": 0,
+        "before_median_ms": 4.2254,
+        "after_median_ms": 1.3624,
+        "equivalent": true,
+        "before_trials_ms": [
+          4.0589,
+          5.1893,
+          4.8416,
+          3.634,
+          4.2254
+        ],
+        "after_trials_ms": [
+          1.0842,
+          1.0026,
+          1.3713,
+          1.6632,
+          1.3624
+        ]
+      },
+      {
+        "mode": 1,
+        "before_median_ms": 3.7214,
+        "after_median_ms": 1.0586,
+        "equivalent": true,
+        "before_trials_ms": [
+          3.6553,
+          3.7214,
+          4.0034,
+          3.8441,
+          3.712
+        ],
+        "after_trials_ms": [
+          0.8694,
+          0.8532,
+          1.0923,
+          1.1317,
+          1.0586
+        ]
+      },
+      {
+        "mode": 2,
+        "before_median_ms": 1.8378,
+        "after_median_ms": 0.8598,
+        "equivalent": true,
+        "before_trials_ms": [
+          2.4739,
+          1.6877,
+          1.6707,
+          1.8378,
+          1.8988
+        ],
+        "after_trials_ms": [
+          0.8804,
+          0.8351,
+          0.7925,
+          0.8598,
+          1.4726
+        ]
+      },
+      {
+        "mode": 3,
+        "before_median_ms": 2.6101,
+        "after_median_ms": 0.9046,
+        "equivalent": true,
+        "before_trials_ms": [
+          2.995,
+          2.1235,
+          2.1024,
+          2.8232,
+          2.6101
+        ],
+        "after_trials_ms": [
+          1.1382,
+          0.9046,
+          0.787,
+          0.8432,
+          1.0459
+        ]
+      },
+      {
+        "mode": 4,
+        "before_median_ms": 4.3648,
+        "after_median_ms": 0.9712,
+        "equivalent": true,
+        "before_trials_ms": [
+          5.9195,
+          3.5154,
+          4.3648,
+          4.2953,
+          4.5869
+        ],
+        "after_trials_ms": [
+          0.9712,
+          0.9642,
+          1.3521,
+          1.2711,
+          0.8973
+        ]
+      },
+      {
+        "mode": 5,
+        "before_median_ms": 4.4485,
+        "after_median_ms": 1.0303,
+        "equivalent": true,
+        "before_trials_ms": [
+          4.5998,
+          4.4485,
+          4.7171,
+          4.4344,
+          4.3389
+        ],
+        "after_trials_ms": [
+          1.0555,
+          1.0303,
+          1.1586,
+          1.0094,
+          0.9246
+        ]
+      },
+      {
+        "mode": 6,
+        "before_median_ms": 1.7563,
+        "after_median_ms": 0.8582,
+        "equivalent": true,
+        "before_trials_ms": [
+          2.427,
+          1.952,
+          1.7563,
+          1.6752,
+          1.756
+        ],
+        "after_trials_ms": [
+          0.8582,
+          0.8979,
+          0.826,
+          0.8056,
+          1.0383
+        ]
+      },
+      {
+        "mode": 7,
+        "before_median_ms": 2.2297,
+        "after_median_ms": 1.0192,
+        "equivalent": true,
+        "before_trials_ms": [
+          2.0702,
+          2.2297,
+          2.0931,
+          2.4615,
+          2.963
+        ],
+        "after_trials_ms": [
+          0.8443,
+          1.0192,
+          1.2439,
+          1.2789,
+          0.9435
+        ]
+      }
+    ],
+    "process_peak_working_set_mib": 5.38672
+  },
+  "apps": [
+    {
+      "label": "before-filter",
+      "theme": "light",
+      "exe_sha256": "5fef82d04f58a9640a4bab2db4b64cd496e2675d64ffe3ce5315c6353e0f4fb4",
+      "items": 8000,
+      "survivors": 80,
+      "filter": "keep-*",
+      "measurements": [
+        {
+          "mode": 0,
+          "samples_ms": [
+            1054.426,
+            961.349,
+            1031.641
+          ],
+          "median_ms": 1031.641,
+          "visible_order_equivalent": true,
+          "rss_mib": 165.879
+        },
+        {
+          "mode": 1,
+          "samples_ms": [
+            955.34,
+            944.033,
+            981.762
+          ],
+          "median_ms": 955.34,
+          "visible_order_equivalent": true,
+          "rss_mib": 185.617
+        }
+      ],
+      "normal_exit": true,
+      "original_settings_unchanged": true,
+      "profile_removed": true
+    },
+    {
+      "label": "after-filter",
+      "theme": "light",
+      "exe_sha256": "bf2de6ba515c072cf30bb075052e7380b0a74479bd2d5dc23b42f348492929a2",
+      "items": 8000,
+      "survivors": 80,
+      "filter": "keep-*",
+      "measurements": [
+        {
+          "mode": 0,
+          "samples_ms": [
+            1042.122,
+            924.312,
+            1079.746
+          ],
+          "median_ms": 1042.122,
+          "visible_order_equivalent": true,
+          "rss_mib": 172.496
+        },
+        {
+          "mode": 1,
+          "samples_ms": [
+            1134.451,
+            1096.055,
+            1059.708
+          ],
+          "median_ms": 1096.055,
+          "visible_order_equivalent": true,
+          "rss_mib": 176.418
+        }
+      ],
+      "window": [
+        20,
+        20,
+        1180,
+        660
+      ],
+      "dpi": 96,
+      "zero_match_clear_restored": true,
+      "normal_exit": true,
+      "original_settings_unchanged": true,
+      "profile_removed": true
+    }
+  ]
+}
