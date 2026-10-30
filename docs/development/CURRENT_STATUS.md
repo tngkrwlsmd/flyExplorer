@@ -1,3 +1,9 @@
+# 2026-10-31 — Alt+Enter 속성 후속 결함 수정·클라우드 모델 PASS
+
+- 제품/검사 `bd523bd0`는 direct canonical properties를 찾은 성공 경로가 초기 오류 코드 59를 유지하던 결함을 `rc=0` 초기화로 수정했다. properties 없음은 66으로 계속 fail-closed한다.
+- 실제 helper 분기 추출 C++17 모델 **1/1 PASS**, 변경 Python 문법 PASS. 중앙 `6bbb4dbf`는 만료 뒤에도 workflow run이 생성되지 않아 Windows 명령·Release·GUI·화면은 미실행이다. 슬롯은 `8de43213`에서 [skip ci] idle로 회수했다.
+- [정확한 구현·검사·미검증 경계](ALT_ENTER_PROPERTIES_20261030.md). 이전 바이너리를 새 증거로 쓰지 않으며 PR #70 draft/미병합, main 유지다.
+
 # 2026-10-30 — Alt+Enter 선택 항목 속성 구현, Windows 검증 대기
 
 - 제품 `c7e8f39f`는 파일 목록 Alt+Enter를 기존 격리 Shell 경계의 canonical `properties` verb에 연결한다. 기존 선택/route/pending/local fixed drive/reparse/32개 제한과 세션·패널 소유권은 유지한다.

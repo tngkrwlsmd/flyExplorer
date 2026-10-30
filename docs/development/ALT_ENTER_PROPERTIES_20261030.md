@@ -24,3 +24,13 @@ Microsoft 공식 [Windows 바로 가기](https://support.microsoft.com/ko-kr/acc
 중앙 실행이 다시 생성되는 다음 실행에서 먼저 VM의 정확한 clean HEAD/기존 runtime/앱0/대화형 desktop을 확인한다. 조건이 맞으면 이 소스의 `test_external_context_contract.py`와 실제 의존 계약만 실행하고, 영향 프로젝트 증분 Release를 빌드한다. 소유 파일과 소유 프로필에서 단일/복수 선택 Alt+Enter 속성 창, Escape 또는 WM_CLOSE 종료, 선택/파일 바이트/설정 보존과 정상 앱 종료를 확인한다. 실제 속성 창 화면은 기능 GUI와 별도로 직접 검토한다.
 
 **Windows Release·GUI·실제 화면 미검증 — 중앙 Remote Shell 실행이 생성되지 않음.** 이전 실행 파일을 새 코드 증거로 사용하지 않으며 main 병합·공개 배포·전역 클립보드·실제 휴지통·외부 전송은 수행하지 않는다.
+
+
+## 2026-10-31 후속 소스 및 Work 클라우드 검사
+
+- 후속 제품/검사 소스 `bd523bd080f471aa9683102883e0ba1d7b47a63a`는 direct-properties가 canonical verb를 찾은 뒤에도 초기 오류 코드 59를 유지하던 실제 결함을 수정했다. direct 분기에 `rc=0`을 먼저 설정하고, properties verb가 없으면 기존처럼 66으로 fail-closed한다.
+- 기존 외부 메뉴 계약의 변경된 함수 서명·상태 문구를 현재 소스에 맞췄고, 소유 GUI harness와 실제 helper 분기 본문을 추출하는 모델 계약을 추가했다.
+- Work 클라우드에서 `test_properties_verb_dispatch_contract.py`를 실제 g++/C++17로 컴파일·실행해 **1/1 PASS**했다. 대소문자 canonical properties 선택, properties 없음/빈 메뉴 거부, 앞 command 조회 실패 뒤 properties 복구를 확인했다. 두 변경 Python 파일의 `py_compile`도 PASS다.
+- 중앙 요청 `6bbb4dbffdb5d5b52d5cfe6d1d8b0a6644591290`은 2026-10-30 11:27 UTC 만료 조건을 지난 뒤에도 workflow run이 생성되지 않았다. 명령·checkout·Windows 소스 검사·Release·GUI는 실행되지 않았다. 슬롯은 `8de43213bf4fc84312da0f6fc8d64bb6830dc7cd`에서 [skip ci] idle로 회수했다.
+
+따라서 현재 판정은 **Work 클라우드 모델 1/1 PASS, Windows Release·GUI·화면 NOT TESTED**다. 다음 실행은 중앙 Actions 생성이 실제 복구됐다는 근거가 있을 때만 동일 소스의 최소 Windows 검증을 제출하며, 이전 요청을 중복 실행하지 않는다.
