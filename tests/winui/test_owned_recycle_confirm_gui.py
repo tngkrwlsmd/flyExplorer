@@ -151,16 +151,39 @@ def run(config="Debug", via_ctrl_d=False):
             assert recycle.element_info.process_id == process.pid
             focus_owned(win, process.pid)
             if shortcut:
-                # Genuine file-row key route; never authorize the Recycle dialog.
+                # Distinguish row and list focus before concluding a product defect.
                 item.set_focus()
                 assert owned_foreground(process.pid)
+                print("CTRL_D_ROW_KEYBOARD_FOCUS=" +
+                      str(item.element_info.has_keyboard_focus), flush=True)
                 send_keys("^d")
+                try:
+                    cancel = wait_until(
+                        cancel_button, "row-focused Ctrl+D did not open modal",
+                        seconds=3, interval=.2,
+                    )
+                    print("CTRL_D_ROW_FOCUS_MODAL=PASS", flush=True)
+                except AssertionError:
+                    print("CTRL_D_ROW_FOCUS_STATUS=" +
+                          status.window_text()[:220], flush=True)
+                    print("CTRL_D_ROW_FOCUS_AFTER=" +
+                          str(item.element_info.has_keyboard_focus), flush=True)
+                    files.set_focus()
+                    print("CTRL_D_LIST_KEYBOARD_FOCUS=" +
+                          str(files.element_info.has_keyboard_focus), flush=True)
+                    assert owned_foreground(process.pid)
+                    send_keys("^d")
+                    cancel = wait_until(
+                        cancel_button, "list-focused Ctrl+D did not open modal",
+                        seconds=7, interval=.2,
+                    )
+                    print("CTRL_D_LIST_FOCUS_MODAL=PASS", flush=True)
             else:
                 recycle.iface_invoke.Invoke()
-            cancel = wait_until(
-                cancel_button, "owned recycle ContentDialog did not appear",
-                seconds=10, interval=.2,
-            )
+                cancel = wait_until(
+                    cancel_button, "owned recycle ContentDialog did not appear",
+                    seconds=10, interval=.2,
+                )
             assert source.read_bytes() == first_bytes
             assert other.read_bytes() == other_bytes
             assert sorted(p.name for p in folder.iterdir()) == sorted([
