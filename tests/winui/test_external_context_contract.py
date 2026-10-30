@@ -34,6 +34,19 @@ class ContextContract(unittest.TestCase):
   self.assertIn("ShowExternalWindowsContextMenu(side)",app)
   self.assertIn("ShowExternalWindowsContextMenu(side,true)",app)
   self.assertIn("!ctrl&&!shift&&alt&&vk==Windows::System::VirtualKey::Enter",app)
+  window=src("app/winui/MainWindow.xaml.cpp")
+  # Bare Enter still opens an item, while modified Enter must bubble to the
+  # list shortcut handler so Alt+Enter can reach the properties route.
+  row_key=window.split("row.KeyDown([weak,side]",1)[1].split("row.CanDrag(true)",1)[0]
+  for token in ("GetKeyState(VK_CONTROL)","GetKeyState(VK_SHIFT)",
+                "GetKeyState(VK_MENU)","OpenSelectedFolder(side)"):
+   self.assertIn(token,row_key)
+  left_key=window.split("void MainWindow::OnLeftFileKeyDown(",1)[1].split(
+      "void MainWindow::OnRightFileKeyDown(",1)[0]
+  right_key=window.split("void MainWindow::OnRightFileKeyDown(",1)[1]
+  for body in (left_key,right_key):
+   self.assertIn("a.Key()==Windows::System::VirtualKey::Enter&&!modified",body)
+   self.assertLess(body.index("&&!modified"),body.index("HandleFileShortcut("))
   self.assertIn("45000,propertiesOnly",app)
   self.assertIn("bool propertiesOnly=false",src("src/base/shell_context_core.h"))
   self.assertIn('propertiesOnly?L"\\\" --context-properties"',client)
