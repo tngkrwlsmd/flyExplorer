@@ -14,7 +14,7 @@ from paths import ROOT, app_exe
 
 
 def main():
-    base = ROOT / "logs" / "alt-properties-owned-20261030"
+    base = ROOT / "logs" / "alt-properties-owned-20261031"
     base.mkdir(parents=True, exist_ok=True)
     h.BASE = base
     fixture = Path(tempfile.mkdtemp(prefix="fixture-", dir=base)).resolve()
@@ -45,11 +45,18 @@ def main():
                 items[names[0]].click_input()
                 if count == 2:
                     items[names[1]].iface_selection_item.AddToSelection()
-                app.el("LeftFiles").set_focus()
+                # Keep the real clicked row as the keyboard route owner.
+                # Moving focus to the ListView container bypasses the user input
+                # path and can make Alt+Enter a harness-only no-op.
+                h.wait(items[names[0]].has_keyboard_focus,
+                       "clicked owned row not keyboard focused")
                 h.wait(lambda: sum(bool(r.is_selected()) for r in rows().values()) == count,
                        "owned selection not ready")
                 previous = {p.pid for p in app.process.children(recursive=True)}
                 app.keys("%{ENTER}")
+                h.wait(lambda: "속성 창을 여는 중입니다" in
+                       app.el("StatusText").window_text(),
+                       "Alt+Enter was not dispatched from the selected row")
 
                 def spawned():
                     found = []
