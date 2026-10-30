@@ -8,7 +8,8 @@ class ContextContract(unittest.TestCase):
   helper=src("app/winui/helper/FlyShellIsolationHelper.cpp")
   app=src("app/winui/m22_transfers.cpp")
   client=src("src/base/shell_context_core.cpp")
-  for term in ("--context-inspect","--context-menu","GetUIObjectOf",
+  for term in ("--context-inspect","--context-menu","--context-properties",
+               "GetUIObjectOf",
                "QueryContextMenu","TrackPopupMenuEx","InvokeCommand",
                "SIIGBF_THUMBNAILONLY","GetAttributesW"):
    if term=="GetAttributesW":continue
@@ -21,7 +22,7 @@ class ContextContract(unittest.TestCase):
   for term in ("filename()!=L\"FlyShellIsolationHelper.exe\"",
                "ERROR_TIMEOUT","WaitForSingleObject","--context-menu"):
    self.assertIn(term,client)
-  for term in ("ShowExternalWindowsContextMenu(int side)",
+  for term in ("ShowExternalWindowsContextMenu(int side,bool propertiesOnly)",
                "OnFileRightTapped","args.Handled(true)",
                "VisualTreeHelper::GetParent","mFileOperations.busy()",
                "session.indexedItem(","indexed->isFileSystem()","root[1]!=L':'",
@@ -31,6 +32,16 @@ class ContextContract(unittest.TestCase):
   self.assertIn("VirtualKey::F10",app)
   self.assertIn("!ctrl&&shift&&!alt",app)
   self.assertIn("ShowExternalWindowsContextMenu(side)",app)
+  self.assertIn("ShowExternalWindowsContextMenu(side,true)",app)
+  self.assertIn("!ctrl&&!shift&&alt&&vk==Windows::System::VirtualKey::Enter",app)
+  self.assertIn("45000,propertiesOnly",app)
+  self.assertIn("bool propertiesOnly=false",src("src/base/shell_context_core.h"))
+  self.assertIn('propertiesOnly?L"\\\" --context-properties"',client)
+  self.assertIn("inspectOrShowContext(false,true)",helper)
+  self.assertIn('verb=="properties"){chosen=offset+1;break;}',helper)
+  self.assertIn("HRESULT_CODE(added)",helper)
+  self.assertLess(app.index("ShowExternalWindowsContextMenu(side,true)"),
+                  app.index("VirtualKey::F10"))
   self.assertIn("ShowAppFileContextMenu(side,clicked,args.GetPosition(clicked))",app)
   self.assertIn("ShowAppBackgroundContextMenu(side,list,args.GetPosition(list))",app)
   self.assertIn("MenuFlyoutSubItem sendTo;",app)

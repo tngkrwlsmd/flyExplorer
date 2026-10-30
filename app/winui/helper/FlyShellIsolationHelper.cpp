@@ -189,7 +189,7 @@ bool awaitOwnedPropertySheet(HWND owner) {
  }
  return false;
 }
-int inspectOrShowContext(bool inspect){
+int inspectOrShowContext(bool inspect,bool directProperties=false){
  // Child reads one bounded UTF-16 path, optional x,y from an anonymous pipe.
  HANDLE input=::GetStdHandle(STD_INPUT_HANDLE);
  HANDLE output=::GetStdHandle(STD_OUTPUT_HANDLE);
@@ -308,11 +308,28 @@ int inspectOrShowContext(bool inspect){
           if(original){
            originalMenuProc=reinterpret_cast<WNDPROC>(original);
            ::ShowWindow(owner,SW_SHOWNA);
-           ::SetForegroundWindow(owner);
-           const UINT chosen=::TrackPopupMenuEx(popup,
-              TPM_RETURNCMD|TPM_RIGHTBUTTON|TPM_NONOTIFY,x,y,owner,nullptr);
+           UINT chosen=0;
+           if(directProperties){
+            const auto commands=static_cast<UINT>(HRESULT_CODE(added));
+            for(UINT offset=0;offset<commands;++offset){
+             char name[128]{};
+             if(SUCCEEDED(menu->GetCommandString(
+                  offset,GCS_VERBA,nullptr,name,sizeof(name)))&&name[0]){
+              std::string verb(name);
+              std::transform(verb.begin(),verb.end(),verb.begin(),[](char c){
+               return (c>='A'&&c<='Z')?char(c-'A'+'a'):c;
+              });
+              if(verb=="properties"){chosen=offset+1;break;}
+             }
+            }
+            if(!chosen)rc=66;
+           }else{
+            ::SetForegroundWindow(owner);
+            chosen=::TrackPopupMenuEx(popup,
+               TPM_RETURNCMD|TPM_RIGHTBUTTON|TPM_NONOTIFY,x,y,owner,nullptr);
+            rc=0; // Escape / clicking away is a valid cancel.
+           }
            ::PostMessageW(owner,WM_NULL,0,0);
-           rc=0; // Escape / clicking away is a valid cancel.
            if(chosen>=1&&chosen<=0x7fff){
             bool isProperties=false;
             // Built-in file mutation must use flyExplorer's native
@@ -915,6 +932,8 @@ int wmain(int argc,wchar_t** argv) {
         return inspectOrShowContext(true);
     if(argc==2&&!wcscmp(argv[1],L"--context-menu"))
         return inspectOrShowContext(false);
+    if(argc==2&&!wcscmp(argv[1],L"--context-properties"))
+        return inspectOrShowContext(false,true);
     if(argc==2&&!wcscmp(argv[1],L"--file-thumbnail")){
         // Exact 1-shot thumbnail in a disposable Shell process. No file
         // path is passed on the command line, no mutation of input files,

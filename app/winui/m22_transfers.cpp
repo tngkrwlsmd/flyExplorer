@@ -1286,7 +1286,7 @@ void MainWindow::RevealSelectedInWindowsExplorer(int side){
   StatusText().Text(L"Windows 탐색기 연결 작업을 시작할 수 없습니다.");
  }
 }
-void MainWindow::ShowExternalWindowsContextMenu(int side){
+void MainWindow::ShowExternalWindowsContextMenu(int side,bool propertiesOnly){
  if(mClosing||side<0||side>1||
     ActiveWindowTab().model.activePane!=side)return;
 
@@ -1386,17 +1386,20 @@ void MainWindow::ShowExternalWindowsContextMenu(int side){
  if(!::GetCursorPos(&cursor))return;
  auto dispatch=DispatcherQueue();
  auto weak=get_weak();
- StatusText().Text(count>1?
-  L"여러 항목의 외부 Windows 메뉴는 속성 확인만 지원합니다. "
-  L"복사·이동·삭제는 앱 명령을 사용하세요.":
-  L"Windows Shell 확장 메뉴를 분리된 프로세스에서 엽니다.");
+ StatusText().Text(propertiesOnly?
+  L"선택 항목의 Windows 속성 창을 여는 중입니다.":
+  count>1?
+   L"여러 항목의 외부 Windows 메뉴는 속성 확인만 지원합니다. "
+   L"복사·이동·삭제는 앱 명령을 사용하세요.":
+   L"Windows Shell 확장 메뉴를 분리된 프로세스에서 엽니다.");
  try{
   std::thread([helper=std::move(helper),paths=std::move(paths),
                cursor,dispatch,weak,identity,side,tab,route,folder,
-               expectedSelection]{
-    const DWORD code=fxfile::shellcontext::show(helper,paths,cursor,45000);
+               expectedSelection,propertiesOnly]{
+    const DWORD code=fxfile::shellcontext::show(
+        helper,paths,cursor,45000,propertiesOnly);
     dispatch.TryEnqueue([weak,code,identity,side,tab,route,folder,
-                         expectedSelection]{
+                         expectedSelection,propertiesOnly]{
       if(auto ui=weak.get()){
        if(ui->mClosing)return;
        const auto& live=ui->ActiveWindowTab();
@@ -1433,7 +1436,8 @@ void MainWindow::ShowExternalWindowsContextMenu(int side){
        }
        std::sort(actualSelection.begin(),actualSelection.end());
        if(actualSelection!=*expectedSelection)return;
-       if(code==0)ui->StatusText().Text(
+       if(code==0)ui->StatusText().Text(propertiesOnly?
+          L"Windows 속성 창이 닫혔습니다.":
           L"Windows Shell 확장 메뉴가 종료됐습니다.");
        else if(code==65)ui->StatusText().Text(
           L"이 Windows 메뉴 명령은 실행하지 않았습니다. "
@@ -1529,6 +1533,16 @@ void MainWindow::HandleFileShortcut(
   if(mClosing||mFileOperations.pendingConfirmationToken())return;
   OnBackClicked(nullptr,nullptr);
   args.Handled(true);return;
+ }
+ // Explorer Alt+Enter opens the selected items' canonical, nonmutating
+ // Windows Properties verb through the same isolated Shell boundary.
+ if(!ctrl&&!shift&&alt&&vk==Windows::System::VirtualKey::Enter){
+  auto view=side==0?LeftFiles():RightFiles();
+  if(view.SelectedItems().Size()){
+   ShowExternalWindowsContextMenu(side,true);
+   args.Handled(true);
+  }
+  return;
  }
  // Keyboard equivalent of right-click: open the same native flyExplorer
  // commands menu. Windows extension verbs remain an explicit menu choice.

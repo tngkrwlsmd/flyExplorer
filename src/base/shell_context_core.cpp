@@ -22,7 +22,7 @@ bool writeAll(HANDLE handle,void const* body,size_t bytes) {
 }
 DWORD show(std::wstring const& helper,
            std::vector<std::wstring> const& paths,
-           POINT point,DWORD timeoutMs) noexcept {
+           POINT point,DWORD timeoutMs,bool propertiesOnly) noexcept {
  namespace fs=std::filesystem;
  Handle childRead,hostWrite,process,thread;
  try{
@@ -66,7 +66,8 @@ DWORD show(std::wstring const& helper,
   start.hStdInput=childRead.value;
   start.hStdOutput=out.value;
   start.hStdError=out.value;
-  std::wstring cmd=L"\""+helper+L"\" --context-menu";
+  std::wstring cmd=L"\""+helper+
+      (propertiesOnly?L"\" --context-properties":L"\" --context-menu");
   PROCESS_INFORMATION info{};
   if(!::CreateProcessW(helper.c_str(),cmd.data(),nullptr,nullptr,TRUE,
          CREATE_NO_WINDOW,nullptr,fs::path(helper).parent_path().c_str(),
