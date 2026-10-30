@@ -133,9 +133,9 @@ class ShortcutSemanticsContract(unittest.TestCase):
         )[1].split("RootShell().AddHandler(", 1)[0]
         for token in (
             "for(int side=0;side<2;++side)",
-            "(GetKeyState(VK_CONTROL)&0x8000)==0",
-            "(GetKeyState(VK_SHIFT)&0x8000)!=0",
-            "(GetKeyState(VK_MENU)&0x8000)!=0",
+            "(::GetKeyState(VK_CONTROL)&0x8000)==0",
+            "(::GetKeyState(VK_SHIFT)&0x8000)!=0",
+            "(::GetKeyState(VK_MENU)&0x8000)!=0",
             "mFileOperations.pendingConfirmationToken()",
             "args.GetCurrentPoint(view). Properties().MouseWheelDelta()",
             "if(side!=ui->ActiveWindowTab().model.activePane) ui->ActivatePane(side)",
