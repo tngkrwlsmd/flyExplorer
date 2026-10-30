@@ -273,17 +273,18 @@ namespace winrt::FlyExplorer::implementation
         using Microsoft::UI::Xaml::Input::PointerEventHandler;
         // Explorer Ctrl+wheel changes the hovered pane's view size. Reuse the
         // existing active-pane view owner so panel and session policy stay intact.
+        const auto wheelWeak=get_weak();
         for(int side=0;side<2;++side){
             auto files=side==0?LeftFiles():RightFiles();
             files.AddHandler(
                 UIElement::PointerWheelChangedEvent(),
-                box_value(PointerEventHandler{[nativeWeak,side](
+                box_value(PointerEventHandler{[wheelWeak,side](
                     IInspectable const&,
                     Microsoft::UI::Xaml::Input::PointerRoutedEventArgs const& args){
                     if((::GetKeyState(VK_CONTROL)&0x8000)==0||
                        (::GetKeyState(VK_SHIFT)&0x8000)!=0||
                        (::GetKeyState(VK_MENU)&0x8000)!=0)return;
-                    if(auto ui=nativeWeak.get()){
+                    if(auto ui=wheelWeak.get()){
                         if(ui->mClosing||
                            ui->mFileOperations.pendingConfirmationToken())return;
                         auto view=side==0?ui->LeftFiles():ui->RightFiles();
