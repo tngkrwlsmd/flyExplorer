@@ -14,7 +14,7 @@ from paths import ROOT, app_exe
 
 
 def main():
-    base = ROOT / "logs" / "alt-properties-owned-20261031-dispatch-fix"
+    base = ROOT / "logs" / "alt-properties-owned-20261031-dispatch-fix2"
     base.mkdir(parents=True, exist_ok=True)
     h.BASE = base
     fixture = Path(tempfile.mkdtemp(prefix="fixture-", dir=base)).resolve()
