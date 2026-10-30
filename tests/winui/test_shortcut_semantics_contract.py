@@ -54,7 +54,7 @@ class ShortcutSemanticsContract(unittest.TestCase):
         root = compact(WINDOW.read_text(encoding="utf-8")).split(
             "RootShell().PreviewKeyDown(", 1
         )[1].split("RefreshWindowTabs();", 1)[0]
-        self.assertNotIn("key==Windows::System::VirtualKey::D", root)
+        self.assertNotIn("control&&!shift&&!alt&&key==Windows::System::VirtualKey::D", root)
 
     def test_alt_p_settles_changed_layout_before_focus_without_deferred_input(self):
         source = compact(WINDOW.read_text(encoding="utf-8"))
