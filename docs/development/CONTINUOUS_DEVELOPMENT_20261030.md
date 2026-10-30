@@ -1,6 +1,7 @@
 # 2026-10-30 계속 개발 기록
 
-사용자는 별도로 멈추라고 지시할 때까지 개발을 이어가도록 요청했다.
+앞서 사용자는 별도로 멈추라고 지시할 때까지 개발을 이어가도록 요청했다.
+현재는 2026-10-30의 후속 지시에 따라 진행 중 작업 정리 후 **일시중지**한다. 재개 지시 전 새 작업/예약 실행을 시작하지 않는다.
 야간·06:00 종료 조건은 해제됐다. 이번 실행은 예약 변경만 하지 않고 실제
 제품 소스를 변경했다. 사용자의 VM 가동 알림 후 변경 기능의 한정 Windows 검증을 진행하며, 필수 Windows 검증 전 main 병합 금지는 유지한다.
 기존 일곱 기능은 [야간 기록](NIGHT_DEVELOPMENT_20261029.md)의 증거로 보존한다.
@@ -258,3 +259,42 @@ F11 실제 최대화/복원·누른 키 반복 방지와 표시된 두 파일의
 이 성공 단계는 재실행하지 않는다. 이어지는 Markdown 메뉴 UIA Invoke 뒤 이름 입력란 포커스가
 확인되지 않아 전체 실행은 **FAIL**이다. 편집 값·물리 클릭·수동 포커스 positive control을
 구분하는 후속 진단으로 원인을 좁히며, 아직 자동 이름 편집/GUI 생성/취소 수용으로 확대하지 않는다.
+
+
+## Markdown 이름 입력: 메뉴 닫힘 뒤 포커스와 최종 일시중지
+
+[#40976728424](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/40976728424)에서
+실제 메뉴 클릭 뒤 이름 값은 준비됐지만 포커스가 MoreButton에 남았다. 수동으로 입력란을
+포커스하면 빈 .md 생성과 정확한 생성 항목 선택은 성공했다. 자동 입력 포커스의 제품 문제로 범위를 좁혔다.
+
+제품 `4206b8f0a2468352978e8aa88e6d6f915e742b1e`는 More 메뉴가 열린 동안 시작한
+이름 편집에만 닫힘 후 포커스를 마무리한다. 표식은 즉시 소비하고 취소 때도 제거하며,
+현재 포커스가 More 버튼인 경우에만 이동한다. 편집/파일 명령의 소유 경로·탭·세션 정책은 유지한다.
+관련 source **13/13 PASS**와 diff 검사 PASS.
+[증분 Release #40977193585](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/40977193585) PASS,
+EXE SHA256 `7af209e944df53ea1f2d30104c9f2555746361e9a0695a0168830e731aab2ff3`.
+이전 정확한 runtime은 `logs/parity-20261030-ad71/before-name-focus-runtime`에 해시 대조 후 보존했다.
+
+- [#40977470562](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/40977470562): 첫 물리 메뉴 클릭 뒤 입력란 포커스,
+  실제 키 타이핑으로 .md 확장자를 남긴 이름 교체, Enter로 0바이트 파일 생성과 UIA의 정확한 항목 선택은 PASS다.
+  생성 직후 두 번째 포인터 메뉴의 포커스에서 전체 실행은 FAIL했다. 정상 종료/원본 설정 보존은 확인했다.
+  그 실패를 PASS로 바꾸거나 원인을 단정하지 않는다.
+- [#40977745029](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/40977745029): 독립 실행에서 첫 물리 메뉴 포커스,
+  실제 이름 입력 후 Esc 취소·파일 미생성, 키보드 메뉴 재열기 포커스와 두 번째 Esc가 PASS했다.
+  정상 종료, 원본 설정/소유 바이트 보존, 성공한 fixture/profile 제거도 PASS다.
+  이 결과는 파일 생성 직후 포인터 재열기를 검증한 것이 아니다.
+- [#40977840422](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/40977840422): 실제 이름 입력/재열기 PNG를
+  앞선 같은 Light/96 DPI/1160x640 화면과 직접 비교했다. 선택된 이름 줄기의 파란 강조와 입력 포커스 밑줄이 보이며
+  확장자 보존은 실제 타이핑 값으로 확인했다. 표준 입력란 내부의 가로 스크롤/지우기 버튼 외에 도구 모음이나 양쪽 목록의 겹침은 없다.
+  **이름 입력 포커스의 이 조건 한정 시각 수용**이다. 생성 직후 PNG는 footer가 불러오는 중이며 이전 목록 프레임이므로
+  새 파일 행의 최종 픽셀 수용으로 사용하지 않는다. 이는 두 번째 포인터 검사의 readiness 경계를 좁힐 근거지만 정확한 실패 원인의 확정은 아니다.
+
+사용자의 '지금까지 하던 것만 하고 일시중지' 지시를 적용했다. 개발 예약
+`6ae347e8d21c819197a07a08b7eb6e74`는 비활성화했고 새 기능은 착수하지 않았다.
+최종 Windows 확인에서 source4206b8f0 clean, 해당 앱 프로세스 0개다. GUI worker task는 각각 finally에서 제거됐다.
+[제어 슬롯 idle 정리 커밋](https://github.com/tngkrwlsmd/personal-control-plane/commit/346a8234778c990c098dc004d694b51d2455061a)은
+skip-ci로 저장했으며 새 Windows 작업을 예약하지 않는다. 재사용 cache/runtime과 실패 진단 자료는 보존한다.
+
+PR #70은 draft/미병합, main은 `c563a0e004fac25be1c92a4765e31223a9af7c10`다.
+재개 후 필요할 때만 생성 완료/탐색 readiness와 두 번째 포인터 메뉴를 구분한다.
+빈 배경 메뉴의 실제 이름 편집, 클립보드, 다른 테마/전체 제품/Explorer 동등성은 미검증으로 보존한다.
