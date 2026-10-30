@@ -50,7 +50,7 @@ def focus_owned(win, pid):
                seconds=7, interval=.15)
 
 
-def run(config="Debug"):
+def run(config="Debug", via_ctrl_d=False):
     assert config in ("Debug", "Release")
     exe = app_exe(config)
     assert exe.is_file()
@@ -139,7 +139,7 @@ def run(config="Debug"):
             matches = visible_modal_buttons("취소")
             return matches[0] if len(matches) == 1 else None
 
-        def select_and_prompt():
+        def select_and_prompt(shortcut=False):
             item = wait_until(lambda: row(source.name),
                               "owned recycle row disappeared",
                               seconds=8, interval=.2)
@@ -150,7 +150,13 @@ def run(config="Debug"):
             assert recycle.is_enabled()
             assert recycle.element_info.process_id == process.pid
             focus_owned(win, process.pid)
-            recycle.iface_invoke.Invoke()
+            if shortcut:
+                # Genuine file-row key route; never authorize the Recycle dialog.
+                item.set_focus()
+                assert owned_foreground(process.pid)
+                send_keys("^d")
+            else:
+                recycle.iface_invoke.Invoke()
             cancel = wait_until(
                 cancel_button, "owned recycle ContentDialog did not appear",
                 seconds=10, interval=.2,
@@ -163,7 +169,7 @@ def run(config="Debug"):
             return cancel
 
         # Explicit Cancel must fail closed without sending to global Recycle Bin.
-        first = select_and_prompt()
+        first = select_and_prompt(via_ctrl_d)
         first.iface_invoke.Invoke()
         wait_until(
             lambda: not bool(cancel_button()),
@@ -178,6 +184,8 @@ def run(config="Debug"):
         assert source.read_bytes() == first_bytes
         assert other.read_bytes() == other_bytes
         print("RECYCLE_DIALOG_CANCEL_PRESERVES_OWNED_FILES=PASS", flush=True)
+        if via_ctrl_d:
+            print("CTRL_D_OWNED_RECYCLE_PROMPT_CANCEL=PASS", flush=True)
 
         # After Cancel the same request must remain usable. Escape closes it
         # without authorizing any Shell file operation.
