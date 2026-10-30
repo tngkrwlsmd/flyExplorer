@@ -44,12 +44,21 @@ def main():
                 assert h.owner(h.u.GetForegroundWindow()) == app.app.pid
                 row.click_input()
 
+            def navigate(side, path, name):
+                app.keys("^l")
+                address = app.el("AddressBox")
+                address.set_edit_text(str(path))
+                address.set_focus()
+                app.keys("{ENTER}")
+                h.wait(lambda: ready(path, name, side),
+                       "owned navigation did not settle in " + side)
+
             h.wait(lambda: len(app.rows()) == 1 and len(app.rows("Right")) == 1
                    and app.el("CreateFolderButton").is_enabled(),
                    "initial owned panes not ready")
             # Sibling folders distinguish Back history from parent/Up.
             select_row("Left", "first-owned.txt")
-            app.navigate(second, "second-owned.txt")
+            navigate("Left", second, "second-owned.txt")
             select_row("Left", "second-owned.txt")
             app.capture("left-before-back")
             app.keys("{BACKSPACE}")
@@ -60,7 +69,7 @@ def main():
             result["left_sibling_history_and_opposite_preserved"] = True
 
             select_row("Right", "first-owned.txt")
-            app.navigate(second, "second-owned.txt")
+            navigate("Right", second, "second-owned.txt")
             select_row("Right", "second-owned.txt")
             app.keys("{BACKSPACE}")
             h.wait(lambda: ready(first, "first-owned.txt", "Right"),
