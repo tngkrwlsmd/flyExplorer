@@ -325,3 +325,25 @@ EXE SHA256 `7af209e944df53ea1f2d30104c9f2555746361e9a0695a0168830e731aab2ff3`를
 Windows 작업 후 앱 프로세스와 성공 fixture/profile·worker task를 정리했고,
 [제어 슬롯 idle 커밋](https://github.com/tngkrwlsmd/personal-control-plane/commit/c2163be95a09428881c02ff74acbcf433c66b88c)으로
 Remote Shell 요청을 비활성 명령에 복귀시켰다. 개발은 다음 독립 단위에서 이어간다.
+
+## 빈 배경 새 항목 이름 편집 포커스
+
+[#41006512594](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41006512594)에서 소유 fixture의 빈 왼쪽 목록 배경을 실제 우클릭하고
+새로 만들기→Markdown을 물리 hover/click한 결과, 기본 이름 값은 준비됐지만 FileNameBox 포커스가 없었다.
+0초·0.2초·0.7초 모두 같은 상태였고 Esc도 편집을 닫지 못해 제품 결함으로 확인했다.
+
+제품 `a4333748719316763faccee27542c0365d65f159`는 빈 배경 동적 MenuFlyout에서 시작한 폴더·텍스트·Markdown 이름 편집만
+메뉴 Closed 때 한 번 포커스한다. 편집이 유효하고 FileNameBox가 표시·탭 가능하며 도구 모음이 로드된 경우에만 적용하고,
+표식은 즉시 소비한다. 파일 명령과 세션/탭/열 소유 정책은 바꾸지 않았다.
+
+- [#41006845613](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41006845613): 소스 계약 **2/2 PASS**, diff 검사와 증분 Release 빌드 PASS.
+  EXE SHA256 `7a4e15a1e5da7c614222a1ae13480e0c1712b94dbd0e8dab88f3a18839f83089`.
+  뒤 GUI는 harness의 존재하지 않는 `app.exe_hash` 접근으로 제품 입력 전에 중단해 전체 실행은 FAIL로 보존한다.
+- [#41007167335](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41007167335): 동일 소스·동일 EXE로 GUI만 재시도했다.
+  빈 목록 배경 물리 우클릭, 새로 만들기 물리 hover, Markdown 클릭 후 기본 이름·키보드 포커스,
+  이름 줄기 타이핑의 .md 유지, Enter 0바이트 파일 생성과 생성 행 선택이 모두 PASS했다.
+  정상 종료·원본 설정/소유 바이트 보존 및 성공 fixture/profile 제거도 PASS다.
+
+이 변경은 **Light/96 DPI/1160×640의 소유 fixture 실제 입력 범위에서 기능 수용**한다.
+PNG는 생성했지만 이번 실행에서 직접 픽셀 비교하지 않았으므로 시각 수용은 주장하지 않는다.
+다른 테마·전체 제품·실제 Explorer 동등성, 전역 클립보드는 미검증이다.
