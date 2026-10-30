@@ -298,3 +298,30 @@ skip-ci로 저장했으며 새 Windows 작업을 예약하지 않는다. 재사�
 PR #70은 draft/미병합, main은 `c563a0e004fac25be1c92a4765e31223a9af7c10`다.
 재개 후 필요할 때만 생성 완료/탐색 readiness와 두 번째 포인터 메뉴를 구분한다.
 빈 배경 메뉴의 실제 이름 편집, 클립보드, 다른 테마/전체 제품/Explorer 동등성은 미검증으로 보존한다.
+
+## 2026-10-30 재개: Markdown 생성 후 물리 메뉴 재열기
+
+사용자의 일시중지 해제 지시에 따라 최종 제품 `4206b8f0a2468352978e8aa88e6d6f915e742b1e`와
+EXE SHA256 `7af209e944df53ea1f2d30104c9f2555746361e9a0695a0168830e731aab2ff3`를 그대로 사용해
+남아 있던 생성 직후 포인터 재열기 경계를 좁혔다.
+
+- [#41005850759](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41005850759):
+  새 파일 생성 전 단일 메뉴에서 물리 포인터와 키보드 모두 기본 이름·입력 포커스를 안정적으로 준비했다.
+- [#41005967857](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41005967857):
+  생성 결과와 두 행 투영·명령 준비를 안정화한 뒤 UIA Expand로 하위 메뉴를 연 경우 포인터 선택은 편집을 시작하지 않았고,
+  키보드 선택은 정상 작동했다. 제품 성공으로 판정하지 않았다.
+- [#41006132284](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41006132284):
+  보이는 Markdown 항목과 포인터 중앙의 Text→NewMarkdownFileMenuItem 조상까지 확인했으나 UIA Expand 경로는 같은 실패를 보였다.
+- [#41006296625](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41006296625):
+  실제 사용자 경로처럼 More를 클릭하고 상위 새 항목 메뉴를 물리 마우스로 가리켜 하위 메뉴를 연 뒤 Markdown을 클릭했다.
+  첫 생성, 생성 결과 두 행·선택·명령 준비 안정화, 두 번째 같은 물리 메뉴 재열기, 기본 이름과 FileNameBox 포커스,
+  이름 줄기 입력, Esc 취소·추가 파일 미생성이 모두 PASS했다. 정상 종료·원본 설정·소유 바이트 보존·fixture/profile 제거도 PASS다.
+
+따라서 생성 직후 **실제 물리 메뉴 재열기 동작은 이 Light/96 DPI/1180×660 소유 fixture 범위에서 수용**한다.
+앞선 실패는 UIA Expand로 연 하위 메뉴의 자동화 입력 경계로 분류하며 제품 결함 근거로 사용하지 않는다.
+제품 코드는 추가 변경하지 않았다. PNG는 기능 진단용으로 생성했으며 새 파일 행의 별도 픽셀 수용으로 확대하지 않는다.
+빈 배경 메뉴 이름 편집, 전역 클립보드, 다른 테마·전체 제품 및 실제 Explorer 동등성은 계속 미검증이다.
+
+Windows 작업 후 앱 프로세스와 성공 fixture/profile·worker task를 정리했고,
+[제어 슬롯 idle 커밋](https://github.com/tngkrwlsmd/personal-control-plane/commit/c2163be95a09428881c02ff74acbcf433c66b88c)으로
+Remote Shell 요청을 비활성 명령에 복귀시켰다. 개발은 다음 독립 단위에서 이어간다.
