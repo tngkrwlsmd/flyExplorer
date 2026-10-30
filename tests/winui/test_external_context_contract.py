@@ -39,8 +39,12 @@ class ContextContract(unittest.TestCase):
   # list shortcut handler so Alt+Enter can reach the properties route.
   row_key=window.split("row.KeyDown([weak,side]",1)[1].split("row.CanDrag(true)",1)[0]
   for token in ("GetKeyState(VK_CONTROL)","GetKeyState(VK_SHIFT)",
-                "GetKeyState(VK_MENU)","OpenSelectedFolder(side)"):
+                "GetKeyState(VK_MENU)","OpenSelectedFolder(side)",
+                "ShowExternalWindowsContextMenu(side,true)"):
    self.assertIn(token,row_key)
+  self.assertLess(row_key.index("ShowExternalWindowsContextMenu(side,true)"),
+                  row_key.index("OpenSelectedFolder(side)"))
+  self.assertIn("if(alt&&!control&&!shift)",row_key)
   left_key=window.split("void MainWindow::OnLeftFileKeyDown(",1)[1].split(
       "void MainWindow::OnRightFileKeyDown(",1)[0]
   right_key=window.split("void MainWindow::OnRightFileKeyDown(",1)[1]
