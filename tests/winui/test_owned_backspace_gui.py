@@ -10,7 +10,7 @@ import benchmark_filtered_folder_gui as h
 from paths import ROOT, app_exe
 
 
-def main():
+def main(*, remaining_only=False):
     base = ROOT / "logs" / "backspace-owned-20261030"
     base.mkdir(parents=True, exist_ok=True)
     h.BASE = base
@@ -57,24 +57,30 @@ def main():
                    and app.el("CreateFolderButton").is_enabled(),
                    "initial owned panes not ready")
             # Sibling folders distinguish Back history from parent/Up.
-            select_row("Left", "first-owned.txt")
-            navigate("Left", second, "second-owned.txt")
-            select_row("Left", "second-owned.txt")
-            app.capture("left-before-back")
-            app.keys("{BACKSPACE}")
-            h.wait(lambda: ready(first, "first-owned.txt"),
-                   "left Backspace did not return to previous sibling")
-            assert "first-owned.txt" in app.first("Right")
-            app.capture("left-after-back")
-            result["left_sibling_history_and_opposite_preserved"] = True
+            # A harness-only successor can reuse the accepted left scenario.
+            if not remaining_only:
+                select_row("Left", "first-owned.txt")
+                navigate("Left", second, "second-owned.txt")
+                select_row("Left", "second-owned.txt")
+                app.capture("left-before-back")
+                app.keys("{BACKSPACE}")
+                h.wait(lambda: ready(first, "first-owned.txt"),
+                       "left Backspace did not return to previous sibling")
+                assert "first-owned.txt" in app.first("Right")
+                app.capture("left-after-back")
+                result["left_sibling_history_and_opposite_preserved"] = True
+            else:
+                result["prior_left_evidence_reused"] = "41008802577/a6174aee"
 
             select_row("Right", "first-owned.txt")
             navigate("Right", second, "second-owned.txt")
             select_row("Right", "second-owned.txt")
+            app.capture("right-before-back")
             app.keys("{BACKSPACE}")
             h.wait(lambda: ready(first, "first-owned.txt", "Right"),
                    "right Backspace did not return to previous sibling")
             assert "first-owned.txt" in app.first("Left")
+            app.capture("right-after-back")
             result["right_sibling_history_and_opposite_preserved"] = True
 
             # These editors are outside the file-list route; Backspace edits
