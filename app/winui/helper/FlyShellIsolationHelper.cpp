@@ -310,6 +310,7 @@ int inspectOrShowContext(bool inspect,bool directProperties=false){
            ::ShowWindow(owner,SW_SHOWNA);
            UINT chosen=0;
            if(directProperties){
+            rc=0;
             const auto commands=static_cast<UINT>(HRESULT_CODE(added));
             for(UINT offset=0;offset<commands;++offset){
              char name[128]{};

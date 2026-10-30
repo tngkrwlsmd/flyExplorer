@@ -97,7 +97,7 @@ class ContextContract(unittest.TestCase):
   self.assertEqual(constructor.count("UIElement::RightTappedEvent()"),1)
   self.assertIn("true);",constructor)
   header=src("app/winui/MainWindow.xaml.h")
-  self.assertIn("ShowExternalWindowsContextMenu(int side)",header)
+  self.assertIn("ShowExternalWindowsContextMenu(int side,bool propertiesOnly=false)",header)
   self.assertIn("OnExternalWindowsContextMenu",header)
  def test_folder_background_menu_reuses_all_toolbar_modes(self):
   app=src("app/winui/m22_transfers.cpp")
@@ -126,16 +126,16 @@ class ContextContract(unittest.TestCase):
   helper=src("app/winui/helper/FlyShellIsolationHelper.cpp")
   self.assertIn('if(paths.size()>1&&verb!="properties")rc=65;',helper)
   self.assertIn("const auto count=list.SelectedItems().Size();",app)
-  self.assertIn("StatusText().Text(count>1?",app)
+  self.assertIn("StatusText().Text(propertiesOnly?",app)
   self.assertIn("여러 항목의 외부 Windows 메뉴는 속성 확인만 지원합니다.",app)
   self.assertIn("else if(code==65)",app)
   self.assertIn("이 Windows 메뉴 명령은 실행하지 않았습니다.",app)
   self.assertIn("else if(code==69)",app)
-  self.assertIn("shellcontext::show(helper,paths,cursor,45000)",app)
+  self.assertIn("helper,paths,cursor,45000,propertiesOnly",app)
 
  def test_external_menu_result_cannot_overwrite_other_workspace_status(self):
   app=src("app/winui/m22_transfers.cpp")
-  body=app.split("void MainWindow::ShowExternalWindowsContextMenu(int side){",1)[1].split(
+  body=app.split("void MainWindow::ShowExternalWindowsContextMenu(int side,bool propertiesOnly){",1)[1].split(
       "void MainWindow::OnExternalWindowsContextMenu(",1)[0]
   for token in (
       "ActiveWindowTab().model.activePane!=side",
@@ -162,17 +162,17 @@ class ContextContract(unittest.TestCase):
                   callback.index("if(code==0)ui->StatusText().Text("))
   self.assertLess(callback.index("pane.filesystemPaths[tab]!=folder"),
                   callback.index("else if(code==65)ui->StatusText().Text("))
-  self.assertIn("shellcontext::show(helper,paths,cursor,45000)",body)
+  self.assertIn("helper,paths,cursor,45000,propertiesOnly",body)
 
  def test_late_shell_menu_result_keeps_new_selection_status(self):
   """The external menu can remain open while selection changes in one tab."""
   app=src("app/winui/m22_transfers.cpp")
-  body=app.split("void MainWindow::ShowExternalWindowsContextMenu(int side){",1)[1].split(
+  body=app.split("void MainWindow::ShowExternalWindowsContextMenu(int side,bool propertiesOnly){",1)[1].split(
       "void MainWindow::OnExternalWindowsContextMenu(",1)[0]
   self.assertIn("originalSelection.push_back(path);",body)
   self.assertIn("std::sort(originalSelection.begin(),originalSelection.end());",body)
   self.assertIn("std::make_shared<const std::vector<std::wstring>>(",body)
-  self.assertIn("expectedSelection]{",body)
+  self.assertIn("expectedSelection,propertiesOnly]{",body)
   callback=body.split("dispatch.TryEnqueue([weak,code,identity,side,tab,route,folder,",1)[1]
   self.assertIn("if(tab>=pane.tabs.size()||tab>=pane.pending.size()||",callback)
   self.assertIn("pane.pending[tab])return;",callback)
