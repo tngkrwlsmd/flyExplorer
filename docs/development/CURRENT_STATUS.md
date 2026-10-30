@@ -1,3 +1,9 @@
+# 2026-10-30 — Alt+Enter 선택 항목 속성 구현, Windows 검증 대기
+
+- 제품 `c7e8f39f`는 파일 목록 Alt+Enter를 기존 격리 Shell 경계의 canonical `properties` verb에 연결한다. 기존 선택/route/pending/local fixed drive/reparse/32개 제한과 세션·패널 소유권은 유지한다.
+- 변경 계약 테스트 Python 문법 PASS와 diff 코드 리뷰를 완료했다. 중앙 사전 점검 `656e38a8`은 Actions run이 생성되지 않아 VM 명령/빌드/GUI가 시작되지 않았다. 슬롯은 `20ca06a5`에서 [skip ci] idle로 회수했다.
+- [정확한 구현·미검증 경계](ALT_ENTER_PROPERTIES_20261030.md). Windows Release·단일/복수 선택 속성 창 GUI·실제 화면은 다음 정상 중앙 실행에서 새 소스로만 확인한다. main 병합/완전 수용은 하지 않는다.
+
 # 2026-10-30 — Ctrl+1~9 작업공간 번호 선택 한정 수용
 
 - 제품 a3ab6ce6는 Ctrl+번호를 기존 상단 WindowTab 활성화에 연결했다. 없는/같은 번호는 무동작이며 편집·메뉴·확인 상태와 Ctrl+Shift 보기 전환을 보호한다. 관련 소스53/53·AST/diff PASS.
