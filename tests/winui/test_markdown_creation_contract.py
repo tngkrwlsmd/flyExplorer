@@ -32,6 +32,23 @@ class MarkdownCreationContract(unittest.TestCase):
             'create.Items().Append(make(L"Markdown 문서 (.md)"',1)[1].split('menu.Items().Append(create)',1)[0]
         self.assertIn('localFolder',background)
         self.assertIn('BeginFileNameCommand(fxfile::filecommand::Kind::CreateMarkdownFile)',background)
+        background_menu=(APP/'m22_transfers.cpp').read_text(encoding='utf-8')
+        scope=background_menu.split('void MainWindow::ShowAppBackgroundContextMenu(',1)[1].split(
+            'void MainWindow::OnFileRightTapped(',1)[0]
+        self.assertIn('auto focusNameEditAfterClose=std::make_shared<bool>(false);',scope)
+        for kind in ('CreateFolder','CreateTextFile','CreateMarkdownFile'):
+            action=scope.split('Kind::'+kind,1)[0].rsplit('create.Items().Append(',1)[1]
+            self.assertIn('[focusNameEditAfterClose](MainWindow& ui)',action)
+            self.assertIn('*focusNameEditAfterClose=true;',action)
+        closed=scope.split('menu.Closed(',1)[1].split('menu.ShowAt(anchor,options);',1)[0]
+        for token in ('std::exchange(*focusNameEditAfterClose,false)',
+                      'box.Opacity()<0.5||!box.IsTabStop()',
+                      '!ui->ToolbarView().IsLoaded()',
+                      'ui->ToolbarView().UpdateLayout();',
+                      'box.Focus(FocusState::Programmatic);'):
+            self.assertIn(token,closed)
+        self.assertLess(closed.index('std::exchange('),closed.index('box.Focus('))
+        self.assertNotIn('BeginFileNameCommand(',closed)
 
     def test_markdown_and_text_suffixes_share_only_the_safe_creation_path(self):
         native=(ROOT/'src/base/file_command_core.cpp').read_text(encoding='utf-8')

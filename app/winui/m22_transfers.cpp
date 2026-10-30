@@ -405,6 +405,7 @@ void MainWindow::ShowAppBackgroundContextMenu(
  const int viewMode=static_cast<int>(state.fileLists[side].viewMode);
  const int sortMode=state.fileLists[side].sortMode;
  auto weak=get_weak();
+ auto focusNameEditAfterClose=std::make_shared<bool>(false);
  // Share the same route/WindowTab guard for ordinary commands and checked
  // view/sort items. A delayed menu click cannot change a different pane.
  auto guarded=[weak,side,identity,tab,route,
@@ -496,18 +497,31 @@ void MainWindow::ShowAppBackgroundContextMenu(
  create.Text(L"새로 만들기");
  create.IsEnabled(localFolder);
  create.Items().Append(make(L"폴더",L"\uE8B7",localFolder,
-     [](MainWindow& ui){
-      ui.BeginFileNameCommand(fxfile::filecommand::Kind::CreateFolder);
-     }));
+     [focusNameEditAfterClose](MainWindow& ui){
+       *focusNameEditAfterClose=true;
+       ui.BeginFileNameCommand(fxfile::filecommand::Kind::CreateFolder);
+      }));
  create.Items().Append(make(L"텍스트 문서 (.txt)",L"\uE8A5",localFolder,
-     [](MainWindow& ui){
-      ui.BeginFileNameCommand(fxfile::filecommand::Kind::CreateTextFile);
-     }));
+     [focusNameEditAfterClose](MainWindow& ui){
+       *focusNameEditAfterClose=true;
+       ui.BeginFileNameCommand(fxfile::filecommand::Kind::CreateTextFile);
+      }));
  create.Items().Append(make(L"Markdown 문서 (.md)",L"\uE8A5",localFolder,
-     [](MainWindow& ui){
-      ui.BeginFileNameCommand(fxfile::filecommand::Kind::CreateMarkdownFile);
-     }));
+     [focusNameEditAfterClose](MainWindow& ui){
+       *focusNameEditAfterClose=true;
+       ui.BeginFileNameCommand(fxfile::filecommand::Kind::CreateMarkdownFile);
+      }));
  menu.Items().Append(create);
+ menu.Closed([weak,focusNameEditAfterClose](
+     IInspectable const&,IInspectable const&){
+  if(!std::exchange(*focusNameEditAfterClose,false))return;
+  auto ui=weak.get();
+  if(!ui)return;
+  auto box=ui->FileNameBox();
+  if(box.Opacity()<0.5||!box.IsTabStop()||!ui->ToolbarView().IsLoaded())return;
+  ui->ToolbarView().UpdateLayout();
+  box.Focus(FocusState::Programmatic);
+ });
  Microsoft::UI::Xaml::Controls::Primitives::FlyoutShowOptions options;
  options.Position(position);
  menu.ShowAt(anchor,options);
