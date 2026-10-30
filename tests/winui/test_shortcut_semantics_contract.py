@@ -126,6 +126,31 @@ class ShortcutSemanticsContract(unittest.TestCase):
         )[0]
         self.assertIn("if(!state.fileInfoPaneVisible){ mTextPreviewEnabled=false; CancelTextPreview();", close)
 
+    def test_ctrl_wheel_steps_existing_hovered_pane_view_owner(self):
+        window = compact(WINDOW.read_text(encoding="utf-8"))
+        wheel = window.split("UIElement::PointerWheelChangedEvent()", 1)[1].split(
+            "RootShell().AddHandler(", 1
+        )[0]
+        for token in (
+            "for(int side=0;side<2;++side)",
+            "(GetKeyState(VK_CONTROL)&0x8000)==0",
+            "(GetKeyState(VK_SHIFT)&0x8000)!=0",
+            "(GetKeyState(VK_MENU)&0x8000)!=0",
+            "mFileOperations.pendingConfirmationToken()",
+            "args.GetCurrentPoint(view). Properties().MouseWheelDelta()",
+            "if(side!=ui->ActiveWindowTab().model.activePane) ui->ActivatePane(side)",
+            "current+(delta>0?1:-1)",
+            "(std::max)(0,(std::min)(4,",
+            "if(next!=current)ui->UpdateView(next)",
+            "args.Handled(true)",
+        ):
+            self.assertIn(token, wheel)
+        for forbidden in (
+            "PersistPreferences(", "pane.active=", "fileLists[side].viewMode=",
+            "RunTransfer(", "OpenFolder(", "QueuePidl(", "std::thread",
+        ):
+            self.assertNotIn(forbidden, wheel)
+
     def test_view_shortcuts_match_supported_explorer_modes(self):
         window = WINDOW.read_text(encoding="utf-8")
         block = window.split("int viewShortcut=-1;", 1)[1].split(
