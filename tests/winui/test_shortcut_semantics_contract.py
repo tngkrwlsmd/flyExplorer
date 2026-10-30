@@ -128,9 +128,9 @@ class ShortcutSemanticsContract(unittest.TestCase):
 
     def test_ctrl_wheel_steps_existing_hovered_pane_view_owner(self):
         window = compact(WINDOW.read_text(encoding="utf-8"))
-        wheel = window.split("UIElement::PointerWheelChangedEvent()", 1)[1].split(
-            "RootShell().AddHandler(", 1
-        )[0]
+        wheel = window.split(
+            "using Microsoft::UI::Xaml::Input::PointerEventHandler;", 1
+        )[1].split("RootShell().AddHandler(", 1)[0]
         for token in (
             "for(int side=0;side<2;++side)",
             "(GetKeyState(VK_CONTROL)&0x8000)==0",
