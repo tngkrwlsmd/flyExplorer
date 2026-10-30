@@ -1523,6 +1523,13 @@ void MainWindow::HandleFileShortcut(
  const auto ctrl=(::GetKeyState(VK_CONTROL)&0x8000)!=0;
  const auto shift=(::GetKeyState(VK_SHIFT)&0x8000)!=0;
  const auto alt=(::GetKeyState(VK_MENU)&0x8000)!=0;
+ // Explorer Backspace is history navigation only while the file list owns
+ // input. Text editors keep their own deletion behavior outside this route.
+ if(!ctrl&&!shift&&!alt&&vk==Windows::System::VirtualKey::Back){
+  if(mClosing||mFileOperations.pendingConfirmationToken())return;
+  OnBackClicked(nullptr,nullptr);
+  args.Handled(true);return;
+ }
  // Keyboard equivalent of right-click: open the same native flyExplorer
  // commands menu. Windows extension verbs remain an explicit menu choice.
  if(!ctrl&&shift&&!alt&&vk==Windows::System::VirtualKey::F10){

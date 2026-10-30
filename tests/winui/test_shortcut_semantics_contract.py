@@ -14,6 +14,24 @@ def compact(text: str) -> str:
 
 
 class ShortcutSemanticsContract(unittest.TestCase):
+    def test_backspace_is_file_list_local_history_without_new_navigation_logic(self):
+        source = compact(TRANSFERS.read_text(encoding="utf-8"))
+        handler = source.split("void MainWindow::HandleFileShortcut(", 1)[1]
+        branch = handler.split(
+            "if(!ctrl&&!shift&&!alt&&vk==Windows::System::VirtualKey::Back){", 1
+        )[1].split("// Keyboard equivalent", 1)[0]
+        self.assertIn("mClosing||mFileOperations.pendingConfirmationToken()", branch)
+        self.assertLess(branch.index("pendingConfirmationToken()"),
+                        branch.index("OnBackClicked(nullptr,nullptr)"))
+        self.assertIn("args.Handled(true);return;", branch)
+        for forbidden in ("QueuePidl(", "OpenFolder(", "RunTransfer(", "HistoryAction::Up"):
+            self.assertNotIn(forbidden, branch)
+        window = compact(WINDOW.read_text(encoding="utf-8"))
+        root = window.split("RootShell().PreviewKeyDown(", 1)[1].split(
+            "RefreshWindowTabs();", 1
+        )[0]
+        self.assertNotIn("VirtualKey::Back", root)
+
     def test_alt_p_settles_changed_layout_before_focus_without_deferred_input(self):
         source = compact(WINDOW.read_text(encoding="utf-8"))
         command = source.split("if(previewAlias){", 1)[1].split("args.Handled(true);", 1)[0]
