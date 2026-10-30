@@ -1,3 +1,10 @@
+# 2026-10-31 — Alt+Enter 선택 행 dispatch 수정, 최종 Windows 검증 환경 대기
+
+- 최종 제품 `30b36f8a` / 제품·검사 head `4abfa53f`: 선택 행이 정확한 Alt-only+Enter를 기존 속성 경로에 직접 전달한다. bare Enter와 다른 수정키 조합, 기존 선택/route/helper 보호는 유지한다. Work 클라우드 source 계약·AST PASS.
+- #41046386664는 이전 `bd523bd0` Release 성공 뒤 helper 미도달 GUI FAIL, #41087143290은 행 입력 미dispatch를 확인했다. 첫 수정 `8dab27b3`은 #41087988459에서 소스 9개·Release PASS 후에도 동일 경계가 남아 최종 수정의 수용 증거로 쓰지 않는다.
+- 최종 Windows 요청 #41089952101은 runner가 가져가지 못한 채 만료됐다. 앞 #41088699946/#41089322834는 request SHA guard 결함으로 제품 명령 전에 종료됐다. 슬롯은 control `48cf602a`에서 idle 회수. **최종 Windows Release·GUI·실제 화면 NOT TESTED**, PR #70 draft/미병합, main 유지다.
+- [정확한 구현·실패 분류·남은 최소 검증](ALT_ENTER_PROPERTIES_20261030.md). runner 복구 전 동일 요청을 중복 제출하지 않는다.
+
 # 2026-10-31 — Alt+Enter 속성 후속 결함 수정·클라우드 모델 PASS
 
 - 제품/검사 `bd523bd0`는 direct canonical properties를 찾은 성공 경로가 초기 오류 코드 59를 유지하던 결함을 `rc=0` 초기화로 수정했다. properties 없음은 66으로 계속 fail-closed한다.

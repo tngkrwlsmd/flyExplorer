@@ -34,3 +34,13 @@ Microsoft 공식 [Windows 바로 가기](https://support.microsoft.com/ko-kr/acc
 - 중앙 요청 `6bbb4dbffdb5d5b52d5cfe6d1d8b0a6644591290`은 2026-10-30 11:27 UTC 만료 조건을 지난 뒤에도 workflow run이 생성되지 않았다. 명령·checkout·Windows 소스 검사·Release·GUI는 실행되지 않았다. 슬롯은 `8de43213bf4fc84312da0f6fc8d64bb6830dc7cd`에서 [skip ci] idle로 회수했다.
 
 따라서 현재 판정은 **Work 클라우드 모델 1/1 PASS, Windows Release·GUI·화면 NOT TESTED**다. 다음 실행은 중앙 Actions 생성이 실제 복구됐다는 근거가 있을 때만 동일 소스의 최소 Windows 검증을 제출하며, 이전 요청을 중복 실행하지 않는다.
+
+
+## 2026-10-31 선택 행 입력 경계 수정과 Windows runner 제한
+
+- 실제 Windows run [#41046386664](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41046386664)는 제품 `bd523bd0`의 Release 빌드와 EXE `a5e7e7c212a8f20cce84b469f1af9eed21426404d98b56e99d237f9b8c37637a` 생성을 완료했지만, 선택 행에 포커스가 있을 때 Alt+Enter가 helper까지 도달하지 않아 GUI는 FAIL이었다.
+- [#41087143290](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41087143290)에서 선택 행 입력이 실제 dispatch되지 않음을 확인했다. 첫 수정 `8dab27b3`은 ListView의 bare Enter 가로채기를 제한했지만, [#41087988459](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41087988459)의 소스 9개·Release PASS 뒤에도 행 기본 입력 경계에서 Alt+Enter가 상위 ListView로 전달되지 않았다. 이 실행의 EXE `ca8af2d5ecc1a948cd605204e0e0b9e69778576b1e8ff971be266eb0bcbf26b4`는 최종 소스의 증거가 아니다.
+- 최종 제품 `30b36f8ac43c73ce76261a83a0ce882eff219508`는 동적 파일 행이 정확한 Alt-only+Enter를 기존 `ShowExternalWindowsContextMenu(side,true)`에 직접 전달하고, bare Enter와 다른 수정키 조합은 기존 동작을 유지한다. 최종 제품/검사 head는 `4abfa53f190bd05fd5d48fdfc04a14932b4bea8d`이며 Work 클라우드 source 계약·AST 검사는 PASS다.
+- 후속 Windows 요청 [#41088699946](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41088699946)과 [#41089322834](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41089322834)은 시작/checkout SHA를 혼동한 request preflight 결함으로 제품 명령 전에 종료됐다. 교정된 [#41089952101](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41089952101)은 Windows runner가 가져가지 못한 채 2026-10-31 01:45 KST 만료 조건을 지났다. 늦게 시작돼도 첫 expiry guard에서 fail-closed하며, 슬롯은 control `48cf602a58e55a6f6f8e9d31782586c31c0a2779`에서 [skip ci] idle로 회수했다.
+
+현재 최종 판정은 **최종 source 계약 PASS / 최종 Windows Release·GUI·실제 화면 NOT TESTED**다. runner 복구 전에는 같은 요청을 다시 만들지 않는다. 다음 실제 검증은 exact `4abfa53f`의 증분 Release, 단일·복수 소유 파일 속성 창, 주소 편집 보호, 정상 종료·바이트/설정 보존과 해당 화면 직접 검토만 수행한다.
