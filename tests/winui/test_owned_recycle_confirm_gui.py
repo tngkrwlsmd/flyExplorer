@@ -146,7 +146,11 @@ def run(config="Debug", via_ctrl_d=False):
             focus_owned(win, process.pid)
             item.click_input()
             item.iface_selection_item.Select()
-            assert row(source.name).is_selected()
+            wait_until(
+                lambda: (current := row(source.name)) is not None
+                and current.is_selected(),
+                "owned row selection did not settle", seconds=8, interval=.2,
+            )
             assert recycle.is_enabled()
             assert recycle.element_info.process_id == process.pid
             focus_owned(win, process.pid)
