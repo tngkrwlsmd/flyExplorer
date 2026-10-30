@@ -34,3 +34,38 @@ Light/96 DPI/1160x640 조건에서 수정 후 이름 줄기의 파란 선택 강
 - 생성 직후 PNG `bd6193b29021628b7b17eb432c7da091566b4a2631d5d04f59469c54dbc3e1ba`는
   불러오는 중인 이전 목록 프레임이므로 생성 행의 최종 픽셀 수용으로 사용하지 않는다.
 - 기존 실제 파일 생성·선택·정상 종료/보존·정리는 #41007167335의 한정 증거를 재사용한다.
+
+## Windows 후속 결과와 한정 수용
+
+- 제품 소스: `a6174aee2fd45cd56d27aaa83a3e278f344cd881`.
+- [41008802577](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41008802577):
+  기존 캐시로 증분 Release 성공, m22_transfers.cpp 컴파일을 확인했다.
+  EXE SHA256 `a1fd4ccd44191a9d0acdb6cf2b66739b8fa8326e9ed0a12a034bf4d4247714a1`.
+  왼쪽 Second→Backspace→First와 반대 패널 보존은 PASS다.
+  오른쪽 준비를 기존 왼쪽 전용 benchmark navigate 함수로 검사해 전체 실행은 FAIL했다.
+  정상 종료/원본 설정 보존은 확인했으며 실패 자료를 보존한다. 제품 결함으로 분류하지 않는다.
+- 테스트만 수정한 `86141a2e`/`282ef2e23b5df2afd2f44f85966328082145e1e3`에서
+  명시한 패널의 경로·행·명령 준비를 확인하도록 바꾸고, 왼쪽 성공을 재사용하는 후속 범위를 제공했다.
+- [41009193684](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41009193684):
+  C++ 변경이 없고 위 EXE 해시가 같음을 확인해 재빌드 없이 오른쪽·편집 검사만 실행했다.
+  오른쪽 Second→Backspace→First, 왼쪽 위치 보존, 주소/검색/이름 편집의 실제 글자 삭제와
+  이름 편집 Esc 취소가 PASS다. 정상 종료, 원본 설정/소유 파일 이름·바이트 보존,
+  성공 fixture/profile 제거도 PASS다. 이전 왼쪽 검사를 다시 실행하지 않았다.
+- [41009358308](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41009358308):
+  실제 Light/96 DPI/1160x640 PNG 네 장을 직접 검토했다. 활성 왼쪽/오른쪽의
+  Second→First 주소·탭·파일 행 변화와 반대 패널 보존을 확인했고 목록·명령 영역의
+  새 겹침/잘림은 없었다. 일부 이동 전 footer는 불러오는 중인 프레임이므로
+  전체 정지 상태나 모든 비동기 상태 화면의 수용으로 확대하지 않는다.
+  source282ef2e clean, 실행 앱 0개와 두 소유 worker task의 제거도 확인했다.
+
+| 실제 PNG | SHA256 |
+| --- | --- |
+| 왼쪽 이동 전 | dfd8cc027591f9e173d8bdd0af5f9475778565932a9dd163e03315c08a671a5e |
+| 왼쪽 이동 후 | 6a07f6d3b7cb09004ff520d5d447f20e8d25d4cceeb0f79bc312283efbeac060 |
+| 오른쪽 이동 전 | 24cf2cf9994fa25cc12e22f193b23950bdf692e68ec4c92975f20dc287d69b5d |
+| 오른쪽 이동 후 | 3c0b2ee2af35e8acd29caa59b9e29863ec7c0c4f31a0fc263b649bd322bb775c |
+
+이번 파일 목록 Backspace의 로컬 이력/편집 보존은 위 조건에서 기능 수용한다.
+Dark/가상 제공자/모든 키 조합/실제 Explorer 동시 대조/실제 충돌창에서의 키 입력은
+이번 runtime 검사 밖이다. 기존 guard 소스 증거와 runtime 증거를 구분한다.
+세션/패널 소유 정책과 실제 클립보드·휴지통은 변경하지 않았으며 PR #70은 미병합이다.
