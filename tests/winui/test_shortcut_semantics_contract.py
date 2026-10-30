@@ -32,6 +32,30 @@ class ShortcutSemanticsContract(unittest.TestCase):
         )[0]
         self.assertNotIn("VirtualKey::Back", root)
 
+    def test_ctrl_d_recycles_only_from_file_list_with_existing_confirmation(self):
+        source = compact(TRANSFERS.read_text(encoding="utf-8"))
+        handler = source.split("void MainWindow::HandleFileShortcut(", 1)[1]
+        alias = handler.split(
+            "if(ctrl&&!shift&&!alt&&vk==Windows::System::VirtualKey::D){", 1
+        )[1].split("if(vk==Windows::System::VirtualKey::F2)", 1)[0]
+        self.assertIn("RunTransfer(fxfile::shelltransfer::Kind::Recycle)", alias)
+        self.assertIn("args.Handled(true);return;", alias)
+        self.assertNotIn("CreateFileW(", alias)
+        self.assertNotIn("CopySelectedToWindowsClipboard(", alias)
+        self.assertLess(handler.index("VirtualKey::D){"),
+                        handler.index("VirtualKey::F2)"))
+        self.assertIn("if(vk==Windows::System::VirtualKey::Delete){", handler)
+        self.assertIn(
+            "if(mFileOperations.pendingConfirmationToken()){",
+            source.split("void MainWindow::RunTransfer(", 1)[1].split(
+                "void MainWindow::", 1
+            )[0],
+        )
+        root = compact(WINDOW.read_text(encoding="utf-8")).split(
+            "RootShell().PreviewKeyDown(", 1
+        )[1].split("RefreshWindowTabs();", 1)[0]
+        self.assertNotIn("key==Windows::System::VirtualKey::D", root)
+
     def test_alt_p_settles_changed_layout_before_focus_without_deferred_input(self):
         source = compact(WINDOW.read_text(encoding="utf-8"))
         command = source.split("if(previewAlias){", 1)[1].split("args.Handled(true);", 1)[0]

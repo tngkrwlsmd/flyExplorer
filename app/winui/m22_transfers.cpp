@@ -1567,6 +1567,12 @@ void MainWindow::HandleFileShortcut(
  if(ctrl&&vk==Windows::System::VirtualKey::V){
   PasteFromWindowsClipboard();args.Handled(true);return;
  }
+ // Explorer Ctrl+D uses the same confirmation and current-pane selection
+ // validation as Delete. This route is reached only from a file list.
+ if(ctrl&&!shift&&!alt&&vk==Windows::System::VirtualKey::D){
+  RunTransfer(fxfile::shelltransfer::Kind::Recycle);
+  args.Handled(true);return;
+ }
  if(vk==Windows::System::VirtualKey::F2){
   BeginFileNameCommand(fxfile::filecommand::Kind::RenameSelected);args.Handled(true);return;
  }
