@@ -516,6 +516,12 @@ namespace winrt::FlyExplorer::implementation
                     key==Windows::System::VirtualKey::P;
                 const bool windowAlias=!control&&!shift&&!alt&&
                     key==Windows::System::VirtualKey::F11;
+                int windowTabShortcut=-1;
+                if(control&&!shift&&!alt&&
+                   key>=Windows::System::VirtualKey::Number1&&
+                   key<=Windows::System::VirtualKey::Number9)
+                    windowTabShortcut=static_cast<int>(key)-
+                        static_cast<int>(Windows::System::VirtualKey::Number1);
                 // Explorer's supported view keys reuse the menu's pane-local
                 // owner. Extra-large icons, Tiles and Content are not modes here.
                 int viewShortcut=-1;
@@ -534,7 +540,7 @@ namespace winrt::FlyExplorer::implementation
                     default:break;
                     }
                 }
-                if(addressAlias||searchAlias||refreshAlias||viewShortcut>=0||previewAlias||windowAlias){
+                if(addressAlias||searchAlias||refreshAlias||viewShortcut>=0||previewAlias||windowAlias||windowTabShortcut>=0){
                     auto ui=nativeWeak.get();
                     if(!ui||ui->mClosing)return;
                     // Keep modal/menu/combo input and inline file-name edits
@@ -549,7 +555,7 @@ namespace winrt::FlyExplorer::implementation
                            node.try_as<MenuFlyoutPresenter>()||
                            node.try_as<ContentDialog>())return;
                         if(auto box=node.try_as<TextBox>();box&&
-                           (refreshAlias||viewShortcut>=0||previewAlias||windowAlias||
+                           (refreshAlias||viewShortcut>=0||previewAlias||windowAlias||windowTabShortcut>=0||
                             (box!=ui->AddressBox()&&box!=ui->QuickSearchBox())))
                             return;
                         node=Microsoft::UI::Xaml::Media::VisualTreeHelper::
@@ -569,6 +575,16 @@ namespace winrt::FlyExplorer::implementation
                     }
                     if(viewShortcut>=0){
                         ui->UpdateView(viewShortcut);
+                        args.Handled(true);
+                        return;
+                    }
+                    if(windowTabShortcut>=0){
+                        // Match Ctrl+T/Tab's top-level workspace owner. Missing
+                        // numbers and repeated selection never create tabs.
+                        const auto index=static_cast<std::size_t>(windowTabShortcut);
+                        if(index<ui->mWorkspace.count()&&
+                           index!=ui->mWorkspace.activeIndex()&&
+                           ui->ActivateWindowTab(index))ui->RefreshWindowTabs();
                         args.Handled(true);
                         return;
                     }

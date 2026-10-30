@@ -350,15 +350,13 @@ class FileOperationContracts(unittest.TestCase):
     def test_create_folder_shortcuts_reuse_existing_file_command_identity(self):
         main = read("app/winui/MainWindow.xaml.cpp")
         command = read("app/winui/m21_commands.cpp")
-        constructor = main[
-            main.index("RootShell().PreviewKeyDown("):
-            main.index("RefreshWindowTabs();")
-        ]
+        # Inspect the new-folder command itself. Unrelated tab refreshes and
+        # the independently supported F11 window shortcut may precede it.
+        start = main.index("const bool createFolderShortcut=")
+        constructor = main[start:main.index("if(!control)return;", start)]
         self.assertIn("VirtualKey::N", constructor)
         self.assertNotIn("VirtualKey::F11", constructor)
-        self.assertIn("VK_CONTROL", constructor)
-        self.assertIn("VK_SHIFT", constructor)
-        self.assertIn("VK_MENU", constructor)
+        self.assertIn("!alt&&control&&shift&&", constructor)
         self.assertEqual(
             1,
             constructor.count(

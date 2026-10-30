@@ -14,6 +14,26 @@ def compact(text: str) -> str:
 
 
 class ShortcutSemanticsContract(unittest.TestCase):
+    def test_number_shortcuts_use_existing_window_tabs_with_editor_and_bounds_guards(self):
+        source = compact(WINDOW.read_text(encoding="utf-8"))
+        root = source.split("RootShell().PreviewKeyDown(", 1)[1]
+        self.assertIn("if(control&&!shift&&!alt&& key>=Windows::System::VirtualKey::Number1&& key<=Windows::System::VirtualKey::Number9)", root)
+        self.assertLess(root.index("pendingConfirmationToken()"),
+                        root.index("int windowTabShortcut="))
+        guarded = root.split("if(addressAlias||", 1)[1].split(
+            "// Closed set of Ctrl-only", 1)[0]
+        self.assertIn("windowAlias||windowTabShortcut>=0||", guarded)
+        command = guarded.split("if(windowTabShortcut>=0){", 1)[1].split(
+            "if(windowAlias){", 1)[0]
+        for token in ("index<ui->mWorkspace.count()",
+                      "index!=ui->mWorkspace.activeIndex()",
+                      "ui->ActivateWindowTab(index)", "ui->RefreshWindowTabs()",
+                      "args.Handled(true)"):
+            self.assertIn(token, command)
+        for forbidden in ("CreateWindowTab(", "OpenFolder(", "QueuePidl(",
+                          "PersistPreferences(", "Current()."):
+            self.assertNotIn(forbidden, command)
+
     def test_backspace_is_file_list_local_history_without_new_navigation_logic(self):
         source = compact(TRANSFERS.read_text(encoding="utf-8"))
         handler = source.split("void MainWindow::HandleFileShortcut(", 1)[1]
@@ -28,7 +48,7 @@ class ShortcutSemanticsContract(unittest.TestCase):
             self.assertNotIn(forbidden, branch)
         window = compact(WINDOW.read_text(encoding="utf-8"))
         root = window.split("RootShell().PreviewKeyDown(", 1)[1].split(
-            "RefreshWindowTabs();", 1
+            "})); RefreshWindowTabs();", 1
         )[0]
         self.assertNotIn("VirtualKey::Back", root)
 
@@ -53,7 +73,7 @@ class ShortcutSemanticsContract(unittest.TestCase):
         )
         root = compact(WINDOW.read_text(encoding="utf-8")).split(
             "RootShell().PreviewKeyDown(", 1
-        )[1].split("RefreshWindowTabs();", 1)[0]
+        )[1].split("})); RefreshWindowTabs();", 1)[0]
         self.assertNotIn("control&&!shift&&!alt&&key==Windows::System::VirtualKey::D", root)
 
     def test_alt_p_settles_changed_layout_before_focus_without_deferred_input(self):
@@ -241,7 +261,7 @@ class ShortcutSemanticsContract(unittest.TestCase):
     def test_f5_is_window_preview_refresh_not_file_transfer(self):
         window = compact(WINDOW.read_text(encoding="utf-8"))
         preview = window.split("RootShell().PreviewKeyDown(", 1)[1].split(
-            "RefreshWindowTabs();", 1
+            "})); RefreshWindowTabs();", 1
         )[0]
         self.assertIn(
             "key==Windows::System::VirtualKey::F5", preview
@@ -258,7 +278,7 @@ class ShortcutSemanticsContract(unittest.TestCase):
     def test_f6_is_window_preview_split_pane_focus(self):
         window = compact(WINDOW.read_text(encoding="utf-8"))
         preview = window.split("RootShell().PreviewKeyDown(", 1)[1].split(
-            "RefreshWindowTabs();", 1
+            "})); RefreshWindowTabs();", 1
         )[0]
         f6 = preview.split(
             "key==Windows::System::VirtualKey::F6", 1
@@ -277,7 +297,7 @@ class ShortcutSemanticsContract(unittest.TestCase):
     def test_configurable_ctrl_focus_shortcuts_do_not_mutate_files(self):
         window = compact(WINDOW.read_text(encoding="utf-8"))
         preview = window.split("RootShell().PreviewKeyDown(", 1)[1].split(
-            "RefreshWindowTabs();", 1
+            "})); RefreshWindowTabs();", 1
         )[0]
         for token in (
             "VirtualKey::L", "VirtualKey::E",
