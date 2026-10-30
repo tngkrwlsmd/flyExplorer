@@ -24,3 +24,33 @@ Microsoft 공식 [Windows 바로 가기](https://support.microsoft.com/en-gb/acc
   원본 설정/파일 보존·정상 종료·성공 소유 정리를 확인하도록 준비했다.
 - 이 초기 구현 커밋에서 Windows 증분 Release와 실제 키 입력·픽셀은 검증 대기다.
   이미 수용한 Ctrl+D/Ctrl+휠/Backspace 및 다른 기능 전체를 다시 검사하지 않는다.
+
+## Windows 후속 결과
+
+- 정확한 제품/검사 소스 `a3ab6ce68b2c33744d8cc97043fa82f2890e2b35`.
+- [41040999662](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41040999662):
+  Release 빌드와 실제 소유 GUI 모두 PASS. MainWindow.xaml.cpp가 컴파일됐다.
+  증분 명령으로 시작했지만 IPDB/IOBJ 캐시가 맞지 않아 25,600개 함수의 전체
+  코드 생성으로 전환됐다. 최소 코드 생성 또는 완전한 캐시 재사용이라고 표현하지 않는다.
+- EXE SHA256 `29b9e2dbd4717f690efb7e15f7f9b0698d7514838df87bc2e8ee476f147c7cac`.
+- 두 작업공간을 각각 First/Second 소유 폴더로 준비하고 Ctrl+1/Ctrl+2의 상단
+  선택 상태, 양쪽 패널 경로/파일 복원을 확인했다. 같은 번호와 없는 Ctrl+9는
+  상태를 바꾸지 않았고 주소 편집의 Ctrl+1은 입력·포커스/작업공간을 보존했다.
+- 정상 종료, 원래 설정과 소유 파일 이름/바이트 보존, 성공 fixture/profile
+  제거 PASS. 대화상자·메뉴와 다른 텍스트 편집의 모든 조합까지 runtime 수용한 것은 아니다.
+- [41041344251](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41041344251):
+  같은 Light/96 DPI/1160x640 실제 PNG 세 장을 직접 검토했다. 두 번째→첫 번째→
+  두 번째 상단 탭 강조·주소·양쪽 목록의 일치와 새 겹침/잘림 없음을 확인했다.
+  일부 유형/아이콘은 비동기 준비 중인 프레임이므로 아이콘 전체 동등성으로 확대하지 않는다.
+  소스 clean, 앱 프로세스0과 소유 worker task 제거도 확인했다.
+
+| 화면 | PNG SHA256 |
+| --- | --- |
+| 두 번째 작업공간, 이동 전 | 4a86effa7afe2f840800e66bd6d23a19b2eb4aeebeda539fc54defc7656ed520 |
+| Ctrl+1 후 첫 번째 | 027ad50635adc96bdd6b6b9b9cec9a509ef5a090106db8878d695d676920ea6d |
+| Ctrl+2 후 두 번째 복원 | a997d3269a30d749185979c5b61b976a72ec9629ce3a34e029523f7749f474cc |
+
+이 조건의 번호 선택은 기능·시각 한정 수용이다. 3~9개 실제 탭, 다른 테마/
+창 크기·제공자와 실제 Explorer 병렬 대조는 별도 미검증이다. 기존 Ctrl+D/
+휠/Backspace, 제외 G03~G05/중단 G07과 실제 클립보드·휴지통을 다시 실행하지 않았다.
+PR #70은 draft/미병합이며 main c563a0e0는 변경하지 않는다.

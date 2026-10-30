@@ -1,6 +1,6 @@
 # flyExplorer 향후 개발 목표 및 미완료 검증 항목
 
-**현재 재개:** 별도 중단 지시가 있을 때까지 매시간 개발을 이어간다. Backspace 파일 목록 이력 이동은 관련 소스34/34·증분 Release·양쪽 이력/편집 보존 GUI와 Light 화면의 한정 수용을 마쳤다. 빈 배경 이름 편집의 Light 포커스 화면도 직접 검토했다. [Backspace 및 정확한 경계](KEYBOARD_BACKSPACE_20261030.md)를 재사용하고 동일 성공을 반복하지 않는다. PR #70은 draft/미병합, main c563a0e0 유지다.
+**현재 재개:** 별도 중단 지시가 있을 때까지 매시간 개발을 이어간다. Ctrl+1~9 상단 작업공간 번호 선택은 관련 소스53/53·Windows Release·두 작업공간 GUI/Light 화면을 한정 수용했다. [번호 탭 기록](NUMBER_TABS_20261030.md)의 정확한 경계를 재사용한다. 기존 Ctrl+D/휠/Backspace와 이름 포커스 수용을 반복하지 않는다. PR #70은 draft/미병합, main c563a0e0 유지다.
 
 2026-10-30 계속 개발 지시(일시중지 후 재개됨): 야간·06:00 종료 제한을 해제하고, 별도 중단
 지시가 있을 때까지 실제 개발을 이어간다. [야간 PR #70](NIGHT_DEVELOPMENT_20261029.md)의
@@ -114,6 +114,8 @@ Light 캡션 대비, PX17의 안전한 새 항목 메뉴는 기록된 범위에�
 집중 18/18 [중앙 #40844041193](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/40844041193) + 기존 영향 의존 계약 26/26 [중앙 #40844503080](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/40844503080), **44/44 소스/모델 PASS**. 지난 완료 항목의 전체 회귀를 다시 요구하지 않으며 실제 Windows 빌드/GUI 검사는 해당 변경 기능의 후속 게이트로만 둔다. PX11 상태 소유 규칙을 사용자 승인 없이 전환하지 않는다.
 
 ## 완료 상태로 보존할 작업
+
+2026-10-30 추가: [Ctrl+1~9 작업공간 번호 선택](NUMBER_TABS_20261030.md)의 두 작업공간 기능/Light 화면 수용을 보존한다.
 
 2026-10-30 추가: [파일 목록 Backspace와 이름 포커스 화면](KEYBOARD_BACKSPACE_20261030.md)의 정확한 로컬 수용을 보존한다. 다른 테마/모든 비동기 상태/전체 제품 수용으로 확대하지 않는다.
 
