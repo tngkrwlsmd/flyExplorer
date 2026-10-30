@@ -3521,10 +3521,17 @@ namespace winrt::FlyExplorer::implementation
             });
             row.KeyDown([weak,side](IInspectable const&,
                 Microsoft::UI::Xaml::Input::KeyRoutedEventArgs const& args){
-                if(args.Key()!=Windows::System::VirtualKey::Enter||
-                   (::GetKeyState(VK_CONTROL)&0x8000)!=0||
-                   (::GetKeyState(VK_SHIFT)&0x8000)!=0||
-                   (::GetKeyState(VK_MENU)&0x8000)!=0)return;
+                if(args.Key()!=Windows::System::VirtualKey::Enter)return;
+                const bool control=(::GetKeyState(VK_CONTROL)&0x8000)!=0;
+                const bool shift=(::GetKeyState(VK_SHIFT)&0x8000)!=0;
+                const bool alt=(::GetKeyState(VK_MENU)&0x8000)!=0;
+                if(alt&&!control&&!shift){
+                    if(auto ui=weak.get())
+                        ui->ShowExternalWindowsContextMenu(side,true);
+                    args.Handled(true);
+                    return;
+                }
+                if(control||shift||alt)return;
                 if(auto ui=weak.get())ui->OpenSelectedFolder(side);
                 args.Handled(true);
             });
