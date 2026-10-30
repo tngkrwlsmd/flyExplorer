@@ -3521,7 +3521,10 @@ namespace winrt::FlyExplorer::implementation
             });
             row.KeyDown([weak,side](IInspectable const&,
                 Microsoft::UI::Xaml::Input::KeyRoutedEventArgs const& args){
-                if(args.Key()!=Windows::System::VirtualKey::Enter)return;
+                if(args.Key()!=Windows::System::VirtualKey::Enter||
+                   (::GetKeyState(VK_CONTROL)&0x8000)!=0||
+                   (::GetKeyState(VK_SHIFT)&0x8000)!=0||
+                   (::GetKeyState(VK_MENU)&0x8000)!=0)return;
                 if(auto ui=weak.get())ui->OpenSelectedFolder(side);
                 args.Handled(true);
             });
@@ -4861,7 +4864,10 @@ namespace winrt::FlyExplorer::implementation
     void MainWindow::OnLeftFileKeyDown(
         IInspectable const&,Input::KeyRoutedEventArgs const& a)
     {
-        if (a.Key()==Windows::System::VirtualKey::Enter) {
+        const bool modified=(::GetKeyState(VK_CONTROL)&0x8000)!=0||
+                            (::GetKeyState(VK_SHIFT)&0x8000)!=0||
+                            (::GetKeyState(VK_MENU)&0x8000)!=0;
+        if (a.Key()==Windows::System::VirtualKey::Enter&&!modified) {
             OpenSelectedFolder(0);a.Handled(true);return;
         }
         HandleFileShortcut(0,a);
@@ -4869,7 +4875,10 @@ namespace winrt::FlyExplorer::implementation
     void MainWindow::OnRightFileKeyDown(
         IInspectable const&,Input::KeyRoutedEventArgs const& a)
     {
-        if (a.Key()==Windows::System::VirtualKey::Enter) {
+        const bool modified=(::GetKeyState(VK_CONTROL)&0x8000)!=0||
+                            (::GetKeyState(VK_SHIFT)&0x8000)!=0||
+                            (::GetKeyState(VK_MENU)&0x8000)!=0;
+        if (a.Key()==Windows::System::VirtualKey::Enter&&!modified) {
             OpenSelectedFolder(1);a.Handled(true);return;
         }
         HandleFileShortcut(1,a);
