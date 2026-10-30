@@ -1,12 +1,31 @@
 """Source-level contract for F2 rename selection without changing filesystem operations."""
 from pathlib import Path
 import unittest
+import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parents[2]
 APP = ROOT / "app" / "winui"
 
 
 class RenameSelectionContract(unittest.TestCase):
+    def test_menu_name_focus_waits_for_close_and_preserves_new_input(self):
+        root=ET.parse(APP/"FileToolbar.xaml").getroot()
+        more=next(n for n in root.iter()
+                  if n.get("{http://schemas.microsoft.com/winfx/2006/xaml}Name")=="MoreButton")
+        self.assertTrue(any(n.get("Closed")=="OnMoreFlyoutClosed" for n in more.iter()))
+        source=(APP/"FileToolbar.xaml.cpp").read_text(encoding="utf-8-sig")
+        self.assertIn("nameFocusAfterMoreClosed_=MoreButton().Flyout().IsOpen();",source)
+        close=source.split("void FileToolbar::OnMoreFlyoutClosed(",1)[1].split("void FileToolbar::EndNameEdit()",1)[0]
+        for token in ("nameFocusAfterMoreClosed_=false;", "pendingNameAction_<0",
+                      "!IsLoaded()", "box.Opacity()<0.5||!box.IsTabStop()",
+                      "Input::FocusManager::GetFocusedElement(XamlRoot())!=MoreButton()"):
+            self.assertIn(token,close)
+        self.assertLess(close.index("nameFocusAfterMoreClosed_=false;"),close.index("box.Focus("))
+        self.assertLess(close.index("UpdateLayout();"),close.index("box.Focus("))
+        self.assertIn("EndNameEdit(){nameFocusAfterMoreClosed_=false;",source)
+        for token in ("TryEnqueue", "std::thread", "action_(", "CreateFile", "BeginNameEdit("):
+            self.assertNotIn(token,close)
+
     def test_file_stem_is_selected_without_last_extension(self):
         body = (APP / "FileToolbar.xaml.cpp").read_text(encoding="utf-8-sig")
         for token in (

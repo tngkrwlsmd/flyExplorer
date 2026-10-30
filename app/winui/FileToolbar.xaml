@@ -104,7 +104,7 @@
         </Button>
         <Button x:Name="MoreButton" Grid.Column="5" Width="32" Height="32" Padding="0" Background="Transparent" CornerRadius="4" ToolTipService.ToolTip="&#xB354; &#xBCF4;&#xAE30;" AutomationProperties.Name="&#xB354; &#xBCF4;&#xAE30;">
             <FontIcon Glyph="&#xE712;" FontSize="16"/>
-            <Button.Flyout><MenuFlyout>
+            <Button.Flyout><MenuFlyout Closed="OnMoreFlyoutClosed">
                 <MenuFlyoutSubItem Text="새로 만들기" AutomationProperties.Name="현재 폴더에 새 항목 만들기">
                     <MenuFlyoutItem x:Name="NewFolderMenuItem" Text="폴더" Click="OnNewFolderMenu" AutomationProperties.Name="현재 폴더에 새 폴더 만들기"/>
                     <MenuFlyoutItem x:Name="NewTextFileMenuItem" Text="텍스트 문서 (.txt)" Click="OnNewTextFileMenu" AutomationProperties.Name="현재 폴더에 빈 텍스트 문서 만들기"/>

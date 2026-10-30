@@ -42,6 +42,7 @@ void FileToolbar::ChooseSort(int index){SetSortIndex(index);if(sort_)sort_(index
 void FileToolbar::ChooseView(int index){SetViewIndex(index);if(view_)view_(index);}
 void FileToolbar::BeginNameEdit(int action,hstring const& initial,bool isFolder){
  pendingNameAction_=action;
+ nameFocusAfterMoreClosed_=MoreButton().Flyout().IsOpen();
  auto box=FileNameBox();
  box.Width(180);
  box.Opacity(1.0);
@@ -59,7 +60,19 @@ void FileToolbar::BeginNameEdit(int action,hstring const& initial,bool isFolder)
      box.Select(0,static_cast<int>(dot));
  else box.SelectAll();
 }
-void FileToolbar::EndNameEdit(){pendingNameAction_=-1;auto box=FileNameBox();box.Text(L"");box.Width(1);box.Opacity(0.0);box.IsHitTestVisible(false);box.IsTabStop(false);}
+void FileToolbar::OnMoreFlyoutClosed(IInspectable const&,IInspectable const&){
+ // Flyout dismissal restores its opener's focus after the item Click.
+ // Complete only the edit opened by that menu, without overriding new input.
+ const bool restore=nameFocusAfterMoreClosed_;
+ nameFocusAfterMoreClosed_=false;
+ if(!restore||pendingNameAction_<0||!IsLoaded())return;
+ auto box=FileNameBox();
+ if(box.Opacity()<0.5||!box.IsTabStop()||
+    Input::FocusManager::GetFocusedElement(XamlRoot())!=MoreButton())return;
+ UpdateLayout();
+ box.Focus(FocusState::Programmatic);
+}
+void FileToolbar::EndNameEdit(){nameFocusAfterMoreClosed_=false;pendingNameAction_=-1;auto box=FileNameBox();box.Text(L"");box.Width(1);box.Opacity(0.0);box.IsHitTestVisible(false);box.IsTabStop(false);}
 void FileToolbar::OnCreateFolder(IInspectable const&,RoutedEventArgs const&){if(!action_)return;const auto box=FileNameBox();if((box.Opacity()>=0.5&&pendingNameAction_==0)||(box.Opacity()<0.5&&!box.Text().empty()))action_(9);else action_(0);}
 void FileToolbar::OnNewFolderMenu(IInspectable const&,RoutedEventArgs const&){if(action_)action_(0);}
 void FileToolbar::OnNewTextFileMenu(IInspectable const&,RoutedEventArgs const&){if(action_)action_(17);}
