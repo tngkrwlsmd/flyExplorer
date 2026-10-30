@@ -370,3 +370,18 @@ PNG는 생성했지만 이번 실행에서 직접 픽셀 비교하지 않았으�
 - 실패 기록: [#41022545205](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41022545205)는 이전 문서 변경까지 검사해 제품 검사 전에 FAIL. [#41023016364](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41023016364)는 입력 후 확인창 미관측 FAIL. [#41023272560](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41023272560)는 선택 준비 상태에서 FAIL, [#41023381491](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41023381491)는 지원하지 않는 UIA 속성 사용 때문에 FAIL. 이력과 실제 원인을 삭제하거나 제품 결함으로 단정하지 않는다. fixture 선택 안정화와 진단을 수정했다.
 - [최종 실제 Windows GUI #41023477151](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41023477151): 동일 EXE 재사용, 테스트 파일 행 포커스 → Ctrl+D → 앱 확인창 PASS; Cancel과 다음 확인창에서 Escape PASS. 테스트 파일 바이트·원래 프로필 보존, 정상 종료, 성공 fixture 정리, 앱 프로세스 0 및 소스 clean PASS.
 - 실제 휴지통으로 보내기 승인, 전역 클립보드, 원본 픽셀 직접 비교, Windows 11 Explorer 병렬 비교는 수행하지 않았다. 제외 G03~G05/중단 G07 그대로. PR #70 draft·미병합, main c563a0e004fac25be1c92a4765e31223a9af7c10 유지. Windows VM 제어 슬롯은 dd92bb7325a15ab15559ffb4198d66b40637f270에서 idle로 반환했다.
+
+
+## EP01: Ctrl+마우스 휠 보기 크기 전환 (2026-10-30)
+
+Microsoft의 Windows 바로 가기 안내에서 파일 탐색기의 Ctrl+마우스 휠은 파일·폴더 아이콘의 크기와 모양을 바꾸는 기본 조작이다. flyExplorer에는 Details/List/Small/Medium/Large의 기존 5단계 보기와 패널별 저장 소유권은 있었지만 이 포인터 입력 연결이 없었다.
+
+- 제품 `6a1c0e59afac7f8cfbc4cced588e20e94969fcf2`에서 양쪽 파일 목록의 PointerWheelChanged를 기존 UpdateView에 연결했다. 정확히 Ctrl만 눌린 경우에만 휠 방향으로 한 단계 이동하고 0~4 범위에서 고정한다. 가리킨 비활성 패널을 활성화하며 Shift/Alt 조합과 일반 휠은 소비하지 않는다.
+- 최초 Windows 컴파일에서 생성자 뒤쪽의 nativeWeak를 앞에서 캡처한 선언 순서 결함을 발견했다. 최종 제품 `0c30de4c19edd5f6f839867874e072f207eceac0`은 이 핸들러 전용 약한 참조를 선언해 해결했다. 세션 v4, PaneTab별 정렬, 패널별 보기/열 소유 계약은 바꾸지 않았다.
+- 소스 계약 **16/16 PASS**. [Windows 증분 Release·집중 GUI #41038432274](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41038432274) PASS. EXE SHA256 `0dec1fb3a012319311335a5f5abf8aa9cb90e392063f3234f0a9760f25be14b5`.
+- 실제 소유 fixture에서 양쪽을 Details로 준비한 뒤 일반 휠이 보기를 바꾸지 않음을 확인했다. 왼쪽 Ctrl+휠은 List, 오른쪽 Ctrl+휠 두 번은 Small icons로 바뀌며 오른쪽이 활성화됐다. 다시 왼쪽을 활성화해도 왼쪽 List가 유지돼 패널별 보존을 확인했다. 정상 종료, 원본 설정·소유 파일 바이트 보존, 성공 fixture/profile/캡처 정리, 앱 프로세스 0, 소스 clean도 PASS다.
+- 같은 실행에 보존된 실제 전후 캡처를 직접 검토했다. Light/96 DPI/1160×640에서 왼쪽 List와 오른쪽 Small icons의 배치가 명확하고 패널 경계·파일명·도구 모음의 겹침이나 잘림이 없다. **이 조건 한정 시각 수용**이다.
+
+실패 이력은 보존한다. #41037912837과 #41038064654는 각각 검사 본문 추출 범위와 `::GetKeyState` 토큰의 harness 결함으로 제품 실행 전 중단했다. #41038216768은 소스 16/16 뒤 실제 Release 컴파일에서 위 선언 순서 제품 결함을 찾았고 GUI는 시작하지 않았다. 설명하는 변경 뒤에만 최종 실행했다.
+
+근거는 Microsoft 공식 [Windows 바로 가기 키](https://support.microsoft.com/ko-kr/windows/windows%EC%9D%98-%EB%B0%94%EB%A1%9C-%EA%B0%80%EA%B8%B0-%ED%82%A4-dcc61a57-8ff0-cffe-9796-cb9706c75eec) 안내다. 실제 Windows 11 탐색기를 나란히 자동 조작한 동등성 검사, Dark/다른 DPI·창 크기, 고대비·Narrator 및 전체 제품 수용은 수행하지 않았다.
