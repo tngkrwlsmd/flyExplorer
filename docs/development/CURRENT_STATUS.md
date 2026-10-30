@@ -1,3 +1,10 @@
+# 2026-10-30 — Ctrl+D 휴지통 단축키 Windows 한정 수용
+
+- 제품 0801c978dd71663780ef0930bacd81f41b4e4ce0: 파일 목록 Ctrl+D를 기존 삭제 확인 및 휴지통 경로로 연결했다. 기존 Delete, v4 세션, 클립보드 계약은 그대로다.
+- Windows 소스 15/15·증분 Release #41022673884 PASS, 제품 빌드 SHA 0020e4a9bba6840db3112b1feea8c9113217f9dd, EXE fd65469dc401a3655de012fb1f29b837a8c2feb6c50b66f696594c2945ca04c8.
+- 앞선 harness/입력/진단 실패를 보존한다. 마지막 fixture 08e5580b1c5cb2ded9711fbdb01f0aa13b5e3773의 [실제 GUI #41023477151](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41023477151)에서 Ctrl+D → 확인창, Cancel/Esc, 원본 바이트·프로필 보존, 정상 종료 및 소유 정리 PASS.
+- 실제 휴지통 승인, 전역 클립보드, 픽셀 직접 검토, Explorer 직접 비교, G03~G05/G07은 미실시. 세부 범위는 [계속 개발 기록](CONTINUOUS_DEVELOPMENT_20261030.md)을 따른다. PR #70 draft/미병합, main c563a0e0 유지, VM 슬롯 idle.
+
 # 2026-10-30 — 파일 목록 Backspace 이력 이동 한정 수용
 
 - 제품 a6174aee: 일반 Backspace를 파일 목록의 기존 뒤로 가기에 연결했다. 관련 소스34/34·AST/diff PASS, #41008802577 증분 Release와 왼쪽 이력 이동 성공. 오른쪽 검사에 왼쪽 전용 helper를 사용한 전체 FAIL은 보존한다.

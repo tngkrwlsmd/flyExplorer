@@ -361,3 +361,12 @@ PNG는 생성했지만 이번 실행에서 직접 픽셀 비교하지 않았으�
 앞 절의 빈 배경 이름 편집 PNG 미검토 상태는 #41008296066의 실제 전후 검토로
 이름 입력 포커스의 Light 한정 범위만 갱신했다. 생성 직후 loading 캡처와 다른
 테마/전체 제품·Explorer 동등성, 전역 클립보드까지 수용한 것은 아니다.
+
+## EP05/EP06: 파일 목록 Ctrl+D 휴지통 단축키 (2026-10-30)
+
+- 사용자 동작: 활성 파일 목록에서 Ctrl+D → 기존 RunTransfer(Kind::Recycle)의 파일 선택 검증 및 휴지통 이동 확인창. 새 엔진, 전역 클립보드, 세션 v4/PaneTab 소유권, 일반 Delete 동작은 변경하지 않았다.
+- 마지막 C++ 제품 변경: 0801c978dd71663780ef0930bacd81f41b4e4ce0 (app/winui/m22_transfers.cpp). 검사용 Alt+D/ Ctrl+D 충돌 주장 수정 0020e4a9bba6840db3112b1feea8c9113217f9dd부터 마지막 GUI 전용 코드 08e5580b1c5cb2ded9711fbdb01f0aa13b5e3773까지 추가 제품 변경은 없다.
+- [Windows source/Release #41022673884](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41022673884): 소스 검사 15/15 PASS, Windows Release PASS. IPDB/IOBJ 불일치로 LTCG 전체 함수 재컴파일로 전환된 사실을 보존한다. EXE SHA256 fd65469dc401a3655de012fb1f29b837a8c2feb6c50b66f696594c2945ca04c8 (소스 0020e4a9bba6840db3112b1feea8c9113217f9dd).
+- 실패 기록: [#41022545205](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41022545205)는 이전 문서 변경까지 검사해 제품 검사 전에 FAIL. [#41023016364](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41023016364)는 입력 후 확인창 미관측 FAIL. [#41023272560](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41023272560)는 선택 준비 상태에서 FAIL, [#41023381491](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41023381491)는 지원하지 않는 UIA 속성 사용 때문에 FAIL. 이력과 실제 원인을 삭제하거나 제품 결함으로 단정하지 않는다. fixture 선택 안정화와 진단을 수정했다.
+- [최종 실제 Windows GUI #41023477151](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41023477151): 동일 EXE 재사용, 테스트 파일 행 포커스 → Ctrl+D → 앱 확인창 PASS; Cancel과 다음 확인창에서 Escape PASS. 테스트 파일 바이트·원래 프로필 보존, 정상 종료, 성공 fixture 정리, 앱 프로세스 0 및 소스 clean PASS.
+- 실제 휴지통으로 보내기 승인, 전역 클립보드, 원본 픽셀 직접 비교, Windows 11 Explorer 병렬 비교는 수행하지 않았다. 제외 G03~G05/중단 G07 그대로. PR #70 draft·미병합, main c563a0e004fac25be1c92a4765e31223a9af7c10 유지. Windows VM 제어 슬롯은 dd92bb7325a15ab15559ffb4198d66b40637f270에서 idle로 반환했다.
