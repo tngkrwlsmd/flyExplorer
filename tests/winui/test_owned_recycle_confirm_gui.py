@@ -158,8 +158,6 @@ def run(config="Debug", via_ctrl_d=False):
                 # Distinguish row and list focus before concluding a product defect.
                 item.set_focus()
                 assert owned_foreground(process.pid)
-                print("CTRL_D_ROW_KEYBOARD_FOCUS=" +
-                      str(item.element_info.has_keyboard_focus), flush=True)
                 send_keys("^d")
                 try:
                     cancel = wait_until(
@@ -170,11 +168,7 @@ def run(config="Debug", via_ctrl_d=False):
                 except AssertionError:
                     print("CTRL_D_ROW_FOCUS_STATUS=" +
                           status.window_text()[:220], flush=True)
-                    print("CTRL_D_ROW_FOCUS_AFTER=" +
-                          str(item.element_info.has_keyboard_focus), flush=True)
                     files.set_focus()
-                    print("CTRL_D_LIST_KEYBOARD_FOCUS=" +
-                          str(files.element_info.has_keyboard_focus), flush=True)
                     assert owned_foreground(process.pid)
                     send_keys("^d")
                     cancel = wait_until(
