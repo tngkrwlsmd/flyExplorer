@@ -95,7 +95,17 @@ void FileToolbar::OnViewFileInfoPane(IInspectable const&,RoutedEventArgs const&)
 void FileToolbar::OnViewFlyoutClosed(IInspectable const&,IInspectable const&){
  const bool requested=pendingFileInfoPaneToggle_;
  pendingFileInfoPaneToggle_=false;
- if(requested&&IsLoaded()&&action_)action_(23);
+ if(!requested||!IsLoaded())return;
+ // Closed can fire before the flyout finishes restoring pointer/focus state.
+ // Change the layout only after that UI event has returned.
+ auto queue=DispatcherQueue();
+ if(!queue)return;
+ auto weak=get_weak();
+ queue.TryEnqueue([weak]{
+  if(auto toolbar=weak.get()){
+   if(toolbar->IsLoaded()&&toolbar->action_)toolbar->action_(23);
+  }
+ });
 }
 void FileToolbar::OnRememberFolderView(IInspectable const&,RoutedEventArgs const&){
  if(folderViewAction_)folderViewAction_(true);
