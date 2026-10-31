@@ -12,7 +12,7 @@ from pywinauto import Desktop
 import benchmark_filtered_folder_gui as h
 from paths import ROOT, app_exe
 
-BASE = ROOT/"logs"/"r12-view-pane-owned-gui-r3-20261031"
+BASE = ROOT/"logs"/"r12-view-pane-owned-gui-r4-20261031"
 
 
 def main():
@@ -71,6 +71,11 @@ def main():
 
             preview=open_view("ViewTextPreviewAccessItem")
             preview.click_input()
+            # Distinguish a missing MenuFlyout Click from a focus failure:
+            # the action only publishes guidance; it never reads file bytes.
+            h.wait(lambda:"미리보기는 .txt" in app.el("StatusText").window_text(),
+                   "R12 View preview command did not dispatch",seconds=8)
+            result["preview_command_dispatched"]=True
             try:
                 h.wait(lambda:app.el("TextPreviewToggleButton").has_keyboard_focus(),
                        "R12 preview opt-in button did not receive focus",seconds=10)
