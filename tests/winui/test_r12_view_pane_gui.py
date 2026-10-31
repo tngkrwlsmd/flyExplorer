@@ -14,7 +14,7 @@ from ctypes import wintypes
 import benchmark_filtered_folder_gui as h
 from paths import ROOT, app_exe
 
-BASE = ROOT/"logs"/"r12-view-pane-owned-gui-r6-pointer-20261031"
+BASE = ROOT/"logs"/"r12-view-pane-owned-gui-r7-hit-20261031"
 
 
 def main():
@@ -94,6 +94,15 @@ def main():
             assert h.owner(h.u.GetForegroundWindow())==app.app.pid
             result["owned_pointer_hit_verified"]=True
             result["pointer_center"]=center
+            actual=Desktop(backend="uia").from_point(*center)
+            assert actual.element_info.process_id==app.app.pid
+            result["uia_pointer_target"]={
+                "id":actual.element_info.automation_id,
+                "name":actual.element_info.name[:100],
+                "control_type":actual.element_info.control_type,
+                "rect":list(actual.rectangle())
+            }
+            print("R12_POINTER_TARGET="+json.dumps(result["uia_pointer_target"],ensure_ascii=False),flush=True)
             mouse.click(button="left",coords=center)
             try:
                 h.wait(lambda:"미리보기는 .txt" in app.el("StatusText").window_text(),
