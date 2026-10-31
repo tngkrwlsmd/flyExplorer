@@ -158,7 +158,7 @@ class ContextContract(unittest.TestCase):
       "void MainWindow::OnFileRightTapped(",1)[0]
   self.assertIn("ToggleMenuFlyoutItem item;",body)
   self.assertIn("item.IsChecked(checked);",body)
-  self.assertEqual(body.count("view.Items().Append(choice("),5)
+  self.assertEqual(body.count("view.Items().Append(choice("),8)
   self.assertEqual(body.count("sort.Items().Append(choice("),8)
   for label,index in (
       ("이름 오름차순",0),("이름 내림차순",1),

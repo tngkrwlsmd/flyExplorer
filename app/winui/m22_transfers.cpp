@@ -2,6 +2,7 @@
 #include "MainWindow.xaml.h"
 #include "../../src/base/shell_context_core.h"
 #include "../../src/base/shell_explorer_delegate.h"
+#include "../../src/base/shell_terminal_delegate.h"
 #include "../../src/base/shell_isolation_wire.h"
 #include <winrt/Microsoft.UI.Xaml.Input.h>
 #include <winrt/Microsoft.UI.Xaml.Media.h>
@@ -514,6 +515,8 @@ void MainWindow::ShowAppBackgroundContextMenu(
  menu.Items().Append(make(L"Windows 탐색기에서 현재 폴더 열기",L"\uE8B7",
                           localFolder,
      [side](MainWindow& ui){ui.OpenCurrentFolderInWindowsExplorer(side);}));
+ menu.Items().Append(make(L"터미널에서 열기",L"\uE756",localFolder,
+     [side](MainWindow& ui){ui.OpenCurrentFolderInWindowsTerminal(side);}));
  menu.Items().Append(MenuFlyoutSeparator{});
  // Root drives keep the existing helper's minimum path boundary. Ordinary
  // local folders use the same isolated Properties verb as selected items.
@@ -1256,6 +1259,61 @@ void MainWindow::OpenCurrentFolderInWindowsExplorer(int side){
   }).detach();
  }catch(...){
   StatusText().Text(L"Windows 탐색기 연결 작업을 시작할 수 없습니다.");
+ }
+}
+void MainWindow::OpenCurrentFolderInWindowsTerminal(int side){
+ // Reuse the accepted route/WindowTab and modal-operation boundaries.
+ if(mClosing||side<0||side>1||mFileOperations.busy()||
+    mFileOperations.pendingConfirmationToken()||
+    ActiveWindowTab().model.activePane!=side)return;
+ const auto& workspace=ActiveWindowTab();
+ const auto& pane=workspace.model.panes[side];
+ if(pane.active>=pane.tabs.size()||pane.active>=pane.pending.size()||
+    pane.pending[pane.active]||pane.active>=pane.routeIds.size()||
+    pane.active>=pane.filesystemPaths.size())return;
+ const auto tab=pane.active;
+ const auto route=pane.routeIds[tab];
+ const auto& visible=workspace.fileLists[side];
+ if(visible.visibleTab!=tab||visible.visibleRoute!=route)return;
+ const auto folder=pane.filesystemPaths[tab];
+ if(folder.empty()){
+  StatusText().Text(L"일반 로컬 폴더에서만 터미널을 열 수 있습니다.");
+  return;
+ }
+ const auto identity=workspace.identity;
+ auto weak=get_weak();
+ auto dispatch=DispatcherQueue();
+ StatusText().Text(L"현재 폴더에서 Windows Terminal을 열고 있습니다.");
+ try{
+  std::thread([weak,dispatch,folder,identity,side,tab,route]{
+   const HRESULT result=fxfile::shellterminal::openFolder(folder);
+   dispatch.TryEnqueue([weak,result,folder,identity,side,tab,route]{
+    auto ui=weak.get();
+    if(!ui||ui->mClosing)return;
+    const auto& workspace=ui->ActiveWindowTab();
+    if(workspace.identity!=identity||
+       workspace.model.activePane!=side)return;
+    const auto& pane=workspace.model.panes[side];
+    if(pane.active!=tab||tab>=pane.routeIds.size()||
+       pane.routeIds[tab]!=route||tab>=pane.filesystemPaths.size()||
+       pane.filesystemPaths[tab]!=folder)return;
+    if(SUCCEEDED(result)){
+     ui->StatusText().Text(L"Windows Terminal에 현재 폴더를 전달했습니다.");
+    }else if(result==HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND)){
+     ui->StatusText().Text(L"Windows Terminal 실행 별칭(wt.exe)을 찾지 못했습니다.");
+    }else if(result==E_INVALIDARG||
+             result==HRESULT_FROM_WIN32(ERROR_NOT_SUPPORTED)||
+             result==HRESULT_FROM_WIN32(ERROR_PATH_NOT_FOUND)){
+     ui->StatusText().Text(L"일반 로컬 고정 디스크 폴더에서만 터미널을 열 수 있습니다.");
+    }else{
+     ui->StatusText().Text(hstring(
+       L"Windows Terminal을 열지 못했습니다. Windows 오류: "+
+       std::to_wstring(HRESULT_CODE(result))));
+    }
+   });
+  }).detach();
+ }catch(...){
+  StatusText().Text(L"터미널 연결 작업을 시작할 수 없습니다.");
  }
 }
 void MainWindow::RevealSelectedInWindowsExplorer(int side){

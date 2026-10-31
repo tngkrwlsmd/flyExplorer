@@ -457,6 +457,7 @@ namespace winrt::FlyExplorer::implementation
         void ShowCurrentFolderProperties(int side);
         void RevealSelectedInWindowsExplorer(int side);
         void OpenCurrentFolderInWindowsExplorer(int side);
+        void OpenCurrentFolderInWindowsTerminal(int side);
         void UpdateViewPresentation(int side);
         void UpdateSortPresentation(int side);
         void UpdateBreadcrumb(std::wstring const& address);
