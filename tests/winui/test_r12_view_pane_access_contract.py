@@ -64,6 +64,8 @@ class R12ViewPaneAccess(unittest.TestCase):
         self.assertIn("OnToggleFileInfoPane(nullptr,nullptr)",body)
         self.assertIn("OnRevealTextPreview(nullptr,nullptr)",body)
         self.assertIn("RootShell().UpdateLayout()",body)
+        self.assertIn("DispatcherQueue().TryEnqueue([weak,origin]",body)
+        self.assertIn("ui->ActiveWindowTab().identity==origin",body)
         for forbidden in ("QueueTextPreview()", "mTextPreviewEnabled=true",
                           "mTextPreviewEnabled=!mTextPreviewEnabled",
                           "mTextPreviewController.start(", "CreateFileW("):
