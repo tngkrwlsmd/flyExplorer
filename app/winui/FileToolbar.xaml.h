@@ -80,7 +80,6 @@ private:
  bool restoring_=false;
  int pendingNameAction_=-1;
  bool nameFocusAfterMoreClosed_=false;
- bool previewFocusAfterViewClosed_=false;
 };
 }
 namespace winrt::FlyExplorer::factory_implementation { struct FileToolbar : FileToolbarT<FileToolbar,implementation::FileToolbar>{}; }
