@@ -78,6 +78,10 @@
         <Button x:Name="ViewButton" Grid.Column="4" Width="68" Style="{StaticResource ExplorerFlyoutButtonStyle}" ToolTipService.ToolTip="&#xBCF4;&#xAE30;" AutomationProperties.Name="&#xBCF4;&#xAE30;">
             <StackPanel Orientation="Horizontal" Spacing="5"><FontIcon Glyph="&#xE8A9;" FontSize="14"/><TextBlock Text="&#xBCF4;&#xAE30;"/></StackPanel>
             <Button.Flyout><MenuFlyout>
+                <ToggleMenuFlyoutItem x:Name="ViewFileInfoPaneItem" Text="세부 정보 창"
+                                      Click="OnViewFileInfoPane"
+                                      AutomationProperties.Name="현재 창의 세부 정보 패널 열기 또는 닫기"/>
+                <MenuFlyoutSeparator/>
                 <ToggleMenuFlyoutItem x:Name="ViewDetailsItem" Text="&#xC790;&#xC138;&#xD788;" IsChecked="True" Click="OnViewDetails"/>
                 <ToggleMenuFlyoutItem x:Name="ViewListItem" Text="&#xBAA9;&#xB85D;" Click="OnViewList"/>
                 <ToggleMenuFlyoutItem x:Name="ViewSmallIconsItem" Text="&#xC791;&#xC740; &#xC544;&#xC774;&#xCF58;" Click="OnViewSmallIcons"/>
@@ -86,10 +90,6 @@
                 <ToggleMenuFlyoutItem x:Name="ViewExtraLargeIconsItem" Text="아주 큰 아이콘" Click="OnViewExtraLargeIcons"/>
                 <ToggleMenuFlyoutItem x:Name="ViewTilesItem" Text="타일" Click="OnViewTiles"/>
                 <ToggleMenuFlyoutItem x:Name="ViewContentItem" Text="내용" Click="OnViewContent"/>
-                <MenuFlyoutSeparator/>
-                <ToggleMenuFlyoutItem x:Name="ViewFileInfoPaneItem" Text="세부 정보 창"
-                                      Click="OnViewFileInfoPane"
-                                      AutomationProperties.Name="현재 창의 세부 정보 패널 열기 또는 닫기"/>
                 <MenuFlyoutSeparator/>
                 <MenuFlyoutItem Text="현재 폴더의 보기 기억 (이 세션만)"
                                 Click="OnRememberFolderView"
