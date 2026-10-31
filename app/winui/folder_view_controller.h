@@ -18,7 +18,7 @@ public:
     };
 
     bool remember(std::wstring const& folder,int mode) {
-        if(!validFolder(folder)||mode<0||mode>6)return false;
+        if(!validFolder(folder)||mode<0||mode>5)return false;
         auto it=std::find_if(items_.begin(),items_.end(),
             [&folder](Entry const& item){return same(item.folder,folder);});
         if(it!=items_.end())items_.erase(it);

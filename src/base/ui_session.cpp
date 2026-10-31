@@ -89,7 +89,7 @@ bool validLegacy(Session const& value){
 }
 bool validPane(PaneState const& pane){
  if(pane.tabs.empty()||pane.tabs.size()>MaxPaneTabs||pane.selected>=pane.tabs.size()||
-    pane.sort>7||pane.view>6||pane.nameColumnWidth<80||pane.nameColumnWidth>600)return false;
+    pane.sort>7||pane.view>5||pane.nameColumnWidth<80||pane.nameColumnWidth>600)return false;
  for(auto const& tab:pane.tabs){
   if(tab.sort>7||!allowed(tab.path)||tab.back.size()>MaxHistory||tab.forward.size()>MaxHistory)return false;
   for(auto const& p:tab.back)if(!allowed(p))return false;

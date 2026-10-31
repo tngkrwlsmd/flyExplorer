@@ -480,7 +480,6 @@ void MainWindow::ShowAppBackgroundContextMenu(
  view.Items().Append(choice(L"중간 아이콘",viewMode==3,3,true));
  view.Items().Append(choice(L"큰 아이콘",viewMode==4,4,true));
  view.Items().Append(choice(L"아주 큰 아이콘",viewMode==5,5,true));
- view.Items().Append(choice(L"타일",viewMode==6,6,true));
  menu.Items().Append(view);
  MenuFlyoutSubItem sort;
  sort.Text(L"정렬 기준");
