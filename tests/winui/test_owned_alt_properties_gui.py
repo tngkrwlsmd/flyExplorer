@@ -14,7 +14,7 @@ from paths import ROOT, app_exe
 
 
 def main(counts=(1, 2)):
-    base = ROOT / "logs" / "alt-properties-owned-20261031-multi-fix"
+    base = ROOT / "logs" / "alt-properties-owned-20261031-multi-pointer"
     base.mkdir(parents=True, exist_ok=True)
     h.BASE = base
     fixture = Path(tempfile.mkdtemp(prefix="fixture-", dir=base)).resolve()
@@ -39,7 +39,7 @@ def main(counts=(1, 2)):
                         for name in names}
 
             def selected_focused():
-                # UIA AddToSelection may focus the added row. Either selected
+                # Ctrl+click may focus the added row. Either selected
                 # owned row is a valid keyboard route for the same selection.
                 items = rows()
                 return (all(items.values()) and any(
@@ -60,7 +60,11 @@ def main(counts=(1, 2)):
                 items = rows()
                 items[names[0]].click_input()
                 if count == 2:
-                    items[names[1]].iface_selection_item.AddToSelection()
+                    # Use the existing accepted F03/drag harness's real Ctrl+click.
+                    # UIA AddToSelection can leave no row as keyboard owner.
+                    second = h.wait(lambda: rows()[names[1]], "second owned row absent")
+                    assert h.owner(h.u.GetForegroundWindow()) == app.app.pid
+                    second.click_input(pressed="control")
                 # Keep the real clicked row as the keyboard route owner.
                 # Moving focus to the ListView container bypasses the user input
                 # path and can make Alt+Enter a harness-only no-op.
