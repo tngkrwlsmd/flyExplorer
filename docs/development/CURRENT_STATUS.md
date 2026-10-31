@@ -1,10 +1,11 @@
-# 2026-10-31 — R03 타일 보기 구현 시도·Windows 수용 보류
+# 2026-10-31 — R03 타일 보기 7번째 모드 한정 Windows 수용
 
-- 타일 보기(기존 0~5 유지, 신규 `Tiles=6`) 실제 제품 구현은 `3cd2df1c09772b26c6aa318a673b1c2061c08592`에 남아 있다. 한 행의 48px 아이콘 옆 파일명·유형·크기, 보기 메뉴/빈 배경 메뉴, Ctrl+Shift+7, 세션 v4 허용 값과 폴더·개인 설정 경계를 연결했다. 이후 R03 기존 검사 기대 표현만 고친 `16908b4554f81703c0400c61453d2d7d3f29e77e`까지 소스 이력은 보존한다.
-- [Windows #41161710785](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41161710785): 새 타일 소스 검사 **3/3 PASS**, 기존 아주 큰 아이콘 검사의 오래된 문자열 기대 **2 FAIL** 때문에 Release 이전 중단. 실패는 검사 코드에 한정되며 제품 컴파일/GUI/화면은 **미실행**이다. 수정된 검사를 대상으로 후속 Windows 요청을 등록하려 했으나 도구 안전 검사에서 차단되어 실행 생성 0건; 실패한 정확한 요청이나 런타임을 성공으로 대체하지 않았다.
-- 변경된 소스의 클라우드 읽기 전용 정적 경계 확인(메뉴·모드 값·저장 허용/타일 렌더링 등)은 수행했지만 실제 Windows 실행 증거를 대체하지 않는다. 추가적인 Windows 빌드·GUI·픽셀 검토를 진행하지 않았다.
-- 사용자 원칙에 따라 이 미검증 제품 변경을 수용된 main에 남기지 않고 `f9625fed7f88c09b5a9468e10b2c7d05da4d2afa`에서 마지막 수용 제품 트리로 비강제 복구했다. 구현/검사 수정 커밋은 조상 이력으로 보존되며, 새 PR/브랜치 없이 보류한다. Windows 제어 슬롯은 [skip ci] `57dfc3471307ffa8de0783d5c5bf7eb0b95016c3`로 idle 반환.
-- 다음 실제 개발 단위는 [R03 타일 인계](R03_TILES_PENDING_20261031.md)를 확인하여 검사 전용 수정 2건이 반영된 `16908b...`의 변경 파일을 최신 main과 비교하고, **신규 제품 빌드→선택된 소유 GUI→실제 PNG** 순서로 한정 검증하는 것이다. 기존 6종(아주 큰 아이콘 포함), R02와 기타 수용 범위는 반복 검증하지 않는다. 콘텐츠 보기는 여전히 미구현이다.
+- 제품 수용 main `1cc598b600192bc9fdc1dd2ebc6e54b6fec9327f`: Windows에서 검증한 제품/검사 소스 `16908b4554f81703c0400c61453d2d7d3f29e77e`의 변경 파일 **15개를 바이트 동일하게** 직전 main에 비강제 반영했다. 기존 0~5 유지, `Tiles=6` 신규. 상단·배경 메뉴/실제 Ctrl+Shift+7, 48px 아이콘 옆 파일명·유형·크기, 패널별 보기/열·PaneTab별 정렬, 폴더 보기·개인 설정 및 세션 v4 형식을 유지한다.
+- [수정된 21/21 관련 소스·Release #41162326981](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41162326981) **PASS**, 새 EXE SHA256 `8c86a402158af7eb80854bc8c1681625549a566810e291b7056039677255c306`. 증분 빌드 중 유효 IPDB/IOBJ가 없어 25,697 함수 재컴파일; clean/package는 하지 않았다. 이전 [#41161710785](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41161710785)는 구 extra-large 검사의 정확 문자열 기대 2건 때문에 **FAIL**한 이력으로 보존한다.
+- [집중 소유 GUI #41162627911](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41162627911) **PASS**: 동일 EXE/소유 로컬 .txt/.md/.log, 왼쪽 Ctrl+Shift+7 타일·오른쪽 자세히 보기 유지, Ctrl+Shift+6 기존 자세히 복귀와 타일 재선택, 파일 원본 바이트·기존 설정 보존, 정상 종료·성공 fixture/profile/worker 정리.
+- [실제 화면 #41162756780](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41162756780) 읽기 전용 **SUCCESS**: Dark/96 DPI/1160×640 두 PNG 직접 검토. 파일명·유형·크기(16 B/15 B/16 B) 표시, 오른쪽 자세히 목록 및 두 패널 경계 유지, 새 겹침·잘림 미관측. 첫 PNG에는 일시 툴팁이 보이고 두 번째는 해제됐으며, 비동기 유형 표기 차이를 완전 Shell 표시 일치로 해석하지 않는다.
+- VM은 source clean/앱·helper·worker 0, 성공 소유 fixture/profile/worker 정리 뒤 `4bb6158eccbb6cc925b250e3ca3edcf9e87127c7` [skip ci] idle로 복귀했다. [수용 상세와 남은 영역](R03_TILES_ACCEPTANCE_20261031.md). 실제 재시작 후 새 보기 값 복원, 메뉴 포인터 선택, 다른 테마/DPI/제공자/Windows 탐색기 픽셀 동등성은 **미검증**이다. G03~G05 제외·G07 중단, 전역 클립보드·실제 휴지통·사용자 파일/설정·외부 전송 보존.
+- 현재 R03는 Windows 기본 탐색기 8종 중 **7종 구현**이며 남은 것은 **내용 보기** 1종이다. 별도 세션 정책이나 새로운 대상 작업을 자동 확장하지 않는다. PR #70은 이전 통합 완료됐으며 새 PR 없이 main 직접 반영했다.
 
 # 2026-10-31 — R03 아주 큰 아이콘 보기 6번째 모드 한정 수용
 
