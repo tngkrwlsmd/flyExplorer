@@ -61,6 +61,11 @@ void FileToolbar::BeginNameEdit(int action,hstring const& initial,bool isFolder)
      box.Select(0,static_cast<int>(dot));
  else box.SelectAll();
 }
+void FileToolbar::OnViewFlyoutClosed(IInspectable const&,IInspectable const&){
+ const bool focus=previewFocusAfterViewClosed_;
+ previewFocusAfterViewClosed_=false;
+ if(focus&&IsLoaded()&&action_)action_(24);
+}
 void FileToolbar::OnMoreFlyoutClosed(IInspectable const&,IInspectable const&){
  // Flyout dismissal restores its opener's focus after the item Click.
  // Complete only the edit opened by that menu, without overriding new input.
@@ -88,7 +93,9 @@ void FileToolbar::OnSortNameAscending(IInspectable const&,RoutedEventArgs const&
 void FileToolbar::OnSortTypeAscending(IInspectable const&,RoutedEventArgs const&){ChooseSort(4);} void FileToolbar::OnSortTypeDescending(IInspectable const&,RoutedEventArgs const&){ChooseSort(5);} void FileToolbar::OnSortSizeAscending(IInspectable const&,RoutedEventArgs const&){ChooseSort(6);} void FileToolbar::OnSortDateAscending(IInspectable const&,RoutedEventArgs const&){ChooseSort(7);}
 void FileToolbar::OnViewDetails(IInspectable const&,RoutedEventArgs const&){ChooseView(0);} void FileToolbar::OnViewList(IInspectable const&,RoutedEventArgs const&){ChooseView(1);} void FileToolbar::OnViewSmallIcons(IInspectable const&,RoutedEventArgs const&){ChooseView(2);} void FileToolbar::OnViewMediumIcons(IInspectable const&,RoutedEventArgs const&){ChooseView(3);} void FileToolbar::OnViewLargeIcons(IInspectable const&,RoutedEventArgs const&){ChooseView(4);} void FileToolbar::OnViewExtraLargeIcons(IInspectable const&,RoutedEventArgs const&){ChooseView(5);} void FileToolbar::OnViewTiles(IInspectable const&,RoutedEventArgs const&){ChooseView(6);} void FileToolbar::OnViewContent(IInspectable const&,RoutedEventArgs const&){ChooseView(7);}
 void FileToolbar::OnViewFileInfoPane(IInspectable const&,RoutedEventArgs const&){if(action_)action_(23);}
-void FileToolbar::OnViewTextPreviewAccess(IInspectable const&,RoutedEventArgs const&){if(action_)action_(24);}
+void FileToolbar::OnViewTextPreviewAccess(IInspectable const&,RoutedEventArgs const&){
+ if(action_)previewFocusAfterViewClosed_=true;
+}
 void FileToolbar::OnRememberFolderView(IInspectable const&,RoutedEventArgs const&){
  if(folderViewAction_)folderViewAction_(true);
 }
