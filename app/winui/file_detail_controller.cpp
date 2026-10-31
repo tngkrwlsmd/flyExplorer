@@ -145,7 +145,8 @@ bool FileDetailController::start(
                 request.paths.size(),0);
             if(request.shellProviderRoot&&
                (request.viewMode==FileViewMode::MediumIcons||
-                request.viewMode==FileViewMode::LargeIcons)){
+                request.viewMode==FileViewMode::LargeIcons||
+                request.viewMode==FileViewMode::ExtraLargeIcons)){
                 std::size_t selected=0;
                 auto select=[&](bool imageLike){
                     for(std::size_t i=0;
@@ -269,7 +270,8 @@ bool FileDetailController::start(
                         (data.nFileSizeHigh==0&&
                          data.nFileSizeLow<=32*1024*1024);
                     if((request.viewMode==FileViewMode::MediumIcons||
-                        request.viewMode==FileViewMode::LargeIcons)&&
+                        request.viewMode==FileViewMode::LargeIcons||
+                        request.viewMode==FileViewMode::ExtraLargeIcons)&&
                        !visualHelper.empty()&&thumbnailBudget<4&&
                        thumbnailSizeEligible){
                         auto ext=std::filesystem::path(path).extension().native();

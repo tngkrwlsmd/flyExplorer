@@ -50,6 +50,7 @@ struct FileToolbar : FileToolbarT<FileToolbar> {
  void OnViewSmallIcons(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
  void OnViewMediumIcons(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
  void OnViewLargeIcons(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
+ void OnViewExtraLargeIcons(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
  void OnRememberFolderView(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
  void OnForgetFolderView(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
  void OnViewCheckboxes(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);

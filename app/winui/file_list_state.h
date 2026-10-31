@@ -10,7 +10,7 @@
 #include "file_group_tab_cache.h"
 
 namespace fxfile::previewlist {
-enum class FileViewMode : int { Details=0, List=1, SmallIcons=2, MediumIcons=3, LargeIcons=4 };
+enum class FileViewMode : int { Details=0, List=1, SmallIcons=2, MediumIcons=3, LargeIcons=4, ExtraLargeIcons=5 };
 
 // F01-B: display-only name. Never use for Shell identity, rename, or transfer.
 constexpr std::wstring_view visibleFileName(std::wstring_view name,
@@ -58,7 +58,7 @@ struct PaneState final {
     fxfile::filegroup::CollapseState groupCollapse{};
     fxfile::filegroup::Mode groupMode=fxfile::filegroup::Mode::Type;
     fxfile::filegroup::TabGrouping groupTabCache{};
-    int appliedItemsPanel=0; // 0=vertical XAML default, 1=small wrap, 2=medium wrap, 3=large wrap
+    int appliedItemsPanel=0; // 0=vertical XAML default, 1=small wrap, 2=medium wrap, 3=large wrap, 4=extra-large wrap
     std::uint32_t visualPixels=0; // DPI-scaled system visual size for current details
     double nameColumnWidth=168.0;
     double typeColumnWidth=180.0;

@@ -295,7 +295,7 @@ namespace winrt::FlyExplorer::implementation
                             ui->ActivatePane(side);
                         const int current=static_cast<int>(
                             ui->ActiveWindowTab().fileLists[side].viewMode);
-                        const int next=(std::max)(0,(std::min)(4,
+                        const int next=(std::max)(0,(std::min)(5,
                             current+(delta>0?1:-1)));
                         if(next!=current)ui->UpdateView(next);
                         args.Handled(true);
@@ -523,10 +523,12 @@ namespace winrt::FlyExplorer::implementation
                     windowTabShortcut=static_cast<int>(key)-
                         static_cast<int>(Windows::System::VirtualKey::Number1);
                 // Explorer's supported view keys reuse the menu's pane-local
-                // owner. Extra-large icons, Tiles and Content are not modes here.
+                // owner. Tiles and Content are not modes here.
                 int viewShortcut=-1;
                 if(control&&shift&&!alt){
                     switch(key){
+                    case Windows::System::VirtualKey::Number1:
+                        viewShortcut=static_cast<int>(FileViewMode::ExtraLargeIcons);break;
                     case Windows::System::VirtualKey::Number2:
                         viewShortcut=static_cast<int>(FileViewMode::LargeIcons);break;
                     case Windows::System::VirtualKey::Number3:
@@ -808,7 +810,7 @@ namespace winrt::FlyExplorer::implementation
         InitializeFilterRules();
         InitializeSearchPresets();
         auto const& preferences=mPreferencesCoordinator.current();
-        const auto initialView=(std::clamp)(preferences.defaultViewMode,0,4);
+        const auto initialView=(std::clamp)(preferences.defaultViewMode,0,5);
         for(auto& state:ActiveWindowTab().fileLists)state.viewMode=static_cast<FileViewMode>(initialView);
         winrt::get_self<winrt::FlyExplorer::implementation::ShellHeader>(
             HeaderView())->RestoreTheme(static_cast<int>(preferences.theme));
@@ -2143,12 +2145,14 @@ namespace winrt::FlyExplorer::implementation
         double raster=1.0;
         try{if(auto xr=RootShell().XamlRoot())raster=xr.RasterizationScale();}
         catch(...){raster=1.0;}
-        const std::uint32_t baseVisual=requestedView==FileViewMode::LargeIcons?64:
+        const std::uint32_t baseVisual=requestedView==FileViewMode::ExtraLargeIcons?64:
+            requestedView==FileViewMode::LargeIcons?64:
             requestedView==FileViewMode::MediumIcons?32:
             requestedView==FileViewMode::SmallIcons?20:16;
         const auto visualPixels=static_cast<std::uint32_t>((std::min)(64.0,
             (std::max)(16.0,baseVisual*raster+0.5)));
-        const double thumbnailBase=requestedView==FileViewMode::LargeIcons?96.0:48.0;
+        const double thumbnailBase=requestedView==FileViewMode::ExtraLargeIcons?128.0:
+            requestedView==FileViewMode::LargeIcons?96.0:48.0;
         const auto thumbnailPixels=static_cast<std::uint32_t>((std::min)(128.0,
             (std::max)(32.0,thumbnailBase*raster+0.5)));
         auto& listState=ActiveWindowTab().fileLists[side];
@@ -2808,11 +2812,13 @@ namespace winrt::FlyExplorer::implementation
         }
         const int panel=viewMode==FileViewMode::SmallIcons?1:
                         viewMode==FileViewMode::MediumIcons?2:
-                        viewMode==FileViewMode::LargeIcons?3:0;
+                        viewMode==FileViewMode::LargeIcons?3:
+                        viewMode==FileViewMode::ExtraLargeIcons?4:0;
         if(ActiveWindowTab().fileLists[side].appliedItemsPanel!=panel){
             const wchar_t* key=panel==1?L"ExplorerSmallIconsItemsPanel":
                                panel==2?L"ExplorerMediumIconsItemsPanel":
                                panel==3?L"ExplorerLargeIconsItemsPanel":
+                               panel==4?L"ExplorerExtraLargeIconsItemsPanel":
                                         L"ExplorerVerticalItemsPanel";
             try{
                 view.ItemsPanel(RootShell().Resources().Lookup(
@@ -3446,10 +3452,11 @@ namespace winrt::FlyExplorer::implementation
             }else{
                 const bool medium=state.viewMode==FileViewMode::MediumIcons;
                 const bool large=state.viewMode==FileViewMode::LargeIcons;
-                const bool iconGrid=medium||large;
+                const bool extraLarge=state.viewMode==FileViewMode::ExtraLargeIcons;
+                const bool iconGrid=medium||large||extraLarge;
                 const bool smallIcons=state.viewMode==FileViewMode::SmallIcons;
                 StackPanel cell;cell.Orientation(iconGrid?Orientation::Vertical:Orientation::Horizontal);
-                cell.Spacing(large?7.0:(medium?5.0:7.0));cell.VerticalAlignment(VerticalAlignment::Center);
+                cell.Spacing(extraLarge?9.0:(large?7.0:(medium?5.0:7.0)));cell.VerticalAlignment(VerticalAlignment::Center);
                 if(iconGrid)cell.HorizontalAlignment(HorizontalAlignment::Center);
                 auto const* iconMeta=detail;
                 bool actualVisual=false;bool realThumb=false;
@@ -3468,7 +3475,7 @@ namespace winrt::FlyExplorer::implementation
                             if(SUCCEEDED(reinterpret_cast<::IUnknown*>(winrt::get_abi(backing))->QueryInterface(__uuidof(::Windows::Storage::Streams::IBufferByteAccess),access.put_void()))){
                                 BYTE* target=nullptr;if(SUCCEEDED(access->Buffer(&target))&&target){
                                     std::memcpy(target,data.data(),data.size());pixels.Invalidate();Image image;image.Source(pixels);
-                                    const double targetSize=large?64.0:(medium?(realThumb?40.0:32.0):(smallIcons?20.0:16.0));image.Width(targetSize);image.Height(targetSize);
+                                    const double targetSize=extraLarge?112.0:(large?64.0:(medium?(realThumb?40.0:32.0):(smallIcons?20.0:16.0)));image.Width(targetSize);image.Height(targetSize);
                                     Microsoft::UI::Xaml::Automation::AutomationProperties::SetName(image,realThumb?L"Windows Shell image thumbnail":
                                         itemFolder?(iconMeta->knownFolderVisual?L"Windows Known Folder artwork":
                                             L"Windows Shell folder icon"):L"Windows system registered file icon");
@@ -3480,16 +3487,17 @@ namespace winrt::FlyExplorer::implementation
                 }
                 if(!actualVisual){
                     FontIcon glyph;glyph.FontFamily(Microsoft::UI::Xaml::Media::FontFamily{L"Segoe Fluent Icons"});
-                    glyph.Glyph(hstring(itemFolder?L"\uE8B7":L"\uE8A5"));glyph.FontSize(large?60.0:(medium?36.0:(smallIcons?20.0:16.0)));cell.Children().Append(glyph);
+                    glyph.Glyph(hstring(itemFolder?L"\uE8B7":L"\uE8A5"));glyph.FontSize(extraLarge?104.0:(large?60.0:(medium?36.0:(smallIcons?20.0:16.0))));cell.Children().Append(glyph);
                 }
                 addFilterBadge(cell);
                 TextBlock filename;filename.Text(hstring(displayName));
                 if(accent)filename.Foreground(accent);
-                if(iconGrid){filename.FontSize(12.0);filename.Width(large?104.0:84.0);filename.TextAlignment(TextAlignment::Center);filename.TextWrapping(TextWrapping::WrapWholeWords);filename.MaxLines(2);filename.TextTrimming(TextTrimming::CharacterEllipsis);}
+                if(iconGrid){filename.FontSize(12.0);filename.Width(extraLarge?152.0:(large?104.0:84.0));filename.TextAlignment(TextAlignment::Center);filename.TextWrapping(TextWrapping::WrapWholeWords);filename.MaxLines(2);filename.TextTrimming(TextTrimming::CharacterEllipsis);}
                 else{filename.TextTrimming(TextTrimming::CharacterEllipsis);if(smallIcons){filename.FontSize(12.0);filename.Width(120);}}
                 cell.Children().Append(filename);row.Content(cell);
                 if(state.viewMode==FileViewMode::List){row.MinHeight(32);row.Padding(Thickness{5.0,0.0,5.0,0.0});}
                 else if(smallIcons){row.Width(160);row.Height(32);row.Padding(Thickness{5.0,0.0,5.0,0.0});}
+                else if(extraLarge){row.Width(168);row.Height(190);row.Padding(Thickness{2.0});row.HorizontalContentAlignment(HorizontalAlignment::Center);}
                 else if(large){row.Width(112);row.Height(128);row.Padding(Thickness{2.0});row.HorizontalContentAlignment(HorizontalAlignment::Center);}
                 else{row.Width(92);row.Height(92);row.Padding(Thickness{2.0});row.HorizontalContentAlignment(HorizontalAlignment::Center);}
             }
@@ -3703,7 +3711,7 @@ namespace winrt::FlyExplorer::implementation
         SuspendActiveWindowTab();
         if(!mWorkspace.create())return false;
         const auto defaultView=static_cast<FileViewMode>(
-            (std::clamp)(mPreferencesCoordinator.current().defaultViewMode,0,4));
+            (std::clamp)(mPreferencesCoordinator.current().defaultViewMode,0,5));
         for(auto& list:ActiveWindowTab().fileLists)list.viewMode=defaultView;
         ApplyActiveWindowTab(L"새 창 탭을 준비하는 중입니다.");
         const auto seed=startPath.empty()?HomePath().native():startPath;

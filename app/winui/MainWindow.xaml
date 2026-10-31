@@ -65,6 +65,7 @@
         <ItemsPanelTemplate x:Key="ExplorerSmallIconsItemsPanel"><ItemsWrapGrid Orientation="Horizontal" ItemWidth="164" ItemHeight="34"/></ItemsPanelTemplate>
         <ItemsPanelTemplate x:Key="ExplorerMediumIconsItemsPanel"><ItemsWrapGrid Orientation="Horizontal" ItemWidth="96" ItemHeight="96"/></ItemsPanelTemplate>
         <ItemsPanelTemplate x:Key="ExplorerLargeIconsItemsPanel"><ItemsWrapGrid Orientation="Horizontal" ItemWidth="120" ItemHeight="132"/></ItemsPanelTemplate>
+        <ItemsPanelTemplate x:Key="ExplorerExtraLargeIconsItemsPanel"><ItemsWrapGrid Orientation="Horizontal" ItemWidth="176" ItemHeight="196"/></ItemsPanelTemplate>
         <Style x:Key="ExplorerPaneTitleStyle" TargetType="Button">
             <Setter Property="Height" Value="30"/>
             <Setter Property="Padding" Value="6,0"/>
