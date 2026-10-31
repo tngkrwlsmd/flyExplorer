@@ -43,7 +43,7 @@ def terminal_windows():
     return found
 
 def main():
-    base=ROOT/"logs"/"r05-terminal-diagnose-20261031"
+    base=ROOT/"logs"/"r05-terminal-fallback-20261031"
     if base.exists() and any(base.iterdir()):
         raise RuntimeError("Retained R05 owned evidence exists; preserve it")
     base.mkdir(parents=True,exist_ok=True)
@@ -57,7 +57,7 @@ def main():
     new_hwnd=None
     success=False
     try:
-        with h.App(app_exe("Release"),fixture,"r05-terminal-diagnose","dark") as app:
+        with h.App(app_exe("Release"),fixture,"r05-terminal-fallback","dark") as app:
             h.wait(lambda:any(marker.name in x.window_text() for x in app.rows("Left")),
                    "owned folder entry absent",seconds=20)
             view=app.el("LeftFiles")
@@ -95,7 +95,7 @@ def main():
                 return next(iter(matches)) if len(matches)==1 else None
             try:
                 new_hwnd,pid=h.wait(own_new_terminal,
-                                   "new Windows Terminal window not observed",seconds=12)
+                                   "new Windows Terminal window not observed",seconds=20)
             except AssertionError:
                 # Observe the exact owned application's response; do not
                 # infer installation, launch success, or alter any other window.

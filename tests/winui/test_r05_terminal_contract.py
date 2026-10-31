@@ -23,6 +23,13 @@ class TerminalDelegationContract(unittest.TestCase):
             "FOLDERID_LocalAppData",
             "Microsoft\\\\WindowsApps\\\\wt.exe",
             "GetFileAttributesW(executable.c_str())",
+            "IApplicationActivationManager",
+            "CLSID_ApplicationActivationManager",
+            "IID_PPV_ARGS(&manager.value)",
+            "Microsoft.WindowsTerminal_8wekyb3d8bbwe!App",
+            "ActivateApplication(",
+            "arguments.c_str(),AO_NONE,&processId",
+            "SUCCEEDED(activated)&&!processId",
             'L"-w new new-tab -d ',
             "if(folder.back()",
             "request.lpFile=executable.c_str();",
@@ -38,6 +45,9 @@ class TerminalDelegationContract(unittest.TestCase):
                           "GetClipboardData(", "CreateFileW(", "DeleteFileW(",
                           "SetEnvironmentVariableW("):
             self.assertNotIn(forbidden,helper)
+        for forbidden_text in ('L"cmd.exe"', 'L"powershell.exe"',
+                               'L"explorer.exe"', "SearchPathW("):
+            self.assertNotIn(forbidden_text,helper)
 
     def test_background_menu_uses_owned_route_guard(self):
         app=source("app/winui/m22_transfers.cpp")

@@ -3,6 +3,7 @@
 #pragma once
 #include <windows.h>
 #include <shlobj.h>
+#include <shobjidl_core.h>
 #include <shellapi.h>
 #include <filesystem>
 #include <string>
@@ -16,6 +17,10 @@ struct Apartment final {
 struct KnownFolderPath final {
  PWSTR path=nullptr;
  ~KnownFolderPath() noexcept {if(path)::CoTaskMemFree(path);}
+};
+struct ActivationManager final {
+ IApplicationActivationManager* value=nullptr;
+ ~ActivationManager() noexcept {if(value)value->Release();}
 };
 }
 inline HRESULT openFolder(std::wstring const& folder) noexcept {
@@ -49,14 +54,27 @@ inline HRESULT openFolder(std::wstring const& folder) noexcept {
   // for a malicious program named wt.exe.
   std::wstring executable=known.path;
   executable+=L"\\Microsoft\\WindowsApps\\wt.exe";
-  const DWORD alias=::GetFileAttributesW(executable.c_str());
-  if(alias==INVALID_FILE_ATTRIBUTES||(alias&FILE_ATTRIBUTE_DIRECTORY))
-   return HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND);
   // Force a distinct window. The path is one quoted -d argument, not shell
   // code; trailing backslashes must not escape the closing argument quote.
   std::wstring arguments=L"-w new new-tab -d \""+folder;
   if(folder.back()==L'\\')arguments+=L"\\";
   arguments+=L"\"";
+  const DWORD alias=::GetFileAttributesW(executable.c_str());
+  if(alias==INVALID_FILE_ATTRIBUTES||(alias&FILE_ATTRIBUTE_DIRECTORY)){
+   // The Store package may be installed while its per-user wt.exe execution
+   // alias is disabled. Activate the signed package through the public
+   // Windows app-activation API; never search PATH or invoke a command shell.
+   detail::ActivationManager manager;
+   const HRESULT created=::CoCreateInstance(
+    CLSID_ApplicationActivationManager,nullptr,CLSCTX_INPROC_SERVER,
+    IID_PPV_ARGS(&manager.value));
+   if(FAILED(created))return created;
+   DWORD processId=0;
+   const HRESULT activated=manager.value->ActivateApplication(
+    L"Microsoft.WindowsTerminal_8wekyb3d8bbwe!App",
+    arguments.c_str(),AO_NONE,&processId);
+   return SUCCEEDED(activated)&&!processId?E_FAIL:activated;
+  }
   SHELLEXECUTEINFOW request{};
   request.cbSize=sizeof(request);
   request.fMask=SEE_MASK_FLAG_NO_UI|SEE_MASK_NOASYNC;
