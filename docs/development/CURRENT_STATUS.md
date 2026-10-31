@@ -1,3 +1,11 @@
+# 2026-10-31 — R04 선택 파일 바로 가기 및 R05 Terminal 최종 집중 검증
+
+- **R05 '터미널에서 열기' GUI 완료:** [#41182673672](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41182673672)에서 정확한 기존 Release EXE SHA256 `e017cdd3e39949e1e30746330f05f983406312f36fe0979cb7391dc9ea4bfc2e`를 재사용해 실제 앱 소유 빈 배경 메뉴 클릭, 새 Windows Terminal HWND/PID 생성·닫기, 원본 바이트·기존 설정 보존, 정상 종료, 성공 소유 fixture/profile/worker 정리 **PASS**. 앞선 [#41181754682](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41181754682)의 HEAD 기대값 오류는 제어 스크립트 사전 조건 수정으로 해결했다. 실제 화면 픽셀 검토는 미실시.
+- **R04 선택 항목 한 개의 .lnk 만들기 구현·main 반영:** 기능 소스 `eebb633a3f1a21343e07743e1de49dbc1c779714`, 기존 계약 범위 수정 `df9b27cc867e457801c3f1d90e825add147a79fb`, GUI 소유 시험 `cd6f8f307a331c453a67ef87f7240733f14c1a08`. 현재 폴더의 고정 로컬 일반 파일/폴더 한 개를 정확히 선택해 우클릭 메뉴에서 `바로 가기 만들기`→이름 편집→Enter로만 새 파일을 만든다. 원본 파일/폴더는 수정하지 않고, 임시 소유 .lnk 작성·비대체 게시·유효성 검증을 수행한다.
+- **R04 실제 Windows 소스·네이티브·증분 Release:** [#41184095052](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41184095052)에서 영향받는 소스 계약 PASS, M21 native build PASS, **45/45 native fixture PASS** (Windows Shell 링크의 실제 원본 경로·동명 항목 미덮어쓰기·잘못된 이름 거부), Release PASS. 새 EXE SHA256 `b29061f1ca8d1c01feb0525d1b6f487f74595a8882dd517adabce52a4b09dae1`. 소유 fixture·별도 프로필 삭제 성공; 전체 제품/패키지 재검사 아님.
+- **R04 실제 GUI:** 최초 [#41184429700](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41184429700)은 Shift+F10 뒤 메뉴 항목을 UIA에서 찾지 못해 FAIL. 원본 보존·정상 종료 근거는 유지하며 제품 결함으로 단정하지 않는다. 마우스 직접 우클릭·테스트 폴더 분리·앱 소유 진단 추가 후 [#41184675172](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41184675172) **PASS**: 정확한 파일 선택 메뉴 클릭·이름 편집·.lnk 생성 및 목록 표시, 원본 바이트·설정 보존, 정상 앱 종료, 성공 소유 fixture/profile/worker 정리. 동일 EXE hash를 재사용했다. 픽셀 육안 검토는 미실시.
+- **미수용 범위:** Windows의 빈 배경 '새 바로 가기' 마법사, 여러 항목 일괄 생성, USB/SMB/UNC 및 가상 Shell/재분석 지점, 실제 사용자 파일·OS 설정·클립보드·휴지통·외부 전송, 화면 픽셀과 모든 환경의 동등성. G03~G05 제외, G07 중단, 두 패널·탭/세션 v4 계약 보존. 중앙 Windows 제어 슬롯은 수용 후 idle로 반환했으며 과거 실패 증거는 보존한다.
+
 # 2026-10-31 — R05 Terminal 패키지 활성화 fallback 실제 GUI 검사 사전 조건 실패
 
 - 최신 제품 `e452fe990d6798ac3292f5eded79d4d634abedb0`은 현재 일반 로컬 폴더에서 사용자가 ‘터미널에서 열기’를 클릭할 때 per-user `wt.exe` 별칭이 없으면 Windows의 공개 `IApplicationActivationManager`로 설치된 Terminal 앱을 활성화하는 fallback을 추가했다. 경로는 고정 로컬 드라이브·실제 폴더/비재분석지점으로 제한하고, 명령 셸·사용자 파일 수정·클립보드·외부 전송은 하지 않는다.
