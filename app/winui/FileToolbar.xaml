@@ -87,6 +87,13 @@
                 <ToggleMenuFlyoutItem x:Name="ViewTilesItem" Text="타일" Click="OnViewTiles"/>
                 <ToggleMenuFlyoutItem x:Name="ViewContentItem" Text="내용" Click="OnViewContent"/>
                 <MenuFlyoutSeparator/>
+                <ToggleMenuFlyoutItem x:Name="ViewFileInfoPaneItem" Text="세부 정보 창"
+                                      IsChecked="False" Click="OnViewFileInfoPane"
+                                      AutomationProperties.Name="현재 창의 세부 정보 패널 열기 또는 닫기"/>
+                <MenuFlyoutItem x:Name="ViewTextPreviewAccessItem" Text="텍스트 미리보기 버튼으로 이동 (Alt+P)"
+                                Click="OnViewTextPreviewAccess"
+                                AutomationProperties.Name="세부 정보 창의 텍스트 미리보기 켜기 버튼으로 이동, 파일은 자동으로 읽지 않음"/>
+                <MenuFlyoutSeparator/>
                 <MenuFlyoutItem Text="현재 폴더의 보기 기억 (이 세션만)"
                                 Click="OnRememberFolderView"
                                 AutomationProperties.Name="현재 폴더의 보기 모드를 이 세션에서 기억"/>
