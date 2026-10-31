@@ -1,5 +1,5 @@
 """R02: exercise grouping only through the owned blank-background menu."""
-import ast
+import hashlib
 import json
 from pathlib import Path
 import shutil
@@ -30,7 +30,7 @@ def main():
     result = {
         "source": subprocess.check_output(
             ["git", "-C", str(ROOT), "rev-parse", "HEAD"], text=True).strip(),
-        "exe_sha256": h.hashlib.sha256(app_exe("Release").read_bytes()).hexdigest(),
+        "exe_sha256": hashlib.sha256(app_exe("Release").read_bytes()).hexdigest(),
     }
     passed = False
     try:
