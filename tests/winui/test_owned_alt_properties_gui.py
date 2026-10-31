@@ -14,7 +14,7 @@ from paths import ROOT, app_exe
 
 
 def main(counts=(1, 2)):
-    base = ROOT / "logs" / "alt-properties-owned-20261031-multi-pointer"
+    base = ROOT / "logs" / "alt-properties-owned-20261031-multi-ready"
     base.mkdir(parents=True, exist_ok=True)
     h.BASE = base
     fixture = Path(tempfile.mkdtemp(prefix="fixture-", dir=base)).resolve()
@@ -38,6 +38,10 @@ def main(counts=(1, 2)):
                 return {name: next((r for r in current if name in r.window_text()), None)
                         for name in names}
 
+            def ready_rows():
+                items = rows()
+                return items if all(items.values()) else None
+
             def selected_focused():
                 # Ctrl+click may focus the added row. Either selected
                 # owned row is a valid keyboard route for the same selection.
@@ -57,7 +61,7 @@ def main(counts=(1, 2)):
                    "owned rows not ready")
             for count in counts:
                 app.win.set_focus()
-                items = rows()
+                items = h.wait(ready_rows, "owned rows absent after foreground focus")
                 items[names[0]].click_input()
                 if count == 2:
                     # Use the existing accepted F03/drag harness's real Ctrl+click.
