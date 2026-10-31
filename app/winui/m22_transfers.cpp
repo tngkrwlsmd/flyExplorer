@@ -1544,9 +1544,13 @@ void MainWindow::HandleFileShortcut(
   }
   return;
  }
- // Keyboard equivalent of right-click: open the same native flyExplorer
- // commands menu. Windows extension verbs remain an explicit menu choice.
- if(!ctrl&&shift&&!alt&&vk==Windows::System::VirtualKey::F10){
+ // Keyboard equivalents of right-click: Shift+F10 and the dedicated
+ // Application/Menu key open the same native flyExplorer commands menu.
+ // Windows extension verbs remain an explicit menu choice.
+ const bool contextMenuKey=
+  (!ctrl&&shift&&!alt&&vk==Windows::System::VirtualKey::F10)||
+  (!ctrl&&!shift&&!alt&&vk==Windows::System::VirtualKey::Application);
+ if(contextMenuKey){
   auto view=side==0?LeftFiles():RightFiles();
   if(view.SelectedItems().Size()){
    auto row=view.SelectedItems().GetAt(0).try_as<ListViewItem>();
