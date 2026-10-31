@@ -8,11 +8,13 @@ import json
 import shutil
 import tempfile
 
-from pywinauto import Desktop
+from pywinauto import Desktop, mouse
+import ctypes
+from ctypes import wintypes
 import benchmark_filtered_folder_gui as h
 from paths import ROOT, app_exe
 
-BASE=ROOT/"logs"/"r12a-details-owned-gui-r2-20261031"
+BASE=ROOT/"logs"/"r12a-details-owned-gui-r3-20261031"
 
 
 def main():
@@ -75,23 +77,52 @@ def main():
             h.wait(menu_closed,"R12a first View menu never closed",seconds=8)
             result["first_menu_dismissed"]=True
 
-            click_detail()
+            app.win.set_focus()
+            assert h.owner(h.u.GetForegroundWindow())==app.app.pid
+            app.el("ViewButton").click_input()
+            entry=h.wait(detail_entry,"R12a second View menu missing",seconds=12)
+            assert entry.is_visible() and entry.is_enabled()
+            box=entry.rectangle()
+            point=(box.left+10,(box.top+box.bottom)//2)
+            assert box.width()>100 and box.height()>18
+            fn=ctypes.windll.user32.WindowFromPoint
+            fn.argtypes=[wintypes.POINT]
+            fn.restype=wintypes.HWND
+            hit=fn(wintypes.POINT(*point))
+            assert hit and h.owner(hit)==app.app.pid
+            ui_hit=Desktop(backend="uia").from_point(*point)
+            assert ui_hit.element_info.process_id==app.app.pid
+            result["second_pointer_hit"]={
+                "point":point,
+                "ui_automation_id":ui_hit.element_info.automation_id,
+                "ui_control_type":ui_hit.element_info.control_type,
+                "menu_rect":[box.left,box.top,box.right,box.bottom]
+            }
+            mouse.click(button="left",coords=point)
             try:
                 h.wait(lambda:"열기" in app.el("FileInfoToggleButton").element_info.name,
-                       "R12a details pane did not close",seconds=12)
+                       "R12a details pane did not close",seconds=8)
             except AssertionError:
-                entry=detail_entry()
+                current=detail_entry()
                 result["second_click_diagnostic"]={
                     "pane_toggle":app.el("FileInfoToggleButton").element_info.name[:100],
-                    "menu_still_visible":entry is not None and entry.is_visible(),
-                    "view_button_focused":app.el("ViewButton").has_keyboard_focus(),
+                    "menu_still_visible":current is not None and current.is_visible(),
                     "foreground_owner":h.owner(h.u.GetForegroundWindow()),
                     "app_pid":app.app.pid,
-                    "status":app.el("StatusText").window_text()[:200],
+                    "status":app.el("StatusText").window_text()[:200]
                 }
-                print("R12A_SECOND_TOGGLE_DIAG="+json.dumps(
-                    result["second_click_diagnostic"],ensure_ascii=False),flush=True)
-                raise
+                retry=current if current is not None and current.is_visible() else None
+                if retry is not None:
+                    retry.invoke()
+                    try:
+                        h.wait(lambda:"열기" in app.el("FileInfoToggleButton").element_info.name,
+                               "R12a UIA invoke did not close Details",seconds=5)
+                        result["uia_invoke_closed"]=True
+                    except AssertionError:
+                        result["uia_invoke_closed"]=False
+                print("R12A_SECOND_POINTER_DIAG="+json.dumps(
+                    result,ensure_ascii=False),flush=True)
+                raise AssertionError("R12a physical close failed; diagnostics retained")
             result["details_closed_by_physical_click"]=True
             h.wait(menu_closed,"R12a second View menu never closed",seconds=8)
             result["second_menu_dismissed"]=True
