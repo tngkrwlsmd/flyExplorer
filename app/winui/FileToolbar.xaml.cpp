@@ -38,6 +38,7 @@ void FileToolbar::SetListDisplayState(bool checkboxes,bool compactRows,bool show
  ViewHiddenItemsItem().IsChecked(showHidden);
 }
 void FileToolbar::SetViewIndex(int value){ViewDetailsItem().IsChecked(value==0);ViewListItem().IsChecked(value==1);ViewSmallIconsItem().IsChecked(value==2);ViewMediumIconsItem().IsChecked(value==3);ViewLargeIconsItem().IsChecked(value==4);ViewExtraLargeIconsItem().IsChecked(value==5);ViewTilesItem().IsChecked(value==6);ViewContentItem().IsChecked(value==7);}
+void FileToolbar::SetFileInfoPaneState(bool visible){ViewFileInfoPaneItem().IsChecked(visible);}
 void FileToolbar::ChooseSort(int index){SetSortIndex(index);if(sort_)sort_(index);}
 void FileToolbar::ChooseView(int index){SetViewIndex(index);if(view_)view_(index);}
 void FileToolbar::BeginNameEdit(int action,hstring const& initial,bool isFolder){
@@ -86,6 +87,7 @@ void FileToolbar::OnToggleLeftFilter(IInspectable const&,RoutedEventArgs const&)
 void FileToolbar::OnSortNameAscending(IInspectable const&,RoutedEventArgs const&){ChooseSort(0);} void FileToolbar::OnSortNameDescending(IInspectable const&,RoutedEventArgs const&){ChooseSort(1);} void FileToolbar::OnSortSizeDescending(IInspectable const&,RoutedEventArgs const&){ChooseSort(2);} void FileToolbar::OnSortDateDescending(IInspectable const&,RoutedEventArgs const&){ChooseSort(3);}
 void FileToolbar::OnSortTypeAscending(IInspectable const&,RoutedEventArgs const&){ChooseSort(4);} void FileToolbar::OnSortTypeDescending(IInspectable const&,RoutedEventArgs const&){ChooseSort(5);} void FileToolbar::OnSortSizeAscending(IInspectable const&,RoutedEventArgs const&){ChooseSort(6);} void FileToolbar::OnSortDateAscending(IInspectable const&,RoutedEventArgs const&){ChooseSort(7);}
 void FileToolbar::OnViewDetails(IInspectable const&,RoutedEventArgs const&){ChooseView(0);} void FileToolbar::OnViewList(IInspectable const&,RoutedEventArgs const&){ChooseView(1);} void FileToolbar::OnViewSmallIcons(IInspectable const&,RoutedEventArgs const&){ChooseView(2);} void FileToolbar::OnViewMediumIcons(IInspectable const&,RoutedEventArgs const&){ChooseView(3);} void FileToolbar::OnViewLargeIcons(IInspectable const&,RoutedEventArgs const&){ChooseView(4);} void FileToolbar::OnViewExtraLargeIcons(IInspectable const&,RoutedEventArgs const&){ChooseView(5);} void FileToolbar::OnViewTiles(IInspectable const&,RoutedEventArgs const&){ChooseView(6);} void FileToolbar::OnViewContent(IInspectable const&,RoutedEventArgs const&){ChooseView(7);}
+void FileToolbar::OnViewFileInfoPane(IInspectable const&,RoutedEventArgs const&){if(action_)action_(23);}
 void FileToolbar::OnRememberFolderView(IInspectable const&,RoutedEventArgs const&){
  if(folderViewAction_)folderViewAction_(true);
 }
