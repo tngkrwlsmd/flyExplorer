@@ -13,7 +13,7 @@ class FolderViewContracts(unittest.TestCase):
                       "bool lookup(std::wstring const& folder,int& mode) const",
                       "bool forget(std::wstring const& folder)",
                       "std::vector<Entry> items_{}",
-                      "mode<0||mode>7","items_.pop_back();",
+                      "mode<0||mode>6","items_.pop_back();",
                       "path.lexically_normal().native()==folder"):
             self.assertIn(token,h)
         for forbidden in ("CreateFile", "WriteFile", "RegSetValue", "APPDATA",

@@ -85,7 +85,6 @@
                 <ToggleMenuFlyoutItem x:Name="ViewLargeIconsItem" Text="&#xD070; &#xC544;&#xC774;&#xCF58;" Click="OnViewLargeIcons"/>
                 <ToggleMenuFlyoutItem x:Name="ViewExtraLargeIconsItem" Text="아주 큰 아이콘" Click="OnViewExtraLargeIcons"/>
                 <ToggleMenuFlyoutItem x:Name="ViewTilesItem" Text="타일" Click="OnViewTiles"/>
-                <ToggleMenuFlyoutItem x:Name="ViewContentItem" Text="내용" Click="OnViewContent"/>
                 <MenuFlyoutSeparator/>
                 <MenuFlyoutItem Text="현재 폴더의 보기 기억 (이 세션만)"
                                 Click="OnRememberFolderView"

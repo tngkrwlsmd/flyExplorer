@@ -10,7 +10,7 @@
 #include "file_group_tab_cache.h"
 
 namespace fxfile::previewlist {
-enum class FileViewMode : int { Details=0, List=1, SmallIcons=2, MediumIcons=3, LargeIcons=4, ExtraLargeIcons=5, Tiles=6, Content=7 };
+enum class FileViewMode : int { Details=0, List=1, SmallIcons=2, MediumIcons=3, LargeIcons=4, ExtraLargeIcons=5, Tiles=6 };
 
 // F01-B: display-only name. Never use for Shell identity, rename, or transfer.
 constexpr std::wstring_view visibleFileName(std::wstring_view name,

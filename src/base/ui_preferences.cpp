@@ -15,7 +15,7 @@ std::string themeName(Theme theme){
  switch(theme){case Theme::Light:return "light";case Theme::Dark:return "dark";default:return "system";}
 }
 std::string viewName(int view){
- switch(view){case 1:return "list";case 2:return "small-icons";case 3:return "medium-icons";case 4:return "large-icons";case 5:return "extra-large-icons";case 6:return "tiles";case 7:return "content";default:return "details";}
+ switch(view){case 1:return "list";case 2:return "small-icons";case 3:return "medium-icons";case 4:return "large-icons";case 5:return "extra-large-icons";case 6:return "tiles";default:return "details";}
 }
 std::string legacyText(Theme theme){return "schema=1\r\nlanguage=ko-KR\r\ntheme="+themeName(theme)+"\r\n";}
 std::string text(Theme theme,int view){return "schema=2\r\nlanguage=ko-KR\r\ntheme="+themeName(theme)+"\r\nview="+viewName(view)+"\r\n";}
@@ -36,7 +36,7 @@ bool load(Preferences& out) noexcept{
  if(!ok||read!=length.QuadPart)return false;std::string data(bytes,read);
  const std::array<Theme,3> themes{{Theme::System,Theme::Light,Theme::Dark}};
  for(auto theme:themes){if(data==legacyText(theme)){out.theme=theme;out.defaultViewMode=0;return true;}}
- for(auto theme:themes)for(int view=0;view<8;++view){
+ for(auto theme:themes)for(int view=0;view<7;++view){
   if(data==text(theme,view)){out.theme=theme;out.defaultViewMode=view;return true;}
   for(int address=0;address<kFocusShortcutCount;++address)
    for(int search=0;search<kFocusShortcutCount;++search){
@@ -50,7 +50,7 @@ bool load(Preferences& out) noexcept{
  return false;
 }
 bool save(Preferences const& pref) noexcept {
- if(pref.language!=L"ko-KR"||pref.defaultViewMode<0||pref.defaultViewMode>7)return false;
+ if(pref.language!=L"ko-KR"||pref.defaultViewMode<0||pref.defaultViewMode>6)return false;
  if(pref.theme!=Theme::System&&pref.theme!=Theme::Light&&pref.theme!=Theme::Dark)return false;
  if(!validFocusShortcuts(pref.addressShortcut,pref.searchShortcut))return false;
  auto dir=directory();if(dir.empty())return false;
