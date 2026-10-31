@@ -1,3 +1,13 @@
+# 2026-10-31 — R03 내용 보기 8번째 모드 구현·Windows 종료 결함으로 수용 보류
+
+- 내용 보기 제품 커밋 `d4a29ced8a1303db16225b2c84ed80214e58c434`: 기존 0~6을 보존하고 `Content=7`을 추가했다. `Ctrl+Shift+8`·상단/빈 배경 보기 메뉴, 한 행의 가변 폭 이름·유형·크기·수정 날짜, 기존 아이콘/파일 정보 조회 상한, 세션 v4 포맷/PaneTab 정렬·패널별 보기/열 정책을 유지하도록 구현했다. 검사 수정을 포함한 `312423120c481c1325623d0aa6da8798aee44b10`은 Git 이력에 보존한다.
+- [Windows 소스·Release #41163556405](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41163556405): 영향받는 내용 보기 3/3, 타일 3/3, 아주 큰 아이콘 3/3, 폴더 4/4, 세션 7/7, 설정 4/4, 합계 **24/24 PASS**; Release **PASS**. 새 EXE SHA256 `3f57c7b4ada9a8a66f21a3f6d0b095529d090aa7c788a874329898789dd97f8c`. 증분 명령은 재사용할 수 있는 IPDB/IOBJ가 없어 25,718개 함수 재컴파일로 전환했으며 clean/package는 하지 않았다.
+- [집중 GUI #41163844278](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41163844278) **FAIL**: 내용 보기 전환 후 목록 UIA ElementFromHandle이 `-2147220991` COM 오류로 실패하여 성공 기준에 도달하지 못했다. 이를 단순 UIA 일시 장애로 추정했으나 확인되지 않았다.
+- **실제 검사 코드 개선** `31242312...`: 반복적인 6회 행 조회를 한 번의 좌우 스냅샷으로 줄이고 위 COM 코드에만 최대 20회의 제한적 재시도를 적용했으며, 앱 종료는 별도 오류로 처리했다. 이전 EXE와 제품 코드가 동일하므로 재빌드하지 않았다. [후속 GUI #41164155299](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41164155299) **FAIL**에서 `owned app exited during UIA provider change`가 확인됐다. **내용 보기 전환 중 제품 프로세스가 이미 종료된 사실**이 관측됐으나 정확한 종료 원인은 미확인. 정상 종료/원본 바이트·설정/성공 정리·GUI 수용·픽셀 수용을 주장하지 않는다.
+- 소유 실패 증거를 VM에 그대로 두었고, 원인 진단을 위한 읽기 전용 Windows 요청은 작업 도구 안전 검사에서 **차단**되어 실제 실행되지 않았다. 이를 우회하거나 무근거로 제품 코드를 추측 수정·반복 실행하지 않았다. 원본 폴더·전역 클립보드·실제 휴지통·외부 전송은 테스트 대상이 아니다.
+- 미수용 제품 변경은 [비강제 복구 `7d3bc25d2100595872140db30dced6892d89bd70`](https://github.com/tngkrwlsmd/flyExplorer/commit/7d3bc25d2100595872140db30dced6892d89bd70)로 마지막 수용 제품 트리에 되돌렸다. Windows 제어 요청은 `bcbb0ebe035a476174b3f0a74f56fefe5dec7755` [skip ci] idle로 반환했지만 **VM 로컬 checkout·실패 프로필/fixture·잔류 앱 상태까지 별도 점검했다는 뜻은 아니다**. [정확한 미완료 경계](R03_CONTENT_RUNTIME_FAILURE_20261031.md). 현재 정식 기능은 **7가지 보기**, 내용 보기는 미수용이다.
+- 다음은 새로운 기능보다 이 **제품 프로세스 종료의 최초 원인**을 안전한 승인 경로/보존 로그로 특정하고, 원인을 설명하는 변경만 한 뒤 관련 증분 Release와 내용 보기 소유 GUI·실제 PNG를 진행한다. 기존 타일·아주 큰 아이콘 수용 검사는 반복하지 않는다. G03~G05 제외/G07 중단 및 세션 v4 정책 유지.
+
 # 2026-10-31 — R03 타일 보기 7번째 모드 한정 Windows 수용
 
 - 제품 수용 main `1cc598b600192bc9fdc1dd2ebc6e54b6fec9327f`: Windows에서 검증한 제품/검사 소스 `16908b4554f81703c0400c61453d2d7d3f29e77e`의 변경 파일 **15개를 바이트 동일하게** 직전 main에 비강제 반영했다. 기존 0~5 유지, `Tiles=6` 신규. 상단·배경 메뉴/실제 Ctrl+Shift+7, 48px 아이콘 옆 파일명·유형·크기, 패널별 보기/열·PaneTab별 정렬, 폴더 보기·개인 설정 및 세션 v4 형식을 유지한다.
