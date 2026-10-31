@@ -22,7 +22,7 @@ class ContextContract(unittest.TestCase):
   for term in ("filename()!=L\"FlyShellIsolationHelper.exe\"",
                "ERROR_TIMEOUT","WaitForSingleObject","--context-menu"):
    self.assertIn(term,client)
-  for term in ("ShowExternalWindowsContextMenu(int side,bool propertiesOnly)",
+  for term in ("ShowExternalWindowsContextMenu(\n int side,bool propertiesOnly,bool currentFolder)",
                "OnFileRightTapped","args.Handled(true)",
                "VisualTreeHelper::GetParent","mFileOperations.busy()",
                "session.indexedItem(","indexed->isFileSystem()","root[1]!=L':'",
@@ -118,8 +118,39 @@ class ContextContract(unittest.TestCase):
   self.assertEqual(constructor.count("UIElement::RightTappedEvent()"),1)
   self.assertIn("true);",constructor)
   header=src("app/winui/MainWindow.xaml.h")
-  self.assertIn("ShowExternalWindowsContextMenu(int side,bool propertiesOnly=false)",header)
+  self.assertIn("ShowExternalWindowsContextMenu(int side,bool propertiesOnly=false,",header)
+  self.assertIn("bool currentFolder=false",header)
   self.assertIn("OnExternalWindowsContextMenu",header)
+ def test_properties_menus_keep_folder_and_selection_targets_distinct(self):
+  app=src("app/winui/m22_transfers.cpp")
+  selected=app.split("void MainWindow::ShowAppFileContextMenu(",1)[1].split(
+      "void MainWindow::ShowAppBackgroundContextMenu(",1)[0]
+  background=app.split("void MainWindow::ShowAppBackgroundContextMenu(",1)[1].split(
+      "void MainWindow::OnFileRightTapped(",1)[0]
+  self.assertIn('make(L"속성",L"\\uE946",canExternal,',selected)
+  self.assertIn("ui.ShowExternalWindowsContextMenu(side,true)",selected)
+  self.assertIn('make(L"속성",L"\\uE946",',background)
+  self.assertIn("localFolder&&sourceFilesystemFolder.size()>3",background)
+  self.assertIn("ui.ShowCurrentFolderProperties(side)",background)
+  self.assertIn("ShowExternalWindowsContextMenu(side,true,true)",app)
+  body=app.split("void MainWindow::ShowExternalWindowsContextMenu(\n",1)[1].split(
+      "void MainWindow::OnExternalWindowsContextMenu(",1)[0]
+  for token in ("propertiesOnly=propertiesOnly||currentFolder",
+                "const auto count=currentFolder?1u:list.SelectedItems().Size()",
+                "std::wstring path=folder;", "path=indexed->parsingName;",
+                "(currentFolder&&!(flags&FILE_ATTRIBUTE_DIRECTORY))",
+                "if(!currentFolder)originalSelection.push_back(path)",
+                "mFileOperations.pendingConfirmationToken()"):
+   self.assertIn(token,body)
+  callback=body.split("dispatch.TryEnqueue(",1)[1]
+  self.assertIn("expectedSelection,propertiesOnly,currentFolder",callback)
+  self.assertLess(callback.index("pane.filesystemPaths[tab]!=folder"),
+                  callback.index("if(!currentFolder){"))
+  self.assertLess(callback.index("if(!currentFolder){"),
+                  callback.index("selection.SelectedItems().Size()!=expectedSelection->size()"))
+  self.assertLess(callback.index("if(actualSelection!=*expectedSelection)return;"),
+                  callback.index("if(code==0)"))
+
  def test_folder_background_menu_reuses_all_toolbar_modes(self):
   app=src("app/winui/m22_transfers.cpp")
   header=src("app/winui/MainWindow.xaml.h")
@@ -156,7 +187,7 @@ class ContextContract(unittest.TestCase):
 
  def test_external_menu_result_cannot_overwrite_other_workspace_status(self):
   app=src("app/winui/m22_transfers.cpp")
-  body=app.split("void MainWindow::ShowExternalWindowsContextMenu(int side,bool propertiesOnly){",1)[1].split(
+  body=app.split("void MainWindow::ShowExternalWindowsContextMenu(\n int side,bool propertiesOnly,bool currentFolder){",1)[1].split(
       "void MainWindow::OnExternalWindowsContextMenu(",1)[0]
   for token in (
       "ActiveWindowTab().model.activePane!=side",
@@ -188,12 +219,12 @@ class ContextContract(unittest.TestCase):
  def test_late_shell_menu_result_keeps_new_selection_status(self):
   """The external menu can remain open while selection changes in one tab."""
   app=src("app/winui/m22_transfers.cpp")
-  body=app.split("void MainWindow::ShowExternalWindowsContextMenu(int side,bool propertiesOnly){",1)[1].split(
+  body=app.split("void MainWindow::ShowExternalWindowsContextMenu(\n int side,bool propertiesOnly,bool currentFolder){",1)[1].split(
       "void MainWindow::OnExternalWindowsContextMenu(",1)[0]
   self.assertIn("originalSelection.push_back(path);",body)
   self.assertIn("std::sort(originalSelection.begin(),originalSelection.end());",body)
   self.assertIn("std::make_shared<const std::vector<std::wstring>>(",body)
-  self.assertIn("expectedSelection,propertiesOnly]{",body)
+  self.assertIn("expectedSelection,propertiesOnly,currentFolder]{",body)
   callback=body.split("dispatch.TryEnqueue([weak,code,identity,side,tab,route,folder,",1)[1]
   self.assertIn("if(tab>=pane.tabs.size()||tab>=pane.pending.size()||",callback)
   self.assertIn("pane.pending[tab])return;",callback)

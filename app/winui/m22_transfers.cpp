@@ -375,6 +375,8 @@ void MainWindow::ShowAppFileContextMenu(
      [](MainWindow& ui){ui.RunTransfer(fxfile::shelltransfer::Kind::Move);}));
  menu.Items().Append(sendTo);
  menu.Items().Append(MenuFlyoutSeparator{});
+ menu.Items().Append(make(L"속성",L"\uE946",canExternal,
+     [side](MainWindow& ui){ui.ShowExternalWindowsContextMenu(side,true);}));
  menu.Items().Append(make(L"추가 옵션 표시",L"\uE712",canExternal,
      [side](MainWindow& ui){ui.ShowExternalWindowsContextMenu(side);}));
  Microsoft::UI::Xaml::Controls::Primitives::FlyoutShowOptions options;
@@ -491,6 +493,11 @@ void MainWindow::ShowAppBackgroundContextMenu(
                           localFolder,
      [side](MainWindow& ui){ui.OpenCurrentFolderInWindowsExplorer(side);}));
  menu.Items().Append(MenuFlyoutSeparator{});
+ // Root drives keep the existing helper's minimum path boundary. Ordinary
+ // local folders use the same isolated Properties verb as selected items.
+ menu.Items().Append(make(L"속성",L"\uE946",
+                          localFolder&&sourceFilesystemFolder.size()>3,
+     [side](MainWindow& ui){ui.ShowCurrentFolderProperties(side);}));
  menu.Items().Append(make(L"붙여넣기",L"\uE77F",localFolder,
      [](MainWindow& ui){ui.PasteFromWindowsClipboard();}));
  MenuFlyoutSubItem create;
@@ -1286,11 +1293,18 @@ void MainWindow::RevealSelectedInWindowsExplorer(int side){
   StatusText().Text(L"Windows 탐색기 연결 작업을 시작할 수 없습니다.");
  }
 }
-void MainWindow::ShowExternalWindowsContextMenu(int side,bool propertiesOnly){
+void MainWindow::ShowCurrentFolderProperties(int side){
+ ShowExternalWindowsContextMenu(side,true,true);
+}
+void MainWindow::ShowExternalWindowsContextMenu(
+ int side,bool propertiesOnly,bool currentFolder){
+ // A background target is always Properties; never expose arbitrary verbs
+ // against the current folder through this internal target option.
+ propertiesOnly=propertiesOnly||currentFolder;
  if(mClosing||side<0||side>1||
     ActiveWindowTab().model.activePane!=side)return;
 
- if(mFileOperations.busy()){
+ if(mFileOperations.busy()||mFileOperations.pendingConfirmationToken()){
   StatusText().Text(L"Shell \uC791\uC5C5\uC774 \uB05D\uB09C \uB4A4 \uC2DC\uB3C4\uD558\uC138\uC694.");
   return;
  }
@@ -1316,7 +1330,7 @@ void MainWindow::ShowExternalWindowsContextMenu(int side,bool propertiesOnly){
   return;
  }
  auto list=side==0?LeftFiles():RightFiles();
- const auto count=list.SelectedItems().Size();
+ const auto count=currentFolder?1u:list.SelectedItems().Size();
  if(!count||count>fxfile::shellcontext::kMaxContextSelection){
   StatusText().Text(L"외부 Shell 메뉴는 최대 32개 항목을 선택할 수 있습니다.");
   return;
@@ -1331,15 +1345,18 @@ void MainWindow::ShowExternalWindowsContextMenu(int side,bool propertiesOnly){
  std::wstring commonParent;
  std::size_t units=0;
  for(std::uint32_t i=0;i<count;++i){
-  auto row=list.SelectedItems().GetAt(i).try_as<ListViewItem>();
-  if(!row||!row.Tag())return;
-  const auto logical=winrt::unbox_value<std::uint64_t>(row.Tag());
-  auto const* indexed=session.indexedItem(static_cast<std::size_t>(logical));
-  if(!indexed||!indexed->isFileSystem()||indexed->parsingName.empty()){
-   StatusText().Text(L"선택한 파일시스템 항목의 Shell 메뉴를 열 수 없습니다.");
-   return;
+  std::wstring path=folder;
+  if(!currentFolder){
+   auto row=list.SelectedItems().GetAt(i).try_as<ListViewItem>();
+   if(!row||!row.Tag())return;
+   const auto logical=winrt::unbox_value<std::uint64_t>(row.Tag());
+   auto const* indexed=session.indexedItem(static_cast<std::size_t>(logical));
+   if(!indexed||!indexed->isFileSystem()||indexed->parsingName.empty()){
+    StatusText().Text(L"선택한 파일시스템 항목의 Shell 메뉴를 열 수 없습니다.");
+    return;
+   }
+   path=indexed->parsingName;
   }
-  auto const& path=indexed->parsingName;
   const auto value=std::filesystem::path(path);
   if(!value.is_absolute()||value.lexically_normal().native()!=path||
      path.size()<4||path.size()>1024||
@@ -1361,13 +1378,14 @@ void MainWindow::ShowExternalWindowsContextMenu(int side,bool propertiesOnly){
   }
   const auto flags=::GetFileAttributesW(path.c_str());
   if(flags==INVALID_FILE_ATTRIBUTES||
-     (flags&FILE_ATTRIBUTE_REPARSE_POINT))return;
+     (flags&FILE_ATTRIBUTE_REPARSE_POINT)||
+     (currentFolder&&!(flags&FILE_ATTRIBUTE_DIRECTORY)))return;
   for(auto const& prior:paths)
    if(::CompareStringOrdinal(prior.c_str(),-1,
                              path.c_str(),-1,TRUE)==CSTR_EQUAL)return;
   units+=path.size();
   paths.push_back(path);
-  originalSelection.push_back(path);
+  if(!currentFolder)originalSelection.push_back(path);
  }
  std::sort(originalSelection.begin(),originalSelection.end());
  const auto expectedSelection=
@@ -1387,7 +1405,8 @@ void MainWindow::ShowExternalWindowsContextMenu(int side,bool propertiesOnly){
  auto dispatch=DispatcherQueue();
  auto weak=get_weak();
  StatusText().Text(propertiesOnly?
-  L"선택 항목의 Windows 속성 창을 여는 중입니다.":
+  currentFolder?L"현재 폴더의 Windows 속성 창을 여는 중입니다.":
+                L"선택 항목의 Windows 속성 창을 여는 중입니다.":
   count>1?
    L"여러 항목의 외부 Windows 메뉴는 속성 확인만 지원합니다. "
    L"복사·이동·삭제는 앱 명령을 사용하세요.":
@@ -1395,17 +1414,18 @@ void MainWindow::ShowExternalWindowsContextMenu(int side,bool propertiesOnly){
  try{
   std::thread([helper=std::move(helper),paths=std::move(paths),
                cursor,dispatch,weak,identity,side,tab,route,folder,
-               expectedSelection,propertiesOnly]{
+               expectedSelection,propertiesOnly,currentFolder]{
     const DWORD code=fxfile::shellcontext::show(
         helper,paths,cursor,45000,propertiesOnly);
     dispatch.TryEnqueue([weak,code,identity,side,tab,route,folder,
-                         expectedSelection,propertiesOnly]{
+                         expectedSelection,propertiesOnly,currentFolder]{
       if(auto ui=weak.get()){
        if(ui->mClosing)return;
        const auto& live=ui->ActiveWindowTab();
        if(live.identity!=identity||
           live.model.activePane!=side||
-          ui->mFileOperations.busy())return;
+          ui->mFileOperations.busy()||
+          ui->mFileOperations.pendingConfirmationToken())return;
        const auto& pane=live.model.panes[side];
        if(pane.active!=tab||
           tab>=pane.routeIds.size()||
@@ -1419,23 +1439,27 @@ void MainWindow::ShowExternalWindowsContextMenu(int side,bool propertiesOnly){
        // status even when the same folder tab and route are still active.
        if(tab>=pane.tabs.size()||tab>=pane.pending.size()||
           pane.pending[tab])return;
-       auto selection=side==0?ui->LeftFiles():ui->RightFiles();
-       if(selection.SelectedItems().Size()!=expectedSelection->size())return;
-       std::vector<std::wstring> actualSelection;
-       actualSelection.reserve(expectedSelection->size());
-       for(auto const& value:selection.SelectedItems()){
-        auto row=value.try_as<ListViewItem>();
-        if(!row||!row.Tag())return;
-        std::uint64_t logical{};
-        try{logical=unbox_value<std::uint64_t>(row.Tag());}
-        catch(...){return;}
-        const auto* indexed=pane.tabs[tab].indexedItem(
-            static_cast<std::size_t>(logical));
-        if(!indexed||!indexed->isFileSystem())return;
-        actualSelection.push_back(indexed->parsingName);
+       // Folder Properties belongs to the committed folder, regardless of
+       // which child files happen to be selected while its sheet is open.
+       if(!currentFolder){
+        auto selection=side==0?ui->LeftFiles():ui->RightFiles();
+        if(selection.SelectedItems().Size()!=expectedSelection->size())return;
+        std::vector<std::wstring> actualSelection;
+        actualSelection.reserve(expectedSelection->size());
+        for(auto const& value:selection.SelectedItems()){
+         auto row=value.try_as<ListViewItem>();
+         if(!row||!row.Tag())return;
+         std::uint64_t logical{};
+         try{logical=unbox_value<std::uint64_t>(row.Tag());}
+         catch(...){return;}
+         const auto* indexed=pane.tabs[tab].indexedItem(
+             static_cast<std::size_t>(logical));
+         if(!indexed||!indexed->isFileSystem())return;
+         actualSelection.push_back(indexed->parsingName);
+        }
+        std::sort(actualSelection.begin(),actualSelection.end());
+        if(actualSelection!=*expectedSelection)return;
        }
-       std::sort(actualSelection.begin(),actualSelection.end());
-       if(actualSelection!=*expectedSelection)return;
        if(code==0)ui->StatusText().Text(propertiesOnly?
           L"Windows 속성 창이 닫혔습니다.":
           L"Windows Shell 확장 메뉴가 종료됐습니다.");

@@ -452,7 +452,9 @@ namespace winrt::FlyExplorer::implementation
         int DetailLayoutProfile() const;
         std::array<Microsoft::UI::Xaml::GridLength,4> DetailColumnWidths(int side) const;
         void ApplyDetailColumnLayout(int side);
-        void ShowExternalWindowsContextMenu(int side,bool propertiesOnly=false);
+        void ShowExternalWindowsContextMenu(int side,bool propertiesOnly=false,
+                                            bool currentFolder=false);
+        void ShowCurrentFolderProperties(int side);
         void RevealSelectedInWindowsExplorer(int side);
         void OpenCurrentFolderInWindowsExplorer(int side);
         void UpdateViewPresentation(int side);
