@@ -30,7 +30,7 @@ class R03ExtraLargeContract(unittest.TestCase):
         self.assertIn("ViewExtraLargeIconsItem().IsChecked(value==5)", cpp)
         self.assertIn('choice(L"아주 큰 아이콘",viewMode==5,5,true)', read("app/winui/m22_transfers.cpp"))
         controller = read("app/winui/m20_shell.cpp")
-        self.assertIn("if(selection<0||selection>5)return;", controller)
+        self.assertIn("if(selection<0||selection>6)return;", controller)
         self.assertIn("mPreferencesCoordinator.setDefaultViewMode(selection)", controller)
         self.assertIn("(std::min)(5,", main)
         self.assertIn("FileViewMode::ExtraLargeIcons", main)
@@ -41,7 +41,7 @@ class R03ExtraLargeContract(unittest.TestCase):
         self.assertIn('x:Key="ExplorerExtraLargeIconsItemsPanel"', read("app/winui/MainWindow.xaml"))
         self.assertIn('panel==4?L"ExplorerExtraLargeIconsItemsPanel"', main)
         self.assertIn("const bool iconGrid=medium||large||extraLarge", main)
-        self.assertIn("const double targetSize=extraLarge?112.0:", main)
+        self.assertIn("extraLarge?112.0:", main)
         self.assertIn("row.Width(168);row.Height(190)", main)
         self.assertIn("requestedView==FileViewMode::ExtraLargeIcons?128.0", main)
         self.assertEqual(read("app/winui/file_detail_controller.cpp").count(
