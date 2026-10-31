@@ -12,7 +12,7 @@ from pywinauto import Desktop
 import benchmark_filtered_folder_gui as h
 from paths import ROOT, app_exe
 
-BASE = ROOT/"logs"/"r12-view-pane-owned-gui-r4-20261031"
+BASE = ROOT/"logs"/"r12-view-pane-owned-gui-r5-diagnostic-20261031"
 
 
 def main():
@@ -70,12 +70,40 @@ def main():
             result["no_implicit_preview_read_on_details"]=True
 
             preview=open_view("ViewTextPreviewAccessItem")
+            rect=preview.rectangle()
+            result["preview_entry"]={
+                "id":preview.element_info.automation_id,
+                "name":preview.element_info.name[:120],
+                "rect":[rect.left,rect.top,rect.right,rect.bottom],
+                "enabled":preview.is_enabled()
+            }
             preview.click_input()
-            # Distinguish a missing MenuFlyout Click from a focus failure:
-            # the action only publishes guidance; it never reads file bytes.
-            h.wait(lambda:"미리보기는 .txt" in app.el("StatusText").window_text(),
-                   "R12 View preview command did not dispatch",seconds=8)
-            result["preview_command_dispatched"]=True
+            try:
+                h.wait(lambda:"미리보기는 .txt" in app.el("StatusText").window_text(),
+                       "R12 pointer click did not dispatch",seconds=4)
+                result["preview_command_dispatched"]=True
+            except AssertionError:
+                result["pointer_dispatched"]=False
+                result["status_after_pointer"]=app.el("StatusText").window_text()[:180]
+                result["menu_still_visible"]=view_item("ViewTextPreviewAccessItem") is not None
+                print("R12_POINTER_DIAG="+json.dumps(result,ensure_ascii=False),flush=True)
+                # Diagnostic only: use WinUI/UIA Invoke on the same owned menu
+                # item to distinguish pointer hit-testing from Click routing.
+                retry=view_item("ViewTextPreviewAccessItem")
+                if retry is None:
+                    retry=open_view("ViewTextPreviewAccessItem")
+                assert retry.element_info.process_id==app.app.pid
+                assert h.owner(h.u.GetForegroundWindow())==app.app.pid
+                retry.invoke()
+                try:
+                    h.wait(lambda:"미리보기는 .txt" in app.el("StatusText").window_text(),
+                           "R12 UIA Invoke did not dispatch",seconds=5)
+                    result["uia_invoke_dispatched"]=True
+                except AssertionError:
+                    result["uia_invoke_dispatched"]=False
+                result["uia_invoke_focus"]=app.el("TextPreviewToggleButton").has_keyboard_focus()
+                print("R12_INVOKE_DIAG="+json.dumps(result,ensure_ascii=False),flush=True)
+                raise AssertionError("R12 pointer menu action not accepted; see bounded diagnostics")
             try:
                 h.wait(lambda:app.el("TextPreviewToggleButton").has_keyboard_focus(),
                        "R12 preview opt-in button did not receive focus",seconds=10)
@@ -107,6 +135,7 @@ def main():
         assert app.report["profile_removed"]
         success=True
     finally:
+        result["owned_source_preserved_on_exit"]=source.read_bytes()==content
         if success:
             assert folder.parent==BASE.resolve() and not folder.is_symlink()
             shutil.rmtree(folder)
