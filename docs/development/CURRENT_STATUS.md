@@ -1,3 +1,11 @@
+# 2026-10-31 — R03 아주 큰 아이콘 보기 6번째 모드 한정 수용
+
+- 제품 `213f3566809950160118d14ee5737e9c1dd4f62c`: 기존 보기 0~4는 유지하고 ExtraLargeIcons=5를 추가했다. 상단·빈 배경 메뉴, Ctrl+Shift+1, Ctrl+휠, 화면 배치 및 bounded Shell thumbnail 요청, 현재 패널별 보기 상태·폴더별 임시 기억·개인 설정·세션 v4 허용 범위를 함께 연결했다. 두 단계 탭/정렬/열 소유권, 저장 포맷 버전과 사용자 파일/OS 설정은 바꾸지 않았다.
+- [관련 Windows 소스 18/18·Release #41160263141](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41160263141) PASS, EXE SHA256 `1cd018b35ebd8ffe9915a7ae56fdb613c146b99425e1e7995259fa0b43ad4ec4`. 증분 명령이 IPDB/IOBJ 불일치로 25,676개 함수 전체 코드 생성으로 전환됐고 clean/package는 하지 않았다.
+- [실제 GUI #41160542458](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41160542458) PASS: 새 EXE로 왼쪽 Ctrl+Shift+1 아주 큰 아이콘/오른쪽 자세히 보기 보존, 기존 Ctrl+Shift+2 큰 아이콘 복귀 후 재선택, 테스트 파일 바이트/원래 설정 보존, 앱 정상 종료/성공 fixture·profile 정리.
+- [실제 PNG #41160630412](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41160630412) 읽기 전용 SUCCESS. Dark·96 DPI·1160×640 두 화면 직접 검토: 아이콘 2열/기존 큰 아이콘 3열, 파일명 및 우측 상세 목록 유지, 새 잘림·겹침 미관측. PNG SHA256 extra-large `13759848c20e4078b7d1d487819ed62aa29f12f1c8362c314c7c1de2b575961b`; legacy-large `68712a04b2c07cd1168501851e63238f9275ed4337c95289a269d19e9047866f`.
+- R03 전체 8종 중 기존 다섯 + 아주 큰 아이콘 **6종**만 구현했다. 타일/내용은 미구현, 새 모드의 실사용 재시작 세션 복원·다른 테마/환경·Explorer 픽셀 동등성은 이번에 시험하지 않았다. VM source clean·앱/helper/worker0, 성공 소유 정리 후 슬롯 `ec11df764a677920ea3b6ee05198c60a3b123edc`에서 idle 복귀. [정확한 구현·제한](R03_EXTRA_LARGE_ICONS_20261031.md). PR #70은 이전에 통합 완료됐으며 새 PR 없이 main에 직접 반영했다.
+
 # 2026-10-31 — R02 빈 배경 분류 방법 메뉴 한정 Windows 수용
 
 - 제품 `43588b57ae56766dcdf7e995841df4e943132155`: 빈 배경 메뉴에 기존 4종 분류 방법(유형·이름·크기·수정 월) 진입을 추가한다. 동일 `ToggleGroupMode`·체크 상태와 활성 패널/PaneTab/route/pending·파일 작업 확인창 차단을 재사용하며 새 그룹 엔진이나 세션 v4 변경은 없다.
