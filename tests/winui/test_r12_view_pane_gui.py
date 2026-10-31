@@ -12,7 +12,7 @@ from pywinauto import Desktop
 import benchmark_filtered_folder_gui as h
 from paths import ROOT, app_exe
 
-BASE = ROOT/"logs"/"r12-view-pane-owned-gui-20261031"
+BASE = ROOT/"logs"/"r12-view-pane-owned-gui-r2-20261031"
 
 
 def main():
