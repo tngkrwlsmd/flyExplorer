@@ -76,8 +76,11 @@ def main():
                 mouse.click(button="right", coords=blank_point())
                 group = h.wait(lambda: visible_menu("분류 방법"),
                                "background grouping submenu absent")
-                box = group.rectangle()
-                mouse.move(coords=(box.mid_point().x, box.mid_point().y))
+                # WinUI's nested MenuFlyoutSubItem may not expand on an
+                # artificial hover alone. Use a real owned pointer click on
+                # the verified group row, not a direct handler invocation.
+                assert group.element_info.process_id == app.app.pid
+                group.click_input()
                 choice = h.wait(lambda: visible_menu("유형"),
                                 "background Type grouping choice absent")
                 assert group.element_info.process_id == app.app.pid
