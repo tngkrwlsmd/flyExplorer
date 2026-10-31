@@ -43,7 +43,7 @@ def terminal_windows():
     return found
 
 def main():
-    base=ROOT/"logs"/"r05-terminal-owned-20261031"
+    base=ROOT/"logs"/"r05-terminal-diagnose-20261031"
     if base.exists() and any(base.iterdir()):
         raise RuntimeError("Retained R05 owned evidence exists; preserve it")
     base.mkdir(parents=True,exist_ok=True)
@@ -57,7 +57,7 @@ def main():
     new_hwnd=None
     success=False
     try:
-        with h.App(app_exe("Release"),fixture,"r05-terminal","dark") as app:
+        with h.App(app_exe("Release"),fixture,"r05-terminal-diagnose","dark") as app:
             h.wait(lambda:any(marker.name in x.window_text() for x in app.rows("Left")),
                    "owned folder entry absent",seconds=20)
             view=app.el("LeftFiles")
@@ -89,11 +89,26 @@ def main():
             assert h.owner(u.GetForegroundWindow())==app.app.pid
             app.capture("menu")
             item.click_input()
+            result["menu_clicked"]=True
             def own_new_terminal():
                 matches=terminal_windows()-baseline
                 return next(iter(matches)) if len(matches)==1 else None
-            new_hwnd,pid=h.wait(own_new_terminal,
-                               "new Windows Terminal window not observed",seconds=20)
+            try:
+                new_hwnd,pid=h.wait(own_new_terminal,
+                                   "new Windows Terminal window not observed",seconds=12)
+            except AssertionError:
+                # Observe the exact owned application's response; do not
+                # infer installation, launch success, or alter any other window.
+                app.win.set_focus()
+                app.capture("terminal-not-observed")
+                status=app.el("StatusText")
+                try:
+                    detail=status.iface_text.DocumentRange.GetText(-1)
+                except Exception:
+                    detail=status.window_text()
+                result["owned_app_status"]=str(detail)[:350]
+                print("R05_TERMINAL_OWNED_STATUS="+repr(detail),flush=True)
+                raise
             assert psutil.Process(pid).name().casefold()=="windowsterminal.exe"
             assert u.IsWindow(new_hwnd)
             result["new_terminal_window"]=True
