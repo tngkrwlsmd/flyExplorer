@@ -18,6 +18,7 @@ struct FileToolbar : FileToolbarT<FileToolbar> {
  void BeginNameEdit(int action,winrt::hstring const& initial,bool isFolder);
  void EndNameEdit();
  void OnMoreFlyoutClosed(IInspectable const&,IInspectable const&);
+ void OnViewFlyoutClosed(IInspectable const&,IInspectable const&);
  void OnCreateFolder(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
  void OnNewFolderMenu(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
  void OnNewTextFileMenu(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
@@ -79,6 +80,7 @@ private:
  bool restoring_=false;
  int pendingNameAction_=-1;
  bool nameFocusAfterMoreClosed_=false;
+ bool previewFocusAfterViewClosed_=false;
 };
 }
 namespace winrt::FlyExplorer::factory_implementation { struct FileToolbar : FileToolbarT<FileToolbar,implementation::FileToolbar>{}; }
