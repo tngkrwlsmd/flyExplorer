@@ -428,7 +428,6 @@ void MainWindow::ShowAppBackgroundContextMenu(
  const int groupMode=static_cast<int>(state.fileLists[side].groupMode);
  auto weak=get_weak();
  auto focusNameEditAfterClose=std::make_shared<bool>(false);
- auto focusPreviewAfterClose=std::make_shared<bool>(false);
  // Share the same route/WindowTab guard for ordinary commands and checked
  // view/sort items. A delayed menu click cannot change a different pane.
  auto guarded=[weak,side,identity,tab,route,
@@ -513,9 +512,7 @@ void MainWindow::ShowAppBackgroundContextMenu(
  }));
  view.Items().Append(detailsPane);
  view.Items().Append(make(L"텍스트 미리보기 버튼으로 이동 (Alt+P)",L"\uE8A9",
-     ready,[focusPreviewAfterClose](MainWindow&){
-      *focusPreviewAfterClose=true;
-     }));
+     ready,[](MainWindow& ui){ui.OpenPreviewFromViewMenu();}));
  menu.Items().Append(view);
  MenuFlyoutSubItem sort;
  sort.Text(L"정렬 기준");
@@ -577,25 +574,8 @@ void MainWindow::ShowAppBackgroundContextMenu(
        ui.BeginFileNameCommand(fxfile::filecommand::Kind::CreateMarkdownFile);
       }));
  menu.Items().Append(create);
- menu.Closed([weak,focusNameEditAfterClose,focusPreviewAfterClose,
-              side,identity,tab,route,sourceShellFolder,sourceFilesystemFolder](
+ menu.Closed([weak,focusNameEditAfterClose](
      IInspectable const&,IInspectable const&){
-  if(std::exchange(*focusPreviewAfterClose,false)){
-   auto ui=weak.get();
-   if(!ui||ui->mClosing||ui->mFileOperations.busy()||
-      ui->mFileOperations.pendingConfirmationToken())return;
-   auto const& state=ui->ActiveWindowTab();
-   if(state.identity!=identity||state.model.activePane!=side)return;
-   auto const& pane=state.model.panes[side];
-   if(pane.active!=tab||tab>=pane.tabs.size()||
-      tab>=pane.routeIds.size()||tab>=pane.pending.size()||
-      tab>=pane.filesystemPaths.size()||pane.pending[tab]||
-      pane.routeIds[tab]!=route||
-      pane.tabs[tab].snapshot().parsingName!=sourceShellFolder||
-      pane.filesystemPaths[tab]!=sourceFilesystemFolder)return;
-   ui->OpenPreviewFromViewMenu();
-   return;
-  }
   if(!std::exchange(*focusNameEditAfterClose,false))return;
   auto ui=weak.get();
   if(!ui)return;
