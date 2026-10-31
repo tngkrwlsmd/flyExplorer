@@ -14,7 +14,7 @@ from paths import ROOT, app_exe
 
 
 def main():
-    base = ROOT / "logs" / "alt-properties-owned-20261031-dispatch-fix2"
+    base = ROOT / "logs" / "alt-properties-owned-20261031-poll-fix"
     base.mkdir(parents=True, exist_ok=True)
     h.BASE = base
     fixture = Path(tempfile.mkdtemp(prefix="fixture-", dir=base)).resolve()
@@ -34,8 +34,20 @@ def main():
     try:
         with h.App(app_exe("Release"), fixture, "alt-properties") as app:
             def rows():
-                return {name: next((r for r in app.rows() if name in r.window_text()), None)
+                current = app.rows()
+                return {name: next((r for r in current if name in r.window_text()), None)
                         for name in names}
+
+            def first_focused():
+                item = rows()[names[0]]
+                return item is not None and item.has_keyboard_focus()
+
+            def selected(count):
+                # Icon/type completion can briefly rebuild the owned row peers.
+                # Resolve one fresh complete snapshot; absence means keep waiting.
+                items = rows()
+                return (all(items.values()) and
+                        sum(bool(r.is_selected()) for r in items.values()) == count)
 
             h.wait(lambda: all(rows().values()) and app.el("CreateFolderButton").is_enabled(),
                    "owned rows not ready")
@@ -48,9 +60,9 @@ def main():
                 # Keep the real clicked row as the keyboard route owner.
                 # Moving focus to the ListView container bypasses the user input
                 # path and can make Alt+Enter a harness-only no-op.
-                h.wait(items[names[0]].has_keyboard_focus,
+                h.wait(first_focused,
                        "clicked owned row not keyboard focused")
-                h.wait(lambda: sum(bool(r.is_selected()) for r in rows().values()) == count,
+                h.wait(lambda: selected(count),
                        "owned selection not ready")
                 previous = {p.pid for p in app.process.children(recursive=True)}
                 app.keys("%{ENTER}")
@@ -85,7 +97,7 @@ def main():
                 content = "\n".join(e.window_text() for e in dialog.descendants()[:120])
                 if count == 1:
                     assert names[0].casefold() in (dialog.window_text() + content).casefold()
-                assert sum(bool(r.is_selected()) for r in rows().values()) == count
+                h.wait(lambda: selected(count), "owned selection not preserved")
                 dialog.set_focus()
                 assert h.owner(h.u.GetForegroundWindow()) == helper.pid
                 rect = dialog.rectangle()
@@ -111,7 +123,7 @@ def main():
                 app.win.set_focus()
                 h.wait(lambda: "속성 창이 닫혔습니다" in app.el("StatusText").window_text(),
                        "properties completion status absent")
-                assert sum(bool(r.is_selected()) for r in rows().values()) == count
+                h.wait(lambda: selected(count), "owned selection not preserved")
             # Address editing keeps ownership of Alt+Enter.
             app.keys("^l")
             address = app.el("AddressBox")
