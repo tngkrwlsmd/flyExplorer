@@ -1,3 +1,12 @@
+# 2026-10-31 — R05 Terminal 패키지 활성화 fallback 실제 GUI 검사 사전 조건 실패
+
+- 최신 제품 `e452fe990d6798ac3292f5eded79d4d634abedb0`은 현재 일반 로컬 폴더에서 사용자가 ‘터미널에서 열기’를 클릭할 때 per-user `wt.exe` 별칭이 없으면 Windows의 공개 `IApplicationActivationManager`로 설치된 Terminal 앱을 활성화하는 fallback을 추가했다. 경로는 고정 로컬 드라이브·실제 폴더/비재분석지점으로 제한하고, 명령 셸·사용자 파일 수정·클립보드·외부 전송은 하지 않는다.
+- [정확한 새 Release #41179006927](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41179006927): R05 직접 관련 source 계약 **3/3 PASS**, Release **PASS**. EXE SHA256 `e017cdd3e39949e1e30746330f05f983406312f36fe0979cb7391dc9ea4bfc2e`; helper SHA256 `3cc8f2e489c9229c8e419199d8b5b63bc512e1c6e503d1943f35984084c08487`. 증분 명령은 유지 IPDB/IOBJ를 사용할 수 없어 25,788개 함수를 다시 컴파일했다.
+- [소유 GUI #41181754682](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41181754682) **FAIL(요청/검사 스크립트)**: 실제 메뉴·앱·Terminal 창 실행 이전에 `UNEXPECTED_OR_DIRTY_R03_SOURCE` 사전 조건에서 중단. GUI 스크립트는 Windows 작업 checkout이 이전 `6f3c805f...` HEAD임을 요구했으나 직전 새 Release가 이미 `e452fe990...`로 checkout했다. 정확한 원인은 오래된 **HEAD 기대값**이며 제품 실패·Terminal 패키지 부재·창 생성 실패가 아니다. 소유 GUI, 새 캡처, Terminal 창 확인은 **실행되지 않았다**.
+- 스크립트의 사전 조건 한 곳을 바로잡는 GitHub 변경 시도가 작업 도구 안전 검사로 차단됐고 실제 반영되지 않았다. 다른 방법으로 우회하거나 변경 없는 반복 GUI를 제출하지 않았다. Windows 제어 요청 슬롯만 `01ca8b43097ff8c7b74b939776bc67ce1c6e0bf4` [skip ci] **idle**로 돌려놓았다. 본 변경의 실제 GUI/픽셀 수용은 아직 미완료다.
+- 다음 Windows 실행 전 `personal-control-plane/scripts/tasks/Invoke-FlyExplorerR05TerminalFallbackGUI.ps1`의 source HEAD preflight가 **현재 빌드된 `e452fe990...`**를 기대하는지 확인한다. 원격 main, 슬롯, 다른 활동, 사용자 변경·프로세스 및 새 EXE hash가 유지되는 경우에만 기존 소유 GUI를 변경된 사전 조건으로 한 번 실행한다. 옛 오류 로그는 보존하고 새 소유 경로를 덮지 않는다. 성공 시 테스트 소유 Terminal 창만 닫고 fixture/profile/worker는 안전하게 정리한다.
+- 기존 R03 8종/세션 v4·듀얼 패널/PaneTab 정렬·패널별 보기/열, G03~G05 제외·G07 중단, 실제 사용자 파일·OS 설정·전역 클립보드·실제 휴지통·외부 전송 경계는 유지한다.
+
 # 2026-10-31 — R03 내용 보기 8번째 모드 실제 Windows 한정 수용
 
 - 제품 `00673784a548c43e231a4e39d150a5e869974a36`: 이전 `d4a29ced...`의 내용 보기 `Content=7` 구현을 복구하고, `app/winui/MainWindow.xaml.cpp`에서 `row.Content(contentRow)` 뒤 공통 `row.Content(cell)`이 같은 아이콘 셀에 서로 다른 XAML 부모를 지정하던 오류를 `if(!contentMode)row.Content(cell)`로 수정했다. 기존 0~6 보기, PaneTab별 정렬, 패널별 보기·열, 두 단계 탭 및 세션 v4 포맷을 유지한다.

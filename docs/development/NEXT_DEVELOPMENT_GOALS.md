@@ -16,6 +16,9 @@
 
 ## 앞으로 진행할 작업
 
+**현재 R05 집중 검증 경계:** [실제 fallback Release PASS·GUI 스크립트 HEAD 실패 기록](R05_TERMINAL_FALLBACK_20261031.md). 새 실행 파일의 GUI는 아직 시작되지 않았으며 최신 빌드 이후 checkout을 이전 소스로 기대하던 검사 스크립트의 한 사전 조건이 원인이다. 안전 검사가 수정 저장을 차단하여 [skip ci] idle로 반환했다. 승인 경로가 확인되면 재빌드 없이 해당 GUI만 한 번 검증한다. 다른 R03 수용이나 이전 R05 실패를 반복하지 않는다.
+
+
 **R03 내용 보기 종료 결함 해결·8종 한정 수용:** [원인·실제 Release/GUI/화면 근거](R03_CONTENT_ACCEPTANCE_20261031.md)를 확인한다. 과거 [GUI 실패](R03_CONTENT_RUNTIME_FAILURE_20261031.md)는 이력으로 유지하되 이제 현재 미완료 작업으로 반복하지 않는다. 기존 R03 여섯 모드·타일·v4 소유 정책과 G03~G05/G07 경계는 그대로다.
 
 **R03 타일 및 내용 보기 완료:** [타일 수용](R03_TILES_ACCEPTANCE_20261031.md)과 [내용 보기 수용](R03_CONTENT_ACCEPTANCE_20261031.md)으로 기본 탐색기 보기 8종의 한정 진입·표현을 구현했다. 과거 [타일](R03_TILES_PENDING_20261031.md)·[내용](R03_CONTENT_RUNTIME_FAILURE_20261031.md) 실패 기록을 유지한다.
