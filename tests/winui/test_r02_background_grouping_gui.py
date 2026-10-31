@@ -13,7 +13,7 @@ from paths import ROOT, app_exe
 
 
 def main():
-    base = ROOT / "logs" / "r02-background-grouping-click-20261031"
+    base = ROOT / "logs" / "r02-background-grouping-click2-20261031"
     if base.exists() and any(base.iterdir()):
         raise RuntimeError("existing R02 GUI evidence; inspect first")
     base.mkdir(parents=True, exist_ok=True)
@@ -93,7 +93,7 @@ def main():
             time.sleep(.8)
             assert heading(".txt") is None and heading(".md") is None
             choice = open_group_menu()
-            assert choice.get_toggle_state() == 0
+            assert int(choice.iface_toggle.CurrentToggleState) == 0
             app.capture("background-group-menu")
             box = choice.rectangle()
             mouse.click(coords=(box.mid_point().x, box.mid_point().y))
@@ -104,7 +104,7 @@ def main():
             result["type_grouped"] = True
 
             choice = open_group_menu()
-            assert choice.get_toggle_state() == 1
+            assert int(choice.iface_toggle.CurrentToggleState) == 1
             app.capture("background-group-checked")
             box = choice.rectangle()
             mouse.click(coords=(box.mid_point().x, box.mid_point().y))
