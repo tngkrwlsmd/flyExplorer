@@ -12,12 +12,12 @@ class R03ExtraLargeContract(unittest.TestCase):
         enum = read("app/winui/file_list_state.h")
         self.assertIn("Details=0, List=1, SmallIcons=2, MediumIcons=3, LargeIcons=4, ExtraLargeIcons=5", enum)
         v4 = read("src/base/ui_session.cpp")
-        self.assertIn("pane.view>5", v4)
+        self.assertIn("pane.view>6", v4)
         self.assertIn("if(version==4)return decodeV4", v4)
         prefs = read("src/base/ui_preferences.cpp")
-        for token in ('case 5:return "extra-large-icons"', "view<6", "pref.defaultViewMode>5"):
+        for token in ('case 5:return "extra-large-icons"', "view<7", "pref.defaultViewMode>6"):
             self.assertIn(token, prefs)
-        self.assertIn("mode<0||mode>5", read("app/winui/folder_view_controller.h"))
+        self.assertIn("mode<0||mode>6", read("app/winui/folder_view_controller.h"))
 
     def test_live_commands_and_selection_owner(self):
         bar = read("app/winui/FileToolbar.xaml")
