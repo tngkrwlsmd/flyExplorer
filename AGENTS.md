@@ -12,6 +12,26 @@ tngkrwlsmd/universal-agent-docs; update that core atomically rather than
 hand-editing individual generic files. Project facts belong in
 .agent-policy/PROJECT.md, while flyExplorer-specific overrides belong here.
 
+## User-directed direct-main and live comparison rule (2026-10-31)
+
+The user explicitly directs: when scoped review and actual use show no material
+problem, integrate directly into main without a PR. Do not keep accepted work
+waiting for a PR, create new PRs by default, or ask again for an already authorized
+safe main update. Verify the exact target, changed-function checks, existing
+accepted evidence and working tree, then use a normal non-force update. Isolate
+only changes with an actual unresolved problem; user data and existing work stay
+protected. Retire superseded work branches/PRs after their accepted content is on
+main. This supersedes older PR #70/draft/unmerged continuation notes.
+
+The user also requests a direct Windows 11 File Explorer comparison to revise
+requirements and the development backlog. Use the approved windows-vm path, the
+same disposable fixture, observed OS/Explorer version/theme/DPI and real input/
+pixels. Separate observed differences, source-confirmed limits and unobserved
+areas. Do not replace this live comparison with a documentation-only audit.
+Keep the dual-pane/two-level-tab/v4 ownership and existing exclusions. Opening
+and closing the new owned Explorer window is authorized; do not inspect or alter
+preexisting Explorer windows or personal history/settings.
+
 ## User-directed validation boundary (2026-10-21)
 
 The user explicitly directs: **do not perform build, GUI, or pixel/visual
