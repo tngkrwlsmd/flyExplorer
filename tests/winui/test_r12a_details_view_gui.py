@@ -12,7 +12,7 @@ from pywinauto import Desktop
 import benchmark_filtered_folder_gui as h
 from paths import ROOT, app_exe
 
-BASE=ROOT/"logs"/"r12a-details-owned-gui-20261031"
+BASE=ROOT/"logs"/"r12a-details-owned-gui-r4-top-20261031"
 
 
 def main():
@@ -55,18 +55,46 @@ def main():
                 assert h.owner(h.u.GetForegroundWindow())==app.app.pid
                 item.click_input()
 
+            def menu_closed():
+                try:
+                    entry=detail_entry()
+                    return entry is None or not entry.is_visible()
+                except (RuntimeError,LookupError):
+                    return True
+
             assert "열기" in app.el("FileInfoToggleButton").element_info.name
             click_detail()
             h.wait(lambda:"닫기" in app.el("FileInfoToggleButton").element_info.name,
                    "R12a details pane did not open",seconds=12)
+            result["details_opened_by_physical_click"]=True
             assert app.el("TextPreviewBody").window_text().strip()==""
             assert "꺼" in app.el("TextPreviewStatus").window_text()
-            result["details_opened_by_physical_click"]=True
             result["no_implicit_preview_read"]=True
+            # A command can update Details state before its flyout dismissal
+            # finishes. Wait for that original menu to close before re-opening.
+            h.wait(menu_closed,"R12a first View menu never closed",seconds=8)
+            result["first_menu_dismissed"]=True
+
             click_detail()
-            h.wait(lambda:"열기" in app.el("FileInfoToggleButton").element_info.name,
-                   "R12a details pane did not close",seconds=12)
+            try:
+                h.wait(lambda:"열기" in app.el("FileInfoToggleButton").element_info.name,
+                       "R12a details pane did not close",seconds=12)
+            except AssertionError:
+                entry=detail_entry()
+                result["second_click_diagnostic"]={
+                    "pane_toggle":app.el("FileInfoToggleButton").element_info.name[:100],
+                    "menu_still_visible":entry is not None and entry.is_visible(),
+                    "view_button_focused":app.el("ViewButton").has_keyboard_focus(),
+                    "foreground_owner":h.owner(h.u.GetForegroundWindow()),
+                    "app_pid":app.app.pid,
+                    "status":app.el("StatusText").window_text()[:200],
+                }
+                print("R12A_SECOND_TOGGLE_DIAG="+json.dumps(
+                    result["second_click_diagnostic"],ensure_ascii=False),flush=True)
+                raise
             result["details_closed_by_physical_click"]=True
+            h.wait(menu_closed,"R12a second View menu never closed",seconds=8)
+            result["second_menu_dismissed"]=True
             result["original_unchanged"]=source.read_bytes()==content
         result["app"]=app.report
         assert result["original_unchanged"]
