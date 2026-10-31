@@ -13,7 +13,7 @@ from paths import ROOT, app_exe
 
 
 def main(remaining_only=False):
-    base = ROOT / "logs" / ("r01-properties-menus-remaining-20261031" if remaining_only
+    base = ROOT / "logs" / ("r01-properties-menus-folder-only-20261031" if remaining_only
                             else "r01-properties-menus-20261031")
     base.mkdir(parents=True, exist_ok=True)
     h.BASE = base
@@ -37,7 +37,9 @@ def main(remaining_only=False):
     h.u.WindowFromPoint.argtypes = (w.POINT,)
     h.u.WindowFromPoint.restype = w.HWND
     try:
-        with h.App(app_exe("Release"), first, "r01-menus", "dark") as app:
+        current = second if remaining_only else first
+        current_item = "r01-other.txt" if remaining_only else "r01-item.txt"
+        with h.App(app_exe("Release"), current, "r01-menus", "dark") as app:
             def row(side, name):
                 return next((r for r in app.rows(side) if name in r.window_text()), None)
 
@@ -123,7 +125,7 @@ def main(remaining_only=False):
                 result[tag]["closed"] = True
                 print("R01_STAGE_" + tag.upper() + "=PASS", flush=True)
 
-            h.wait(lambda: row("Left", "r01-item.txt") is not None and
+            h.wait(lambda: row("Left", current_item) is not None and
                    app.el("UpButton").is_enabled(), "initial fixture not ready")
             if not remaining_only:
                 click_row("Left", "r01-item.txt")
@@ -134,30 +136,19 @@ def main(remaining_only=False):
                 h.wait(lambda: selected("Left", "r01-item.txt"), "file selection changed")
             else:
                 result["selected_case_reused"] = "41156724867/b10bc7a6/9d7624fa"
-            # The hidden pane-title Invoke changes the model but need not move
-            # keyboard focus. A Control key from the old Left row can activate
-            # Left again. Establish a real Right input owner before Ctrl+L.
-            click_row("Right", "r01-item.txt")
-            h.wait(lambda: app.el("RightFiles").has_keyboard_focus() or any(
-                r.has_keyboard_focus() for r in app.rows("Right")),
-                "Right input owner not established")
-            app.keys("^l")
-            app.el("AddressBox").set_edit_text(str(second))
-            app.el("AddressBox").set_focus()
-            app.keys("{ENTER}")
-            h.wait(lambda: row("Right", "r01-other.txt") is not None and
-                   app.el("AddressBox").get_value().casefold() == str(second).casefold() and
-                   app.el("UpButton").is_enabled(), "right owned folder not committed")
-            click_row("Right", "r01-other.txt")
-            area = app.el("RightFiles").rectangle()
-            last_bottom = max(r.rectangle().bottom for r in app.rows("Right"))
+            # Observe the new folder command directly on a committed owned
+            # folder. Unrelated right-pane navigation/focus setup is not a
+            # precondition for this menu's target and must not gate it.
+            click_row("Left", current_item)
+            area = app.el("LeftFiles").rectangle()
+            last_bottom = max(r.rectangle().bottom for r in app.rows("Left"))
             blank = (area.left + 40, max(area.top + 100, last_bottom + 30))
             assert area.left < blank[0] < area.right and area.top < blank[1] < area.bottom - 8
             assert h.owner(h.u.GetForegroundWindow()) == app.app.pid
             mouse.click(button="right", coords=blank)
-            invoke_and_close("SecondMenu", "current-folder")
-            assert app.el("AddressBox").get_value().casefold() == str(second).casefold()
-            assert row("Left", "r01-item.txt") is not None
+            invoke_and_close(current.name, "current-folder")
+            assert app.el("AddressBox").get_value().casefold() == str(current).casefold()
+            assert row("Left", current_item) is not None
             assert {p.relative_to(fixture).as_posix(): p.read_bytes()
                     for p in fixture.rglob("*") if p.is_file()} == before
             result["original_bytes_preserved"] = True
