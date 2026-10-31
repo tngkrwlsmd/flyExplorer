@@ -870,6 +870,10 @@ namespace winrt::FlyExplorer::implementation
                     fxfile::filecommand::Kind::CreateMarkdownFile);
                 else if(command==22)ui->ExecuteFileCommand(
                     fxfile::filecommand::Kind::CreateShortcut);
+                else if(command==23&&!ui->mFileOperations.busy()&&
+                        !ui->mFileOperations.pendingConfirmationToken())
+                    ui->OnToggleFileInfoPane(nullptr,nullptr);
+                else if(command==24)ui->OpenPreviewFromViewMenu();
                 else if(command>=11&&command<=13){
                     const int theme=command-11;
                     ui->ApplyThemeChoice(theme);
@@ -4099,6 +4103,7 @@ namespace winrt::FlyExplorer::implementation
         const bool visible=ActiveWindowTab().fileInfoPaneVisible;
         FileInfoPane().Visibility(visible?Visibility::Visible:Visibility::Collapsed);
         FileInfoColumn().Width(GridLength{visible?260.0:0.0,GridUnitType::Pixel});
+        fileBar()->SetFileInfoPaneState(visible);
         Microsoft::UI::Xaml::Automation::AutomationProperties::SetName(
             FileInfoToggleButton(),visible?
                 L"선택 항목 상세 정보 닫기":L"선택 항목 상세 정보 열기");
