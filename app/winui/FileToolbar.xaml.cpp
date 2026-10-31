@@ -61,11 +61,6 @@ void FileToolbar::BeginNameEdit(int action,hstring const& initial,bool isFolder)
      box.Select(0,static_cast<int>(dot));
  else box.SelectAll();
 }
-void FileToolbar::OnViewFlyoutClosed(IInspectable const&,IInspectable const&){
- const bool focus=previewFocusAfterViewClosed_;
- previewFocusAfterViewClosed_=false;
- if(focus&&IsLoaded()&&action_)action_(24);
-}
 void FileToolbar::OnMoreFlyoutClosed(IInspectable const&,IInspectable const&){
  // Flyout dismissal restores its opener's focus after the item Click.
  // Complete only the edit opened by that menu, without overriding new input.
