@@ -13,7 +13,7 @@ from pywinauto import Desktop
 import benchmark_filtered_folder_gui as h
 from paths import ROOT, app_exe
 
-BASE=ROOT/"logs"/"r04-selected-shortcut-gui-20261031"
+BASE=ROOT/"logs"/"r04-selected-shortcut-gui-r2-20261031"
 
 
 def main():
@@ -40,7 +40,11 @@ def main():
                    "source not selected",seconds=8)
             app.el("LeftFiles").set_focus()
             assert h.owner(h.u.GetForegroundWindow())==app.app.pid
-            app.keys("+{F10}")
+            # Exercise the actual selected-item right-click, not the already
+            # accepted Shift+F10 keyboard route used by unrelated tests.
+            row=source_row()
+            assert row is not None and row.is_selected()
+            row.click_input(button="right")
 
             def shortcut_action():
                 matches={}
@@ -55,7 +59,27 @@ def main():
                         continue
                 return next(iter(matches.values())) if len(matches)==1 else None
 
-            item=h.wait(shortcut_action,"owned shortcut menu absent",seconds=12)
+            try:
+                item=h.wait(shortcut_action,"owned shortcut menu absent",seconds=12)
+            except AssertionError:
+                # Bounded diagnostics of this application's own UI only.
+                names=[]
+                for top in Desktop(backend="uia").windows(process=app.app.pid):
+                    try:
+                        for node in top.descendants(control_type="MenuItem"):
+                            if node.element_info.process_id==app.app.pid:
+                                names.append(node.window_text()[:80])
+                    except (RuntimeError,LookupError):
+                        continue
+                print("R04_MENU_OWNED_ITEMS="+repr(names[:30]),flush=True)
+                print("R04_MENU_FOREGROUND_OWNER="+
+                      str(h.owner(h.u.GetForegroundWindow())),flush=True)
+                current=source_row()
+                print("R04_MENU_SOURCE_SELECTED="+
+                      str(current is not None and current.is_selected()),flush=True)
+                print("R04_MENU_OWNED_STATUS="+
+                      repr(app.el("StatusText").window_text()[:180]),flush=True)
+                raise
             assert item.is_enabled() and item.element_info.process_id==app.app.pid
             assert h.owner(h.u.GetForegroundWindow())==app.app.pid
             item.click_input()
