@@ -22,8 +22,21 @@ class FileOperationContracts(unittest.TestCase):
             "parent_path()!=folder",
         ):
             self.assertIn(token, body)
-        self.assertNotIn("MoveFileExW", body)
-        self.assertNotIn("DeleteFileW", body)
+        # R04's explicit Shell-link command stages only its own new file.
+        # Retain the old no-MoveFileExW/no-DeleteFileW contract for the
+        # folder, text, Markdown and rename commands outside that branch.
+        before_shortcut, after_start = body.split(
+            "if(task.kind==Kind::CreateShortcut){", 1)
+        shortcut, after_shortcut = after_start.split(
+            "if(task.kind!=Kind::RenameSelected)", 1)
+        legacy_commands = (before_shortcut +
+                           "if(task.kind!=Kind::RenameSelected)" + after_shortcut)
+        self.assertNotIn("MoveFileExW", legacy_commands)
+        self.assertNotIn("DeleteFileW", legacy_commands)
+        self.assertIn("::MoveFileExW(stage.c_str(),target.c_str(),MOVEFILE_WRITE_THROUGH)",
+                      shortcut)
+        self.assertNotIn("MOVEFILE_REPLACE_EXISTING", shortcut)
+        self.assertIn("::DeleteFileW(stage.c_str())", shortcut)
 
     def test_shell_transfer_core_is_bounded_and_requires_recycle_consent(self):
         header = read("src/base/shell_transfer_core.h")
