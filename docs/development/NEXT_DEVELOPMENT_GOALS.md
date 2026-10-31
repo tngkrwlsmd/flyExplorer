@@ -16,6 +16,10 @@
 
 ## 앞으로 진행할 작업
 
+**R11 단축키 안내 한정 수용:** [R11 개발·검증 기록](R11_MENU_SHORTCUT_HINTS_20261031.md)과 [Windows 소스·Release #41195478631](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41195478631)의 26/26 소스·Release PASS, [GUI 실행 #41199151346](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41199151346)의 앱 소유 메뉴 5종·원본 보존·정상 종료, [GUI 증거 확인 #41199490778](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41199490778) 및 1160×640 다크 화면의 Ctrl+X/Ctrl+C/Ctrl+Shift+C/F2/Delete 표시를 수용한다. 최초 GUI 실행의 상위 결과 경로 오류는 제품 실패로 취급하지 않고 로그로 보존한다. 코드가 독립적으로 분리돼 있어 R12 미수용 기능은 포함하지 않는다.
+
+**R12 보기 메뉴 진입 보류:** [Windows 포인터 검사 #41195201589](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41195201589)에서 메뉴 항목으로 실제 마우스 클릭을 했으나 동작하지 않았다. 접근성 호출(UIA Invoke)은 동작했으며 파일 읽기 자동 실행은 없었다. 별도 실제 GUI 수용 전에는 R12를 main으로 가져오지 않는다.
+
 **R05 Terminal GUI 수용 완료:** [R05 후속 수용](R05_TERMINAL_FALLBACK_20261031.md)과 [Windows GUI #41182673672](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41182673672)의 메뉴 클릭·새 Terminal 창 생성·닫기·원본/설정 보존·정상 종료 PASS를 재사용한다. 과거 HEAD 사전 조건 FAIL은 해결 전 이력이다. 픽셀 검토 및 다른 환경은 미검증이다.
 
 **R04 선택 항목 바로 가기 한정 수용:** [R04 구현·검증](R04_SELECTED_SHORTCUT_IMPLEMENTATION_20261031.md)의 고정 로컬 일반 파일/폴더 한 개에 대한 .lnk 생성은 [Windows native+Release #41184095052](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41184095052) 및 [실제 GUI #41184675172](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41184675172)에서 PASS. 빈 배경 새 바로 가기 마법사, 다중 선택, 픽셀 검토는 별개 미수용 범위다. 초기 GUI 메뉴 조회 실패는 기록을 보존한다.
@@ -40,7 +44,8 @@ Dark/96 DPI 화면은 수용했다. 기존 출력 처리 실패 #41153452286은 
 | 완료(한정) / R04 | 선택 항목 한 개의 바로 가기 만들기 | Windows native 45/45·Release 및 실제 마우스 우클릭→.lnk 생성 GUI PASS. 빈 배경 새 바로 가기 마법사·픽셀 검토는 별도 후보. |
 | 완료(한정) / R05 | 현재 폴더에서 Windows Terminal 열기 | 실제 새 Terminal 창 열기·닫기·원본 보존·정상 종료 GUI PASS. 별도 픽셀 검토와 다른 환경은 미검증. |
 | 별도 설계 / R06~R10 | 공유·Undo/Redo·압축 위임 안내·파일 즐겨찾기·환경별 명령 | 실제 진입점 차이는 확인했으나 실제 전송/압축/Undo·계정 기능을 실행하지 않았다. 외부 전송·기록/데이터 영향 정책을 유지한다. |
-| 사용성 / R11~R12 | 메뉴 아이콘/단축키 안내·보조 창 접근 | 명령 배치 차이와 기능 부재를 구분한다. 기존 상세/명시적 미리보기 읽기와 듀얼 패널 명령은 보존한다. |
+| 완료(한정) / R11 | 선택 항목 우클릭 메뉴의 기존 단축키 5종 안내 | 소스 26/26·Windows Release·소유 GUI·Dark/96 DPI 1160×640 실제 화면에서 Ctrl+X/Ctrl+C/Ctrl+Shift+C/F2/Delete 글자 표시 PASS. 명령 핸들러·클립보드·파일 변경 정책 불변. |
+| 보류 / R12 | 보기 메뉴에서 상세 창·미리보기 버튼 접근 | 소스·Release는 PASS였으나 실제 마우스 MenuItem 클릭이 디스패치되지 않음. UIA Invoke는 성공; 원인과 명시적 실제 클릭 수용 전 main 반영하지 않는다. |
 
 ### 기존 기능에 남은 검증 공백
 
