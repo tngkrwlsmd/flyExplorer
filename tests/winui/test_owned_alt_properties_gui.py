@@ -14,7 +14,7 @@ from paths import ROOT, app_exe
 
 
 def main(counts=(1, 2)):
-    base = ROOT / "logs" / "alt-properties-owned-20261031-multi-ready"
+    base = ROOT / "logs" / "alt-properties-owned-20261031-address-only"
     base.mkdir(parents=True, exist_ok=True)
     h.BASE = base
     fixture = Path(tempfile.mkdtemp(prefix="fixture-", dir=base)).resolve()
@@ -136,10 +136,11 @@ def main(counts=(1, 2)):
                 h.wait(lambda: "속성 창이 닫혔습니다" in app.el("StatusText").window_text(),
                        "properties completion status absent")
                 h.wait(lambda: selected(count), "owned selection not preserved")
-            # Address editing keeps ownership of Alt+Enter.
+            # The unchanged address handler treats Enter (including Alt+Enter)
+            # as path submission. It must not dispatch selected-file properties.
             app.keys("^l")
             address = app.el("AddressBox")
-            draft = str(fixture) + "-unsubmitted"
+            draft = str(fixture)
             address.set_edit_text(draft)
             address.set_focus()
             app.keys("%{ENTER}")
@@ -147,7 +148,7 @@ def main(counts=(1, 2)):
             assert not any("--context-properties" in p.cmdline()
                            for p in app.process.children(recursive=True))
             app.keys("{ESC}")
-            result["address_editor_preserved"] = True
+            result["address_keeps_existing_enter_behavior"] = True
             assert {p.name: p.read_bytes() for p in fixture.iterdir()} == before
             result["original_bytes_preserved"] = True
         assert app.report["normal_exit"] and app.report["profile_removed"]
