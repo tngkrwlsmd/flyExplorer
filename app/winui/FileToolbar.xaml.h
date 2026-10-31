@@ -55,6 +55,7 @@ struct FileToolbar : FileToolbarT<FileToolbar> {
  void OnViewTiles(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
  void OnViewContent(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
  void OnViewFileInfoPane(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
+ void OnViewFlyoutClosed(IInspectable const&,IInspectable const&);
  void OnRememberFolderView(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
  void OnForgetFolderView(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
  void OnViewCheckboxes(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
@@ -78,6 +79,7 @@ private:
  bool restoring_=false;
  int pendingNameAction_=-1;
  bool nameFocusAfterMoreClosed_=false;
+ bool pendingFileInfoPaneToggle_=false;
 };
 }
 namespace winrt::FlyExplorer::factory_implementation { struct FileToolbar : FileToolbarT<FileToolbar,implementation::FileToolbar>{}; }
