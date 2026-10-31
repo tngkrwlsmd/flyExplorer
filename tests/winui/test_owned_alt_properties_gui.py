@@ -13,8 +13,8 @@ import benchmark_filtered_folder_gui as h
 from paths import ROOT, app_exe
 
 
-def main():
-    base = ROOT / "logs" / "alt-properties-owned-20261031-poll-fix"
+def main(counts=(1, 2)):
+    base = ROOT / "logs" / "alt-properties-owned-20261031-multi-fix"
     base.mkdir(parents=True, exist_ok=True)
     h.BASE = base
     fixture = Path(tempfile.mkdtemp(prefix="fixture-", dir=base)).resolve()
@@ -38,9 +38,13 @@ def main():
                 return {name: next((r for r in current if name in r.window_text()), None)
                         for name in names}
 
-            def first_focused():
-                item = rows()[names[0]]
-                return item is not None and item.has_keyboard_focus()
+            def selected_focused():
+                # UIA AddToSelection may focus the added row. Either selected
+                # owned row is a valid keyboard route for the same selection.
+                items = rows()
+                return (all(items.values()) and any(
+                    item.is_selected() and item.has_keyboard_focus()
+                    for item in items.values()))
 
             def selected(count):
                 # Icon/type completion can briefly rebuild the owned row peers.
@@ -51,7 +55,7 @@ def main():
 
             h.wait(lambda: all(rows().values()) and app.el("CreateFolderButton").is_enabled(),
                    "owned rows not ready")
-            for count in (1, 2):
+            for count in counts:
                 app.win.set_focus()
                 items = rows()
                 items[names[0]].click_input()
@@ -60,8 +64,8 @@ def main():
                 # Keep the real clicked row as the keyboard route owner.
                 # Moving focus to the ListView container bypasses the user input
                 # path and can make Alt+Enter a harness-only no-op.
-                h.wait(first_focused,
-                       "clicked owned row not keyboard focused")
+                h.wait(selected_focused,
+                       "no selected owned row keyboard focused")
                 h.wait(lambda: selected(count),
                        "owned selection not ready")
                 previous = {p.pid for p in app.process.children(recursive=True)}
