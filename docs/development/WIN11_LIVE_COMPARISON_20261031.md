@@ -83,3 +83,13 @@ win11-live-native-captures-20261031에 보존. 전체 개인 desktop/원시 화�
 | Explorer 빈 배경 | b35be9cded42903ea683cd9b8d0b76658b2b558fa91e7c6ae7d2400d38d22b5d |
 | Explorer 보기 | ca9ade2193f1cc17bba092dc5beefcea20dda81a317c4092a077c933ad188954 |
 | Explorer 새 항목 | de1554f130a0bf03a235bc5f6eec567b6e05d373aa4223d773127c84a21205d5 |
+
+## main 반영 및 정리
+
+사용자 지시에 따라 검토·수용한 변경은 `72743bf7d9364b36c48d3873ea865ebf68ed1778`에서
+main에 비강제 fast-forward로 직접 반영했다. 새 PR이나 PR merge 명령은 사용하지
+않았고, GitHub가 기존 PR #70을 통합 완료로 자동 종료했다.
+[#41155449677](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41155449677)에서
+VM 소스를 해당 main으로 맞추고 clean/앱0·같은 EXE 보존을 확인했다. main과 같은
+HEAD임을 확인한 뒤 기존 work 브랜치를 제거했다. 이 완료 문서 갱신은 제품 변경이나
+새 빌드/GUI가 아니다. 이후 개발도 정상 변경은 main 직접 반영을 기본으로 한다.
