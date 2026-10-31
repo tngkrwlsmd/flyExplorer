@@ -508,6 +508,15 @@ void MainWindow::ShowAppBackgroundContextMenu(
  view.Items().Append(choice(L"아주 큰 아이콘",viewMode==5,5,true));
  view.Items().Append(choice(L"타일",viewMode==6,6,true));
  view.Items().Append(choice(L"내용",viewMode==7,7,true));
+ view.Items().Append(MenuFlyoutSeparator{});
+ ToggleMenuFlyoutItem detailsPane;
+ detailsPane.Text(L"세부 정보 창");
+ detailsPane.IsEnabled(ready);
+ detailsPane.IsChecked(state.fileInfoPaneVisible);
+ detailsPane.Click(guarded([](MainWindow& ui){
+  ui.OnToggleFileInfoPane(nullptr,nullptr);
+ }));
+ view.Items().Append(detailsPane);
  menu.Items().Append(view);
  MenuFlyoutSubItem sort;
  sort.Text(L"정렬 기준");
