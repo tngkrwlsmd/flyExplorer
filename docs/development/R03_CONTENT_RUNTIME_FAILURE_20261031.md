@@ -1,4 +1,6 @@
-# R03 내용 보기(8번째 보기) — Windows 프로세스 종료 미해결 (2026-10-31)
+# R03 내용 보기(8번째 보기) — 당시 Windows 프로세스 종료 실패 이력 (2026-10-31)
+
+**후속 해결:** 아래는 당시의 실패 분석/보류 근거이며 현재 미완료 상태가 아닙니다. 새 제품 커밋 `00673784a548c43e231a4e39d150a5e869974a36`에서 같은 아이콘 셀을 두 UI 부모에 중복 지정하던 결함을 고쳤습니다. [#41165798408](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41165798408) Release, [#41166008089](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41166008089) 정상 GUI, [#41166133019](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41166133019) Dark 실제 화면 통과. [후속 수용 문서](R03_CONTENT_ACCEPTANCE_20261031.md)를 우선 참조하고 아래 실패 로그·소유 자료를 보존합니다.
 
 ## 구현 범위
 - 최신 수용 제품 기준: `ebaf8afcc87fcb8396520b2739db9430689a62d8` (7개 보기).

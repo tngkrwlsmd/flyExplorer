@@ -1,3 +1,12 @@
+# 2026-10-31 — R03 내용 보기 8번째 모드 실제 Windows 한정 수용
+
+- 제품 `00673784a548c43e231a4e39d150a5e869974a36`: 이전 `d4a29ced...`의 내용 보기 `Content=7` 구현을 복구하고, `app/winui/MainWindow.xaml.cpp`에서 `row.Content(contentRow)` 뒤 공통 `row.Content(cell)`이 같은 아이콘 셀에 서로 다른 XAML 부모를 지정하던 오류를 `if(!contentMode)row.Content(cell)`로 수정했다. 기존 0~6 보기, PaneTab별 정렬, 패널별 보기·열, 두 단계 탭 및 세션 v4 포맷을 유지한다.
+- [Windows 수정 범위 소스 3/3·증분 Release #41165798408](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41165798408) **PASS**. 새 EXE SHA256 `c250a8f4611c4306e9010e34e5d5588068d5b2a0c725e126dd5e81a599327337`, helper `3cc8f2e489c9229c8e419199d8b5b63bc512e1c6e503d1943f35984084c08487`. 증분 명령이 IPDB/IOBJ 불일치로 25,718 함수 재컴파일로 전환됐고 clean/package는 하지 않았다. 변경되지 않은 세션·타일·설정 수용 증거는 재사용했다.
+- [실제 소유 GUI #41166008089](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41166008089) **PASS**: 왼쪽 Ctrl+Shift+8 내용 보기, 오른쪽 자세히 보기 보존, Ctrl+Shift+6 복귀와 재선택, UIA 재시도 0, 원본 소유 파일 바이트·기존 설정 보존, 정상 종료·성공 fixture/profile/worker 정리. 첫 [#41163844278](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41163844278)과 후속 [#41164155299](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41164155299)의 UIA COM 오류/앱 종료 실패 로그는 별도로 보존한다.
+- [실제 PNG #41166133019](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41166133019): Dark·96 DPI·1160×640 소유 화면 2장을 직접 검토해 파일 3개의 이름·유형·크기·수정 날짜 및 우측 자세히 패널 유지, 겹침·잘림 미관측을 확인했다. 두 PNG는 동일 SHA256 `dbff94ea935581f847205612382b0f554020bdad6a446cae9ccc0288a3930e7d`. [수용 및 제한 상세](R03_CONTENT_ACCEPTANCE_20261031.md).
+- 마지막 성공 GUI의 source clean/앱·helper·worker 없음 및 성공 소유 파일/프로필 정리, 제어 슬롯 `0cc2f28ec1e5b6c29572c9b3e6d9906a24e06ac3` [skip ci] idle. 이전 실패 디렉터리와 재사용 runtime/cache는 보존한다.
+- Windows 11 탐색기 보기 8종에 대응하는 flyExplorer의 **8가지 보기 진입·표현을 이 소유 Dark/96 DPI 범위에서 한정 수용**했다. 실제 종료/재시작 후 모드 복원, 메뉴 마우스 클릭, Light/고배율·고대비·Narrator·USB/SMB/UNC/IME 및 Explorer와의 픽셀 동등성은 수용 범위가 아니다. 다음 의미 있는 기능 후보는 R04 안전한 바로 가기 생성 또는 R05 현재 폴더 터미널 열기이며 기존 기능을 불필요하게 재검증하지 않는다.
+
 # 2026-10-31 — R03 내용 보기 8번째 모드 구현·Windows 종료 결함으로 수용 보류
 
 - 내용 보기 제품 커밋 `d4a29ced8a1303db16225b2c84ed80214e58c434`: 기존 0~6을 보존하고 `Content=7`을 추가했다. `Ctrl+Shift+8`·상단/빈 배경 보기 메뉴, 한 행의 가변 폭 이름·유형·크기·수정 날짜, 기존 아이콘/파일 정보 조회 상한, 세션 v4 포맷/PaneTab 정렬·패널별 보기/열 정책을 유지하도록 구현했다. 검사 수정을 포함한 `312423120c481c1325623d0aa6da8798aee44b10`은 Git 이력에 보존한다.
