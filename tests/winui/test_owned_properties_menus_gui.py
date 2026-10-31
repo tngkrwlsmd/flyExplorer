@@ -12,8 +12,9 @@ import benchmark_filtered_folder_gui as h
 from paths import ROOT, app_exe
 
 
-def main():
-    base = ROOT / "logs" / "r01-properties-menus-20261031"
+def main(remaining_only=False):
+    base = ROOT / "logs" / ("r01-properties-menus-remaining-20261031" if remaining_only
+                            else "r01-properties-menus-20261031")
     base.mkdir(parents=True, exist_ok=True)
     h.BASE = base
     fixture = Path(tempfile.mkdtemp(prefix="fixture-", dir=base)).resolve()
@@ -124,14 +125,22 @@ def main():
 
             h.wait(lambda: row("Left", "r01-item.txt") is not None and
                    app.el("UpButton").is_enabled(), "initial fixture not ready")
-            click_row("Left", "r01-item.txt")
-            assert h.owner(h.u.GetForegroundWindow()) == app.app.pid
-            h.u.keybd_event(0x5d, 0, 0, 0)
-            h.u.keybd_event(0x5d, 0, 2, 0)
-            invoke_and_close("r01-item.txt", "selected")
-            h.wait(lambda: selected("Left", "r01-item.txt"), "file selection changed")
-
-            app.el("SecondaryPaneTitle").invoke()
+            if not remaining_only:
+                click_row("Left", "r01-item.txt")
+                assert h.owner(h.u.GetForegroundWindow()) == app.app.pid
+                h.u.keybd_event(0x5d, 0, 0, 0)
+                h.u.keybd_event(0x5d, 0, 2, 0)
+                invoke_and_close("r01-item.txt", "selected")
+                h.wait(lambda: selected("Left", "r01-item.txt"), "file selection changed")
+            else:
+                result["selected_case_reused"] = "41156724867/b10bc7a6/9d7624fa"
+            # The hidden pane-title Invoke changes the model but need not move
+            # keyboard focus. A Control key from the old Left row can activate
+            # Left again. Establish a real Right input owner before Ctrl+L.
+            click_row("Right", "r01-item.txt")
+            h.wait(lambda: app.el("RightFiles").has_keyboard_focus() or any(
+                r.has_keyboard_focus() for r in app.rows("Right")),
+                "Right input owner not established")
             app.keys("^l")
             app.el("AddressBox").set_edit_text(str(second))
             app.el("AddressBox").set_focus()
