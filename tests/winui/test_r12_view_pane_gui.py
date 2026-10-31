@@ -8,11 +8,13 @@ import json
 import shutil
 import tempfile
 
-from pywinauto import Desktop
+from pywinauto import Desktop, mouse
+import ctypes
+from ctypes import wintypes
 import benchmark_filtered_folder_gui as h
 from paths import ROOT, app_exe
 
-BASE = ROOT/"logs"/"r12-view-pane-owned-gui-r5-diagnostic-20261031"
+BASE = ROOT/"logs"/"r12-view-pane-owned-gui-r6-pointer-20261031"
 
 
 def main():
@@ -77,7 +79,22 @@ def main():
                 "rect":[rect.left,rect.top,rect.right,rect.bottom],
                 "enabled":preview.is_enabled()
             }
-            preview.click_input()
+            # Avoid UIAWrapper.click_input(), which failed to dispatch while
+            # Invoke on this same owned item succeeded in the R5 diagnosis.
+            # Only send a real pointer event if Windows hit-testing confirms
+            # the exact coordinate belongs to this flyExplorer process.
+            center=((rect.left+rect.right)//2,(rect.top+rect.bottom)//2)
+            assert preview.is_visible() and rect.width()>120 and rect.height()>16
+            fn=ctypes.windll.user32.WindowFromPoint
+            fn.argtypes=[wintypes.POINT]
+            fn.restype=wintypes.HWND
+            hit=fn(wintypes.POINT(*center))
+            assert hit and h.owner(hit)==app.app.pid, (
+                "R12 pointer target not owned by this application")
+            assert h.owner(h.u.GetForegroundWindow())==app.app.pid
+            result["owned_pointer_hit_verified"]=True
+            result["pointer_center"]=center
+            mouse.click(button="left",coords=center)
             try:
                 h.wait(lambda:"미리보기는 .txt" in app.el("StatusText").window_text(),
                        "R12 pointer click did not dispatch",seconds=4)
