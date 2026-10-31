@@ -71,8 +71,20 @@ def main():
 
             preview=open_view("ViewTextPreviewAccessItem")
             preview.click_input()
-            h.wait(lambda:app.el("TextPreviewToggleButton").has_keyboard_focus(),
-                   "R12 preview opt-in button did not receive focus",seconds=10)
+            try:
+                h.wait(lambda:app.el("TextPreviewToggleButton").has_keyboard_focus(),
+                       "R12 preview opt-in button did not receive focus",seconds=10)
+            except AssertionError:
+                print("R12_FOCUS_DIAG="+json.dumps({
+                    "status":app.el("StatusText").window_text()[:200],
+                    "preview_status":app.el("TextPreviewStatus").window_text()[:160],
+                    "preview_button_visible":app.el("TextPreviewToggleButton").is_visible(),
+                    "preview_button_focus":app.el("TextPreviewToggleButton").has_keyboard_focus(),
+                    "view_button_focus":app.el("ViewButton").has_keyboard_focus(),
+                    "foreground_pid":h.owner(h.u.GetForegroundWindow()),
+                    "owned_pid":app.app.pid
+                },ensure_ascii=False),flush=True)
+                raise
             assert "닫기" in app.el("FileInfoToggleButton").element_info.name
             assert app.el("TextPreviewBody").window_text().strip()==""
             assert "꺼" in app.el("TextPreviewStatus").window_text()
