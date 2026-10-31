@@ -1,3 +1,13 @@
+## 2026-10-31 actual comparison supersedes the documentation-only next steps
+
+A real owned Windows Explorer/flyExplorer comparison has now been performed.
+Use [the live comparison and R01–R12 requirements](WIN11_LIVE_COMPARISON_20261031.md)
+and the current NEXT_DEVELOPMENT_GOALS queue. Menu-key input is accepted in its
+scoped environment. Normal validated work goes directly to main without a PR,
+per the user's latest instruction. The 2026-10-22/29 priorities and OPEN labels
+below are historical; they do not reopen completed checks. Unobserved Home,
+cloud, Gallery, providers and excluded/stopped tests remain separate.
+
 # Windows 11 File Explorer parity re-audit — 2026-10-22
 
 ## 2026-10-29 evidence reconciliation
