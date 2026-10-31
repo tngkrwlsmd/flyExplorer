@@ -500,6 +500,19 @@ void MainWindow::ShowAppBackgroundContextMenu(
  view.Items().Append(choice(L"아주 큰 아이콘",viewMode==5,5,true));
  view.Items().Append(choice(L"타일",viewMode==6,6,true));
  view.Items().Append(choice(L"내용",viewMode==7,7,true));
+ // R12: View also reaches the existing shared Details pane and explicit
+ // preview opt-in. These entries do not introduce an automatic file read.
+ view.Items().Append(MenuFlyoutSeparator{});
+ ToggleMenuFlyoutItem detailsPane;
+ detailsPane.Text(L"세부 정보 창");
+ detailsPane.IsEnabled(ready);
+ detailsPane.IsChecked(state.fileInfoPaneVisible);
+ detailsPane.Click(guarded([](MainWindow& ui){
+  ui.OnToggleFileInfoPane(nullptr,nullptr);
+ }));
+ view.Items().Append(detailsPane);
+ view.Items().Append(make(L"텍스트 미리보기 버튼으로 이동 (Alt+P)",L"\uE8A9",
+     ready,[](MainWindow& ui){ui.OpenPreviewFromViewMenu();}));
  menu.Items().Append(view);
  MenuFlyoutSubItem sort;
  sort.Text(L"정렬 기준");
