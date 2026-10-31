@@ -868,6 +868,8 @@ namespace winrt::FlyExplorer::implementation
                     fxfile::filecommand::Kind::CreateMarkdownFile);
                 else if(command==21)ui->BeginFileNameCommand(
                     fxfile::filecommand::Kind::CreateMarkdownFile);
+                else if(command==22)ui->ExecuteFileCommand(
+                    fxfile::filecommand::Kind::CreateShortcut);
                 else if(command>=11&&command<=13){
                     const int theme=command-11;
                     ui->ApplyThemeChoice(theme);

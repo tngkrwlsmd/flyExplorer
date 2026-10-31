@@ -13,7 +13,7 @@ hstring koreanError(DWORD code){
  case ERROR_ALREADY_EXISTS:
  case ERROR_FILE_EXISTS:return L"같은 이름의 파일 또는 폴더가 이미 존재합니다. 덮어쓰지 않았습니다.";
  case ERROR_ACCESS_DENIED:return L"이 위치를 변경할 권한이 없습니다.";
- case ERROR_NOT_SUPPORTED:return L"빈 문서는 로컬 일반 폴더에서만 만들 수 있습니다.";
+ case ERROR_NOT_SUPPORTED:return L"이 작업은 지원되는 로컬 일반 폴더와 파일에서만 사용할 수 있습니다.";
  case ERROR_INVALID_NAME:
  case ERROR_INVALID_PARAMETER:return L"이름 또는 폴더 경로가 올바르지 않습니다.";
  case ERROR_FILE_NOT_FOUND:
@@ -39,6 +39,7 @@ void MainWindow::BeginFileNameCommand(fxfile::filecommand::Kind kind){
  if(kind!=fxfile::filecommand::Kind::CreateFolder&&
     kind!=fxfile::filecommand::Kind::CreateTextFile&&
     kind!=fxfile::filecommand::Kind::CreateMarkdownFile&&
+    kind!=fxfile::filecommand::Kind::CreateShortcut&&
     kind!=fxfile::filecommand::Kind::RenameSelected)return;
  // The toolbar is shared by all workspaces. Every new edit supersedes
  // the previous edit anchor, even when validation rejects this request.
@@ -66,26 +67,27 @@ void MainWindow::BeginFileNameCommand(fxfile::filecommand::Kind kind){
   initial=L"새 텍스트 문서.txt";
  if(kind==fxfile::filecommand::Kind::CreateMarkdownFile)
   initial=L"새 Markdown 문서.md";
- if(kind==fxfile::filecommand::Kind::RenameSelected){
+ if(kind==fxfile::filecommand::Kind::RenameSelected||
+    kind==fxfile::filecommand::Kind::CreateShortcut){
   const int side=ActiveWindowTab().model.activePane;
   auto& pane=ActiveWindowTab().model.panes[static_cast<size_t>(side)];
   const size_t tab=pane.active;
   const auto view=side==0?LeftFiles():RightFiles();
   if(view.SelectedItems().Size()!=1){
-   StatusText().Text(L"이름 변경은 파일 또는 폴더 하나만 선택해야 합니다.");
+   StatusText().Text(L"파일 또는 폴더 하나를 선택하세요.");
    return;
   }
   const auto picked=view.SelectedItem();
   const auto row=picked.try_as<ListViewItem>();
   if(!row||!row.Tag()){
-   StatusText().Text(L"이름을 변경할 파일 또는 폴더를 선택하세요.");
+   StatusText().Text(L"파일 또는 폴더를 선택하세요.");
    return;
   }
   const auto logical=winrt::unbox_value<std::uint64_t>(row.Tag());
   auto const* indexed=pane.tabs[tab].indexedItem(
       static_cast<std::size_t>(logical));
   if(!indexed||!indexed->isFileSystem()||indexed->parsingName.empty()){
-   StatusText().Text(L"이 항목은 이름을 변경할 수 없습니다.");
+   StatusText().Text(L"이 파일 작업은 일반 파일 또는 폴더만 지원합니다.");
    return;
   }
   renameFolder=indexed->isFolder();
@@ -93,10 +95,20 @@ void MainWindow::BeginFileNameCommand(fxfile::filecommand::Kind kind){
   try{initial=std::filesystem::path(
           indexed->parsingName).filename().wstring();}
   catch(...){initial=indexed->label;}
+  if(kind==fxfile::filecommand::Kind::CreateShortcut){
+   // The selected original remains untouched: edit only the new .lnk name.
+   if(!renameFolder){
+    try{initial=std::filesystem::path(initial).stem().wstring();}
+    catch(...){}
+   }
+   initial+=L" - 바로 가기.lnk";
+   renameFolder=false;
+  }
  }
  mPendingNameEdit=PendingNameEdit{kind,editContext,std::move(renameSource)};
  fileBar()->BeginNameEdit(
      kind==fxfile::filecommand::Kind::CreateFolder?0:
+     kind==fxfile::filecommand::Kind::CreateShortcut?4:
      kind==fxfile::filecommand::Kind::CreateMarkdownFile?3:
      kind==fxfile::filecommand::Kind::CreateTextFile?2:1,
      hstring(initial),renameFolder);
@@ -106,6 +118,8 @@ void MainWindow::BeginFileNameCommand(fxfile::filecommand::Kind kind){
   L"새 텍스트 문서의 .txt 파일 이름을 입력하세요. Enter 확정, Esc 취소.":
   kind==fxfile::filecommand::Kind::CreateMarkdownFile?
   L"새 Markdown 문서의 .md 파일 이름을 입력하세요. Enter 확정, Esc 취소.":
+  kind==fxfile::filecommand::Kind::CreateShortcut?
+  L"선택 항목의 .lnk 바로 가기 이름을 입력하세요. Enter 확정, Esc 취소.":
   hstring(L"이름 변경 대상: "+initial+
       L" (Enter 확정, Esc 취소)"));
 }
@@ -162,16 +176,22 @@ void MainWindow::ExecuteFileCommand(fxfile::filecommand::Kind kind){
      StatusText().Text(L"새 Markdown 문서는 .md 확장자로만 만들 수 있습니다.");
      return;
  }
- if(kind==fxfile::filecommand::Kind::RenameSelected){
+ if(kind==fxfile::filecommand::Kind::CreateShortcut&&
+    !fxfile::filecommand::validShortcutLeaf(request.name)){
+     StatusText().Text(L"바로 가기는 .lnk 확장자로만 만들 수 있습니다.");
+     return;
+ }
+ if(kind==fxfile::filecommand::Kind::RenameSelected||
+    kind==fxfile::filecommand::Kind::CreateShortcut){
      const auto view=side==0?LeftFiles():RightFiles();
      if(view.SelectedItems().Size()!=1){
-         StatusText().Text(L"이름 변경은 파일 또는 폴더 하나만 선택해야 합니다.");
+         StatusText().Text(L"파일 또는 폴더 하나를 선택하세요.");
          return;
      }
      const auto picked=view.SelectedItem();
      const auto row=picked.try_as<ListViewItem>();
      if(!row||!row.Tag()){
-         StatusText().Text(L"이름을 변경할 파일 또는 폴더를 선택하세요.");
+         StatusText().Text(L"파일 또는 폴더를 선택하세요.");
          return;
      }
      const auto logical=winrt::unbox_value<std::uint64_t>(row.Tag());
@@ -187,7 +207,7 @@ void MainWindow::ExecuteFileCommand(fxfile::filecommand::Kind kind){
          mPendingNameEdit->source,indexed->parsingName)){
          mPendingNameEdit.reset();
          fileBar()->EndNameEdit();
-         StatusText().Text(L"이름 변경 대상이 바뀌었습니다. 다시 선택해 주세요.");
+         StatusText().Text(L"선택 대상이 바뀌었습니다. 다시 선택해 주세요.");
          return;
      }
      request.source=mPendingNameEdit->source;
@@ -264,7 +284,9 @@ void MainWindow::OnFileCommandCompleted(
      completion.kind==fxfile::filecommand::Kind::CreateTextFile?
      L"새 텍스트 문서를 만들었습니다.":
      completion.kind==fxfile::filecommand::Kind::CreateMarkdownFile?
-     L"새 Markdown 문서를 만들었습니다.":L"이름을 변경했습니다.";
+     L"새 Markdown 문서를 만들었습니다.":
+     completion.kind==fxfile::filecommand::Kind::CreateShortcut?
+     L"선택 항목의 바로 가기를 만들었습니다.":L"이름을 변경했습니다.";
  // A matching Shell Refresh can replace the footer text; retain the
  // accepted result in the exact originating workspace until navigation.
  rememberOrigin(message);

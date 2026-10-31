@@ -1,6 +1,7 @@
 #include "../../../src/base/ui_preferences.h"
 #include "../../../src/base/file_command_core.h"
 #include <windows.h>
+#include <shobjidl.h>
 #include <filesystem>
 #include <cstdio>
 #include <fstream>
@@ -166,6 +167,65 @@ int wmain(int argc,wchar_t**argv){
      filecommand::execute(req).error==ERROR_INVALID_NAME;
  }
  chk(markdownNamesRejected,"markdown_rejects_unsafe_or_other_suffix_names");
+
+ // R04 selected file shortcut: preserve source and never replace a link.
+ req.parent=dir.native();req.kind=filecommand::Kind::CreateShortcut;
+ req.source=(dir/L"메모.MD").native();req.name=L"메모 - 바로 가기.lnk";
+ const auto linkResult=filecommand::execute(req);
+ chk(linkResult.error==ERROR_SUCCESS&&
+     std::filesystem::is_regular_file(dir/req.name)&&
+     std::filesystem::file_size(dir/req.name)>0&&
+     std::filesystem::file_size(dir/L"메모.MD")==0,
+     "shortcut_creates_nonempty_link_preserves_source");
+ // Verify the actual Shell link payload refers to the exact selected
+ // file, not merely that a nonempty .lnk-looking file was written.
+ bool linkTargetsSource=false;
+ const HRESULT apartment=::CoInitializeEx(nullptr,COINIT_APARTMENTTHREADED);
+ if(SUCCEEDED(apartment)){
+  IShellLinkW* link=nullptr;
+  if(SUCCEEDED(::CoCreateInstance(CLSID_ShellLink,nullptr,CLSCTX_INPROC_SERVER,
+                                  IID_PPV_ARGS(&link)))){
+   IPersistFile* persist=nullptr;
+   if(SUCCEEDED(link->QueryInterface(IID_PPV_ARGS(&persist)))){
+    if(SUCCEEDED(persist->Load((dir/req.name).c_str(),STGM_READ))){
+     wchar_t resolved[32768]{};
+     WIN32_FIND_DATAW data{};
+     if(SUCCEEDED(link->GetPath(resolved,32768,&data,SLGP_RAWPATH))){
+      linkTargetsSource=::CompareStringOrdinal(
+          resolved,-1,req.source.c_str(),-1,TRUE)==CSTR_EQUAL;
+     }
+    }
+    persist->Release();
+   }
+   link->Release();
+  }
+  ::CoUninitialize();
+ }
+ chk(linkTargetsSource,"shortcut_resolves_exact_selected_source");
+ { std::ofstream existing(dir/req.name,std::ios::binary);existing<<"owned link"; }
+ const auto collision=filecommand::execute(req);
+ { std::ifstream existing(dir/req.name,std::ios::binary);std::string retained;
+   std::getline(existing,retained);
+   chk(collision.error!=ERROR_SUCCESS&&retained=="owned link",
+       "shortcut_never_overwrites_existing_link"); }
+ req.name=L"링크.LNK";
+ chk(filecommand::execute(req).error==ERROR_SUCCESS&&
+     std::filesystem::is_regular_file(dir/req.name),
+     "shortcut_accepts_uppercase_extension");
+ bool rejectsBadLinks=true;
+ for(auto const* leaf:{L".lnk",L"wrong.txt",L"..\\escape.lnk",
+                       L"CON.lnk",L"trailing.lnk ",L"double.lnk.exe"}){
+  req.name=leaf;
+  rejectsBadLinks=rejectsBadLinks&&
+      filecommand::execute(req).error==ERROR_INVALID_NAME;
+ }
+ chk(rejectsBadLinks,"shortcut_denies_unsafe_link_names");
+ req.name=L"foreign.lnk";req.source=(root/L"foreign-source").native();
+ chk(filecommand::execute(req).error==ERROR_INVALID_NAME,
+     "shortcut_denies_nonchild_source");
+ req.source=(dir/L"missing.txt").native();
+ chk(filecommand::execute(req).error!=ERROR_SUCCESS,
+     "shortcut_denies_missing_source");
  req.parent=dir.native();req.kind=static_cast<filecommand::Kind>(99);
  chk(filecommand::execute(req).error==ERROR_INVALID_PARAMETER,"unknown_mutation_denied");
  std::printf("M21_NATIVE_SUMMARY %d passed, %d failed.\n",pass,fail);

@@ -364,6 +364,13 @@ void MainWindow::ShowAppFileContextMenu(
      [](MainWindow& ui){
       ui.BeginFileNameCommand(fxfile::filecommand::Kind::RenameSelected);
      }));
+ // Explicitly selected file/folder only. Enter commits after the menu closes.
+ auto focusShortcutNameAfterClose=std::make_shared<bool>(false);
+ menu.Items().Append(make(L"바로 가기 만들기",L"\uE71B",canRename,
+     [focusShortcutNameAfterClose](MainWindow& ui){
+      *focusShortcutNameAfterClose=true;
+      ui.BeginFileNameCommand(fxfile::filecommand::Kind::CreateShortcut);
+     }));
  menu.Items().Append(make(L"삭제",L"\uE74D",localSelection,
      [](MainWindow& ui){ui.RunTransfer(fxfile::shelltransfer::Kind::Recycle);}));
  menu.Items().Append(MenuFlyoutSeparator{});
@@ -380,6 +387,16 @@ void MainWindow::ShowAppFileContextMenu(
      [side](MainWindow& ui){ui.ShowExternalWindowsContextMenu(side,true);}));
  menu.Items().Append(make(L"추가 옵션 표시",L"\uE712",canExternal,
      [side](MainWindow& ui){ui.ShowExternalWindowsContextMenu(side);}));
+ menu.Closed([weak,focusShortcutNameAfterClose](
+     IInspectable const&,IInspectable const&){
+  if(!std::exchange(*focusShortcutNameAfterClose,false))return;
+  auto ui=weak.get();
+  if(!ui)return;
+  auto box=ui->FileNameBox();
+  if(box.Opacity()<0.5||!box.IsTabStop()||!ui->ToolbarView().IsLoaded())return;
+  ui->ToolbarView().UpdateLayout();
+  box.Focus(FocusState::Programmatic);
+ });
  Microsoft::UI::Xaml::Controls::Primitives::FlyoutShowOptions options;
  options.Position(position);
  menu.ShowAt(anchor,options);
