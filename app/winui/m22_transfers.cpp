@@ -406,6 +406,8 @@ void MainWindow::ShowAppBackgroundContextMenu(
  const bool localFolder=ready&&!pane.filesystemPaths[tab].empty();
  const int viewMode=static_cast<int>(state.fileLists[side].viewMode);
  const int sortMode=state.fileLists[side].sortMode;
+ const bool grouping=state.fileLists[side].groupByType;
+ const int groupMode=static_cast<int>(state.fileLists[side].groupMode);
  auto weak=get_weak();
  auto focusNameEditAfterClose=std::make_shared<bool>(false);
  // Share the same route/WindowTab guard for ordinary commands and checked
@@ -459,6 +461,16 @@ void MainWindow::ShowAppBackgroundContextMenu(
   }));
   return item;
  };
+ auto groupChoice=[&](wchar_t const* label,int choiceIndex){
+  ToggleMenuFlyoutItem item;
+  item.Text(label);
+  item.IsEnabled(ready);
+  item.IsChecked(grouping&&groupMode==choiceIndex-1);
+  item.Click(guarded([choiceIndex](MainWindow& ui){
+   ui.ToggleGroupMode(choiceIndex);
+  }));
+  return item;
+ };
  MenuFlyout menu;
  MenuFlyoutSubItem view;
  view.Text(L"보기");
@@ -479,6 +491,13 @@ void MainWindow::ShowAppBackgroundContextMenu(
  sort.Items().Append(choice(L"수정 날짜 오름차순",sortMode==7,7,false));
  sort.Items().Append(choice(L"수정 날짜 내림차순",sortMode==3,3,false));
  menu.Items().Append(sort);
+ MenuFlyoutSubItem group;
+ group.Text(L"분류 방법");
+ group.Items().Append(groupChoice(L"유형",1));
+ group.Items().Append(groupChoice(L"이름",2));
+ group.Items().Append(groupChoice(L"크기",3));
+ group.Items().Append(groupChoice(L"수정 월",4));
+ menu.Items().Append(group);
  menu.Items().Append(make(L"새로 고침",L"\uE72C",ready,
      [side](MainWindow& ui){
       const auto& pane=ui.ActiveWindowTab().model.panes[side];

@@ -10,6 +10,7 @@ TOOL_CPP=(ROOT/"app/winui/FileToolbar.xaml.cpp").read_text(encoding="utf-8")
 WINDOW_HEADER=(ROOT/"app/winui/MainWindow.xaml.h").read_text(encoding="utf-8")
 WINDOW_CPP=(ROOT/"app/winui/MainWindow.xaml.cpp").read_text(encoding="utf-8")
 STATE=(ROOT/"app/winui/file_list_state.h").read_text(encoding="utf-8")
+TRANSFERS=(ROOT/"app/winui/m22_transfers.cpp").read_text(encoding="utf-8")
 
 
 class F05WinUIGroupIntegrationContract(unittest.TestCase):
@@ -29,6 +30,19 @@ class F05WinUIGroupIntegrationContract(unittest.TestCase):
         self.assertIn("ui->ToggleGroupMode(mode);",WINDOW_CPP)
         self.assertIn("state.groupByType=state.groupTabCache.enabled();",WINDOW_CPP)
         self.assertIn("state.viewMode!=FileViewMode::Details",WINDOW_CPP)
+
+    def test_background_menu_reuses_group_modes_and_route_guard(self):
+        background=TRANSFERS.split(
+            "void MainWindow::ShowAppBackgroundContextMenu(",1)[1].split(
+            "void MainWindow::OnFileRightTapped(",1)[0]
+        for token in ('group.Text(L"분류 방법")',
+                      'groupChoice(L"유형",1)', 'groupChoice(L"이름",2)',
+                      'groupChoice(L"크기",3)', 'groupChoice(L"수정 월",4)',
+                      "item.IsChecked(grouping&&groupMode==choiceIndex-1)",
+                      "ui.ToggleGroupMode(choiceIndex)"):
+            self.assertIn(token,background)
+        self.assertIn("item.Click(guarded(",background)
+        self.assertNotIn("groupTabCache.choose(",background)
 
     def test_route_and_complete_model_gate_before_grouping(self):
         for token in ("bool groupByType=false;", "CollapseState groupCollapse{}"):
