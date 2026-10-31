@@ -14,7 +14,7 @@ from ctypes import wintypes
 import benchmark_filtered_folder_gui as h
 from paths import ROOT, app_exe
 
-BASE = ROOT/"logs"/"r12-view-pane-owned-gui-r7-hit-20261031"
+BASE = ROOT/"logs"/"r12-view-pane-owned-gui-r7-hit-retry-20261031"
 
 
 def main():
@@ -100,7 +100,7 @@ def main():
                 "id":actual.element_info.automation_id,
                 "name":actual.element_info.name[:100],
                 "control_type":actual.element_info.control_type,
-                "rect":list(actual.rectangle())
+                "rect":[actual.rectangle().left,actual.rectangle().top,actual.rectangle().right,actual.rectangle().bottom]
             }
             print("R12_POINTER_TARGET="+json.dumps(result["uia_pointer_target"],ensure_ascii=False),flush=True)
             mouse.click(button="left",coords=center)
