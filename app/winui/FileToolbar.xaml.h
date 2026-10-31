@@ -9,6 +9,7 @@ struct FileToolbar : FileToolbarT<FileToolbar> {
  void SetSortIndex(int selection);
  void SetView(std::function<void(int)> change);
  void SetViewIndex(int selection);
+ void SetFileInfoPaneState(bool visible);
  void SetFolderViewAction(std::function<void(bool)> action);
  void SetListDisplay(std::function<void(int)> change);
  void SetGroup(std::function<void(int)> change);
@@ -53,6 +54,7 @@ struct FileToolbar : FileToolbarT<FileToolbar> {
  void OnViewExtraLargeIcons(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
  void OnViewTiles(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
  void OnViewContent(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
+ void OnViewFileInfoPane(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
  void OnRememberFolderView(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
  void OnForgetFolderView(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
  void OnViewCheckboxes(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
