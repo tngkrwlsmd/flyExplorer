@@ -11,12 +11,12 @@ class TilesContracts(unittest.TestCase):
         state=source("app/winui/file_list_state.h")
         self.assertIn("Details=0, List=1, SmallIcons=2, MediumIcons=3, LargeIcons=4, ExtraLargeIcons=5, Tiles=6", state)
         v4=source("src/base/ui_session.cpp")
-        self.assertIn("pane.view>6",v4)
+        self.assertIn("pane.view>7",v4)
         self.assertIn("if(version==4)return decodeV4",v4)
         prefs=source("src/base/ui_preferences.cpp")
-        for s in ('case 6:return "tiles"', 'view<7', 'pref.defaultViewMode>6'):
+        for s in ('case 6:return "tiles"', 'view<8', 'pref.defaultViewMode>7'):
             self.assertIn(s,prefs)
-        self.assertIn("mode<0||mode>6",source("app/winui/folder_view_controller.h"))
+        self.assertIn("mode<0||mode>7",source("app/winui/folder_view_controller.h"))
 
     def test_menu_keyboard_and_zoom_boundaries(self):
         bar=source("app/winui/FileToolbar.xaml")
@@ -27,7 +27,7 @@ class TilesContracts(unittest.TestCase):
         self.assertIn("ChooseView(6)",cpp)
         self.assertIn("ViewTilesItem().IsChecked(value==6)",cpp)
         self.assertIn('choice(L"타일",viewMode==6,6,true)',source("app/winui/m22_transfers.cpp"))
-        self.assertIn("if(selection<0||selection>6)return;",source("app/winui/m20_shell.cpp"))
+        self.assertIn("if(selection<0||selection>7)return;",source("app/winui/m20_shell.cpp"))
         self.assertIn("mPreferencesCoordinator.setDefaultViewMode(selection)",source("app/winui/m20_shell.cpp"))
         self.assertIn("case Windows::System::VirtualKey::Number7:",window)
         self.assertIn("viewShortcut=static_cast<int>(FileViewMode::Tiles)",window)

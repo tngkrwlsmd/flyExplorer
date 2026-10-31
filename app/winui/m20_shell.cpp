@@ -92,11 +92,11 @@ void MainWindow::RememberCurrentFolderView(bool remember){
                  L"현재 폴더에는 기억된 보기 모드가 없습니다."));
 }
 void MainWindow::UpdateView(int selection){
-    if(selection<0||selection>6)return;const int side=ActiveWindowTab().model.activePane;
+    if(selection<0||selection>7)return;const int side=ActiveWindowTab().model.activePane;
     ActiveWindowTab().fileLists[side].viewMode=static_cast<FileViewMode>(selection);mPreferencesCoordinator.setDefaultViewMode(selection);
     ScheduleFileDetails(side);
     fileBar()->SetViewIndex(selection);FillFiles(side);UpdateSelectionChrome();UpdateFooterSummary();PersistPreferences();
-    static constexpr wchar_t const* names[]={L"\uC790\uC138\uD788",L"\uBAA9\uB85D",L"\uC791\uC740 \uC544\uC774\uCF58",L"\uBCF4\uD1B5 \uC544\uC774\uCF58",L"\uD070 \uC544\uC774\uCF58",L"\uC544\uC8FC \uD070 \uC544\uC774\uCF58",L"\uD0C0\uC77C"};
+    static constexpr wchar_t const* names[]={L"\uC790\uC138\uD788",L"\uBAA9\uB85D",L"\uC791\uC740 \uC544\uC774\uCF58",L"\uBCF4\uD1B5 \uC544\uC774\uCF58",L"\uD070 \uC544\uC774\uCF58",L"\uC544\uC8FC \uD070 \uC544\uC774\uCF58",L"\uD0C0\uC77C",L"\uB0B4\uC6A9"};
     StatusText().Text(hstring(std::wstring(L"\uBCF4\uAE30: ")+names[selection]));
 }
 }
