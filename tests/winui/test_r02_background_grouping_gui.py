@@ -14,9 +14,9 @@ from paths import ROOT, app_exe
 
 def main():
     base = ROOT / "logs" / "r02-background-grouping-20261031"
-    if base.exists():
+    if base.exists() and any(base.iterdir()):
         raise RuntimeError("existing R02 GUI evidence; inspect first")
-    base.mkdir(parents=True)
+    base.mkdir(parents=True, exist_ok=True)
     h.BASE = base
     fixture = Path(tempfile.mkdtemp(prefix="fixture-", dir=base)).resolve()
     files = {
