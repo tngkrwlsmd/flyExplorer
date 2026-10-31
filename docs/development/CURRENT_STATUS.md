@@ -1,3 +1,11 @@
+# 2026-10-31 — Alt+Enter 선택 항목 속성 한정 수용 완료
+
+- 최종 제품30b36f8a/빌드 소스4abfa53f는 선택 행의 Alt-only+Enter를 기존 격리 Shell properties 경로로 직접 처리한다. 관련 코드9/9·실제 C++ 분기 모델·AST/diff PASS.
+- #41151817072 Release 단계 PASS. EXE27a73d6b…/helper3cc8f2e4…를 이후 그대로 재사용했다. 증분 명령은 IPDB/IOBJ 불일치로 25,600개 함수 전체 코드 생성에 전환됐음을 보존한다.
+- #41152158131의 단일 선택 및 #41152708059의 실제 Ctrl+클릭 복수 선택에서 속성 창 표시·닫기/helper exit0/선택 유지 PASS. 뒤 검사 실패 때문에 두 전체 run의 FAIL은 유지한다. #41152885137 SUCCESS는 두 사례를 반복하지 않고 기존 주소 Enter 경로/속성 helper 미생성·정상 종료·원래 설정/바이트 보존·성공 소유 정리를 확인했다.
+- #41152943320에서 실제 Light/96 DPI 두 PNG를 직접 검토했다. 단일21바이트/파일2개42바이트 표시와 두 이전 fixture 바이트 보존, source51e1 clean/앱0/helper0/worker0 확인. control711ac2cf에서 idle 복귀했다. [정확한 수용·실패 분류·정정](ALT_ENTER_PROPERTIES_20261030.md).
+- 아래의 미생성/미관측·최종 검증 대기 문구는 당시 기록이며 이 실제 결과가 대체한다. 다른 환경/전체 제품으로 확대하지 않는다. PR #70 draft/미병합, main c563a0e0 유지. 다음 기능은 최신 코드의 실제 미완료 경계를 선정한다.
+
 # 2026-10-31 — Alt+Enter 선택 행 dispatch 수정, 최종 Windows 검증 환경 대기
 
 - 최종 제품 `30b36f8a` / 제품·검사 head `4abfa53f`: 선택 행이 정확한 Alt-only+Enter를 기존 속성 경로에 직접 전달한다. bare Enter와 다른 수정키 조합, 기존 선택/route/helper 보호는 유지한다. Work 클라우드 source 계약·AST PASS.

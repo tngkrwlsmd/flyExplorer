@@ -1,3 +1,7 @@
+## 2026-10-31 — 소유 GUI 목록 재생성과 복수 선택의 입력·포커스 경계
+
+Alt+Enter #41151817072/#41152539835의 최초 오류는 아이콘/유형 갱신 또는 foreground 전환 중 없는 UIA 행을 읽거나 클릭한 None 오류였다. 액션 직전에 완전한 새 행 스냅샷을 기다리고 선택 검사도 같은 스냅샷으로 처리한다. UIA AddToSelection 뒤 행 포커스는 관측되지 않았으므로 이미 수용된 실제 Ctrl+클릭 경로로 바꾸고 선택된 어느 행이든 키보드 소유를 허용한다. #41152708059에서 복수 속성 단계가 통과했다. 뒤 주소 초안 보존 기대는 변경하지 않은 기존 Enter 제출 본문과 달라 수정했으며 #41152885137은 주소/정리만 SUCCESS다. 빌드와 단일/복수 성공은 재사용했다. 중간 전체 FAIL은 보존하고 [정확한 증거·화면·실행 정정](ALT_ENTER_PROPERTIES_20261030.md)을 따른다.
+
 ## 2026-10-29 — Pending navigation predicate existed, but submit sites did not publish it
 
 Controller submit methods marked pending while MainWindow QueuePath/QueuePidl/page submit wrappers omitted UpdateNavigationChrome. Earlier contracts checked predicates/completion but missed the request-start call sites. Refresh active-pane chrome immediately after successful submit and on continuation completion. New contract catches all five live submit sites and continuation terminal paths; source 25/25, Release, bounded GUI and Light before/after pixels accepted. [Exact evidence, hashes and all failed attempts](EP01_NAVIGATION_CHROME_ACCEPTANCE_20261029.md).
