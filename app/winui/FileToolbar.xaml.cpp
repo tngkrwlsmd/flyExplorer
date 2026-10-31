@@ -89,7 +89,9 @@ void FileToolbar::OnSortTypeAscending(IInspectable const&,RoutedEventArgs const&
 void FileToolbar::OnViewDetails(IInspectable const&,RoutedEventArgs const&){ChooseView(0);} void FileToolbar::OnViewList(IInspectable const&,RoutedEventArgs const&){ChooseView(1);} void FileToolbar::OnViewSmallIcons(IInspectable const&,RoutedEventArgs const&){ChooseView(2);} void FileToolbar::OnViewMediumIcons(IInspectable const&,RoutedEventArgs const&){ChooseView(3);} void FileToolbar::OnViewLargeIcons(IInspectable const&,RoutedEventArgs const&){ChooseView(4);} void FileToolbar::OnViewExtraLargeIcons(IInspectable const&,RoutedEventArgs const&){ChooseView(5);} void FileToolbar::OnViewTiles(IInspectable const&,RoutedEventArgs const&){ChooseView(6);} void FileToolbar::OnViewContent(IInspectable const&,RoutedEventArgs const&){ChooseView(7);}
 void FileToolbar::OnViewFileInfoPane(IInspectable const&,RoutedEventArgs const&){if(action_)action_(23);}
 void FileToolbar::OnViewTextPreviewAccess(IInspectable const&,RoutedEventArgs const&){
- if(action_)previewFocusAfterViewClosed_=true;
+ // Click may precede or follow flyout Closed; route the action directly.
+ // MainWindow queues only the focus gesture, never file reading.
+ if(action_)action_(24);
 }
 void FileToolbar::OnRememberFolderView(IInspectable const&,RoutedEventArgs const&){
  if(folderViewAction_)folderViewAction_(true);
