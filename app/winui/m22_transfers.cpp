@@ -261,10 +261,14 @@ void MainWindow::ShowAppFileContextMenu(
  auto weak=get_weak();
  MenuFlyout menu;
  auto make=[&](wchar_t const* title,wchar_t const* iconGlyph,
-               bool enabled,std::function<void(MainWindow&)> action){
+               bool enabled,std::function<void(MainWindow&)> action,
+               wchar_t const* shortcutHint=nullptr){
   MenuFlyoutItem item;
   item.Text(title);
   item.IsEnabled(enabled);
+  // Display only: actual key handling stays in the file-list KeyDown route.
+  if(shortcutHint&&*shortcutHint)
+   item.KeyboardAcceleratorTextOverride(shortcutHint);
   if(iconGlyph&&*iconGlyph){
    FontIcon icon;
    icon.Glyph(iconGlyph);
@@ -355,15 +359,18 @@ void MainWindow::ShowAppFileContextMenu(
  }
  menu.Items().Append(MenuFlyoutSeparator{});
  menu.Items().Append(make(L"잘라내기",L"\uE8C6",localSelection,
-     [side](MainWindow& ui){ui.CopySelectedToWindowsClipboard(side,true);}));
+     [side](MainWindow& ui){ui.CopySelectedToWindowsClipboard(side,true);},
+     L"Ctrl+X"));
  menu.Items().Append(make(L"복사",L"\uE8C8",localSelection,
-     [side](MainWindow& ui){ui.CopySelectedToWindowsClipboard(side,false);}));
+     [side](MainWindow& ui){ui.CopySelectedToWindowsClipboard(side,false);},
+     L"Ctrl+C"));
  menu.Items().Append(make(L"경로 복사",L"\uE8C8",localSelection,
-     [side](MainWindow& ui){ui.CopySelectedToWindowsClipboard(side,false,true);}));
+     [side](MainWindow& ui){ui.CopySelectedToWindowsClipboard(side,false,true);},
+     L"Ctrl+Shift+C"));
  menu.Items().Append(make(L"이름 바꾸기",L"\uE8AC",canRename,
      [](MainWindow& ui){
       ui.BeginFileNameCommand(fxfile::filecommand::Kind::RenameSelected);
-     }));
+     },L"F2"));
  // Explicitly selected file/folder only. Enter commits after the menu closes.
  auto focusShortcutNameAfterClose=std::make_shared<bool>(false);
  menu.Items().Append(make(L"바로 가기 만들기",L"\uE71B",canRename,
@@ -372,7 +379,8 @@ void MainWindow::ShowAppFileContextMenu(
       ui.BeginFileNameCommand(fxfile::filecommand::Kind::CreateShortcut);
      }));
  menu.Items().Append(make(L"삭제",L"\uE74D",localSelection,
-     [](MainWindow& ui){ui.RunTransfer(fxfile::shelltransfer::Kind::Recycle);}));
+     [](MainWindow& ui){ui.RunTransfer(fxfile::shelltransfer::Kind::Recycle);},
+     L"Delete"));
  menu.Items().Append(MenuFlyoutSeparator{});
  MenuFlyoutSubItem sendTo;
  sendTo.Text(L"반대쪽 패널로 보내기");
