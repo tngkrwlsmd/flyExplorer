@@ -27,6 +27,18 @@ void MainWindow::OnRevealTextPreview(
     button.StartBringIntoView();
 }
 
+void MainWindow::OpenPreviewFromViewMenu() {
+    if(mClosing||mFileOperations.busy()||
+       mFileOperations.pendingConfirmationToken())return;
+    // Reveal the existing Details/Preview pane, not a new file reader.
+    // Reading bytes still requires the separate "텍스트 미리보기 켜기" click.
+    if(!ActiveWindowTab().fileInfoPaneVisible)
+        OnToggleFileInfoPane(nullptr,nullptr);
+    RootShell().UpdateLayout();
+    OnRevealTextPreview(nullptr,nullptr);
+    StatusText().Text(L"미리보기는 .txt, .md, .log 파일을 선택한 후 '텍스트 미리보기 켜기'를 눌러야 표시됩니다.");
+}
+
 void MainWindow::OnFileInfoViewportSizeChanged(
     IInspectable const&,SizeChangedEventArgs const&) {
     auto pane=FileInfoPane();
