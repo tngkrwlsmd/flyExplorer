@@ -1,3 +1,14 @@
+# 2026-10-31 — R02 빈 배경 분류 방법 메뉴 한정 Windows 수용
+
+- 제품 `43588b57ae56766dcdf7e995841df4e943132155`: 빈 배경 메뉴에 기존 4종 분류 방법(유형·이름·크기·수정 월) 진입을 추가한다. 동일 `ToggleGroupMode`·체크 상태와 활성 패널/PaneTab/route/pending·파일 작업 확인창 차단을 재사용하며 새 그룹 엔진이나 세션 v4 변경은 없다.
+- [증분 Release #41158157518](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41158157518) PASS. EXE SHA256 `61fd80511560f6ada59debff527dbd4c6c7a8a65bfaae0b2810cc2a5d313a006`. 캐시 IPDB/IOBJ 불일치로 25,657개 함수를 다시 코드 생성한 사실은 보존한다. 최종 검사용 소스 `eb73f964f51624c93f7c99007fb3e63321e4c671`까지 변경된 것은 소유 GUI 테스트 파일뿐이며 동일 EXE를 재사용했다.
+- [#41158470446](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41158470446): hover만으로 '유형' 하위 항목이 나타나지 않아 **GUI FAIL**. [#41158860708](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41158860708): 실제 UIA 소유 메뉴 행 물리 클릭으로 하위 항목을 찾았지만 테스트의 미지원 `get_toggle_state` 호출로 **GUI FAIL**. 제품 실패로 오분류하지 않는다.
+- 검사용 UIA `iface_toggle.CurrentToggleState` 사용과 테스트 폴더 분리 후 [#41159003202](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41159003202) **GUI SUCCESS**. Dark/96 DPI/1160×640의 소유 .txt/.md/.log에서 빈 배경 메뉴 실제 클릭, 유형 그룹 머리글, 재열기 체크, 재클릭 해제, 파일 바이트/원본 프로필 보존, 정상 종료, 성공 fixture/profile 정리 PASS. 파일 작업, 클립보드, 실제 휴지통은 실행하지 않았다.
+- [#41159142286](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41159142286) **화면 읽기 전용 SUCCESS**. 실제 1160×640 두 PNG를 직접 검토했다. '분류 방법' 팝업과 네 선택 항목, 적용 후 유형 체크, 왼쪽 유형 그룹 머리글/오른쪽 유지, 창 경계 내 메뉴 배치를 확인했다. 시각적 수용은 **Dark·96 DPI·소유 폴더 한정**이다.
+- 확인 PNG SHA256: `background-group-menu` = `a55856f4040129c4aed05a83011f66fb097da0e1f32691d41929199ffa7abd72`; `background-group-checked` = `3b790da6ab9ddfd630d409fc30a6aee315b37a758ba61f12f89c24aa35043254`.
+- 완료 후 VM은 동일 소스 clean/앱·helper 프로세스 0, 소유 worker 등록이 없는 상태에서 읽기 전용 화면 검증을 통과했다. 성공 fixture/profile은 정리했고 실패 증거/runtime/cache는 보존했다. 제어 슬롯 `605e67795cd093cac05aaca4d212ba70cffa9065`에서 [skip ci] idle로 반환.
+- Windows 11 기본 Explorer와 모든 환경에서 동일하다는 주장은 하지 않는다. 제외 G03~G05/중단 G07과 사용자 파일·OS 설정·전역 클립보드·실제 휴지통 보존. 다음 개발 후보는 [R03 보기 8종 호환 설계](NEXT_DEVELOPMENT_GOALS.md)로, 기존 5종/세션 v4/패널별 보기 계약을 먼저 분석한다. PR #70은 과거 통합 완료됐고 새 PR은 만들지 않았다. 현재 main 직접 반영 정책에 따른다.
+
 # 2026-10-31 — R01 선택 항목·현재 폴더 속성 메뉴 한정 수용
 
 - 제품b10bc7a6은 선택 메뉴와 빈 배경 메뉴에 속성을 추가했다. 선택 항목과 현재 확정 폴더를 분리하고 기존 격리 helper·경로/탭/route/pending 검증을 재사용한다. 파일 작업 확인창 중 직접 진입/늦은 상태 갱신도 차단한다. 일반 고정 로컬 폴더 범위이며 드라이브 루트·가상/네트워크/이동식/reparse 제한은 유지한다.
