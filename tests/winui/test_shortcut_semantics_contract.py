@@ -160,7 +160,7 @@ class ShortcutSemanticsContract(unittest.TestCase):
             "args.GetCurrentPoint(view). Properties().MouseWheelDelta()",
             "if(side!=ui->ActiveWindowTab().model.activePane) ui->ActivatePane(side)",
             "current+(delta>0?1:-1)",
-            "(std::max)(0,(std::min)(4,",
+            "(std::max)(0,(std::min)(5,",
             "if(next!=current)ui->UpdateView(next)",
             "args.Handled(true)",
         ):
@@ -183,8 +183,9 @@ class ShortcutSemanticsContract(unittest.TestCase):
             block,
         ))
         self.assertEqual(bindings, {
-            "2": "LargeIcons", "3": "MediumIcons", "4": "SmallIcons",
-            "5": "List", "6": "Details",
+            "1": "ExtraLargeIcons", "2": "LargeIcons", "3": "MediumIcons",
+            "4": "SmallIcons", "5": "List", "6": "Details",
+            "7": "Tiles", "8": "Content",
         })
         self.assertNotIn("NumberPad", block)
         self.assertNotIn("UpdateView(", block)
