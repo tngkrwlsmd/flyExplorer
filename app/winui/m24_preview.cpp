@@ -35,7 +35,17 @@ void MainWindow::OpenPreviewFromViewMenu() {
     if(!ActiveWindowTab().fileInfoPaneVisible)
         OnToggleFileInfoPane(nullptr,nullptr);
     RootShell().UpdateLayout();
-    OnRevealTextPreview(nullptr,nullptr);
+    // A closing menu can restore focus after its Closed callback. Defer
+    // the focus gesture to the next UI turn and retain its originating tab.
+    auto const origin=ActiveWindowTab().identity;
+    auto weak=get_weak();
+    DispatcherQueue().TryEnqueue([weak,origin] {
+        if(auto ui=weak.get();ui&&!ui->mClosing&&
+           ui->ActiveWindowTab().identity==origin&&
+           !ui->mFileOperations.busy()&&
+           !ui->mFileOperations.pendingConfirmationToken())
+            ui->OnRevealTextPreview(nullptr,nullptr);
+    });
     StatusText().Text(L"미리보기는 .txt, .md, .log 파일을 선택한 후 '텍스트 미리보기 켜기'를 눌러야 표시됩니다.");
 }
 
