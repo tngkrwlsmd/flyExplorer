@@ -1,4 +1,11 @@
-# R05 Terminal fallback: 소스·Release 성공과 GUI 요청 스크립트의 HEAD 오류 (2026-10-31)
+# R05 Terminal fallback: Release 및 실제 Windows GUI 한정 수용 (2026-10-31)
+
+## 후속 해결 및 최종 수용
+- 초기 [#41181754682](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41181754682)의 `UNEXPECTED_OR_DIRTY_R03_SOURCE`는 테스트가 이전 소스 HEAD를 요구하던 **검사 사전 조건 오류**다. 컨트롤 플레인 `a88594272c04ead91e351ba852c476bcc2bf8367`에서 그 조건과 문서 전용 main SHA 비교를 실제 소스에 맞게 수정했고, 기존 Release를 재빌드하지 않았다.
+- [#41182673672](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41182673672) **GUI PASS**: 본 문서의 동일 실행 파일 SHA256 `e017cdd3e39949e1e30746330f05f983406312f36fe0979cb7391dc9ea4bfc2e`로 실제 앱 빈 배경 메뉴에서 `터미널에서 열기` 클릭, 새 Windows Terminal HWND/PID 관측·닫기, 원본 파일과 기존 설정 보존, 앱 정상 종료, 소유 fixture/profile/worker 정리를 확인했다. `R05_TERMINAL_OWNED_GUI=PASS; PIXELS_NOT_REVIEWED`. 특정 Windows VM·일반 로컬 폴더·Dark/96 DPI 한정 동작 검증이다.
+- 이전 실패와 재개 가이드는 **해결 전 이력**이다. 성공 후 중앙 Windows 제어 요청 슬롯은 idle로 반환했다. 메뉴와 창의 픽셀 육안 평가, 다른 설치 환경/경로·별도 Windows 동등성은 미검증이다.
+
+## 이전 조사·재개 기록 (해결 전 이력)
 
 ## 변경된 실제 제품
 - 제품 `e452fe990d6798ac3292f5eded79d4d634abedb0`; 선행 `16e6986e2c46dc5c9e6d16eedc82b491f45c1ed5`가 ‘터미널에서 열기’ 메뉴, 활성 패널/현재 폴더·경로의 안정성 검증 및 안전한 로컬 경로로 `wt.exe`를 여는 기능을 도입했다.
