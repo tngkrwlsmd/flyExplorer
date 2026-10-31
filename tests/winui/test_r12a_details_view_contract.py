@@ -29,7 +29,7 @@ class R12aDetailsViewEntry(unittest.TestCase):
         self.assertIn("if(requested&&IsLoaded()&&action_)action_(23);",impl)
         self.assertNotIn("OnViewFileInfoPane(IInspectable const&,RoutedEventArgs const&){if(action_)action_(23);}",impl)
         self.assertIn("ViewFileInfoPaneItem().IsChecked(visible)",impl)
-        self.assertIn("if(action_)action_(23)",impl)
+        self.assertNotIn('OnViewFileInfoPane(IInspectable const&,RoutedEventArgs const&){if(action_)action_(23);}',impl)
         self.assertIn("else if(command==23&&!ui->mFileOperations.busy()",main)
         self.assertIn("!ui->mFileOperations.pendingConfirmationToken()",main)
         self.assertIn("ui->OnToggleFileInfoPane(nullptr,nullptr)",main)
