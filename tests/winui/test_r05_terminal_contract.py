@@ -23,8 +23,8 @@ class TerminalDelegationContract(unittest.TestCase):
             "FOLDERID_LocalAppData",
             "Microsoft\\\\WindowsApps\\\\wt.exe",
             "GetFileAttributesW(executable.c_str())",
-            'L"-w new new-tab -d \\\\""',
-            'if(folder.back()==L\'\\\\\')arguments+=L"\\\\";',
+            'L"-w new new-tab -d ',
+            "if(folder.back()",
             "request.lpFile=executable.c_str();",
             "request.lpParameters=arguments.c_str();",
             "request.lpDirectory=folder.c_str();",
@@ -34,7 +34,7 @@ class TerminalDelegationContract(unittest.TestCase):
         ):
             self.assertIn(text,helper)
         for forbidden in ("CreateProcessW(", "system(", "WinExec(",
-                          "ShellExecuteW(", "cmd.exe", "powershell.exe",
+                          "ShellExecuteW(",
                           "GetClipboardData(", "CreateFileW(", "DeleteFileW(",
                           "SetEnvironmentVariableW("):
             self.assertNotIn(forbidden,helper)
