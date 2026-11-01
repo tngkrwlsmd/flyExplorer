@@ -160,7 +160,7 @@ class ShortcutSemanticsContract(unittest.TestCase):
             "args.GetCurrentPoint(view). Properties().MouseWheelDelta()",
             "if(side!=ui->ActiveWindowTab().model.activePane) ui->ActivatePane(side)",
             "current+(delta>0?1:-1)",
-            "(std::max)(0,(std::min)(4,",
+            "(std::max)(0,(std::min)(5,",
             "if(next!=current)ui->UpdateView(next)",
             "args.Handled(true)",
         ):
