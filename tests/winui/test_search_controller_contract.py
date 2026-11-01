@@ -325,5 +325,31 @@ class SearchControllerContracts(unittest.TestCase):
             self.assertIn(marker, gui)
 
 
+    def test_same_pane_right_tap_does_not_invalidate_in_flight_search(self):
+        menus=src("app/winui/m22_transfers.cpp")
+        main=src("app/winui/MainWindow.xaml.cpp")
+        right_tap=menus.split("void MainWindow::OnFileRightTapped(",1)[1].split(
+            "void MainWindow::UpdateSort(",1)[0]
+        guard="if(ActiveWindowTab().model.activePane!=side)ActivatePane(side);"
+        self.assertIn(guard,right_tap)
+        self.assertEqual(right_tap.count("ActivatePane(side);"),1)
+        self.assertLess(right_tap.index(guard),
+                        right_tap.index("ListViewItem clicked{nullptr};"))
+        # Same-pane context menus must retain selection and background
+        # menu presentation; opposite-pane right-click still activates it.
+        self.assertIn("if(!clicked.IsSelected())",right_tap)
+        self.assertIn("ShowAppFileContextMenu(side,clicked,",right_tap)
+        self.assertIn("ShowAppBackgroundContextMenu(side,list,",right_tap)
+        self.assertEqual(right_tap.count("QueueSelectionPresentationUpdate();"),2)
+        activate=main.split("void MainWindow::ActivatePane(int side)",1)[1].split(
+            "void MainWindow::UpdateActivePaneChrome()",1)[0]
+        self.assertIn("mSearchController.invalidate();",activate)
+        self.assertIn("CancelTextPreview();",activate)
+        # Consistent with pre-existing normal same-pane click behavior.
+        self.assertIn("if(ActiveWindowTab().model.activePane!=0)ActivatePane(0);",
+                      main)
+        self.assertIn("if(ActiveWindowTab().model.activePane!=1)ActivatePane(1);",
+                      main)
+
 if __name__ == "__main__":
     unittest.main()

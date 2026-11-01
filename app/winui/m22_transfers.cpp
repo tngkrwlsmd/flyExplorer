@@ -589,7 +589,9 @@ void MainWindow::OnFileRightTapped(
  if(!list)return;
  const int side=list==LeftFiles()?0:list==RightFiles()?1:-1;
  if(side<0)return;
- ActivatePane(side);
+ // Switching panes must refresh navigation/search context; a same-pane
+ // context menu must not cancel an unrelated in-flight search.
+ if(ActiveWindowTab().model.activePane!=side)ActivatePane(side);
 
  ListViewItem clicked{nullptr};
  auto current=args.OriginalSource().try_as<DependencyObject>();
