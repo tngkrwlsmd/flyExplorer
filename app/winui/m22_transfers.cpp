@@ -348,7 +348,7 @@ void MainWindow::ShowAppFileContextMenu(
  // Windows owns compression, extraction and other Explorer commands.
  // Retired F08 native archive code is not part of this product.
  // Explorer owns user-initiated archive commands in its separate window.
- menu.Items().Append(make(L"Windows 탐색기에서 선택 열기",L"\uE8B7",
+ menu.Items().Append(make(L"Windows 탐색기에서 선택 열기 (압축 등)",L"\uE8B7",
                           canWindowsExplorer,
      [side](MainWindow& ui){ui.RevealSelectedInWindowsExplorer(side);}));
  if(count==1&&isFolder&&!folderPath.empty()){
@@ -537,7 +537,7 @@ void MainWindow::ShowAppBackgroundContextMenu(
       }else ui.StatusText().Text(L"현재 위치를 새로 고칠 수 없습니다.");
      }));
  // Delegate Windows-native New/archive/background actions to Explorer.
- menu.Items().Append(make(L"Windows 탐색기에서 현재 폴더 열기",L"\uE8B7",
+ menu.Items().Append(make(L"Windows 탐색기에서 현재 폴더 열기 (새 ZIP 등)",L"\uE8B7",
                           localFolder,
      [side](MainWindow& ui){ui.OpenCurrentFolderInWindowsExplorer(side);}));
  menu.Items().Append(make(L"터미널에서 열기",L"\uE756",localFolder,
@@ -1278,7 +1278,7 @@ void MainWindow::OpenCurrentFolderInWindowsExplorer(int side){
        tab>=pane.filesystemPaths.size()||
        pane.filesystemPaths[tab]!=folder)return;
     ui->StatusText().Text(SUCCEEDED(result)?
-     L"Windows 탐색기에서 현재 폴더를 열었습니다. Windows 기본 메뉴를 이용하세요.":
+     L"Windows 탐색기에서 현재 폴더를 열었습니다. 새 ZIP 등 가능한 작업은 탐색기 메뉴에서 직접 선택하세요.":
      L"Windows 탐색기에서 현재 폴더를 열지 못했습니다.");
    });
   }).detach();
@@ -1390,7 +1390,7 @@ void MainWindow::RevealSelectedInWindowsExplorer(int side){
        tab>=pane.filesystemPaths.size()||
        pane.filesystemPaths[tab]!=folder)return;
     ui->StatusText().Text(SUCCEEDED(result)?
-     L"Windows 탐색기에서 항목을 선택했습니다. 압축 등 기본 메뉴를 이용하세요.":
+     L"Windows 탐색기에서 항목을 선택했습니다. 압축 등 가능한 작업은 탐색기 메뉴에서 직접 선택하세요.":
      L"Windows 탐색기에서 선택 항목을 열지 못했습니다.");
    });
   }).detach();

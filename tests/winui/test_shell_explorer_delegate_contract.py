@@ -43,7 +43,7 @@ class WindowsExplorerDelegationContracts(unittest.TestCase):
             "workspace.identity!=identity",
             "pane.routeIds[tab]!=route",
             "pane.filesystemPaths[tab]!=folder",
-            'make(L"Windows 탐색기에서 선택 열기"',
+            'make(L"Windows 탐색기에서 선택 열기 (압축 등)"',
             "ui.RevealSelectedInWindowsExplorer(side)",
             "ui.ShowExternalWindowsContextMenu(side)",
         ):
@@ -55,10 +55,27 @@ class WindowsExplorerDelegationContracts(unittest.TestCase):
             "shellexplorer::openFolder(folder)",
             "pane.routeIds[tab]!=route",
             "pane.filesystemPaths[tab]!=folder",
-            'make(L"Windows 탐색기에서 현재 폴더 열기"',
+            'make(L"Windows 탐색기에서 현재 폴더 열기 (새 ZIP 등)"',
             "ui.OpenCurrentFolderInWindowsExplorer(side)",
         ):
             self.assertIn(token,ui)
+
+    def test_r08_archive_entry_reuses_native_explorer_delegation(self):
+        # Labels aid discovery; the user decides what to archive in Explorer.
+        ui=source("app/winui/m22_transfers.cpp")
+        file_menu=ui.split("void MainWindow::ShowAppFileContextMenu(",1)[1].split(
+            "void MainWindow::ShowAppBackgroundContextMenu(",1)[0]
+        background=ui.split("void MainWindow::ShowAppBackgroundContextMenu(",1)[1].split(
+            "void MainWindow::OnFileRightTapped(",1)[0]
+        self.assertIn('make(L"Windows 탐색기에서 선택 열기 (압축 등)"',file_menu)
+        self.assertIn("ui.RevealSelectedInWindowsExplorer(side)",file_menu)
+        self.assertIn('make(L"Windows 탐색기에서 현재 폴더 열기 (새 ZIP 등)"',background)
+        self.assertIn("ui.OpenCurrentFolderInWindowsExplorer(side)",background)
+        self.assertIn("압축 등 가능한 작업은 탐색기 메뉴에서 직접 선택하세요.",ui)
+        self.assertIn("새 ZIP 등 가능한 작업은 탐색기 메뉴에서 직접 선택하세요.",ui)
+        for forbidden in ("CreateSelectedZip(", "ExtractSelectedZip("):
+            self.assertNotIn(forbidden,file_menu)
+            self.assertNotIn(forbidden,background)
 
     def test_right_tapped_on_handled_list_item_reaches_owned_menu(self):
         xaml=source("app/winui/MainWindow.xaml")
@@ -165,8 +182,8 @@ class WindowsExplorerDelegationContracts(unittest.TestCase):
         harness=source("tests/winui/test_shell_gui.py")
         runner=source("tools/winui/run_checks.py")
         for command in (
-            "Windows 탐색기에서 선택 열기",
-            "Windows 탐색기에서 현재 폴더 열기",
+            "Windows 탐색기에서 선택 열기 (압축 등)",
+            "Windows 탐색기에서 현재 폴더 열기 (새 ZIP 등)",
             "EP05_NATIVE_EXPLORER_SELECTED_OWNED_FILE=PASS",
             "EP05_NATIVE_EXPLORER_OPENED_OWNED_FOLDER=PASS",
             "EP05_NATIVE_EXPLORER_HANDOFF_READ_ONLY=PASS",

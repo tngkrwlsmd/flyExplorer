@@ -185,8 +185,8 @@ def run(*,win,element,focus,eventually,left,right,owned_pid):
         assert area.left<click[0]<area.right and area.top<click[1]<area.bottom
         focus()
         mouse.click(button="right",coords=click)
-        menu_diagnostic("Windows 탐색기에서 선택 열기")
-        menu_click("Windows 탐색기에서 선택 열기")
+        menu_diagnostic("Windows 탐색기에서 선택 열기 (압축 등)")
+        menu_click("Windows 탐색기에서 선택 열기 (압축 등)")
         eventually(lambda: "Windows 탐색기에서 항목을 선택했습니다" in
                    element("StatusText").window_text(),
                    "native Explorer file selection handoff failed", 14)
@@ -249,8 +249,8 @@ def run(*,win,element,focus,eventually,left,right,owned_pid):
         assert point is not None, (
             "No verified blank point in test-owned RightFiles; refusing click")
         mouse.click(button="right",coords=point)
-        menu_diagnostic("Windows 탐색기에서 현재 폴더 열기")
-        menu_click("Windows 탐색기에서 현재 폴더 열기")
+        menu_diagnostic("Windows 탐색기에서 현재 폴더 열기 (새 ZIP 등)")
+        menu_click("Windows 탐색기에서 현재 폴더 열기 (새 ZIP 등)")
         eventually(lambda: "Windows 탐색기에서 현재 폴더를 열었습니다" in
                    element("StatusText").window_text(),
                    "native Explorer folder handoff failed", 14)
