@@ -31,6 +31,15 @@ def main():
     success = False
     try:
         with h.App(app_exe("Release"), folder, "r18-details-shortcut", "dark") as app:
+            def owned_file():
+                matches = [row for row in app.rows("Left")
+                           if source.name in row.window_text()]
+                return matches[0] if len(matches) == 1 else None
+
+            h.wait(owned_file, "R18 test file absent", seconds=20).select()
+            h.wait(lambda: owned_file() is not None and owned_file().is_selected(),
+                   "R18 test file selection missing", seconds=8)
+
             def name():
                 return app.el("FileInfoToggleButton").element_info.name
 
