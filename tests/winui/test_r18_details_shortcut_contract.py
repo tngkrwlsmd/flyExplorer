@@ -28,7 +28,6 @@ class R18DetailsShortcut(unittest.TestCase):
             keys,
         )
         self.assertIn("||previewAlias||detailsAlias||windowAlias", keys)
-        self.assertIn("||previewAlias||detailsAlias||windowAlias", keys)
         self.assertIn(
             "refreshAlias||viewShortcut>=0||previewAlias||detailsAlias", keys
         )
