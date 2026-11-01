@@ -1,3 +1,9 @@
+# 2026-11-01 — 동일 패널 파일 우클릭의 불필요한 검색 취소 방지 후보 (GUI 미검증)
+
+- **소스에서 확인한 문제 경로:** `MainWindow::OnFileRightTapped`가 파일/빈 배경을 우클릭할 때 현재 활성 패널 여부와 관계없이 `ActivatePane(side)`를 실행했다. 해당 함수는 `mSearchController.invalidate()`로 진행 중인 검색 요청을 무효화한다. 반면 일반 패널 탭 클릭과 파일 키 처리에는 이미 **다른 패널로 바뀔 때만** 재활성화하는 조건이 있다. 같은 패널의 파일 우클릭으로 실제 검색이 취소된 GUI 증상은 아직 관측하지 않았으며, 소스 경계에서 확인한 위험이다.
+- **제품 변경 후보:** [`fix/same-pane-righttap-preserve-search-20261101` / `158f2aada9333b8b894ad26aba714ec8d6f82e45`](https://github.com/tngkrwlsmd/flyExplorer/commit/158f2aada9333b8b894ad26aba714ec8d6f82e45)은 `m22_transfers.cpp`에서 실제 패널 전환 시에만 `ActivatePane(side)`를 호출하도록 조건을 추가했다. 파일 선택 유지, 목록 선택 표시 갱신, 선택 항목/빈 배경 메뉴와 반대쪽 패널 진입은 원래 경로를 유지한다. `test_search_controller_contract.py`에 집중 소스 계약 1개를 추가했다. 전체 차이는 두 파일뿐이다.
+- **확인한 검증:** [실제 Windows 소스 전용 #41311099947](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41311099947)에서 동일 후보 SHA의 검색 관련 Python 소스 계약 **13/13 PASS** 및 소유 Git worktree 제거를 확인했다. [Windows VM 요청 슬롯은 idle로 복구](https://github.com/tngkrwlsmd/personal-control-plane/commit/1e7b9005da1e27de2b204217eea9e7a9c7af2eaa)했다. **C++ 제품 빌드, 실제 마우스 입력, 진행 중 검색 유지 GUI, 픽셀 검토는 수행하지 않았다.** 기능 수용·실사용 문제 해결 판정은 보류하고 제품 변경을 `main`에 통합하지 않았다. 기존 PX06 검색 취소 수용과 R12 보기 메뉴 입력 차단은 재실행하거나 다른 결과로 재분류하지 않는다.
+
 # 2026-11-01 — 작업공간 복원 모델 구조 보호 네이티브 한정 수용 (전체 앱 Release·GUI 미검증)
 
 - **변경 범위:** `WindowWorkspaceController::replace()`가 복원 상태를 실제로 교체하기 전에 각 `Model::invariant()`를 호출해 좌·우 PaneTab, routeIds, pending, filesystemPaths 크기 및 활성 탭·패널 불일치를 거부한다. 세션 v4 저장 형식, 사용자 파일, 실제 OS 설정, UI 명령 및 정상 복원 경로를 변경하지 않는다. 제품 코드 1파일·소스 계약 1파일·네이티브 fixture 1파일만 기존 `main`의 문서 변경 위에 직접 통합했으며 PR은 만들지 않았다.
