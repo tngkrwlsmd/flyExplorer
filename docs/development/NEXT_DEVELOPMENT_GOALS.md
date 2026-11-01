@@ -20,7 +20,7 @@
 
 **R12 보기 메뉴 진입 보류:** [Windows 포인터 검사 #41195201589](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41195201589)에서 메뉴 항목으로 실제 마우스 클릭을 했으나 동작하지 않았다. 접근성 호출(UIA Invoke)은 동작했으며 파일 읽기 자동 실행은 없었다. 별도 실제 GUI 수용 전에는 R12를 main으로 가져오지 않는다.
 
-**R18 세부 정보 창 키보드 바로 가기 구현 후보:** Windows 탐색기와 동일한 `Alt+Shift+P`를 기존 세부 정보 창 토글에 연결하는 변경을 별도 브랜치에서 진행한다. 기존 `Alt+P`의 명시적 미리보기 포커스·읽기 동의, 입력창·확인창 우선권은 유지한다. [R18 기능·검증 범위](R18_DETAILS_KEYBOARD_SHORTCUT_20261101.md). **소스·Release·실제 키보드/GUI는 미검증이며 main 미반영**이다. R17 보기 메뉴 두 번째 물리 클릭 실패와 서로 별개의 작업이다.
+**R18 세부 정보 창 키보드 바로 가기 Windows 한정 수용:** Windows 탐색기의 `Alt+Shift+P`를 기존 세부 정보 창 열기·닫기에 연결했다. [R18 개발·검증 기록](R18_DETAILS_KEYBOARD_SHORTCUT_20261101.md) 및 [소스 24/24·Release #41284881498](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41284881498), [실제 키보드 GUI #41286258463](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41286258463) **PASS**. 기존 `Alt+P`와 파일 본문 미리보기 동의, 테스트 원본/실제 설정 및 정상 종료·정리를 확인했다. 다크 테마/소유 로컬 환경 한정; 화면 픽셀 검토는 미실시. R12/R17 보기 메뉴 두 번째 물리 클릭 실패는 별도 **미해결**이며 이 단축키로 해결됐다고 표시하지 않는다.
 
 **R05 Terminal GUI 수용 완료:** [R05 후속 수용](R05_TERMINAL_FALLBACK_20261031.md)과 [Windows GUI #41182673672](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41182673672)의 메뉴 클릭·새 Terminal 창 생성·닫기·원본/설정 보존·정상 종료 PASS를 재사용한다. 과거 HEAD 사전 조건 FAIL은 해결 전 이력이다. 픽셀 검토 및 다른 환경은 미검증이다.
 
