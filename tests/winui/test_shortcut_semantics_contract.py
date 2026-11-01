@@ -183,8 +183,9 @@ class ShortcutSemanticsContract(unittest.TestCase):
             block,
         ))
         self.assertEqual(bindings, {
-            "2": "LargeIcons", "3": "MediumIcons", "4": "SmallIcons",
-            "5": "List", "6": "Details",
+            "1": "ExtraLargeIcons", "2": "LargeIcons", "3": "MediumIcons",
+            "4": "SmallIcons", "5": "List", "6": "Details",
+            "7": "Tiles", "8": "Content",
         })
         self.assertNotIn("NumberPad", block)
         self.assertNotIn("UpdateView(", block)
