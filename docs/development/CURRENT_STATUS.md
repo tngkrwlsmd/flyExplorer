@@ -1,3 +1,10 @@
+# 2026-11-01 — R18 세부 정보 창 Alt+Shift+P 실제 Windows 키보드 한정 수용
+
+- **기능 및 정확한 제품 소스:** 원래의 `Alt+P`는 유지하면서 `Alt+Shift+P`를 기존 세부 정보 창 열기·닫기 경로에 연결했다. 검증한 제품 커밋 `c57fc3b7e851e29589c6401a42f4c6b8c2532c77`; R12/R17 미수용 보기 메뉴 코드는 포함하지 않는다. 기존 8종 보기 키 계약·Ctrl+휠 아이콘 확대 상한의 오래된 검사 기대값도 현재 구현에 맞게 교정했다.
+- **실제 Windows 소스·Release:** [#41284881498](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41284881498) 영향 범위 소스 계약 **24/24 PASS**, x64 Release **PASS**, EXE SHA256 `29d7cb3fa94f4b91cd245a7185b14d77a634f847eaa961c82576a2fc12bab4d8`. 앞선 검증 스크립트 작업경로 및 기존 검사 기대값 실패 로그는 별도 보존하며 실제 제품 빌드 오류로 분류하지 않는다.
+- **실제 소유 GUI:** [#41286258463](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41286258463) 동일 EXE로 물리 키 `Alt+Shift+P` 열기/닫기, 기존 `Alt+P` 열기/닫기, 명시적 동의 없는 텍스트 본문 미리보기 없음, 소유 원본 바이트·실제 설정 보존, 앱 정상 종료·테스트 프로필/fixture/작업자 정리 **PASS**.
+- **미검증·보류:** Dark/단일 소유 로컬 폴더 시험 이외 테마·배율·제공자와 화면 픽셀 비교는 검증하지 않았다. R17 메뉴 항목의 **두 번째 실제 마우스 클릭 실패** [#41282607675](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41282607675)는 독립적으로 미해결이다. [R18 상세 기록](R18_DETAILS_KEYBOARD_SHORTCUT_20261101.md).
+
 # 2026-10-31 — R11 선택 항목 메뉴 단축키 안내 Windows 한정 수용, R12 포커스 진입 보류
 
 - **R11 소스·Release 통과:** [Windows #41195478631](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41195478631)에서 관련 소스 계약 **26/26 PASS**, 증분 Windows x64 Release **PASS**. 정확한 빌드 소스 `c98bbfb17fe8966be88ec6f93ffe8dee2334d596`, EXE SHA256 `e10f4925b11a9152881fd1d4f2a76048ba31d2f27c4a27fc49d8ec98785521b4`. 변경된 기능 소스는 기존 선택 항목 메뉴의 단축키 표시 속성 5개에 한정된다. 실제 파일 작업/단축키 실행 코드 변경 없음.
