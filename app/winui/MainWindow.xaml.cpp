@@ -514,6 +514,8 @@ namespace winrt::FlyExplorer::implementation
                     key==Windows::System::VirtualKey::R;
                 const bool previewAlias=alt&&!control&&!shift&&
                     key==Windows::System::VirtualKey::P;
+                const bool detailsAlias=alt&&!control&&shift&&
+                    key==Windows::System::VirtualKey::P;
                 const bool windowAlias=!control&&!shift&&!alt&&
                     key==Windows::System::VirtualKey::F11;
                 int windowTabShortcut=-1;
@@ -546,7 +548,7 @@ namespace winrt::FlyExplorer::implementation
                     default:break;
                     }
                 }
-                if(addressAlias||searchAlias||refreshAlias||viewShortcut>=0||previewAlias||windowAlias||windowTabShortcut>=0){
+                if(addressAlias||searchAlias||refreshAlias||viewShortcut>=0||previewAlias||detailsAlias||windowAlias||windowTabShortcut>=0){
                     auto ui=nativeWeak.get();
                     if(!ui||ui->mClosing)return;
                     // Keep modal/menu/combo input and inline file-name edits
@@ -561,7 +563,7 @@ namespace winrt::FlyExplorer::implementation
                            node.try_as<MenuFlyoutPresenter>()||
                            node.try_as<ContentDialog>())return;
                         if(auto box=node.try_as<TextBox>();box&&
-                           (refreshAlias||viewShortcut>=0||previewAlias||windowAlias||windowTabShortcut>=0||
+                           (refreshAlias||viewShortcut>=0||previewAlias||detailsAlias||windowAlias||windowTabShortcut>=0||
                             (box!=ui->AddressBox()&&box!=ui->QuickSearchBox())))
                             return;
                         node=Microsoft::UI::Xaml::Media::VisualTreeHelper::
@@ -613,6 +615,14 @@ namespace winrt::FlyExplorer::implementation
                         }catch(winrt::hresult_error const&){
                             ui->StatusText().Text(L"창 크기를 변경할 수 없습니다.");
                         }
+                        args.Handled(true);
+                        return;
+                    }
+                    if(detailsAlias){
+                        // Explorer's Alt+Shift+P toggles the Details pane. Keep
+                        // file reading opt-in and do not redirect keyboard focus.
+                        if(!args.KeyStatus().WasKeyDown)
+                            ui->OnToggleFileInfoPane(nullptr,nullptr);
                         args.Handled(true);
                         return;
                     }
