@@ -2,7 +2,7 @@
 
 - **확인한 기존 코드 경계:** `WindowWorkspaceController::replace()`는 창 ID, 탭별 정렬 배열 및 활성 탭 값은 검사하지만, `explorerui::Model::invariant()`를 호출하지 않았다. 기존 `invariant()`에는 좌·우 폴더 탭, routeIds, pending, filesystemPaths 크기 일치 및 활성 인덱스·분할 시 활성 패널 조건이 들어 있다. 현재 `SessionCoordinator`의 정상 복원 생성 경로는 `model.reset()`을 사용하므로 **실제 손상된 세션으로 인한 사용자 오류는 관측되지 않았다**. 이는 방어적 경계의 소스 확인이다.
 - **변경 후보:** [`fix/workspace-replace-invariant-20261101`의 `78a728f`](https://github.com/tngkrwlsmd/flyExplorer/commit/78a728f74639633f921c1a90d4495ed6a8caa553)에서 교체 전 `!states[i].model.invariant()` 거부를 추가하고 `test_session_coordinator_contract.py`에 집중 소스 계약 1개를 추가했다. 다른 작업공간 상태·세션 v4 파일 형식·사용자 파일·UI 경로는 바꾸지 않았다. 두 파일만 변경됐다.
-- **검증 경계:** GitHub에서 읽은 후보 소스 네 파일에 대해 검사 가드, 거부 순서, 기반 모델의 route/pending/path 모양과 호출부 관련 정적 조건 **11/11 충족**을 확인했다. 저장소 Python 테스트 자체 실행, Windows 네이티브/C++ 컴파일, GUI·픽셀 검사는 **실시하지 않았다**. 따라서 제품 후보는 `main` 미반영이며 정상 세션 복원과 잘못된 모델 교체에 대한 영향 범위 검증 후에만 수용한다. R12/R19 GUI 차단은 별도 상태로 유지한다.
+- **집중 소스 검증:** GitHub에서 읽은 후보 소스 네 파일에 대한 정적 검사 조건 **11/11 충족** 이후, [실제 Windows 소스 전용 #41307146818](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41307146818)에서 정확한 브랜치 소스 `78a728f74639633f921c1a90d4495ed6a8caa553`를 임시 worktree로 가져와 `test_session_coordinator_contract.py`의 **8/8 PASS**를 확인했다. 해당 검사는 기존 7개와 새 구조 검사 1개로 이뤄진 소스 계약이며 실제 C++ 실행은 아니다. 실행 로그에 임시 소스 작업 폴더 제거 확인이 있고 [원격 요청 슬롯 idle 복구](https://github.com/tngkrwlsmd/personal-control-plane/commit/ef92fdbff330a2a6115e9aee492f72f728fa4e8c)를 확인했다. Windows 네이티브/C++ 컴파일, 잘못된 작업공간 복원의 실제 실행, GUI·픽셀 검사는 **실시하지 않았다**. 따라서 제품 후보는 `main` 미반영이며 실제 빌드·동작 영향이 검증된 후에만 수용한다. R12/R19 GUI 차단은 별도 상태로 유지한다.
 
 # 2026-11-01 — R23 소유 창 일시 최상위 진단 후에도 실제 보기 버튼 입력 차단
 
