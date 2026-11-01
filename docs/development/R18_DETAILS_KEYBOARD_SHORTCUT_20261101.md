@@ -13,8 +13,10 @@
 - Keep the current active WindowTab, pane/PaneTab ownership, private session v4, FileOperationController and bounded preview opt-in rules. Do not change the unaccepted R12 menu entry or any GUI screenshot.
 - Add focused R18 source contract to the existing core source suite; no broad suite, installer, clean build or user-data operations.
 
-## Verification / acceptance status
+## Verification / limited acceptance (2026-11-01)
 
-- Source revision is a **separate unmerged branch**. Actual Windows source suite, compilation, keyboard input, functional GUI, screen pixels, settings preservation and normal owned process exit are **NOT TESTED** for R18.
-- Direct main acceptance requires the affected source check and, if separately authorized, one owned Windows keyboard GUI scenario with both Alt+Shift+P transitions, Alt+P unchanged, no implicit content reading, source/settings preservation and normal exit. Record visual evidence separately if presentation changes.
-- The R17 physical View-menu second-click defect remains blocked independently. No previously accepted functionality should be retested unless its boundary changed.
+- **Exact product source:** `c57fc3b7e851e29589c6401a42f4c6b8c2532c77`, based on then-main `84b1780e94483f8aa70043d1e19296cc0b561b1f`. The only product behavior change is the shortcut; the legacy shortcut contract also updates two stale expectations to the already-accepted eight view modes and Ctrl+wheel icon limit.
+- **Windows source + x64 Release:** [#41284881498](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41284881498) **PASS**, focused source contracts **24/24**, build **PASS**; executable SHA256 `29d7cb3fa94f4b91cd245a7185b14d77a634f847eaa961c82576a2fc12bab4d8`. The earlier harness-path and pre-existing shortcut assertion failures were corrected without dismissing failed evidence or repeating unrelated tests.
+- **Actual owned keyboard GUI:** [#41286258463](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41286258463) **PASS** with the exact same executable hash and product source. Physical `Alt+Shift+P` opened and closed Details; legacy `Alt+P` still opened and closed the pane; the selected synthetic text file was not read without explicit opt-in. Owned source bytes and real settings remained unchanged; app exit code 0, disposable profile/fixture and worker cleanup **PASS**.
+- **Bounded scope:** Dark theme, one interactive Windows desktop and owned local fixture only. Actual screen pixels were **NOT REVIEWED**, and other themes/DPI/remote providers, full suite, package, and native Debug remain untested. No layout or preview opt-in policy was changed.
+- **Independently unresolved:** R17 physical View-menu Details second click [#41282607675](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41282607675) still fails; R18 keyboard success does not repair or certify the R12/R17 flyout entry.
