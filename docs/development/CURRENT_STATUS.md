@@ -1,3 +1,9 @@
+# 2026-11-01 — R12 보기 메뉴 R19 빌드 검증과 실제 입력 가림 문제 분리
+
+- **검증된 제품 후보:** 정확한 `7229144f3566d08e39f13a9ec42c93ef645d1a20`의 관련 소스 계약 **43/43 PASS**, Windows x64 Release **PASS** ([#41300472669](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41300472669)). EXE SHA256 `f600f7658b1e703d291ed21dff27bfeceb8dea9d1129f67834b6cf35dafd0a93`.
+- **실제 GUI는 미수용:** 첫 소유 GUI [#41302119085](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41302119085)는 첫 보기 메뉴 항목을 찾기 전에 중단. [#41302491405](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41302491405)는 진단 시 전면 창이 앱 소유가 아니고 메뉴 항목도 접근성 트리에 없는 상태를 확인했다. [#41302764366](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41302764366)는 첫 메뉴 버튼의 화면 클릭 좌표가 **다른 창 소유**여서 클릭 전에 안전하게 중단했다. [#41303018445](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41303018445)는 테스트 앱만 세 가지 위치로 옮겼지만 클릭 가능한 앱 소유 좌표를 찾지 못했다. 모두 원본·설정 보존 및 앱 정상 종료를 확인했으며 다른 창의 내용·위치·상태는 변경하지 않았다.
+- **정확한 결론:** 위 실패는 현재 화면 가림/입력 소유권으로 **첫 메뉴 물리 클릭부터 검사할 수 없었던 환경 차단**이다. 따라서 800ms 이후 두 번째 클릭이 수리됐는지 판정할 수 없고, 과거 R17 [#41282607675](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41282607675)의 **두 번째 물리 클릭 실패도 여전히 미해결**이다. 입력을 차지하는 다른 창은 임의로 닫거나 이동하지 않는다. 안전한 앱 소유 입력 좌표가 확보되거나 독립된 검증 화면이 마련되기 전에는 같은 실행을 반복하지 않는다. 제품 `main`은 검증된 R18 수용 상태를 유지한다.
+
 # 2026-11-01 — R18 세부 정보 창 Alt+Shift+P 실제 Windows 키보드 한정 수용
 
 - **기능 및 정확한 제품 소스:** 원래의 `Alt+P`는 유지하면서 `Alt+Shift+P`를 기존 세부 정보 창 열기·닫기 경로에 연결했다. 검증한 제품 커밋 `c57fc3b7e851e29589c6401a42f4c6b8c2532c77`; R12/R17 미수용 보기 메뉴 코드는 포함하지 않는다. 기존 8종 보기 키 계약·Ctrl+휠 아이콘 확대 상한의 오래된 검사 기대값도 현재 구현에 맞게 교정했다.
