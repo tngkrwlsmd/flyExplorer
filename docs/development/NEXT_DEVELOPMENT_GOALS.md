@@ -20,6 +20,8 @@
 
 **R12 보기 메뉴 진입 보류:** [Windows 포인터 검사 #41195201589](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41195201589)에서 메뉴 항목으로 실제 마우스 클릭을 했으나 동작하지 않았다. 접근성 호출(UIA Invoke)은 동작했으며 파일 읽기 자동 실행은 없었다. 별도 실제 GUI 수용 전에는 R12를 main으로 가져오지 않는다.
 
+**R18 세부 정보 창 키보드 바로 가기 구현 후보:** Windows 탐색기와 동일한 `Alt+Shift+P`를 기존 세부 정보 창 토글에 연결하는 변경을 별도 브랜치에서 진행한다. 기존 `Alt+P`의 명시적 미리보기 포커스·읽기 동의, 입력창·확인창 우선권은 유지한다. [R18 기능·검증 범위](R18_DETAILS_KEYBOARD_SHORTCUT_20261101.md). **소스·Release·실제 키보드/GUI는 미검증이며 main 미반영**이다. R17 보기 메뉴 두 번째 물리 클릭 실패와 서로 별개의 작업이다.
+
 **R05 Terminal GUI 수용 완료:** [R05 후속 수용](R05_TERMINAL_FALLBACK_20261031.md)과 [Windows GUI #41182673672](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41182673672)의 메뉴 클릭·새 Terminal 창 생성·닫기·원본/설정 보존·정상 종료 PASS를 재사용한다. 과거 HEAD 사전 조건 FAIL은 해결 전 이력이다. 픽셀 검토 및 다른 환경은 미검증이다.
 
 **R04 선택 항목 바로 가기 한정 수용:** [R04 구현·검증](R04_SELECTED_SHORTCUT_IMPLEMENTATION_20261031.md)의 고정 로컬 일반 파일/폴더 한 개에 대한 .lnk 생성은 [Windows native+Release #41184095052](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41184095052) 및 [실제 GUI #41184675172](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41184675172)에서 PASS. 빈 배경 새 바로 가기 마법사, 다중 선택, 픽셀 검토는 별개 미수용 범위다. 초기 GUI 메뉴 조회 실패는 기록을 보존한다.
