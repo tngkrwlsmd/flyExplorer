@@ -1,3 +1,9 @@
+# 2026-11-01 — 작업공간 복원 모델 구조 검사 보강 후보 (컴파일·GUI 미검증)
+
+- **확인한 기존 코드 경계:** `WindowWorkspaceController::replace()`는 창 ID, 탭별 정렬 배열 및 활성 탭 값은 검사하지만, `explorerui::Model::invariant()`를 호출하지 않았다. 기존 `invariant()`에는 좌·우 폴더 탭, routeIds, pending, filesystemPaths 크기 일치 및 활성 인덱스·분할 시 활성 패널 조건이 들어 있다. 현재 `SessionCoordinator`의 정상 복원 생성 경로는 `model.reset()`을 사용하므로 **실제 손상된 세션으로 인한 사용자 오류는 관측되지 않았다**. 이는 방어적 경계의 소스 확인이다.
+- **변경 후보:** [`fix/workspace-replace-invariant-20261101`의 `78a728f`](https://github.com/tngkrwlsmd/flyExplorer/commit/78a728f74639633f921c1a90d4495ed6a8caa553)에서 교체 전 `!states[i].model.invariant()` 거부를 추가하고 `test_session_coordinator_contract.py`에 집중 소스 계약 1개를 추가했다. 다른 작업공간 상태·세션 v4 파일 형식·사용자 파일·UI 경로는 바꾸지 않았다. 두 파일만 변경됐다.
+- **검증 경계:** GitHub에서 읽은 후보 소스 네 파일에 대해 검사 가드, 거부 순서, 기반 모델의 route/pending/path 모양과 호출부 관련 정적 조건 **11/11 충족**을 확인했다. 저장소 Python 테스트 자체 실행, Windows 네이티브/C++ 컴파일, GUI·픽셀 검사는 **실시하지 않았다**. 따라서 제품 후보는 `main` 미반영이며 정상 세션 복원과 잘못된 모델 교체에 대한 영향 범위 검증 후에만 수용한다. R12/R19 GUI 차단은 별도 상태로 유지한다.
+
 # 2026-11-01 — R23 소유 창 일시 최상위 진단 후에도 실제 보기 버튼 입력 차단
 
 - **후속 검사 코드 준비(미실행):** [분리된 사전 조건 검사 `60c88410`](https://github.com/tngkrwlsmd/flyExplorer/commit/60c88410d984bd106391243bc108391339d3f650)는 기존 R23 테스트의 보기 버튼 `visible`·`enabled`·`WindowFromPoint` HWND 유무·앱 프로세스 소유 여부를 각각 기록하고, 최상위 전환 시도와 복원 여부를 별도로 표시한다. 테스트 파일 한 개만 바뀌었음을 Git diff로 확인했다. [Windows 소스 전용 #41305972207](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41305972207)에서 해당 정확한 후보 소스 `60c88410d984bd106391243bc108391339d3f650`을 GitHub에서 가져와 **Python `py_compile` PASS**를 확인했으며, 임시 검사 디렉터리는 작업의 `finally`에서 제거하도록 구성했다. **제품 빌드, 실행, 실제 GUI 클릭 또는 픽셀 수용은 실시하지 않았다.** [검사 요청 슬롯 idle 복구](https://github.com/tngkrwlsmd/personal-control-plane/commit/24339470de874bfdb389f793521f1f6d0ba4537c). 독립 입력 환경이 확보될 때 이 후보를 먼저 검토하되, 동일 환경에서 R23을 다시 실행하지 않는다.
