@@ -548,7 +548,7 @@ namespace winrt::FlyExplorer::implementation
                     default:break;
                     }
                 }
-                if(addressAlias||searchAlias||refreshAlias||viewShortcut>=0||previewAlias||detailsAlias||windowAlias||windowTabShortcut>=0){
+                if(addressAlias||searchAlias||refreshAlias||viewShortcut>=0||previewAlias||windowAlias||windowTabShortcut>=0||detailsAlias){
                     auto ui=nativeWeak.get();
                     if(!ui||ui->mClosing)return;
                     // Keep modal/menu/combo input and inline file-name edits
@@ -563,7 +563,7 @@ namespace winrt::FlyExplorer::implementation
                            node.try_as<MenuFlyoutPresenter>()||
                            node.try_as<ContentDialog>())return;
                         if(auto box=node.try_as<TextBox>();box&&
-                           (refreshAlias||viewShortcut>=0||previewAlias||detailsAlias||windowAlias||windowTabShortcut>=0||
+                           (refreshAlias||viewShortcut>=0||previewAlias||windowAlias||windowTabShortcut>=0||detailsAlias||
                             (box!=ui->AddressBox()&&box!=ui->QuickSearchBox())))
                             return;
                         node=Microsoft::UI::Xaml::Media::VisualTreeHelper::
