@@ -27,9 +27,9 @@ class R18DetailsShortcut(unittest.TestCase):
             "                    key==Windows::System::VirtualKey::P;",
             keys,
         )
-        self.assertIn("||previewAlias||detailsAlias||windowAlias", keys)
+        self.assertIn("||previewAlias||windowAlias||windowTabShortcut>=0||detailsAlias", keys)
         self.assertIn(
-            "refreshAlias||viewShortcut>=0||previewAlias||detailsAlias", keys
+            "refreshAlias||viewShortcut>=0||previewAlias||windowAlias", keys
         )
 
     def test_details_toggles_once_without_implicit_preview(self):
