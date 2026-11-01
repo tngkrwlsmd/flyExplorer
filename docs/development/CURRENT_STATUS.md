@@ -1,3 +1,10 @@
+# 2026-11-01 — R23 소유 창 일시 최상위 진단 후에도 실제 보기 버튼 입력 차단
+
+- **검사 범위:** R22 후속 [R23 검사 소스 `84ce754b`](https://github.com/tngkrwlsmd/flyExplorer/commit/84ce754be2cf554852ee18b1a070bda503025448)는 `tests/winui/test_r12a_details_view_gui.py`만 수정한다. 기존 세 위치에서 앱 소유 클릭 좌표를 얻지 못하면 **테스트 앱 HWND만** 일시 최상위로 올리고(Win32 `SetWindowPos`), 종료 전에 소유 창의 순서를 복원한다. 타사 창을 이동·닫기·조회하지 않으며, 클릭 전에 `WindowFromPoint` 소유권을 확인한다. 제품 소스와 R19 Release EXE SHA256 `f600f7658b1e703d291ed21dff27bfeceb8dea9d1129f67834b6cf35dafd0a93`는 그대로 재사용했다.
+- **실제 Windows [R23 #41304540172](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41304540172) FAIL(환경/입력 소유):** 앱 최상위 변경 및 복원은 진행됐지만, 이후에도 보기 버튼의 중심 좌표가 앱 소유로 판정되지 않아 `No test-owned View-button pixel after bounded topmost lift`에서 **첫 보기 메뉴 클릭 전 중단**했다. 로그상 `owned_topmost_restored=true`, 테스트 원본 바이트 보존, 실제 설정 불변, 앱 정상 종료가 확인됐다. 따라서 두 번째 물리 클릭 또는 R19 수정 성공 여부는 여전히 **미검증**이다. 같은 환경에서 동일 GUI를 반복하지 않는다.
+- **검사 메타데이터 구분:** 이 실패 실행의 내장 worker `source` 문구는 구 R22 `009e0ec0...`가 남아 있어 정확한 실행 소스 식별자로 쓰지 않는다. 실행용 스크립트의 checkout/diff 사전 검사 및 실제 R23 전용 traceback은 R23 `84ce754b...` 소스를 가리킨다. [제어 스크립트 수정 `b0159cf`](https://github.com/tngkrwlsmd/personal-control-plane/commit/b0159cf4438f4a3c8a96074846965ebe9e3dd347)에서 이 메타데이터와 소스 일치 검사를 바로잡았으며 과거 실행을 재실행·재해석하지 않는다.
+- **정리·다음 조건:** [Windows VM 요청 슬롯 `3397937` [skip ci] idle 복구](https://github.com/tngkrwlsmd/personal-control-plane/commit/3397937b9244d44fc09929c40d0c0ce45106d3dc). 사용자 파일·외부 창·OS 설정은 변경하지 않았다. 별도 입력 전용 화면이나 검증 가능한 앱 소유 픽셀이 확보되기 전에는 R12/R19 실제 GUI 검사를 반복하지 않는다. 미수용 후보는 계속 `main`에 반영하지 않고 검증된 R18 제품 상태를 유지한다.
+
 # 2026-11-01 — R12 보기 메뉴 R19 빌드 검증과 실제 입력 가림 문제 분리
 
 - **검증된 제품 후보:** 정확한 `7229144f3566d08e39f13a9ec42c93ef645d1a20`의 관련 소스 계약 **43/43 PASS**, Windows x64 Release **PASS** ([#41300472669](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41300472669)). EXE SHA256 `f600f7658b1e703d291ed21dff27bfeceb8dea9d1129f67834b6cf35dafd0a93`.
