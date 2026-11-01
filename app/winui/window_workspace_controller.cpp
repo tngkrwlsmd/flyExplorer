@@ -128,7 +128,8 @@ bool WindowWorkspaceController::replace(
         return false;
     std::uint64_t maxIdentity=0;
     for(std::size_t i=0;i<states.size();++i){
-        if(states[i].identity>kMaxWindowTabIdentity)return false;
+        if(states[i].identity>kMaxWindowTabIdentity||
+           !states[i].model.invariant())return false;
         for(int side=0;side<2;++side){
             auto const& pane=states[i].model.panes[side];
             auto const& modes=states[i].tabSortModes[side];

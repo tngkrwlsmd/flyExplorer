@@ -85,5 +85,37 @@ class SessionCoordinatorContract(unittest.TestCase):
         for forbidden in ("shellclipboard::write(","OpenClipboard(","recycleConfirmed=true"):
             self.assertNotIn(forbidden,gui)
 
+    def test_restore_rejects_invalid_pane_model_before_committing_workspace(self):
+        workspace=read(APP/"window_workspace_controller.cpp")
+        native=read(ROOT/"src"/"base"/"explorer_ui_state.cpp")
+        coordinator=read(APP/"session_coordinator.cpp")
+        replace=workspace.split("bool WindowWorkspaceController::replace(",1)[1]
+        self.assertIn("!states[i].model.invariant()",replace)
+        self.assertLess(replace.index("!states[i].model.invariant()"),
+                        replace.index("states_=std::move(states);"))
+        self.assertIn("shape(panes[0])&&shape(panes[1])",native)
+        self.assertIn("p.routeIds.size()==count",native)
+        self.assertIn("p.pending.size()==count",native)
+        self.assertIn("p.filesystemPaths.size()==count",native)
+        self.assertIn("return workspace.replace(",coordinator)
+
+    def test_native_restore_fixture_covers_rejection_and_valid_unsplit(self):
+        fixture=read(ROOT/"tests"/"winui"/"native_workspace_replace_invariant.cpp")
+        self.assertIn('#include "../../app/winui/window_workspace_controller.h"',fixture)
+        self.assertIn("assert(controller.replace(std::move(valid),1));",fixture)
+        self.assertEqual(fixture.count("rejectedWithoutMutation(std::move(bad));"),5)
+        for invalid in ("routeIds.clear();","pending.clear();",
+                        "filesystemPaths.clear();",
+                        "active=bad[0].model.panes[0].tabs.size();",
+                        "bad[0].model.activePane=1;"):
+            self.assertIn(invalid,fixture)
+        for stable in ("assert(controller.count()==oldCount);",
+                       "assert(controller.activeIndex()==oldActive);",
+                       "assert(controller.active().identity==oldIdentity);"):
+            self.assertIn(stable,fixture)
+        self.assertIn("assert(controller.replace(std::move(unsplit),0));",fixture)
+        self.assertNotIn("ShellExecute",fixture)
+        self.assertNotIn("CreateFile",fixture)
+
 if __name__=="__main__":
     unittest.main()
