@@ -4,6 +4,7 @@
 #include "MainWindow.xaml.h"
 #include <unordered_map>
 #include <vector>
+#include <optional>
 #include "../../src/base/shell_assoc_type_core.h"
 #include "../../src/base/shell_thumbnail_core.h"
 #if __has_include("MainWindow.g.cpp")
@@ -880,6 +881,9 @@ namespace winrt::FlyExplorer::implementation
                     fxfile::filecommand::Kind::CreateMarkdownFile);
                 else if(command==22)ui->ExecuteFileCommand(
                     fxfile::filecommand::Kind::CreateShortcut);
+                else if(command==23&&!ui->mFileOperations.busy()&&
+                        !ui->mFileOperations.pendingConfirmationToken())
+                    ui->OnToggleFileInfoPane(nullptr,nullptr);
                 else if(command>=11&&command<=13){
                     const int theme=command-11;
                     ui->ApplyThemeChoice(theme);
@@ -889,6 +893,13 @@ namespace winrt::FlyExplorer::implementation
                 else if(command==14)ui->ToggleNameFilter(0);
                 else if(command==15)ui->ToggleNameFilter(1);
             }
+        });
+        // A deferred Details command must never target a different WindowTab.
+        fileBar()->SetFileInfoPaneContext([nativeWeak]()->std::optional<std::uint64_t>{
+            if(auto ui=nativeWeak.get()){
+                if(!ui->mClosing)return ui->ActiveWindowTab().identity;
+            }
+            return std::nullopt;
         });
         fileBar()->SetSort([nativeWeak](int index){
             if(auto ui=nativeWeak.get())ui->UpdateSort(index);
@@ -4109,6 +4120,7 @@ namespace winrt::FlyExplorer::implementation
         const bool visible=ActiveWindowTab().fileInfoPaneVisible;
         FileInfoPane().Visibility(visible?Visibility::Visible:Visibility::Collapsed);
         FileInfoColumn().Width(GridLength{visible?260.0:0.0,GridUnitType::Pixel});
+        fileBar()->SetFileInfoPaneState(visible);
         Microsoft::UI::Xaml::Automation::AutomationProperties::SetName(
             FileInfoToggleButton(),visible?
                 L"선택 항목 상세 정보 닫기":L"선택 항목 상세 정보 열기");

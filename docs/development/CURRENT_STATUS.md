@@ -1,3 +1,13 @@
+# 2026-11-03 — R12 보기 메뉴 세부 정보 창: 실제 물리 마우스·키보드 수용 및 main 통합
+
+- **수용한 제품 코드:** Windows x64 Release [R39 #41469825133](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41469825133)에서 소스 계약과 컴파일 PASS. 정확한 제품 커밋 `a5a721f21ceab812ea9894d15d08184e35062296`, EXE SHA256 `5a1098cdd77cee4f7a33cedb55e1573e73f97219d921fc1d828c6d407db8c202`, Shell helper SHA256 `b8ceab71e686fc6732496d5f81e028feee91a0e621348d980fc41a2710c1de72`. 최종 GUI 검사 커밋 `8d2fc11136ec885b8e9561aac867b1fe534cd010`까지 달라진 것은 Python GUI 검사기 파일뿐이다. 제품 C++/XAML은 바이너리와 동일하다.
+- **실제 완전 마우스 검증:** [R42 #41548314025](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41548314025) PASS. 전용 Windows 테스트 창에서 마우스로 보기 버튼을 열고 세부 정보 메뉴를 실제 클릭해 열기·닫기 성공. 메뉴 Opening/Closed 각각 2회, `action23_dispatch` 정확히 2회, 두 번째 `Tapped` 보완 1회, `action23_stale` 0회. 이전 R36/R37의 ViewButton 실패는 검사기의 `click_input()` 절차에서 관측됐으며, 소유 UIA/픽셀을 확인한 실제 `mouse.click()` 전체 동작이 통과했다.
+- **키보드·데이터 안전:** [R43 #41548691840](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41548691840)에서 Alt+Shift+P 및 기존 Alt+P 각각 열기·닫기 PASS. [R41 #41547907684](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41547907684)에서 키보드 메뉴 열기+두 번의 실제 항목 마우스 클릭과 중복 방지 PASS. R42·R43 모두 독립 소유 파일 바이트 보존, 기존 사용자 설정 불변, 본문 자동 미리보기 차단(해당 검사), 정상 종료 및 임시 프로필/fixture 제거를 확인했다. 과거 실패 증거는 보존하며 화면 픽셀 단위 시각 비교는 이 수용에 포함하지 않는다.
+- **제품 정책:** 메뉴 `Click`이 정상일 때 우선 사용하며, 두 번째 물리 입력에서 누락되면 마우스 `Tapped` 보완을 한 번만 예약한다. 메뉴 `Closed` 이후에만 기존 action 23 경로를 실행하고, 세대·실제 활성 WindowTab ID 일치·파일 작업 확인창 정책을 유지한다. 유효한 첫 탭 ID `0`은 허용하고 탭 소멸·창 종료는 `std::nullopt`로 구분한다. 같은 패널 파일 우클릭 검색 유지는 이전 수용 상태를 보존했다.
+- **통합 범위:** 검증된 R12 C++/XAML 및 연관된 우클릭 보기 컨텍스트 메뉴, 소스·GUI 검사기, 검증 범위 등록과 이 상태 기록을 직접 main에 반영한다. 컨텍스트 메뉴의 세부 정보 항목은 이번 R42에서 별도의 독립 물리 입력 시나리오로 재검증하지 않았다. 아래 2026-11-02 실패·미수용 서술은 당시 후보에 대한 역사적 증거이며, 현재 최종 R12 수용 상태를 대체하지 않는다.
+
+---
+
 # 2026-11-02 — R12 보기 메뉴: 두 번째 실제 마우스 입력 실패 원인 좁힘, 체크형 후보 미수용
 
 - **기준:** 실제 제품 `main`은 이전 수용 상태 `944a96cf95354328864e036f2820071031185940`을 유지한다. R12 통합 후보 `0742e3bc0d45566698617791d9efb23884d3cefb` ([브랜치](https://github.com/tngkrwlsmd/flyExplorer/tree/fix/r12-toggle-pointer-current-main-20261102))는 기존 Windows 11 UI의 세부 정보 창 메뉴 행을 `MenuFlyoutItem`에서 `ToggleMenuFlyoutItem`으로 변경하고, 메뉴 `Opening`에서만 체크 상태를 동기화하며 `Closed` 뒤 실제 패널 토글을 수행하도록 했다. 직전 수용된 같은 패널 우클릭 검색 보호는 그대로 보존했다.

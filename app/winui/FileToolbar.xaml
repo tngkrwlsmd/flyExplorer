@@ -77,7 +77,16 @@
         </Button>
         <Button x:Name="ViewButton" Grid.Column="4" Width="68" Style="{StaticResource ExplorerFlyoutButtonStyle}" ToolTipService.ToolTip="&#xBCF4;&#xAE30;" AutomationProperties.Name="&#xBCF4;&#xAE30;">
             <StackPanel Orientation="Horizontal" Spacing="5"><FontIcon Glyph="&#xE8A9;" FontSize="14"/><TextBlock Text="&#xBCF4;&#xAE30;"/></StackPanel>
-            <Button.Flyout><MenuFlyout>
+            <Button.Flyout><MenuFlyout Opening="OnViewFlyoutOpening" Closed="OnViewFlyoutClosed" Placement="Bottom">
+                <MenuFlyout.MenuFlyoutPresenterStyle>
+                    <Style TargetType="MenuFlyoutPresenter">
+                        <Setter Property="MaxHeight" Value="400"/>
+                    </Style>
+                </MenuFlyout.MenuFlyoutPresenterStyle>
+                <ToggleMenuFlyoutItem x:Name="ViewFileInfoPaneItem" Text="세부 정보 창"
+                                      Click="OnViewFileInfoPane"
+                                      AutomationProperties.Name="현재 창의 세부 정보 패널 열기 또는 닫기"/>
+                <MenuFlyoutSeparator/>
                 <ToggleMenuFlyoutItem x:Name="ViewDetailsItem" Text="&#xC790;&#xC138;&#xD788;" IsChecked="True" Click="OnViewDetails"/>
                 <ToggleMenuFlyoutItem x:Name="ViewListItem" Text="&#xBAA9;&#xB85D;" Click="OnViewList"/>
                 <ToggleMenuFlyoutItem x:Name="ViewSmallIconsItem" Text="&#xC791;&#xC740; &#xC544;&#xC774;&#xCF58;" Click="OnViewSmallIcons"/>

@@ -1,14 +1,18 @@
 #pragma once
 #include "FileToolbar.g.h"
 #include <functional>
+#include <cstdint>
+#include <optional>
 namespace winrt::FlyExplorer::implementation {
 struct FileToolbar : FileToolbarT<FileToolbar> {
  FileToolbar();
  void SetAction(std::function<void(int)> action);
+ void SetFileInfoPaneContext(std::function<std::optional<std::uint64_t>()> context);
  void SetSort(std::function<void(int)> change);
  void SetSortIndex(int selection);
  void SetView(std::function<void(int)> change);
  void SetViewIndex(int selection);
+ void SetFileInfoPaneState(bool visible);
  void SetFolderViewAction(std::function<void(bool)> action);
  void SetListDisplay(std::function<void(int)> change);
  void SetGroup(std::function<void(int)> change);
@@ -53,6 +57,10 @@ struct FileToolbar : FileToolbarT<FileToolbar> {
  void OnViewExtraLargeIcons(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
  void OnViewTiles(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
  void OnViewContent(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
+ void OnViewFileInfoPane(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
+ void OnViewFileInfoPaneTapped(IInspectable const&,Microsoft::UI::Xaml::Input::TappedRoutedEventArgs const&);
+ void OnViewFlyoutOpening(IInspectable const&,IInspectable const&);
+ void OnViewFlyoutClosed(IInspectable const&,IInspectable const&);
  void OnRememberFolderView(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
  void OnForgetFolderView(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
  void OnViewCheckboxes(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
@@ -68,6 +76,7 @@ private:
  void ChooseSort(int index);
  void ChooseView(int index);
  std::function<void(int)> action_;
+ std::function<std::optional<std::uint64_t>()> fileInfoPaneContext_;
  std::function<void(int)> sort_;
  std::function<void(int)> view_;
  std::function<void(bool)> folderViewAction_;
@@ -76,6 +85,12 @@ private:
  bool restoring_=false;
  int pendingNameAction_=-1;
  bool nameFocusAfterMoreClosed_=false;
+ bool pendingFileInfoPaneToggle_=false;
+ bool fileInfoPaneVisible_=false;
+ bool viewFlyoutOpen_=false;
+ bool viewFileInfoPaneClaimed_=false;
+ std::uint64_t viewFlyoutGeneration_=0;
+ std::optional<std::uint64_t> fileInfoPaneOpenIdentity_;
 };
 }
 namespace winrt::FlyExplorer::factory_implementation { struct FileToolbar : FileToolbarT<FileToolbar,implementation::FileToolbar>{}; }
