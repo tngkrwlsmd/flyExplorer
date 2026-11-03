@@ -1,6 +1,8 @@
 // M2.1 initial safe local-filesystem command boundary (no MFC/WinRT).
 #pragma once
 #include <windows.h>
+#include <array>
+#include <cstdint>
 #include <string>
 namespace fxfile::filecommand {
 enum class Kind { CreateFolder, RenameSelected, CreateTextFile, CreateMarkdownFile, CreateShortcut };
@@ -10,7 +12,20 @@ struct Request {
  std::wstring source; // full selected native filesystem parsing path for rename
  std::wstring name;   // single leaf only, never a path or virtual Shell GUID
 };
-struct Result { DWORD error=ERROR_INVALID_PARAMETER; std::wstring target; };
+// R07-2: read-only, single local regular-file rename evidence.
+// Never treat this snapshot as permission to undo/redo or overwrite a path.
+struct RenameEvidence {
+    bool verified=false;
+    std::uint64_t volumeSerial=0;
+    std::array<unsigned char,16> fileId{};
+    std::uint64_t fileSize=0;
+    std::int64_t lastWriteTime=0;
+};
+struct Result {
+    DWORD error=ERROR_INVALID_PARAMETER;
+    std::wstring target;
+    RenameEvidence renameEvidence{};
+};
 bool validLeaf(std::wstring const& name) noexcept;
 bool validTextDocumentLeaf(std::wstring const& name) noexcept;
 bool validMarkdownDocumentLeaf(std::wstring const& name) noexcept;
