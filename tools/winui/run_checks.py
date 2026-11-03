@@ -599,6 +599,9 @@ def run_gui(area, configuration, env, tag):
             encoding="utf-8", errors="replace"
         )
         markers = (
+            "SA03_GUI_EMPTY_GUIDANCE_VISIBLE_NONINTERACTIVE=PASS",
+            "SA03_GUI_ESCAPE_RESTORES_COMMITTED_PANE=PASS",
+            "SA03_GUI_HINT_HIDDEN_FOR_REAL_CANDIDATES=PASS",
             "PX12_GUI_KEYBOARD_CANDIDATE_UP_DOWN=PASS",
             "PX12_GUI_STALE_CANDIDATE_OFFERED=PASS",
             "PX12_GUI_FAILED_CANDIDATE_COMMITTED_ADDRESS=PASS",
