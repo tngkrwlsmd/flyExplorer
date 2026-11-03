@@ -93,7 +93,9 @@ def main():
             app.el("NewTabButton").click_input()
             h.wait(lambda: len(tabs("Left")) == 3,
                    "third pane tab not created", seconds=18)
-            app.navigate(fixture, root_file.name)
+            app.navigate(fixture, pane_a.name)
+            h.wait(lambda: ready("Left", root_file.name),
+                   "owned root marker not visible after tab navigation", seconds=12)
             click_tab("Left", 1)
             h.wait(lambda: ready("Left", a_file.name),
                    "second tab did not restore its folder", seconds=15)
