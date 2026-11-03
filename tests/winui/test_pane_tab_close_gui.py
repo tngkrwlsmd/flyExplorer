@@ -96,6 +96,7 @@ def main():
             app.navigate(fixture, pane_a.name)
             h.wait(lambda: ready("Left", root_file.name),
                    "owned root marker not visible after tab navigation", seconds=12)
+            app.capture("three-tabs")  # only the owned app window and test fixture
             click_tab("Left", 1)
             h.wait(lambda: ready("Left", a_file.name),
                    "second tab did not restore its folder", seconds=15)
@@ -113,6 +114,7 @@ def main():
                    ready("Left", a_file.name),
                    "closing later inactive tab changed active folder", seconds=18)
             result["later_background_x_preserves_active_route"] = True
+            app.capture("single-tab")
             close_x("Left", 0)
             h.wait(lambda: "최소 한 개" in app.el("StatusText").window_text(),
                    "last pane tab close was not rejected", seconds=12)
@@ -129,6 +131,7 @@ def main():
             assert ready("Right", root_file.name)
             result["other_pane_unmodified"] = True
         result["app"] = app.report
+        result["owned_window_captures"] = ["three-tabs", "single-tab"]
         assert app.report["normal_exit"] and app.report["original_settings_unchanged"]
         assert app.report["profile_removed"]
         success = True
