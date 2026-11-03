@@ -156,6 +156,7 @@ GUI_AREAS = (
     "home-overview",
     "search-cancel",
     "search-usability",
+    "share-menu",
     "selection-projection",
     "address-candidate-chrome",
     "address-visual-compare",
@@ -431,6 +432,10 @@ def gui_command(area, configuration, env):
         gui_env["FLY_SA_SEARCH_USABILITY_ONLY"] = "YES"
         gui_env["FLY_F05_VISUAL_CAPTURE"] = "NO"
         return [sys.executable, "-u", str(TESTS / "test_shell_gui.py")], gui_env, 160
+    if area == "share-menu":
+        gui_env["FLY_R06_SHARE_MENU_ONLY"] = "YES"
+        gui_env["FLY_F05_VISUAL_CAPTURE"] = "NO"
+        return [sys.executable, "-u", str(TESTS / "test_shell_gui.py")], gui_env, 160
     if area == "selection-projection":
         gui_env["FLY_PX10_SELECTION_ONLY"] = "YES"
         gui_env["FLY_F05_VISUAL_CAPTURE"] = "NO"
@@ -503,6 +508,28 @@ def gui_command(area, configuration, env):
         # already accepted GUI interactions after initial route observation.
         gui_env["FLY_G01_INTEGRATED_STARTUP_ONLY"] = "YES"
     return [sys.executable, "-u", str(TESTS / "test_shell_gui.py")], gui_env, 260
+
+
+def r06_share_menu_evidence_ok(body: str) -> bool:
+    """Require all test-owned Share-menu checks without invoking a Share sheet."""
+    lines = set(body.splitlines())
+    required = (
+        "R06_GUI_SINGLE_FILE_DIRECT_AND_FALLBACK_ENABLED=PASS",
+        "R06_GUI_FOLDER_DIRECT_DISABLED_FALLBACK_ENABLED=PASS",
+        "R06_GUI_MULTI_SELECTION_DIRECT_DISABLED_FALLBACK_ENABLED=PASS",
+        "R06_GUI_OWNED_ORIGINALS_PRESERVED_NO_SHARE_ACTION_INVOKED=PASS",
+        "R06_GUI_FOCUSED_OWNED_MENU_PASS=True",
+        "OWNED_WINUI_SHELL_EXIT 0",
+        "ORIGINAL_SIX_USER_CONFIG_SHA256_IDENTICAL True",
+        "OWNED_SYNTHETIC_FIXTURE_REMOVED True",
+    )
+    prefix = "LEGACY_USER_PROFILE_SENTINEL_UNCHANGED True PRESENT "
+    return (
+        all(item in lines for item in required)
+        and any(line.startswith(prefix) and line[len(prefix):].isdigit()
+                for line in lines)
+        and "Traceback (most recent call last)" not in body
+    )
 
 
 def sa_search_usability_evidence_ok(body: str) -> bool:
@@ -636,6 +663,13 @@ def run_gui(area, configuration, env, tag):
         )
         if not sa_search_usability_evidence_ok(body):
             print("SA_REQUIRED_GUI_EVIDENCE_MISSING", flush=True)
+            rc = 1
+    if not rc and area == "share-menu":
+        body = (LOGS / (tag + "-" + label + ".log")).read_text(
+            encoding="utf-8", errors="replace"
+        )
+        if not r06_share_menu_evidence_ok(body):
+            print("R06_REQUIRED_OWNED_SHARE_MENU_EVIDENCE_MISSING", flush=True)
             rc = 1
     if not rc and area == "address-candidate-chrome":
         body = (LOGS / (tag + "-" + label + ".log")).read_text(
