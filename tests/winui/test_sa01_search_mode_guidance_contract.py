@@ -38,7 +38,7 @@ class SearchModeGuidanceContract(unittest.TestCase):
                          "OnSearchContentCriteriaChanged")
         for method in ("OnSearchModeCriteriaChanged", "OnSearchOptionCriteriaChanged",
                        "OnSearchContentCriteriaChanged", "UpdateSearchModeGuidance"):
-            self.assertIn("void " + method + "(", HEADER if method.startswith("On") else FEATURE)
+            self.assertIn("void " + method + "(", HEADER)
             self.assertIn("void MainWindow::" + method + "(", FEATURE)
         code = FEATURE.split("void MainWindow::UpdateSearchModeGuidance()", 1)[1].split(
             "void MainWindow::OnSearchModeCriteriaChanged(", 1)[0]
