@@ -133,6 +133,13 @@ namespace winrt::FlyExplorer::implementation
         void OnToggleTextPreview(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
         void OnApplyShortcuts(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
         void OnResetShortcuts(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
+        void UpdateSearchModeGuidance();
+        void OnSearchModeCriteriaChanged(IInspectable const&,
+            Microsoft::UI::Xaml::Controls::SelectionChangedEventArgs const&);
+        void OnSearchOptionCriteriaChanged(IInspectable const&,
+            Microsoft::UI::Xaml::RoutedEventArgs const&);
+        void OnSearchContentCriteriaChanged(IInspectable const&,
+            Microsoft::UI::Xaml::Controls::TextChangedEventArgs const&);
         void OnRunSearch(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
         void OnCancelSearch(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
         void OnSearchMatchSelectionChanged(IInspectable const&,

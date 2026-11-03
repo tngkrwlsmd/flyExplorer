@@ -503,6 +503,7 @@
             <StackPanel Orientation="Horizontal" Spacing="7">
                 <TextBlock Text="검색 방식:" VerticalAlignment="Center"/>
                 <ComboBox x:Name="SearchModeBox" Width="185" SelectedIndex="0"
+                          SelectionChanged="OnSearchModeCriteriaChanged"
                           AutomationProperties.Name="검색 방식">
                     <ComboBoxItem Content="직접 탐색 (기존)"/>
                     <ComboBoxItem Content="Windows 검색 인덱스"/>
@@ -512,18 +513,26 @@
                           VerticalAlignment="Center"
                           ToolTipService.ToolTip="해제하면 지정한 폴더 안의 항목만 검색합니다."
                           AutomationProperties.Name="검색에 하위 폴더 포함"/>
-                <TextBlock Text="인덱스: 파일명·확장자·크기·수정일 · 1,000개 · 미인덱싱 제외"
-                           VerticalAlignment="Center" Opacity="{ThemeResource FlyExplorerSubtleTextOpacity}"/>
             </StackPanel>
+            <TextBlock x:Name="SearchModeGuidanceText"
+                       Text="직접 탐색: 파일·폴더·내용과 정규식 검색을 지원합니다. 깊이 32·항목 20,000개·결과 1,000개 제한."
+                       TextWrapping="Wrap" MaxLines="3"
+                       AutomationProperties.Name="현재 검색 방식의 지원 조건과 제한 안내"
+                       Opacity="{ThemeResource FlyExplorerSubtleTextOpacity}"/>
             <StackPanel Orientation="Horizontal" Spacing="7">
                 <CheckBox x:Name="SearchRegexBox" IsChecked="False"
+                          Checked="OnSearchOptionCriteriaChanged"
+                          Unchecked="OnSearchOptionCriteriaChanged"
                           Content="정규식"
                           AutomationProperties.Name="정규식 검색 사용"/>
                 <CheckBox x:Name="SearchCaseBox" IsChecked="False"
+                          Checked="OnSearchOptionCriteriaChanged"
+                          Unchecked="OnSearchOptionCriteriaChanged"
                           Content="대/소문자 구분 (이름/내용)"
                           AutomationProperties.Name="대소문자 구분"/>
                 <TextBlock Text="대상:" VerticalAlignment="Center"/>
                 <ComboBox x:Name="SearchTargetBox" Width="125" SelectedIndex="0"
+                          SelectionChanged="OnSearchModeCriteriaChanged"
                           AutomationProperties.Name="검색 대상">
                     <ComboBoxItem Content="파일"/>
                     <ComboBoxItem Content="폴더"/>
@@ -538,9 +547,12 @@
             <StackPanel Orientation="Horizontal" Spacing="7">
                 <TextBlock Text="파일 내용:" VerticalAlignment="Center"/>
                 <TextBox x:Name="SearchContentBox" Width="245" MaxLength="256"
+                         TextChanged="OnSearchContentCriteriaChanged"
                          PlaceholderText="파일 내용 일반 텍스트 또는 정규식"
                          AutomationProperties.Name="파일 내용 검색어"/>
                 <CheckBox x:Name="SearchContentRegexBox" IsChecked="False"
+                          Checked="OnSearchOptionCriteriaChanged"
+                          Unchecked="OnSearchOptionCriteriaChanged"
                           Content="내용 정규식"
                           VerticalAlignment="Center"
                           AutomationProperties.Name="파일 내용 정규식 사용"/>

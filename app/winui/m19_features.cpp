@@ -722,6 +722,53 @@ void MainWindow::OnSearchPanelSizeChanged(
         root.ActualHeight()-chrome-minimumFilePane,0.0,400.0);
     if(std::abs(search.MaxHeight()-maximum)>0.5)search.MaxHeight(maximum);
 }
+void MainWindow::UpdateSearchModeGuidance(){
+    // SelectionChanged/Checked/TextChanged can fire while XAML is loading.
+    // This is presentation-only; never change inputs or start/cancel a search.
+    if(mClosing||!SearchPanel()||
+       SearchPanel().Visibility()!=Visibility::Visible||
+       !SearchModeGuidanceText()||!SearchModeBox()||
+       !SearchRegexBox()||!SearchCaseBox()||!SearchTargetBox()||
+       !SearchContentBox()||!SearchContentRegexBox())return;
+    if(SearchModeBox().SelectedIndex()!=1){
+        SearchModeGuidanceText().Text(
+            L"직접 탐색: 파일·폴더·내용과 정규식 검색을 지원합니다. "
+            L"깊이 32·항목 20,000개·결과 1,000개 제한.");
+        return;
+    }
+    std::wstring unsupported;
+    auto add=[&](wchar_t const* label){
+        if(!unsupported.empty())unsupported+=L", ";
+        unsupported+=label;
+    };
+    if(SearchRegexBox().IsChecked().GetBoolean())add(L"이름 정규식");
+    if(SearchCaseBox().IsChecked().GetBoolean())add(L"대소문자 구분");
+    if(SearchTargetBox().SelectedIndex()!=0)add(L"폴더 대상");
+    if(!SearchContentBox().Text().empty()||
+       SearchContentRegexBox().IsChecked().GetBoolean())
+        add(L"파일 내용/내용 정규식");
+    std::wstring guidance=
+        L"Windows 인덱스: 파일명·확장자·크기·수정일의 색인된 파일만 검색합니다. "
+        L"정규식·내용·대소문자 구분·폴더 대상 미지원 (최대 1,000개).";
+    if(!unsupported.empty()){
+        guidance+=L" 현재 설정의 미지원 조건: ";
+        guidance+=unsupported;
+        guidance+=L" · 검색 전에 변경하세요.";
+    }
+    SearchModeGuidanceText().Text(hstring(guidance));
+}
+void MainWindow::OnSearchModeCriteriaChanged(
+    IInspectable const&,SelectionChangedEventArgs const&){
+    UpdateSearchModeGuidance();
+}
+void MainWindow::OnSearchOptionCriteriaChanged(
+    IInspectable const&,RoutedEventArgs const&){
+    UpdateSearchModeGuidance();
+}
+void MainWindow::OnSearchContentCriteriaChanged(
+    IInspectable const&,TextChangedEventArgs const&){
+    UpdateSearchModeGuidance();
+}
 void MainWindow::OnToggleSearch(
     IInspectable const&,RoutedEventArgs const&) {
     const auto next=SearchPanel().Visibility()==Visibility::Collapsed?
@@ -750,6 +797,7 @@ void MainWindow::OnToggleSearch(
     if(!path.empty())SearchScopeBox().Text(hstring(path));
     SearchActiveScopeText().Text(
         L"검색 대기 · 검색 위치와 방식을 선택한 뒤 파일 찾기를 누르세요.");
+    UpdateSearchModeGuidance();
     StatusText().Text(
         L"직접 탐색은 기존 복합 조건을, Windows 인덱스는 파일명·확장자·크기(KB)·수정일 조건을 지원합니다.");
 }
