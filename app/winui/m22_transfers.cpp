@@ -358,7 +358,7 @@ void MainWindow::ShowAppFileContextMenu(
  // R06b: only one local filesystem FILE can open the native Share
  // sheet here. Multi-selection, directories and providers keep R06a fallback.
  menu.Items().Append(make(L"Windows 공유 창 열기 (파일 1개)",nullptr,
-                          canWindowsExplorer&&count==1&&!isFolder,
+                          canWindowsExplorer&&localSelection&&count==1&&!isFolder,
      [side](MainWindow& ui){ui.ShareSelectedWithWindows(side);}));
  // R06a is discoverability only: opening Explorer does not send any file.
  // The user explicitly chooses Share and a recipient in Windows Explorer.

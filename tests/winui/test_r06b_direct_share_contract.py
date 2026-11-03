@@ -12,7 +12,7 @@ class DirectShareContract(unittest.TestCase):
         menu=ui.split("void MainWindow::ShowAppFileContextMenu(",1)[1].split(
             "void MainWindow::ShowAppBackgroundContextMenu(",1)[0]
         direct=menu.split('make(L"Windows 공유 창 열기 (파일 1개)"',1)[1].split("));",1)[0]
-        self.assertIn("canWindowsExplorer&&count==1&&!isFolder",direct)
+        self.assertIn("canWindowsExplorer&&localSelection&&count==1&&!isFolder",direct)
         self.assertIn("ui.ShareSelectedWithWindows(side)",direct)
         self.assertIn('L"공유 옵션: Windows 탐색기에서 선택"',menu)
         self.assertIn("ui.RevealSelectedInWindowsExplorer(side)",menu)
