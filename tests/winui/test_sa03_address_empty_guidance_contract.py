@@ -62,5 +62,31 @@ class SA03AddressEmptyGuidanceContract(unittest.TestCase):
         self.assertIn("pane.pending[tab]", update)
 
 
+    def test_owned_gui_oracle_requires_empty_hint_and_restoration(self):
+        gui=(ROOT / "tests/winui/test_px12_address_chrome_gui.py").read_text(
+            encoding="utf-8-sig")
+        checks=(ROOT / "tools/winui/run_checks.py").read_text(
+            encoding="utf-8-sig")
+        for marker in (
+            "SA03_GUI_EMPTY_GUIDANCE_VISIBLE_NONINTERACTIVE=PASS",
+            "SA03_GUI_ESCAPE_RESTORES_COMMITTED_PANE=PASS",
+            "SA03_GUI_HINT_HIDDEN_FOR_REAL_CANDIDATES=PASS",
+        ):
+            self.assertIn(marker,gui)
+            self.assertIn(marker,checks)
+        for required in (
+            'element("AddressSuggestionEmptyText")',
+            'missing.is_relative_to(owned)',
+            'not offered_candidates()',
+            'assert owned_foreground()',
+            'send_keys("{ESC}")',
+            'committed(left)',
+            'not hint_visible()',
+        ):
+            self.assertIn(required,gui)
+        self.assertIn('if not all(marker in body for marker in markers)',checks)
+
+
+
 if __name__ == "__main__":
     unittest.main()
