@@ -1,10 +1,81 @@
 #define WIN32_LEAN_AND_MEAN
 #include "file_command_core.h"
 #include <filesystem>
+#include <algorithm>
 #include <cwctype>
 #include <shobjidl.h>
 #pragma comment(lib,"ole32.lib")
 namespace fxfile::filecommand {
+namespace {
+// R07-2: read-only evidence for a regular file on a fixed local drive.
+// Never issue an undo/redo operation based solely on this snapshot.
+bool safeRenameEvidenceParent(std::filesystem::path const& file) noexcept {
+ try {
+  if(!file.is_absolute()||file.lexically_normal()!=file)return false;
+  auto const parent=file.parent_path();
+  auto const root=parent.root_path().native();
+  if(root.size()!=3||root[1]!=L':'||root[2]!=L'\\'||
+     ::GetDriveTypeW(root.c_str())!=DRIVE_FIXED)return false;
+  std::filesystem::path current;
+  for(auto const& part:parent){
+   current/=part;
+   if(!current.has_root_directory())continue;
+   DWORD const attrs=::GetFileAttributesW(current.c_str());
+   if(attrs==INVALID_FILE_ATTRIBUTES||
+      !(attrs&FILE_ATTRIBUTE_DIRECTORY)||
+      (attrs&FILE_ATTRIBUTE_REPARSE_POINT))return false;
+  }
+  return true;
+ }catch(...){return false;}
+}
+bool readRenameEvidence(
+ std::filesystem::path const& file,RenameEvidence& evidence) noexcept {
+ DWORD const attrs=::GetFileAttributesW(file.c_str());
+ if(attrs==INVALID_FILE_ATTRIBUTES||
+    (attrs&(FILE_ATTRIBUTE_DIRECTORY|FILE_ATTRIBUTE_REPARSE_POINT)))
+  return false;
+ HANDLE const handle=::CreateFileW(
+  file.c_str(),FILE_READ_ATTRIBUTES,
+  FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE,
+  nullptr,OPEN_EXISTING,FILE_FLAG_OPEN_REPARSE_POINT,nullptr);
+ if(handle==INVALID_HANDLE_VALUE)return false;
+ FILE_ATTRIBUTE_TAG_INFO tag{};
+ FILE_ID_INFO identity{};
+ FILE_STANDARD_INFO standard{};
+ FILE_BASIC_INFO basic{};
+ bool const ok=
+  ::GetFileInformationByHandleEx(
+   handle,FileAttributeTagInfo,&tag,sizeof(tag))&&
+  !(tag.FileAttributes&
+    (FILE_ATTRIBUTE_DIRECTORY|FILE_ATTRIBUTE_REPARSE_POINT))&&
+  ::GetFileInformationByHandleEx(
+   handle,FileIdInfo,&identity,sizeof(identity))&&
+  ::GetFileInformationByHandleEx(
+   handle,FileStandardInfo,&standard,sizeof(standard))&&
+  !standard.Directory&&!standard.DeletePending&&
+  standard.NumberOfLinks==1&&standard.EndOfFile.QuadPart>=0&&
+  ::GetFileInformationByHandleEx(
+   handle,FileBasicInfo,&basic,sizeof(basic));
+ bool const closed=::CloseHandle(handle)!=FALSE;
+ if(!ok||!closed)return false;
+ evidence.volumeSerial=identity.VolumeSerialNumber;
+ std::copy_n(identity.FileId.Identifier,evidence.fileId.size(),
+             evidence.fileId.begin());
+ evidence.fileSize=static_cast<std::uint64_t>(standard.EndOfFile.QuadPart);
+ evidence.lastWriteTime=basic.LastWriteTime.QuadPart;
+ evidence.verified=true;
+ return true;
+}
+bool sameRenameEvidence(
+ RenameEvidence const& before,RenameEvidence const& after) noexcept {
+ return before.verified&&after.verified&&
+  before.volumeSerial==after.volumeSerial&&
+  before.fileId==after.fileId&&
+  before.fileSize==after.fileSize&&
+  before.lastWriteTime==after.lastWriteTime;
+}
+} // namespace
+
 bool validLeaf(std::wstring const& name) noexcept{
  if(name.empty()||name.size()>240||name==L"."||name==L".."||
     name.back()==L'.'||name.back()==L' ')return false;
@@ -193,9 +264,21 @@ Result execute(Request const& task) noexcept{
   if(::CompareStringOrdinal(src.c_str(),-1,target.c_str(),-1,TRUE)==CSTR_EQUAL){
    result.error=ERROR_ALREADY_EXISTS;return result;
   }
+  // Capture only read-only identity evidence before and after a rename.
+  // A probe failure never changes ordinary rename success/failure semantics.
+  RenameEvidence before{};
+  bool const canRecord=safeRenameEvidenceParent(src)&&
+                       readRenameEvidence(src,before);
   // Native MoveFileW never overwrites an existing destination.
-  if(::MoveFileW(src.c_str(),target.c_str()))result.error=ERROR_SUCCESS;
-  else result.error=::GetLastError();
+  if(::MoveFileW(src.c_str(),target.c_str())){
+   result.error=ERROR_SUCCESS;
+   if(canRecord&&safeRenameEvidenceParent(target)){
+    RenameEvidence after{};
+    if(readRenameEvidence(target,after)&&
+       sameRenameEvidence(before,after))
+     result.renameEvidence=after;
+   }
+  }else result.error=::GetLastError();
  }catch(...){result.error=ERROR_INVALID_PARAMETER;}
  return result;
 }
