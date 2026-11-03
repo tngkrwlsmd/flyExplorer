@@ -1,3 +1,12 @@
+# 2026-11-03 — R06 공유 메뉴 실제 Windows 한정 검증: 단일 파일 PASS, 폴더·복수 선택 확인 중
+
+- **범위 및 안전:** 제품 `app/winui`·`src/base` 변경 없이, `test_r06_share_menu_gui.py`·`test_shell_gui.py`·`run_checks.py` 및 신규 `test_r06_share_menu_gui_contract.py`를 추가했다. 소유 테스트 파일 `readme.txt`·폴더 `Nested`·복수 선택의 앱 자체 컨텍스트 메뉴에서 **R06b 직접 공유 메뉴와 R06a Windows 탐색기 위임 메뉴의 표시·활성 상태만** 확인한다. 파일 메뉴 클릭·Windows 공유 시트 호출·시트 자동 조작·취소·수신자 선택·전송은 전부 하지 않는다. 중앙 `personal-control-plane`에 정확한 메인 SHA용 `gui-share-menu` 범위를 추가했다.
+- **첫 소스 검증:** [Windows #41647512565](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41647512565)에서 R06 신규 3/3 PASS, 중앙 제어 실행 순서·구문 계약 PASS, 소유 임시 작업공간 정리 PASS. 제품 코드 변경·전체 기능 재검증 없음.
+- **첫 실제 GUI 결과:** [중앙 Windows #41647705586](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41647705586)은 정확한 소스 `a2583683204abfa4dc0e85c7efd6bc7426a4b115`에서 GUI 의존성·x64 Release 빌드 모두 PASS, R06 GUI **FAIL**. 보존된 `gui-test.log`에서 단일 파일 우클릭의 **`R06_GUI_SINGLE_FILE_DIRECT_AND_FALLBACK_ENABLED=PASS`**까지 확인됐다. 이어지는 폴더 우클릭 시 메뉴를 발견하지 못해 중단했다. 테스트 앱의 정상 종료 `OWNED_WINUI_SHELL_EXIT 0`, 사용자 기존 설정 `PRESENT 6`/SHA 동일성, 테스트 소유 fixture 정리 PASS. **첫 파일의 메뉴 동작 성공은 유지하지만 폴더/복수 선택에 대해 GUI PASS를 주장하지 않는다.**
+- **원인 분리 후 재검증:** 파일은 실제 마우스 우클릭 경로를 유지하고, 폴더·복수 선택은 이미 제품에서 지원하는 `Shift+F10`을 통해 같은 파일 메뉴를 열도록 한정 테스트를 조정했다. 실제 메뉴 성공 키보드 표식 2개를 별도 요구하며 공유 시트를 건드리지 않는다. [Windows 전용 소스 #41649149905](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41649149905)에서 새 3/3 PASS, `git diff --check` PASS, 소유 임시 공간 정리 PASS. [후속 Windows GUI #41649330703](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41649330703)은 **기록 시점 진행 중**, 소스 `dee652f1fe47d8bb6db05fee92ae83f704c89d74`, 범위 `gui-share-menu`. 재개 시 실제 작업 완료·첫 실패 단계·원본/설정 보존 표식을 먼저 확인한다. **Windows 공유 시트 자체 실행/수동 취소/시각 검증은 여전히 NOT TESTED.**
+
+---
+
 # 2026-11-03 — SA01/SA02 기능 GUI 실제 성공 관측, 중앙 판정기 불일치 수정·소스 검증
 
 - **작업 범위:** SA01 Windows 인덱스 검색의 미지원 조건 사전 안내와 SA02 검색 결과 64px ↔ 160px 펼치기·접기는 이전부터 실제 제품 C++/XAML에 구현됐다. 이번에는 별도 `search-usability` GUI 검사, 소유 임시 검색 fixture·프로필 보호, 성공 표식 검사만 추가·수정했다. 제품 `app/winui`·`src/base` **변경 0건**. 기존 SA03, PX06 대량 검색 취소, 전체 GUI·사용자 파일·전역 테마/DPI 검증은 재실행하지 않았다.
