@@ -16,7 +16,7 @@ def run(*, win, element, focus, eventually, left, right, owned):
     eventually(lambda: element("SearchTermBox").is_visible(),
                "SA search panel did not open", 9)
     guidance = element("SearchModeGuidanceText")
-    eventually(lambda: "직접 탐색" in scroll_to("SearchModeGuidanceText").window_text(),
+    eventually(lambda: "직접 탐색" in guidance.window_text(),
                "SA01 default search guidance missing", 8)
     print("SA01_GUI_DIRECT_GUIDANCE=PASS", flush=True)
 
