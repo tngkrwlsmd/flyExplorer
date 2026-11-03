@@ -155,6 +155,7 @@ GUI_AREAS = (
     "context-selection",
     "home-overview",
     "search-cancel",
+    "search-usability",
     "selection-projection",
     "address-candidate-chrome",
     "address-visual-compare",
@@ -426,6 +427,10 @@ def gui_command(area, configuration, env):
     if area == "search-cancel":
         return [sys.executable, "-u", str(TESTS / "test_px06_search_cancel_gui.py"),
                 configuration], gui_env, 240
+    if area == "search-usability":
+        gui_env["FLY_SA_SEARCH_USABILITY_ONLY"] = "YES"
+        gui_env["FLY_F05_VISUAL_CAPTURE"] = "NO"
+        return [sys.executable, "-u", str(TESTS / "test_shell_gui.py")], gui_env, 160
     if area == "selection-projection":
         gui_env["FLY_PX10_SELECTION_ONLY"] = "YES"
         gui_env["FLY_F05_VISUAL_CAPTURE"] = "NO"
@@ -593,6 +598,28 @@ def run_gui(area, configuration, env, tag):
         if not all(marker in body for marker in markers) or (
                 "Traceback (most recent call last)" in body):
             print("PX10_OWNED_GUI_MARKERS_MISSING_OR_ERROR", flush=True)
+            rc = 1
+    if not rc and area == "search-usability":
+        body = (LOGS / (tag + "-" + label + ".log")).read_text(
+            encoding="utf-8", errors="replace"
+        )
+        markers = (
+            "SA01_GUI_DIRECT_GUIDANCE=PASS",
+            "SA01_GUI_INDEXED_LIMITS_BEFORE_SUBMIT=PASS",
+            "SA01_GUI_UNSUPPORTED_OPTIONS_LIVE=PASS",
+            "SA01_GUI_MODE_RESTORE_WITHOUT_SEARCH=PASS",
+            "SA02_GUI_EXPANDED_PRESERVED_RESULT=PASS",
+            "SA02_GUI_COLLAPSED_PRESERVED_SELECTION=PASS",
+            "SA_SEARCH_USABILITY_FOCUSED_GUI_PASS=True",
+            "OWNED_WINUI_SHELL_EXIT 0",
+            "LEGACY_USER_PROFILE_SENTINEL_UNCHANGED True",
+            "OWNED_SYNTHETIC_FIXTURE_REMOVED True",
+        )
+        lines = set(body.splitlines())
+        if not all(marker in lines for marker in markers) or (
+            "Traceback (most recent call last)" in body
+        ):
+            print("SA_REQUIRED_GUI_EVIDENCE_MISSING", flush=True)
             rc = 1
     if not rc and area == "address-candidate-chrome":
         body = (LOGS / (tag + "-" + label + ".log")).read_text(
