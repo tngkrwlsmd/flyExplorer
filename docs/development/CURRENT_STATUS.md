@@ -2,7 +2,7 @@
 
 - **변경:** 기존 `FileOperationController`에서 단일 `RenameSelected` 요청의 원본 경로를 worker 실행 전에 값으로 고정하고, 네이티브 결과가 성공할 때만 `FileCommandCompletion.originalRenameSource`에 남긴다. 기존 결과의 target/ticket/context는 그대로 유지한다. [안전 설계·미구현 경계](R07_UNDO_RECEIPT_POLICY_20261103.md).
 - **범위 제한:** 실제 Ctrl+Z/Ctrl+Y, 파일 복원·삭제·이동, Explorer Undo 스택, 사용자 설정/세션은 변경하지 않았다. 원래 경로만으로는 파일 신원·외부 변경·충돌 안전을 증명할 수 없으므로 아직 Undo 가능이라고 표시하지 않는다.
-- **검증 상태:** 전용 `test_r07_rename_receipt_contract.py` 소스 계약 4건을 작성했다. Windows Release·GUI·복구 시나리오/픽셀 검사는 **NOT TESTED**. 본 작업은 R07-1 성공 원본 경로 전달만 구현한 단계다.
+- **소스 검증:** [Windows VM #41591666994](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41591666994)의 전용 4건 중 **3건 PASS·1건 FAIL**은 Python 검사가 구조체의 중첩 `{}`를 종료 지점으로 오인한 테스트 경계 오류였다. 해당 한 건만 수정해 [#41591962701](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41591962701) **1/1 PASS**, Git 공백 검사 PASS, 실패/후속 작업공간의 소유 검증 후 삭제 PASS를 확인했다. **최종 SHA에서 전체 4건을 다시 실행한 것은 아니다.** Windows Release·GUI·복구 시나리오/픽셀 검사는 **NOT TESTED**. 본 작업은 R07-1 성공 원본 경로 전달만 구현한 단계다.
 
 ---
 
