@@ -1,3 +1,12 @@
+# 2026-11-03 — R44 빈 배경 우클릭의 ‘보기 > 세부 정보 창’ 별도 검증 미수용
+
+- **기준:** R12 완전 물리 마우스·키보드 수용은 `main d268c42190fab65125281ddb627a5adafba113b0`, x64 Release 제품 코드 `a5a721f21ceab812ea9894d15d08184e35062296`, EXE SHA256 `5a1098cdd77cee4f7a33cedb55e1573e73f97219d921fc1d828c6d407db8c202`에서 기존 R39/R42/R43 PASS로 유지한다. 이 세션에서 제품 C++/XAML은 수정하거나 재컴파일하지 않았다.
+- **분리된 검증 후보:** `diag/r44-background-details-context-20261103`의 전용 Python GUI 검사기와 개발 목표 문서만 변경했다. [R44 소유 GUI #41551471623](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41551471623)는 빈 배경 우클릭 뒤 `보기` 메뉴 항목 미발견으로, [R45 #41552172203](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41552172203)는 800ms 초기 안정화·앱 소유 UIA 목록 영역 계층 확인 후에도 같은 지점에서 **전체 FAIL**했다. 두 실행 모두 실제 세부 정보 창 항목 클릭 전 중단됐으므로 토글 동작의 실패 증거는 아니다.
+- **원인 경계:** [읽기 전용 R45 진단 #41552534433](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41552534433)은 우클릭 지점이 `LeftFiles` UIA 리스트 안이고 소유 앱 전면 상태가 참임을 확인. [메뉴 존재 진단 #41552732665](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41552732665)에서 `보기`, `분류 방법`, `정렬 기준`, `새로 고침` 접근성 메뉴 항목은 모두 0건. 이 사실만으로 RightTapped 이벤트가 누락됐는지, `ShowAt` 호출이 거부됐는지, 표시 직후 닫혔는지는 미확정이다. 전용 fixture의 파일 바이트 보존이 확인됐으며 실패 기록과 격리 작업공간을 임의 삭제하지 않았다. Windows VM 요청 슬롯은 idle 상태로 복원했다.
+- **다음 조사:** 기존 수용 R02 빈 배경 분류 메뉴의 정확한 입력 경계와 현재 R44 테스트의 차이만 점검한 후, 필요한 경우 소유 앱의 `OnFileRightTapped`·`ShowAppBackgroundContextMenu` 이벤트 도달과 메뉴 `Opening/Closed`를 한정 관측한다. 근거 없이 동일 GUI 반복·제품 메뉴 전면 교체·기존 R12 재검증을 하지 않는다. R44 기능 및 새 시험은 `main`에 수용하지 않는다.
+
+---
+
 # 2026-11-03 — R12 보기 메뉴 세부 정보 창: 실제 물리 마우스·키보드 수용 및 main 통합
 
 - **수용한 제품 코드:** Windows x64 Release [R39 #41469825133](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41469825133)에서 소스 계약과 컴파일 PASS. 정확한 제품 커밋 `a5a721f21ceab812ea9894d15d08184e35062296`, EXE SHA256 `5a1098cdd77cee4f7a33cedb55e1573e73f97219d921fc1d828c6d407db8c202`, Shell helper SHA256 `b8ceab71e686fc6732496d5f81e028feee91a0e621348d980fc41a2710c1de72`. 최종 GUI 검사 커밋 `8d2fc11136ec885b8e9561aac867b1fe534cd010`까지 달라진 것은 Python GUI 검사기 파일뿐이다. 제품 C++/XAML은 바이너리와 동일하다.
