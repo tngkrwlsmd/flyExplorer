@@ -505,6 +505,37 @@ def gui_command(area, configuration, env):
     return [sys.executable, "-u", str(TESTS / "test_shell_gui.py")], gui_env, 260
 
 
+def sa_search_usability_evidence_ok(body: str) -> bool:
+    """Require all scoped GUI markers plus the real counted legacy sentinel.
+
+    The test-owned exit line includes "PRESENT N"; it is not an exact bare
+    "LEGACY_USER_PROFILE_SENTINEL_UNCHANGED True" line.
+    """
+    lines = set(body.splitlines())
+    required = (
+        "SA01_GUI_DIRECT_GUIDANCE=PASS",
+        "SA01_GUI_INDEXED_LIMITS_BEFORE_SUBMIT=PASS",
+        "SA01_GUI_UNSUPPORTED_OPTIONS_LIVE=PASS",
+        "SA01_GUI_MODE_RESTORE_WITHOUT_SEARCH=PASS",
+        "SA02_GUI_EXPANDED_PRESERVED_RESULT=PASS",
+        "SA02_GUI_COLLAPSED_PRESERVED_SELECTION=PASS",
+        "SA_SEARCH_USABILITY_FOCUSED_GUI_PASS=True",
+        "OWNED_WINUI_SHELL_EXIT 0",
+        "ORIGINAL_SIX_USER_CONFIG_SHA256_IDENTICAL True",
+        "OWNED_SYNTHETIC_FIXTURE_REMOVED True",
+    )
+    profile_prefix = "LEGACY_USER_PROFILE_SENTINEL_UNCHANGED True PRESENT "
+    return (
+        all(marker in lines for marker in required)
+        and any(
+            line.startswith(profile_prefix)
+            and line[len(profile_prefix):].isdigit()
+            for line in lines
+        )
+        and "Traceback (most recent call last)" not in body
+    )
+
+
 def g01_startup_evidence_ok(body: str) -> bool:
     """Accept exact owned-exit markers and the real bounded profile sentinel."""
     lines = set(body.splitlines())
@@ -603,22 +634,7 @@ def run_gui(area, configuration, env, tag):
         body = (LOGS / (tag + "-" + label + ".log")).read_text(
             encoding="utf-8", errors="replace"
         )
-        markers = (
-            "SA01_GUI_DIRECT_GUIDANCE=PASS",
-            "SA01_GUI_INDEXED_LIMITS_BEFORE_SUBMIT=PASS",
-            "SA01_GUI_UNSUPPORTED_OPTIONS_LIVE=PASS",
-            "SA01_GUI_MODE_RESTORE_WITHOUT_SEARCH=PASS",
-            "SA02_GUI_EXPANDED_PRESERVED_RESULT=PASS",
-            "SA02_GUI_COLLAPSED_PRESERVED_SELECTION=PASS",
-            "SA_SEARCH_USABILITY_FOCUSED_GUI_PASS=True",
-            "OWNED_WINUI_SHELL_EXIT 0",
-            "LEGACY_USER_PROFILE_SENTINEL_UNCHANGED True",
-            "OWNED_SYNTHETIC_FIXTURE_REMOVED True",
-        )
-        lines = set(body.splitlines())
-        if not all(marker in lines for marker in markers) or (
-            "Traceback (most recent call last)" in body
-        ):
+        if not sa_search_usability_evidence_ok(body):
             print("SA_REQUIRED_GUI_EVIDENCE_MISSING", flush=True)
             rc = 1
     if not rc and area == "address-candidate-chrome":
