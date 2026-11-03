@@ -1,3 +1,11 @@
+# 2026-11-03 — R06b 단일 파일 Windows 공유 창: 소스 구현, 실행 검증 대기
+
+- Windows 데스크톱 전용 `IDataTransferManagerInterop`으로 **파일시스템 파일 하나**에 대한 Windows 공유 시트 호출을 준비한다. WinRT 파일 항목을 만들어 `DataRequested`에서 `SetStorageItems`로 전달하고, 사용자가 공유 대상과 전송 여부를 직접 선택한다. 파일·복수 선택·가상 항목의 기존 R06a 탐색기 위임은 유지한다.
+- 단일 선택·창/패널/탭/route/실제 경로를 비동기 준비 전후와 이벤트 처리 시 재확인하며, 이전 요청과 창 닫기에서 revision·이벤트를 무효화한다. 사용자 파일 이동·전송·클립보드/설정 수정 코드는 추가하지 않는다. [범위 및 후속 R07](R06B_DIRECT_SHARE_20261103.md).
+- **수용 한계:** 신규 계약 `test_r06b_direct_share_contract.py` 작성. 현재 변경은 **Windows Release 컴파일, 공유 창 실제 실행/취소, 픽셀 화면 QA NOT TESTED**이며 비패키지 환경에서 공유 API 작동 여부도 미확인이다. 기존 R06a 위임은 그대로 제공한다.
+
+---
+
 # 2026-11-03 — R06a 공유 진입점: 코드 반영·Windows 수용 미검증
 
 - **변경:** 선택 항목 메뉴에 `공유 옵션: Windows 탐색기에서 선택`을 추가하고 기존 `RevealSelectedInWindowsExplorer(side)`를 재사용한다. Windows에서 선택 항목을 열어 사용자가 공유 명령을 직접 선택하도록 하며, 앱에서 공유 창을 직접 열거나 전송하지 않는다. 압축 위임·추가 옵션 메뉴는 그대로 유지한다. [R06a 한정 범위](R06_SHARE_DISCOVERY_20261103.md).

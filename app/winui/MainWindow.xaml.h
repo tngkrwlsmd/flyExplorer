@@ -34,6 +34,7 @@
 #include <optional>
 #include <vector>
 #include <filesystem>
+#include <winrt/Windows.ApplicationModel.DataTransfer.h>
 
 namespace winrt::FlyExplorer::implementation
 {
@@ -333,6 +334,16 @@ namespace winrt::FlyExplorer::implementation
 
         using FileOperationController=fxfile::previewops::FileOperationController;
         FileOperationController::Context FileOperationContext(int side) const;
+        bool ShareSelectionStillCurrent(int side,
+            FileOperationController::Context const& origin,
+            std::uint64_t logical,std::wstring const& path);
+        winrt::fire_and_forget ShareSelectedWithWindows(int side);
+        // Window-owned callback: no global share state, no persistent file paths.
+        Windows::ApplicationModel::DataTransfer::DataTransferManager
+            mShareManager{nullptr};
+        winrt::event_token mShareRequestedToken{};
+        bool mShareHandlerRegistered=false;
+        std::uint64_t mShareRevision=0;
         void SetFileButtonsBusy(bool busy,bool cancellable);
         void StartTransfer(fxfile::shelltransfer::Request request);
         void ApplyTransferStartStatus(

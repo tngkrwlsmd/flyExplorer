@@ -7,6 +7,10 @@
 #include <winrt/Microsoft.UI.Xaml.Input.h>
 #include <winrt/Microsoft.UI.Xaml.Media.h>
 #include <winrt/Windows.System.h>
+#include <winrt/Windows.Storage.h>
+#include <winrt/Windows.ApplicationModel.DataTransfer.h>
+#include <shobjidl_core.h>
+#include <microsoft.ui.xaml.window.h>
 #include <thread>
 #include <chrono>
 #include <utility>
@@ -351,6 +355,11 @@ void MainWindow::ShowAppFileContextMenu(
  menu.Items().Append(make(L"Windows 탐색기에서 선택 열기 (압축 등)",L"\uE8B7",
                           canWindowsExplorer,
      [side](MainWindow& ui){ui.RevealSelectedInWindowsExplorer(side);}));
+ // R06b: only one local filesystem FILE can open the native Share
+ // sheet here. Multi-selection, directories and providers keep R06a fallback.
+ menu.Items().Append(make(L"Windows 공유 창 열기 (파일 1개)",nullptr,
+                          canWindowsExplorer&&count==1&&!isFolder,
+     [side](MainWindow& ui){ui.ShareSelectedWithWindows(side);}));
  // R06a is discoverability only: opening Explorer does not send any file.
  // The user explicitly chooses Share and a recipient in Windows Explorer.
  menu.Items().Append(make(L"공유 옵션: Windows 탐색기에서 선택",nullptr,
@@ -1355,6 +1364,135 @@ void MainWindow::OpenCurrentFolderInWindowsTerminal(int side){
   }).detach();
  }catch(...){
   StatusText().Text(L"터미널 연결 작업을 시작할 수 없습니다.");
+ }
+}
+bool MainWindow::ShareSelectionStillCurrent(
+ int side,FileOperationController::Context const& origin,
+ std::uint64_t logical,std::wstring const& path){
+ if(mClosing||side<0||side>1||mFileOperations.busy()||
+    mFileOperations.pendingConfirmationToken()||
+    ActiveWindowTab().model.activePane!=side)return false;
+ const auto& workspace=ActiveWindowTab();
+ const auto& pane=workspace.model.panes[side];
+ if(pane.active>=pane.tabs.size()||pane.active>=pane.pending.size()||
+    pane.pending[pane.active]||pane.active>=pane.routeIds.size()||
+    pane.active>=pane.filesystemPaths.size()||
+    pane.filesystemPaths[pane.active].empty())return false;
+ const auto now=FileOperationContext(side);
+ if(now.windowTabIdentity!=origin.windowTabIdentity||
+    now.side!=origin.side||now.tab!=origin.tab||
+    now.route!=origin.route||
+    now.visibleFolder!=origin.visibleFolder||
+    now.visibleShellFolder!=origin.visibleShellFolder)return false;
+ const auto& visible=workspace.fileLists[side];
+ if(visible.visibleRoute!=origin.route||
+    visible.visibleTab!=origin.tab)return false;
+ auto selectedView=side==0?LeftFiles():RightFiles();
+ if(selectedView.SelectedItems().Size()!=1)return false;
+ auto row=selectedView.SelectedItem().try_as<ListViewItem>();
+ if(!row||!row.Tag())return false;
+ std::uint64_t currentId{};
+ try{currentId=unbox_value<std::uint64_t>(row.Tag());}
+ catch(...){return false;}
+ if(currentId!=logical)return false;
+ const auto* item=pane.tabs[pane.active].indexedItem(
+     static_cast<std::size_t>(currentId));
+ return item&&item->isFileSystem()&&!item->isFolder()&&
+        item->parsingName==path;
+}
+winrt::fire_and_forget MainWindow::ShareSelectedWithWindows(int side){
+ // A Share UI is NOT a send command. Windows lets the user select a target.
+ const auto keep=get_strong();
+ if(mClosing||side<0||side>1||
+    ActiveWindowTab().model.activePane!=side||
+    mFileOperations.busy()||
+    mFileOperations.pendingConfirmationToken())co_return;
+ auto selectedView=side==0?LeftFiles():RightFiles();
+ if(selectedView.SelectedItems().Size()!=1){
+  StatusText().Text(L"Windows 공유 창은 파일 하나를 선택한 경우에만 열 수 있습니다.");
+  co_return;
+ }
+ auto row=selectedView.SelectedItem().try_as<ListViewItem>();
+ if(!row||!row.Tag())co_return;
+ std::uint64_t logical{};
+ try{logical=unbox_value<std::uint64_t>(row.Tag());}
+ catch(...){co_return;}
+ const auto& workspace=ActiveWindowTab();
+ const auto& pane=workspace.model.panes[side];
+ if(pane.active>=pane.tabs.size())co_return;
+ const auto* item=pane.tabs[pane.active].indexedItem(
+     static_cast<std::size_t>(logical));
+ if(!item||!item->isFileSystem()||item->isFolder()||
+    item->parsingName.empty())co_return;
+ const auto path=item->parsingName;
+ const auto origin=FileOperationContext(side);
+ if(!ShareSelectionStillCurrent(side,origin,logical,path))co_return;
+ const auto revision=++mShareRevision;
+ const auto weak=get_weak();
+ try{
+  StatusText().Text(L"선택한 파일을 Windows 공유 창에 준비하고 있습니다.");
+  // Resolve only the explicitly selected item. Never walk other directories
+  // or fetch a virtual provider, and never put the path on the clipboard.
+  winrt::apartment_context uiApartment;
+  auto file=co_await Windows::Storage::StorageFile::GetFileFromPathAsync(
+      hstring(path));
+  co_await uiApartment;
+  if(mClosing||revision!=mShareRevision||
+     !ShareSelectionStillCurrent(side,origin,logical,path))co_return;
+  HWND window{};
+  winrt::check_hresult(get_strong().as<::IWindowNative>()->
+                       get_WindowHandle(&window));
+  if(!window)throw winrt::hresult_error(E_HANDLE);
+  using Manager=Windows::ApplicationModel::DataTransfer::DataTransferManager;
+  auto interop=winrt::get_activation_factory<
+      Manager,::IDataTransferManagerInterop>();
+  constexpr winrt::guid managerIid{
+      0xa5caee9b,0x8708,0x49d1,
+      {0x8d,0x36,0x67,0xd2,0x5a,0x8d,0xa0,0x0c}};
+  Manager manager{nullptr};
+  winrt::check_hresult(interop->GetForWindow(
+      window,managerIid,winrt::put_abi(manager)));
+  // Keep the subscription alive for the platform's asynchronous request.
+  if(mShareHandlerRegistered&&mShareManager)
+   mShareManager.DataRequested(mShareRequestedToken);
+  mShareHandlerRegistered=false;
+  mShareManager=manager;
+  mShareRequestedToken=manager.DataRequested(
+      [weak,side,origin,logical,path,revision,file](
+          Manager const&,
+          Windows::ApplicationModel::DataTransfer::DataRequestedEventArgs
+              const& args){
+       auto ui=weak.get();
+       if(!ui||revision!=ui->mShareRevision||
+          !ui->ShareSelectionStillCurrent(side,origin,logical,path)){
+        args.Request().FailWithDisplayText(
+            L"파일이나 선택 위치가 변경되었습니다. 다시 선택하세요.");
+        return;
+       }
+       try{
+        auto items=winrt::single_threaded_vector<
+            Windows::Storage::IStorageItem>();
+        items.Append(file.as<Windows::Storage::IStorageItem>());
+        auto package=args.Request().Data();
+        package.Properties().Title(L"선택한 파일 공유");
+        package.RequestedOperation(
+            Windows::ApplicationModel::DataTransfer::
+                DataPackageOperation::Copy);
+        package.SetStorageItems(items);
+       }catch(...){
+        args.Request().FailWithDisplayText(
+            L"선택한 파일을 공유 요청에 추가하지 못했습니다.");
+       }
+      });
+  mShareHandlerRegistered=true;
+  winrt::check_hresult(interop->ShowShareUIForWindow(window));
+  if(!mClosing&&revision==mShareRevision)
+   StatusText().Text(
+       L"Windows 공유 창을 요청했습니다. 대상 선택과 전송은 직접 결정하세요.");
+ }catch(...){
+  if(!mClosing&&revision==mShareRevision)
+   StatusText().Text(
+       L"Windows 공유 창을 열지 못했습니다. 기존 탐색기 공유 메뉴를 이용하세요.");
  }
 }
 void MainWindow::RevealSelectedInWindowsExplorer(int side){

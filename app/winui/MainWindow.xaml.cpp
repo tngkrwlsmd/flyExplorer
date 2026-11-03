@@ -1452,6 +1452,15 @@ namespace winrt::FlyExplorer::implementation
             return;
         }
         mClosing=true;
+        // Invalidate asynchronous Share preparations and unlink window events
+        // before dismantling the owned XAML tree. Do not touch any files.
+        ++mShareRevision;
+        try{
+            if(mShareHandlerRegistered&&mShareManager)
+                mShareManager.DataRequested(mShareRequestedToken);
+        }catch(...){}
+        mShareHandlerRegistered=false;
+        mShareManager=nullptr;
         // Prevent detached sidebar workers from projecting into torn-down XAML.
         // Cancel by generation and clear window callbacks without touching UI.
         try{
