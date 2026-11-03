@@ -351,6 +351,11 @@ void MainWindow::ShowAppFileContextMenu(
  menu.Items().Append(make(L"Windows 탐색기에서 선택 열기 (압축 등)",L"\uE8B7",
                           canWindowsExplorer,
      [side](MainWindow& ui){ui.RevealSelectedInWindowsExplorer(side);}));
+ // R06a is discoverability only: opening Explorer does not send any file.
+ // The user explicitly chooses Share and a recipient in Windows Explorer.
+ menu.Items().Append(make(L"공유 옵션: Windows 탐색기에서 선택",nullptr,
+                          canWindowsExplorer,
+     [side](MainWindow& ui){ui.RevealSelectedInWindowsExplorer(side);}));
  if(count==1&&isFolder&&!folderPath.empty()){
   menu.Items().Append(make(L"새 폴더 탭에서 열기",L"\uE8B7",ready,
      [side,path=std::move(folderPath)](MainWindow& ui){
@@ -1401,7 +1406,7 @@ void MainWindow::RevealSelectedInWindowsExplorer(int side){
        tab>=pane.filesystemPaths.size()||
        pane.filesystemPaths[tab]!=folder)return;
     ui->StatusText().Text(SUCCEEDED(result)?
-     L"Windows 탐색기에서 항목을 선택했습니다. 압축 등 가능한 작업은 탐색기 메뉴에서 직접 선택하세요.":
+     L"Windows 탐색기에서 항목을 선택했습니다. 공유·압축 등의 작업은 탐색기 메뉴에서 직접 선택하세요.":
      L"Windows 탐색기에서 선택 항목을 열지 못했습니다.");
    });
   }).detach();
