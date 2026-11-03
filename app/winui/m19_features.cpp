@@ -722,6 +722,18 @@ void MainWindow::OnSearchPanelSizeChanged(
         root.ActualHeight()-chrome-minimumFilePane,0.0,400.0);
     if(std::abs(search.MaxHeight()-maximum)>0.5)search.MaxHeight(maximum);
 }
+void MainWindow::OnToggleSearchResults(
+    IInspectable const&,RoutedEventArgs const&){
+    if(mClosing||SearchPanel().Visibility()!=Visibility::Visible)return;
+    // Only change the list viewport. The parent SearchPanel remains bounded
+    // to 400 px and preserves at least 160 px for the file panes.
+    constexpr double compactHeight=64.0;
+    constexpr double expandedHeight=160.0;
+    const bool expand=SearchMatches().Height()<=compactHeight;
+    SearchMatches().Height(expand?expandedHeight:compactHeight);
+    SearchResultsSizeButton().Content(box_value(hstring(
+        expand?L"결과 접기":L"결과 펼치기")));
+}
 void MainWindow::UpdateSearchModeGuidance(){
     // SelectionChanged/Checked/TextChanged can fire while XAML is loading.
     // This is presentation-only; never change inputs or start/cancel a search.

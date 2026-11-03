@@ -127,6 +127,7 @@ namespace winrt::FlyExplorer::implementation
         void OnSaveWorkspace(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
         void OnOpenWorkspace(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
         void OnToggleSearch(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
+        void OnToggleSearchResults(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
         void OnToggleFileInfoPane(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
         void OnRevealTextPreview(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
         void OnFileInfoViewportSizeChanged(IInspectable const&,Microsoft::UI::Xaml::SizeChangedEventArgs const&);

@@ -623,6 +623,12 @@
                            VerticalAlignment="Center"
                            AutomationProperties.Name="검색 결과 요약"/>
             </StackPanel>
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <TextBlock Text="검색 결과" VerticalAlignment="Center"/>
+                <Button x:Name="SearchResultsSizeButton" Content="결과 펼치기"
+                        Click="OnToggleSearchResults"
+                        ToolTipService.ToolTip="검색 결과 목록의 높이만 바꿉니다. 결과 선택과 검색 조건은 유지합니다."/>
+            </StackPanel>
             <ListView x:Name="SearchMatches" Height="64"
                       SelectionChanged="OnSearchMatchSelectionChanged"
                       AutomationProperties.Name="일치하는 파일 경로"/>
