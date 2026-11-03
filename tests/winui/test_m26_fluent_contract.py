@@ -218,11 +218,12 @@ class FluentShellContract(unittest.TestCase):
         state=text("file_list_state.h")
         prefs=text("../../src/base/ui_preferences.cpp")
         prefh=text("../../src/base/ui_preferences.h")
-        self.assertIn("enum class FileViewMode : int { Details=0, List=1, SmallIcons=2, MediumIcons=3, LargeIcons=4 }",state)
+        self.assertIn("enum class FileViewMode : int { Details=0, List=1, SmallIcons=2, MediumIcons=3, LargeIcons=4, ExtraLargeIcons=5, Tiles=6, Content=7 }",state)
         self.assertIn("FileViewMode viewMode=FileViewMode::Details",state)
         for token in ('x:Name="ViewDetailsItem"','x:Name="ViewListItem"',
                       'x:Name="ViewSmallIconsItem"','x:Name="ViewMediumIconsItem"',
-                      'x:Name="ViewLargeIconsItem"'):
+                      'x:Name="ViewLargeIconsItem"', 'x:Name="ViewExtraLargeIconsItem"',
+                       'x:Name="ViewTilesItem"', 'x:Name="ViewContentItem"'):
             self.assertIn(token,toolbar)
         self.assertIn("ExplorerSmallIconsItemsPanel",main)
         self.assertIn("ExplorerMediumIconsItemsPanel",main)
@@ -244,10 +245,10 @@ class FluentShellContract(unittest.TestCase):
         self.assertIn('schema=2\\r\\nlanguage=ko-KR',prefs)
         self.assertIn('view="+viewName(view)',prefs)
         self.assertIn('case 4:return "large-icons"',prefs)
-        self.assertIn("view<5",prefs)
-        self.assertIn("defaultViewMode>4",prefs)
+        self.assertIn("view<8",prefs)
+        self.assertIn("defaultViewMode>7",prefs)
         session=(ROOT/"src/base/ui_session.cpp").read_text(encoding="utf-8")
-        self.assertIn("pane.view>4",session)
+        self.assertIn("pane.view>7",session)
 
     def test_v7_window_tab_state_owns_workspace_without_xaml(self):
         header=text("MainWindow.xaml.h")
@@ -276,9 +277,9 @@ class FluentShellContract(unittest.TestCase):
         self.assertIn('row.Width(160);row.Height(32)',impl)
         self.assertIn('row.Width(92);row.Height(92)',impl)
         self.assertIn('row.Width(112);row.Height(128)',impl)
-        self.assertIn('targetSize=large?64.0',impl)
-        self.assertIn('filename.Width(large?104.0:84.0)',impl)
-        self.assertIn('filename.FontSize(12.0);filename.Width(large?104.0:84.0)',impl)
+        self.assertIn('extraLarge?112.0:(large?64.0',impl)
+        self.assertIn('filename.Width(extraLarge?152.0:(large?104.0:84.0))',impl)
+        self.assertIn('filename.FontSize(12.0);filename.Width(extraLarge?152.0:(large?104.0:84.0))',impl)
         self.assertIn('filename.MaxLines(2)',impl)
         self.assertIn('UseSystemFocusVisuals" Value="True"',main)
         self.assertIn('row.MinHeight(32)',impl)
@@ -325,11 +326,11 @@ class FluentShellContract(unittest.TestCase):
         end=impl.index("bool MainWindow::ActivateWindowTab",start)
         create=impl[start:end]
         self.assertIn(
-            "(std::clamp)(mPreferencesCoordinator.current().defaultViewMode,0,4)",
+            "(std::clamp)(mPreferencesCoordinator.current().defaultViewMode,0,7)",
             create,
         )
         self.assertNotIn(
-            "(std::clamp)(mPreferencesCoordinator.current().defaultViewMode,0,3)",
+            "(std::clamp)(mPreferencesCoordinator.current().defaultViewMode,0,4)",
             create,
         )
         self.assertIn(
