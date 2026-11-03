@@ -12,7 +12,7 @@ def src(path):
 class R07RenameReceiptContract(unittest.TestCase):
     def test_completion_adds_value_only_to_existing_file_command_result(self):
         header=src("app/winui/file_operation_controller.h")
-        struct=header.split("struct FileCommandCompletion final {",1)[1].split("};",1)[0]
+        struct=header.split("struct FileCommandCompletion final {",1)[1].split("\n    };",1)[0]
         for marker in ("ticket=0", "Context context{}", "Kind kind=", "Result result{}",
                        "std::wstring originalRenameSource{}"):
             self.assertIn(marker,struct)
