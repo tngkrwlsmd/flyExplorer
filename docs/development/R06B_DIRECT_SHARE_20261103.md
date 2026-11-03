@@ -10,9 +10,11 @@ Windows 11 파일 탐색기와 차이를 줄이기 위해 파일 한 개를 직�
 - **수명:** 이벤트는 창이 소유하며 `PrepareForClose`에서 해제한다. Windows 공유 시트와 시스템 사용자 데이터는 테스트 목적이라도 자동 조작·전송·취소하지 않는다.
 - **안전한 대안:** Windows 공유 API를 사용할 수 없으면 R06a 탐색기 위임을 계속 제공한다. 자동 전송, 클립보드 변경, 파일 이동/삭제, 세션 v4 변경은 없다.
 
-## 남은 검증
+## 후속 검증 상태 (2026-11-03)
 
-이번 단위는 **소스 구현 후보**이며 C++ Release 컴파일·실제 WinUI 메뉴·Windows 공유 시트 실행/취소·시각 QA는 **NOT TESTED**. 자동 전송은 이 제품의 요구사항이 아니다. Windows 공유 창 자체의 지원·OS 버전과 실제 수신 대상은 추가 확인이 필요하다.
+- 기존 소스 구현과 안전 경계는 유지했으며, 이번 후속 검증에서 제품 C++/XAML·전송 엔진은 변경하지 않았다. [Windows 신규 메뉴 계약 #41647512565](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41647512565) **3/3 PASS**와 [수정된 입력 경로 소스 계약 #41649149905](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41649149905) **3/3 PASS**를 기록했다.
+- [중앙 x64 Release + 앱 소유 메뉴 #41649330703](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41649330703)은 정확한 소스 `dee652f1fe47d8bb6db05fee92ae83f704c89d74`에서 **SUCCESS**. 단일 파일 우클릭은 R06b 직접 공유·R06a 탐색기 대안 **둘 다 활성화**, 폴더와 복수 선택의 `Shift+F10`에서는 R06b 직접 공유 **비활성화**, R06a **활성화**, 원본 바이트·사용자 기존 설정 보존과 테스트 앱 정상 종료·소유 fixture 정리까지 한정 PASS했다. [앞선 물리 폴더 우클릭 중단 #41647705586](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41647705586)은 해당 입력 경로의 실패 이력으로 보존한다.
+- **Windows 공유 시트 자체 실행/수동 취소·비패키지 OS 연동·수신 대상·외부 전송·화면 픽셀 검증은 여전히 NOT TESTED**. 자동 공유 시트 조작·자동 전송은 현재 검증에도 포함되지 않았다. 소스의 `ShowShareUIForWindow` 요청이 실제 Windows OS에서 시트를 표시하는지는 별도 사용자 주도 확인이 필요하다. R06a Explorer 위임 메뉴의 활성 여부는 검증했으나, 이번에는 해당 메뉴를 눌러 새로운 Explorer 창을 띄우지도 않았다.
 
 ## R07 경계
 
