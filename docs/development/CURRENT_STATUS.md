@@ -1,3 +1,12 @@
+# 2026-11-03 — 오래된 소스 검사 5건 수정 및 정확한 main x64 Release PASS (제품 코드 변경 없음)
+
+- **발견·분리:** 이전 `main` `873654854e74516ec9959165919f03ba6bbc8aa4`의 [중앙 Release #41615228267](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41615228267)는 소스 계약 345건 중 4건 FAIL로 컴파일 전에 중단됐다. 보기 모드 5종 시절의 테스트 기대값 3건과 R12 전용 진단 로그의 `CreateFileW`를 실제 새 항목 메뉴 파일 생성으로 오인한 테스트 1건이었다. [다음 Release #41616604638](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41616604638)에서 제품 소스 345/345 PASS 후 GUI 검사 도구 59건 중 과거 단일 패널 열 조절 진입/커서 기대값 1건이 FAIL하여, 실제 Release 빌드는 여전히 미실행이었다.
+- **수정 범위:** `tests/winui/test_m26_fluent_contract.py`를 지원 중인 8종 보기·설정/세션 상한·아주 큰 아이콘 밀도에 맞췄고, `test_file_command_feedback_contract.py`의 파일 생성 방지 검사를 새 항목 메뉴 핸들러에 한정했다. `test_gui_harness_contract.py`는 좌·우 열 크기 조절의 실제 분기와 엄격한 네이티브 크기 조절 커서 판정을 확인한다. `87365485..eabfebd4` 비교에서 변경은 이 **검사 코드 3개 파일뿐이며 제품 `app/winui`·`src/base` 파일 차이는 0개**다. 변경은 각각 `f5d694e9`, `d7a485c9`, `eabfebd4`에 PR 없이 main 직접 반영됐다.
+- **검증:** [수정된 제품 소스 검사 모듈 #41616431552](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41616431552)에서 보기/탭 **17/17 PASS**와 파일 명령 **15/15 PASS**, [GUI 검사 도구 소스 모듈 #41616977848](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41616977848)에서 **9/9 PASS**. 두 독립 실행 모두 소유 임시 소스 디렉터리 삭제 PASS. 최종 제품/검사 SHA `eabfebd41efc902d0e21a32257a25f0730cc0cff`의 [중앙 Windows CI #41617142673](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41617142673)는 runner-health, policy, 전체 source, **x64 Release 빌드 모두 PASS (EXIT=0)**. 앞의 실패는 그 당시 소스 검사 계약 실패이며 제품 컴파일 실패로 분류하지 않는다.
+- **남은 경계:** SA01~SA03 검색/주소창 실제 GUI·화면, R06a/R06b 공유 메뉴 및 공유 창 실제 동작/취소, R07 이름 변경 원본 경로 및 향후 실제 Undo의 GUI·복구 시나리오/픽셀은 **NOT TESTED**. Release 컴파일 성공이 사용자 조작 또는 Windows 공유 API 실행 성공을 뜻하지 않는다. Ctrl+Z/Redo, 원본 파일·설정·세션/OS 정책에는 새 변경이 없다.
+
+---
+
 # 2026-11-03 — R07-1 이름 변경 영수증 최소 데이터: 코드 반영, Undo 실행 미구현
 
 - **변경:** 기존 `FileOperationController`에서 단일 `RenameSelected` 요청의 원본 경로를 worker 실행 전에 값으로 고정하고, 네이티브 결과가 성공할 때만 `FileCommandCompletion.originalRenameSource`에 남긴다. 기존 결과의 target/ticket/context는 그대로 유지한다. [안전 설계·미구현 경계](R07_UNDO_RECEIPT_POLICY_20261103.md).
