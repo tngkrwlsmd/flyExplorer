@@ -2,7 +2,7 @@
 
 - **변경 내용:** 검색 결과 `SearchMatches`의 기본 높이 64px은 보존하고, 새 `SearchResultsSizeButton`을 통해 **64px ↔ 160px**만 사용자 의도에 따라 전환한다. 버튼 표시를 `결과 펼치기`/`결과 접기`로 동기화하며 목록 선택, 검색 조건·검색 결과 매핑, 색인/직접 검색 엔진·검색 실행/취소에는 개입하지 않는다.
 - **레이아웃 보존:** 기존 `SearchPanel`은 최대 400px, 파일 패널 가용 높이는 최소 160px이라는 `OnSearchPanelSizeChanged` 규칙을 유지한다. 확장한 목록 때문에 검색 내용이 넘치면 기존 검색 패널이 독립적으로 스크롤한다. 실제 창 크기·테마별 화면 결과는 아직 관측하지 않았다.
-- **검증 범위:** 전용 `tests/winui/test_sa02_search_results_expand_contract.py` 소스 계약을 추가했다. 변경은 XAML/검색 화면 표시·전용 검사·개발 문서에 한정했다. **Windows Release 빌드, 실제 GUI 클릭, 변경 전후 픽셀 시각 검토는 NOT TESTED**이므로 기능/화면 최종 수용 완료로 기록하지 않는다. 이미 수용된 검색 작업과 결과 선택/폴더 이동 검증은 반복하지 않는다.
+- **검증 범위:** 전용 `tests/winui/test_sa02_search_results_expand_contract.py` 4건과 기존 검색 패널 높이 보호 계약 1건을 [중앙 소스 검사 #41585429901](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41585429901)에서 **5/5 PASS**, 해당 SHA의 `git diff --check` PASS, 정확한 테스트 전용 작업공간 삭제 PASS로 확인했다. 변경은 XAML/검색 화면 표시·전용 검사·개발 문서에 한정했다. **Windows Release 빌드, 실제 GUI 클릭, 변경 전후 픽셀 시각 검토는 NOT TESTED**이므로 기능/화면 최종 수용 완료로 기록하지 않는다. 이미 수용된 검색 작업과 결과 선택/폴더 이동 검증은 반복하지 않는다.
 
 ---
 
