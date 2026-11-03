@@ -1,3 +1,11 @@
+# 2026-11-03 — SA01/SA02 전용 실제 GUI 검증 경로 추가: 소스 PASS, GUI 결과 확인 중
+
+- **이유 및 범위:** SA01 Windows 인덱스 검색 미지원 조건 사전 안내와 SA02 검색 결과 64px ↔ 160px 펼치기·접기의 기존 제품 구현은 유지하며, 아직 없는 **실제 Windows GUI 조작 검증**만 별도로 작성했다. `test_sa_search_usability_gui.py`는 소유 임시 폴더의 파일 한 개를 검색해 선택한 뒤 결과 높이 전후·검색 개수/선택·파일 위치 열기 버튼 유지와 인덱스 조건 충돌 안내·직접 검색 방식 복귀를 확인한다. `test_shell_gui.py`의 소유 프로세스/프로필·정상 종료/원본 보존 경로를 재사용한다. `tools/winui/run_checks.py`의 `search-usability` 경로는 SA01 4개, SA02 2개, 앱 정상 종료·원본 보존·테스트 fixture 정리 표식을 독립적인 필수 증거로 확인한다. 새 테스트의 배선은 `test_sa_search_usability_gui_contract.py`가 보호한다. `app/winui`, `src/base` 변경 없음. 테스트 소스 SHA `3683fac7d5b02a31b61ff69f6a8e27c94db42b41`.
+- **중앙 CI:** `personal-control-plane`에 전용 `gui-search-usability` 선택지를 추가했고, 기존 `gui-search-cancel` 18,000건 파일 검사·전체 GUI·사용자 폴더를 실행하지 않는다. 첫 중앙 정적 시도 [#41624856502](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41624856502)는 새 허용 범위의 옛 검사 기대값 누락으로 중단돼 **GUI/제품 실패가 아니다**. 수정 후 [Windows 소스/라우팅 #41625067737](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41625067737)에서 전용 새 3/3, SA01 3/3, SA02 4/4, GUI 하네스 9/9 **합계 19/19 PASS**, 중앙 라우팅 정적 검사 및 소유 임시 작업공간 정리 PASS.
+- **GUI 검증 체크포인트:** [Windows Central CI #41625266953](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41625266953), 프로젝트 `desktop-a`, 범위 `gui-search-usability`, 소스 SHA `3683fac7d5b02a31b61ff69f6a8e27c94db42b41`는 실행 요청 후 **결론 확인 전**이다. 재개 시 해당 작업의 완료 상태·첫 실패 단계·필수 10개 표식·원본 보존/정상 종료를 먼저 확인한다. 실패 시 불필요한 전체 GUI/빌드 재실행 없이 하네스/제품/환경 경계를 구분한다. **실제 GUI 및 별도 화면 픽셀 검증은 이 문단 작성 당시 미확정**.
+
+---
+
 # 2026-11-03 — SA03 주소 후보 없음 안내: 실제 Windows GUI 한정 PASS, 픽셀 미검증
 
 - **범위:** 이미 구현된 주소 후보 없음 안내의 WinUI 실제 동작을 검증하기 위해 `tests/winui/test_px12_address_chrome_gui.py`에 소유 임시 폴더 내 일치 후보 0개 → 비클릭 안내 표시/후보 버튼 없음 → Esc로 패널 닫기와 마지막 정상 주소·파일 목록 복원 → 기존 후보가 표시되면 안내 숨김의 한정 검사를 추가했다. `tools/winui/run_checks.py`의 기존 `address-candidate-chrome` 명령이 세 가지 SA03 성공 표식을 필수로 요구하며, `test_sa03_address_empty_guidance_contract.py`가 이 연결을 확인한다. **제품 C++/XAML, 파일 작업·세션·주소 후보 엔진은 변경하지 않았다.** 검증 후보 SHA는 `f8afd19dbdf850ede1bf2a51881afb73410193ec`.
