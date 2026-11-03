@@ -112,6 +112,8 @@ def main():
                    "closing later inactive tab changed active folder", seconds=18)
             result["later_background_x_preserves_active_route"] = True
             close_x("Left", 0)
+            h.wait(lambda: "최소 한 개" in app.el("StatusText").window_text(),
+                   "last pane tab close was not rejected", seconds=12)
             assert len(tabs("Left")) == 1 and ready("Left", a_file.name)
             result["last_pane_tab_guard"] = True
             app.el("NewTabButton").click_input()
