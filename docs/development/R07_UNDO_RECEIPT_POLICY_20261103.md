@@ -18,7 +18,13 @@
 - 증거 대상은 고정 로컬 드라이브(`DRIVE_FIXED`)이며 파일과 모든 부모 폴더가 **재분석 지점이 아닌 일반 파일 시스템 경로**여야 한다. 폴더 이름 변경, 재분석 지점, 네트워크·이동식 볼륨, 하드 링크 수가 1이 아닌 파일, 지원되지 않는 파일 ID 조회는 **영수증 미발급**으로 종료한다. **기존 파일 이름 변경 요청은 그대로 수행**되며, 읽기 전용 조회 실패를 작업 실패로 바꾸지 않는다.
 - Windows `CreateFileW(FILE_READ_ATTRIBUTES, OPEN_EXISTING, FILE_FLAG_OPEN_REPARSE_POINT)`로 기존 파일의 속성만 조회하고 `GetFileInformationByHandleEx(FileIdInfo)`에서 **볼륨 일련번호 + 128비트 파일 ID**를 수집한다. 파일 크기·마지막 수정 시각도 함께 기록하며 이름 변경 전후 **모두 같을 때만** `Result.renameEvidence.verified=true`로 만든다. 탐색 중 접근만 하며 파일에 쓰지 않는다. Microsoft 근거: https://learn.microsoft.com/en-us/windows/desktop/api/winbase/ns-winbase-file_id_info 와 https://learn.microsoft.com/en-us/windows/desktop/api/winbase/nf-winbase-getfileinformationbyhandleex .
 - 기존 `originalRenameSource`와 새 `Result.renameEvidence`는 작업 완료에 전달되는 **관측 데이터**일 뿐이며 **실행 취소 가능 판정이나 파일 쓰기 허가가 아니다**. Rename이 완료된 후 외부 프로그램이 수정하거나 원본 이름을 다시 점유할 수 있고, 현재 구현에는 원자적 열린 핸들 기반의 안전한 복원, 충돌/만료 확인, Undo·Redo 명령/단축키가 없다. 복원 전 재검증이 완료되기 전에는 사용자가 누를 수 있는 실행 취소를 만들지 않는다.
-- 전용 `test_r07_rename_identity_contract.py`와 기존 `m21_native_fixture.cpp`에 파일 ID의 독립 조회 비교, 폴더 이름 변경의 영수증 미발급, 기존 대상 이름 충돌 시 영수증 미발급/파일 보존 검사를 추가했다. **Windows Release·네이티브 검사 및 GUI는 이 문단 작성 시점 NOT TESTED**이고, 실제 완료 결과만 별도 기록한다.
+- 전용 `test_r07_rename_identity_contract.py`와 기존 `m21_native_fixture.cpp`에 파일 ID의 독립 조회 비교, 폴더 이름 변경의 영수증 미발급, 기존 대상 이름 충돌 시 영수증 미발급/파일 보존 검사를 추가했다. **Windows 단위 네이티브 검증은 후속 #41657292869에서 48/48 PASS**, GUI·픽셀·실제 파일 되돌리기 명령은 NOT TESTED/NOT IMPLEMENTED이며 제품 전체 Release 빌드는 별도 확인 대상이다.
+
+### R07-2 Windows 한정 실행 증거
+
+[Windows VM #41657292869](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41657292869)에서 정확한 제품·시험 소스 `c3486e1b247a22ecec388168eb23166650b59b9c`의 소스 5/5 PASS, M21 네이티브 x64 Release 빌드 PASS, **48/48 실제 테스트용 파일 명령 PASS**, 원본 사용자 설정 불변(`PRESENT 0`), 소유 임시 공간 정리를 확인했다. 처음 [#41656448397](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41656448397)은 Remote Shell의 잘못된 PowerShell 인자로 실행 전 중단, [#41656844843](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41656844843)은 실제 네이티브 48/48 PASS에도 오래된 Python 예상 테스트 수가 37이라 검증기에서 중단됐다. 원인을 수정한 후속 실행만 성공으로 수용한다.
+
+[제품 전체 x64 Release 컴파일 #41657641687](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41657641687)는 **문서 작성 중 진행 중**이며 완료 상태가 확인되기 전에는 Release 성공을 주장하지 않는다. GUI·픽셀·파일 복원/Undo는 NOT TESTED다.
 
 ## 후속 필수 단계 (순서 변경 금지)
 
