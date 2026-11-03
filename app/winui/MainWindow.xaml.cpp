@@ -4535,7 +4535,10 @@ namespace winrt::FlyExplorer::implementation
             }}),true);
             rows.Children().Append(button);
         }
-        if(choices.empty()){panel.Visibility(Visibility::Collapsed);return;}
+        // An absent in-memory candidate is not an invalid path. Keep the
+        // existing Enter submission usable without disk or network probing.
+        AddressSuggestionEmptyText().Visibility(
+            choices.empty()?Visibility::Visible:Visibility::Collapsed);
         panel.Visibility(Visibility::Visible);
     }
     void MainWindow::OnAddressTextChanged(IInspectable const&,
