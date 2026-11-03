@@ -26,6 +26,17 @@ struct Result {
     std::wstring target;
     RenameEvidence renameEvidence{};
 };
+// R07-3 is a momentary, read-only observation, NOT undo authorization.
+// No target handle is retained: checks can become stale immediately.
+enum class RenameRestoreObservation {
+    UnverifiedReceipt,
+    UnsafePaths,
+    OriginalOccupiedOrUnknown,
+    TargetChangedOrUnavailable,
+    MatchingSnapshotOnly
+};
+RenameRestoreObservation inspectRenameRestore(
+    std::wstring const& originalPath,Result const& renamed) noexcept;
 bool validLeaf(std::wstring const& name) noexcept;
 bool validTextDocumentLeaf(std::wstring const& name) noexcept;
 bool validMarkdownDocumentLeaf(std::wstring const& name) noexcept;
