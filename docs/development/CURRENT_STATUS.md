@@ -1,3 +1,12 @@
+# 2026-11-03 — R07-2 단일 파일 이름 변경: 읽기 전용 128비트 ID 증거, Windows native 한정 PASS
+
+- **작업 범위:** 실제 파일 복원·`Ctrl+Z`·Redo·세션 이력 저장을 추가하지 않고 `src/base/file_command_core.h/.cpp`의 `RenameSelected` 결과에 읽기 전용 `RenameEvidence`만 더했다. 비재분석 일반 파일/비재분석 부모·고정 로컬 드라이브·단일 하드링크일 때만, 실행 전과 성공 후 `GetFileInformationByHandleEx(FileIdInfo)`의 볼륨 일련번호·128비트 파일 ID·파일 크기·수정 시각을 비교해 동일한 경우 `verified=true`로 기록한다. 지원되지 않는 파일·동일성 미확인·ID 조회 실패는 **증거 미발급**, 기존 `MoveFileW` 이름 변경의 결과/덮어쓰기 금지·`FileOperationController`의 완료 ticket/Context·UI/세션 v4는 불변. 이 결과는 **Undo 파일 쓰기 권한이 아니다**.
+- **네이티브 실검증:** `tests/winui/m21/m21_native_fixture.cpp`에 소유 임시 파일의 ID 독립 조회·Rename 전후 같은 볼륨·128비트 ID와 크기·기존 대상 이름 충돌의 미발급/원본 보존 3사례를 추가했다. [Windows #41657292869](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41657292869), 정확한 소스 `c3486e1b247a22ecec388168eb23166650b59b9c`에서 R07 계약 **5/5 PASS**, M21 전용 x64 Release 네이티브 빌드 **PASS**, 소유 폴더 실제 파일 명령 **48/48 PASS**, 원본 사용자 설정 불변(`PRESENT 0`), 소유 임시 체크아웃 정리 PASS. 이는 **앱 전체 Release/GUI PASS를 뜻하지 않는다**.
+- **이전 실패 이력 분리:** [#41656448397](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41656448397)는 임시 디렉터리 생성용 PowerShell 명령에 존재하지 않는 `New-Item -LiteralPath` 인자를 써 제품·소스 실행 전 중단됐다. [#41656844843](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41656844843)는 R07 소스 5/5, 네이티브 빌드 PASS, 실제 `M21_NATIVE_SUMMARY 48 passed, 0 failed`였으나 과거 34건을 바탕으로 예상한 Python 상위 검사기 37건과 불일치해 작업 전체 FAIL. 기대값을 **실제로 관측한 48건**으로 바로잡고 동일 범위만 후속 #41657292869에서 PASS했다. 둘 다 앱 제품 실패로 단정하지 않으며 기록은 보존한다.
+- **Release 및 미완료:** [정확한 제품 소스 #41657641687](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41657641687)에 `desktop-a` / `release-build-only` x64 Release 빌드가 요청돼 **작성 시점 진행 중**이다. 최종 완료 상태를 확인하기 전 제품 Release PASS로 주장하지 않는다. 새 UI·WinUI GUI·픽셀·외부 파일 Undo/Redo는 **NOT TESTED**이며 실제 실행 취소 동작은 **NOT IMPLEMENTED**. [후속 안전 설계](R07_UNDO_RECEIPT_POLICY_20261103.md).
+
+---
+
 # 2026-11-03 — R06 앱 공유 메뉴: 소유 Windows 실제 GUI 파일·폴더·복수 선택 한정 PASS
 
 - **범위 및 안전:** 제품 `app/winui`·`src/base` 변경 없이, `test_r06_share_menu_gui.py`·`test_shell_gui.py`·`run_checks.py` 및 신규 `test_r06_share_menu_gui_contract.py`를 추가했다. 소유 테스트 파일 `readme.txt`·폴더 `Nested`·복수 선택의 앱 자체 컨텍스트 메뉴에서 **R06b 직접 공유 메뉴와 R06a Windows 탐색기 위임 메뉴의 표시·활성 상태만** 확인한다. 파일 메뉴 클릭·Windows 공유 시트 호출·시트 자동 조작·취소·수신자 선택·전송은 전부 하지 않는다. 중앙 `personal-control-plane`에 정확한 메인 SHA용 `gui-share-menu` 범위를 추가했다.
