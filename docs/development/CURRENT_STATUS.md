@@ -2,7 +2,7 @@
 
 - **변경:** 선택 항목 메뉴에 `공유 옵션: Windows 탐색기에서 선택`을 추가하고 기존 `RevealSelectedInWindowsExplorer(side)`를 재사용한다. Windows에서 선택 항목을 열어 사용자가 공유 명령을 직접 선택하도록 하며, 앱에서 공유 창을 직접 열거나 전송하지 않는다. 압축 위임·추가 옵션 메뉴는 그대로 유지한다. [R06a 한정 범위](R06_SHARE_DISCOVERY_20261103.md).
 - **안전:** 기존 WindowTab/PaneTab/route/선택 경로의 늦은 클릭 보호와 로컬 파일 128개·경로 예산, 모달 충돌 보호를 유지한다. 원본 파일·클립보드·세션 설정·파일 작업 엔진 변경 없음.
-- **검증:** 전용 `test_r06_share_discovery_contract.py` 4건 작성. **Windows Release, 실제 GUI/공유·취소, 화면 픽셀은 NOT TESTED**. R06b 직접 공유 시트와 R07 실행 취소는 별도 구현 대상으로 남겨 둔다.
+- **소스 검증:** 전용 R06a 4건과 기존 Explorer 위임 11건을 [Windows VM #41588257250](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41588257250)에서 실행했다. 최초 **14/15 통과·1건 FAIL**은 기존 R08의 이전 안내 문구만 검사하던 기대값 불일치였다. 메시지를 공유·압축 안내로 고친 뒤 **변경된 1건만** [#41588581717](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41588581717)에서 **1/1 PASS**, `git diff --check` PASS, 최초 실패/후속 성공 작업공간의 정확한 소유 경로 삭제 PASS를 확인했다. 두 실행을 합쳐 변경 범위 소스 계약 15건의 실패 원인을 해소했으며, **새 SHA의 전체 15건을 통째로 재실행한 것은 아니다.** **Windows Release, 실제 GUI/공유·취소, 화면 픽셀은 NOT TESTED**. R06b 직접 공유 시트와 R07 실행 취소는 별도 구현 대상으로 남겨 둔다.
 
 ---
 
