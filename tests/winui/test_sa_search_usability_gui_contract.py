@@ -39,12 +39,20 @@ class SearchUsabilityGuiContract(unittest.TestCase):
                 self.assertIn(label, gui)
         self.assertIn("left.is_relative_to(owned)", gui)
         self.assertIn('element("SearchRunButton").invoke()', gui)
-        self.assertIn('element("SearchModeBox").select(1)', gui)
-        self.assertIn('element("SearchModeBox").select(0)', gui)
+        self.assertIn('scroll_to("SearchModeBox").select(1)', gui)
+        self.assertIn('scroll_to("SearchModeBox").select(0)', gui)
         self.assertIn('label.invoke()', gui)
         self.assertIn("baseline + 55", gui)
         self.assertIn("검색 결과 1개", gui)
         self.assertIn("len(results()) == 1", gui)
+        # A compact 960x519 owned window clips the SearchPanel's results.
+        # Demand real ScrollPattern movement, not relaxed result assertions.
+        self.assertIn('scroll.CurrentVerticallyScrollable', gui)
+        self.assertIn('scroll.SetScrollPercent(-1, percent)', gui)
+        self.assertIn('scroll_to("SearchMatches")', gui)
+        self.assertIn('scroll_to("SearchCountText")', gui)
+        self.assertIn('"검색 완료" in element("StatusText").window_text()', gui)
+        self.assertIn('assert "검색 결과 1개" in count_text', gui)
         self.assertNotIn("indexer.exe", gui)
         self.assertNotIn("os.system(", gui)
 
