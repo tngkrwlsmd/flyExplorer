@@ -1,3 +1,12 @@
+# 2026-11-04 — R07-3 이름 변경 복원 전 읽기 전용 재관측: 소스·Windows 네이티브 PASS
+
+- **변경 범위:** `src/base/file_command_core.h/.cpp`에 `inspectRenameRestore(originalPath, renamedResult)`를 추가했다. 성공하고 128비트 파일 ID 증거가 확인된 R07-2 이름 변경에 대해서만, 원래 이름이 **정확히 `ERROR_FILE_NOT_FOUND`**인지와 현재 대상의 볼륨·128비트 ID·크기·수정 시각이 모두 저장된 값과 같은지 관측한다. 원래 이름 점유·불분명한 경로·다른 부모·재분석 경로·대상 누락·외부 내용 변경은 거부한다. `MatchingSnapshotOnly`는 순간 관측 결과이며 **복원 실행 권한이나 경합 방지 수단이 아니다**. `FileOperationController`, MainWindow, Ctrl+Z/Redo, 세션 v4 및 기존 파일 작업/전송·Undo 기록 변경은 **0건**.
+- **한정 네이티브 검증:** [Windows VM #41662348650](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41662348650)에서 소스 `cd3c83d604ac5da4704cfba240a60ef1f6152683`의 **R07-1·R07-2·R07-3 소스 계약 14/14 PASS**, `git diff --check` PASS, M21 네이티브 x64 Release 빌드 PASS, 실제 소유 파일 작업 **55/55 PASS**, 임시 Windows 작업공간 정리 PASS, 사용자 설정 불변 확인(`PRESENT 0`). 추가 7개 검사는 정상 순간 관측/미검증 영수증/다른 부모·동일 이름/원래 이름 재점유/ID 변경/대상 누락/외부 내용 변경을 실험했다. 모두 **테스트 소유 폴더만 변경**하고 실제 Undo 파일 복원은 시도하지 않았다.
+- **제품 빌드 별도 경계:** 공통 `src/base` 변경의 앱 연결 확인을 위해 [중앙 Windows Release #41662666694](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41662666694), `project_id=desktop-a`, `scope=release-build-only`, 대상 SHA `cd3c83d604ac5da4704cfba240a60ef1f6152683`를 제출했다. **이 문단 작성 당시 완료 결과 미확인**이며, 성공 전 제품 전체 Release PASS로 표시하지 않는다. GUI·픽셀·복원·Redo는 **NOT TESTED**, 실제 Undo/Redo는 **NOT IMPLEMENTED**.
+- **남은 안전 요구:** R07-3은 핸들을 유지하지 않고 원본 이름을 예약하지 않는다. 관측 직후에도 타 프로세스가 파일을 바꿀 수 있으므로 경합(TOCTOU)을 막는 열린 핸들 기반 검증과 원자적 무덮어쓰기 복원, 티켓·컨텍스트 수명 및 외부 변경 확인이 구현·검증될 때까지 사용자에게 실행 취소를 제공하지 않는다. [상세 정책](R07_UNDO_RECEIPT_POLICY_20261103.md).
+
+---
+
 # 2026-11-03 — R07-2 단일 파일 이름 변경: 읽기 전용 128비트 ID 증거, Windows native 한정 PASS
 
 - **작업 범위:** 실제 파일 복원·`Ctrl+Z`·Redo·세션 이력 저장을 추가하지 않고 `src/base/file_command_core.h/.cpp`의 `RenameSelected` 결과에 읽기 전용 `RenameEvidence`만 더했다. 비재분석 일반 파일/비재분석 부모·고정 로컬 드라이브·단일 하드링크일 때만, 실행 전과 성공 후 `GetFileInformationByHandleEx(FileIdInfo)`의 볼륨 일련번호·128비트 파일 ID·파일 크기·수정 시각을 비교해 동일한 경우 `verified=true`로 기록한다. 지원되지 않는 파일·동일성 미확인·ID 조회 실패는 **증거 미발급**, 기존 `MoveFileW` 이름 변경의 결과/덮어쓰기 금지·`FileOperationController`의 완료 ticket/Context·UI/세션 v4는 불변. 이 결과는 **Undo 파일 쓰기 권한이 아니다**.
