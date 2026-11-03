@@ -100,7 +100,7 @@ class BuildEnvironmentContract(unittest.TestCase):
         ]
         self.assertEqual(
             lines,
-            ["pywinauto==0.6.9", "Pillow==12.3.0", "psutil==7.2.2"],
+            ["pywinauto==0.6.9", "Pillow==13.0.0", "psutil==7.2.2"],
         )
     def test_policy_batch_gate_propagates_validator_failure(self):
         body = (ROOT / "test.bat").read_text(encoding="utf-8")
