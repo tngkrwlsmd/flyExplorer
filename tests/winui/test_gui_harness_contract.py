@@ -178,7 +178,7 @@ class GuiHarnessStaticContract(unittest.TestCase):
             encoding="utf-8"
         )
         self.assertIn('"column-resize",', runner)
-        self.assertIn('if area == "column-resize":', runner)
+        self.assertIn('if area in ("column-resize","column-resize-right"):', runner)
         self.assertIn('str(TESTS / "test_owned_column_resize_gui.py")', runner)
         self.assertIn('OWNED_DETAIL_COLUMN_RESULT ', gui)
         for marker in (
@@ -192,7 +192,9 @@ class GuiHarnessStaticContract(unittest.TestCase):
         self.assertIn('if not all(marker in lines for marker in required)', runner)
         self.assertIn('L08_REQUIRED_GUI_MARKERS_MISSING_OR_ERROR', runner)
         self.assertIn('print("OWNED_DETAIL_COLUMN_RESULT FAIL"', gui)
-        self.assertIn('eventually(horizontal_resize_cursor,', gui)
+        self.assertIn('current=horizontal_resize_cursor(details=True)', gui)
+        self.assertIn('assert len(cursor_observations)==3', gui)
+        self.assertIn('L08 native horizontal resize cursor missing on owned handle', gui)
         self.assertIn('SIX_ORIGINAL_MFC_SETTINGS_IDENTICAL', gui)
 
     def test_integrated_shell_gui_captures_owned_shutdown_stack_on_timeout(self):
