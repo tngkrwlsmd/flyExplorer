@@ -157,6 +157,39 @@ int wmain(int argc,wchar_t**argv){
                  currentId.FileId.Identifier,16)==0;
  chk(stableId&&renamedFile.renameEvidence.fileSize==14,
      "r07_128bit_file_id_volume_and_size_match");
+ using Observation=filecommand::RenameRestoreObservation;
+ chk(filecommand::inspectRenameRestore(srcRename.native(),renamedFile)==
+     Observation::MatchingSnapshotOnly&&
+     !std::filesystem::exists(srcRename)&&std::filesystem::exists(dstRename),
+     "r07_preflight_snapshot_matches_without_restoring");
+ auto unverifiedReceipt=renamedFile;
+ unverifiedReceipt.renameEvidence.verified=false;
+ chk(filecommand::inspectRenameRestore(
+       srcRename.native(),unverifiedReceipt)==Observation::UnverifiedReceipt,
+     "r07_preflight_rejects_unverified_receipt");
+ chk(filecommand::inspectRenameRestore(
+       (root/L"foreign-original.txt").native(),renamedFile)==
+       Observation::UnsafePaths&&
+     filecommand::inspectRenameRestore(dstRename.native(),renamedFile)==
+       Observation::UnsafePaths,
+     "r07_preflight_rejects_other_parent_and_same_name");
+ { std::ofstream occupied(srcRename,std::ios::binary);occupied<<"do not modify"; }
+ chk(filecommand::inspectRenameRestore(srcRename.native(),renamedFile)==
+     Observation::OriginalOccupiedOrUnknown&&
+     std::filesystem::file_size(srcRename)==13&&
+     std::filesystem::file_size(dstRename)==14,
+     "r07_preflight_rejects_reoccupied_source_preserves_files");
+ std::filesystem::remove(srcRename);
+ auto changedIdentity=renamedFile;
+ changedIdentity.renameEvidence.fileId[0]^=1;
+ chk(filecommand::inspectRenameRestore(srcRename.native(),changedIdentity)==
+     Observation::TargetChangedOrUnavailable,
+     "r07_preflight_rejects_changed_file_id");
+ auto lostTarget=renamedFile;
+ lostTarget.target=(dir/L"missing-target.txt").native();
+ chk(filecommand::inspectRenameRestore(srcRename.native(),lostTarget)==
+     Observation::TargetChangedOrUnavailable,
+     "r07_preflight_rejects_missing_target");
  req.source=dstRename.native();req.name=L"새 문서.txt";
  const auto failedRename=filecommand::execute(req);
  { std::ifstream retained(dstRename,std::ios::binary);std::string payload;
@@ -166,6 +199,14 @@ int wmain(int argc,wchar_t**argv){
        std::filesystem::exists(dir/L"새 문서.txt")&&
        payload=="owned R07 only",
        "r07_conflict_does_not_issue_receipt_or_overwrite"); }
+ // An external content change must invalidate the old point-in-time ID
+ // snapshot even though the same renamed pathname and file ID still exist.
+ { std::ofstream changed(dstRename,std::ios::binary|std::ios::app);changed<<"!"; }
+ chk(filecommand::inspectRenameRestore(srcRename.native(),renamedFile)==
+     Observation::TargetChangedOrUnavailable&&
+     std::filesystem::file_size(dstRename)==15&&
+     !std::filesystem::exists(srcRename),
+     "r07_preflight_rejects_external_content_change");
  req.kind=filecommand::Kind::CreateTextFile;
  req.source.clear();
  req.name=L"메모.md";
