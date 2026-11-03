@@ -41,6 +41,8 @@ class R06OwnedShareMenuContract(unittest.TestCase):
             "assert fallback.is_enabled()",
             "second.iface_selection_item.AddToSelection()",
             "assert row(source.name).is_selected() and row(folder.name).is_selected()",
+            'keyboard.send_keys("+{F10}")',
+            "element(\"LeftFiles\").set_focus()",
             'keyboard.send_keys("{ESC}")',
             "assert_menu(True)", "assert_menu(False)",
         ):
@@ -65,7 +67,9 @@ class R06OwnedShareMenuContract(unittest.TestCase):
         required = (
             "R06_GUI_SINGLE_FILE_DIRECT_AND_FALLBACK_ENABLED=PASS",
             "R06_GUI_FOLDER_DIRECT_DISABLED_FALLBACK_ENABLED=PASS",
+            "R06_GUI_FOLDER_SHIFT_F10_MENU=PASS",
             "R06_GUI_MULTI_SELECTION_DIRECT_DISABLED_FALLBACK_ENABLED=PASS",
+            "R06_GUI_MULTI_SHIFT_F10_MENU=PASS",
             "R06_GUI_OWNED_ORIGINALS_PRESERVED_NO_SHARE_ACTION_INVOKED=PASS",
             "R06_GUI_FOCUSED_OWNED_MENU_PASS=True",
             "OWNED_WINUI_SHELL_EXIT 0",
@@ -83,7 +87,7 @@ class R06OwnedShareMenuContract(unittest.TestCase):
             body.replace("PRESENT 6", "PRESENT unknown")))
         self.assertFalse(r06_share_menu_evidence_ok(
             body + "Traceback (most recent call last)\n"))
-        for marker in required[:4]:
+        for marker in required[:6]:
             self.assertIn(marker, script)
 
 
