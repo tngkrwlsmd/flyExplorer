@@ -3,6 +3,7 @@
 #include <windows.h>
 #include <shobjidl.h>
 #include <filesystem>
+#include <cstring>
 #include <cstdio>
 #include <fstream>
 #include <string>
@@ -91,8 +92,10 @@ int wmain(int argc,wchar_t**argv){
    filecommand::execute(req).error==ERROR_INVALID_NAME,"deny_trailing_period");
  req.kind=filecommand::Kind::RenameSelected;
  req.source=(dir/L"새 폴더").native();req.name=L"이름 변경";
- chk(filecommand::execute(req).error==ERROR_SUCCESS&&
-    std::filesystem::is_directory(dir/L"이름 변경"),"rename_owned_korean_directory");
+ const auto renamedFolder=filecommand::execute(req);
+ chk(renamedFolder.error==ERROR_SUCCESS&&
+     !renamedFolder.renameEvidence.verified&&
+     std::filesystem::is_directory(dir/L"이름 변경"),"rename_owned_korean_directory");
  std::filesystem::create_directory(dir/L"대상 존재");
  req.source=(dir/L"이름 변경").native();req.name=L"대상 존재";
  chk(filecommand::execute(req).error!=ERROR_SUCCESS&&
@@ -122,6 +125,49 @@ int wmain(int argc,wchar_t**argv){
  chk(filecommand::execute(req).error==ERROR_SUCCESS&&
      std::filesystem::file_size(dir/L"메모.TXT")==0,
      "text_document_case_insensitive_extension");
+ // R07-2: the receipt is strictly read-only and restricted to a single
+ // local, non-reparse, ordinary file; verify it against independent Win32 IDs.
+ const auto srcRename=dir/L"메모.TXT";
+ const auto dstRename=dir/L"메모-확인.TXT";
+ { std::ofstream payload(srcRename,std::ios::binary);payload<<"owned R07 only"; }
+ auto readId=[](std::filesystem::path const& path,FILE_ID_INFO& id)->bool{
+  HANDLE const h=::CreateFileW(path.c_str(),FILE_READ_ATTRIBUTES,
+   FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE,nullptr,
+   OPEN_EXISTING,FILE_FLAG_OPEN_REPARSE_POINT,nullptr);
+  if(h==INVALID_HANDLE_VALUE)return false;
+  bool const ok=::GetFileInformationByHandleEx(
+   h,FileIdInfo,&id,sizeof(id))!=FALSE;
+  ::CloseHandle(h);
+  return ok;
+ };
+ FILE_ID_INFO priorId{},currentId{};
+ bool const priorFound=readId(srcRename,priorId);
+ req.kind=filecommand::Kind::RenameSelected;
+ req.source=srcRename.native();req.name=dstRename.filename().native();
+ const auto renamedFile=filecommand::execute(req);
+ bool const currentFound=readId(dstRename,currentId);
+ chk(renamedFile.error==ERROR_SUCCESS&&renamedFile.renameEvidence.verified&&
+     !std::filesystem::exists(srcRename)&&std::filesystem::exists(dstRename),
+     "r07_regular_file_receipt_verified");
+ bool const stableId=priorFound&&currentFound&&
+     priorId.VolumeSerialNumber==currentId.VolumeSerialNumber&&
+     renamedFile.renameEvidence.volumeSerial==currentId.VolumeSerialNumber&&
+     std::memcmp(priorId.FileId.Identifier,currentId.FileId.Identifier,16)==0&&
+     std::memcmp(renamedFile.renameEvidence.fileId.data(),
+                 currentId.FileId.Identifier,16)==0;
+ chk(stableId&&renamedFile.renameEvidence.fileSize==14,
+     "r07_128bit_file_id_volume_and_size_match");
+ req.source=dstRename.native();req.name=L"새 문서.txt";
+ const auto failedRename=filecommand::execute(req);
+ { std::ifstream retained(dstRename,std::ios::binary);std::string payload;
+   std::getline(retained,payload);
+   chk(failedRename.error!=ERROR_SUCCESS&&
+       !failedRename.renameEvidence.verified&&
+       std::filesystem::exists(dir/L"새 문서.txt")&&
+       payload=="owned R07 only",
+       "r07_conflict_does_not_issue_receipt_or_overwrite"); }
+ req.kind=filecommand::Kind::CreateTextFile;
+ req.source.clear();
  req.name=L"메모.md";
  chk(filecommand::execute(req).error==ERROR_INVALID_NAME&&
      !std::filesystem::exists(dir/L"메모.md"),
