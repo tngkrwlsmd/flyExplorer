@@ -49,7 +49,7 @@ class RenameIdentityContract(unittest.TestCase):
         ):
             with self.subTest(token=token):
                 self.assertIn(token, probe)
-        for forbidden in ("GENERIC_WRITE", "DELETE,",
+        for forbidden in ("GENERIC_WRITE", "FILE_WRITE_DATA",
                           "CREATE_ALWAYS", "TRUNCATE_EXISTING"):
             with self.subTest(forbidden=forbidden):
                 self.assertNotIn(forbidden, probe)
