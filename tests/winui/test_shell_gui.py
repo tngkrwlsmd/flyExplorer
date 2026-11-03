@@ -374,6 +374,13 @@ try:
      for e in element("LeftFiles").descendants()),
      "async native Shell directory items never displayed",12)
  print("REAL_FILE_LIST_IN_LEFT_PANE",True,flush=True)
+ if os.environ.get("FLY_R06_SHARE_MENU_ONLY")=="YES":
+  from test_r06_share_menu_gui import run as r06_share_menu
+  r06_share_menu(win=win,element=element,focus=ensure_owned_focus,
+                 eventually=eventually,left=left,right=right,
+                 owned=owned,owned_pid=p.pid)
+  print("R06_GUI_FOCUSED_OWNED_MENU_PASS=True",flush=True)
+  raise SystemExit(0)
  if os.environ.get("FLY_SA_SEARCH_USABILITY_ONLY")=="YES":
   from test_sa_search_usability_gui import run as sa_search_probe
   sa_search_probe(win=win,element=element,focus=ensure_owned_focus,
