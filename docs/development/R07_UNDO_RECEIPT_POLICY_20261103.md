@@ -24,7 +24,7 @@
 
 [Windows VM #41657292869](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41657292869)에서 정확한 제품·시험 소스 `c3486e1b247a22ecec388168eb23166650b59b9c`의 소스 5/5 PASS, M21 네이티브 x64 Release 빌드 PASS, **48/48 실제 테스트용 파일 명령 PASS**, 원본 사용자 설정 불변(`PRESENT 0`), 소유 임시 공간 정리를 확인했다. 처음 [#41656448397](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41656448397)은 Remote Shell의 잘못된 PowerShell 인자로 실행 전 중단, [#41656844843](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41656844843)은 실제 네이티브 48/48 PASS에도 오래된 Python 예상 테스트 수가 37이라 검증기에서 중단됐다. 원인을 수정한 후속 실행만 성공으로 수용한다.
 
-[제품 전체 x64 Release 컴파일 #41657641687](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41657641687)는 **문서 작성 중 진행 중**이며 완료 상태가 확인되기 전에는 Release 성공을 주장하지 않는다. GUI·픽셀·파일 복원/Undo는 NOT TESTED다.
+[제품 x64 Release 컴파일 #41657641687](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41657641687)은 **정확한 소스 SHA `c3486e1b247a22ecec388168eb23166650b59b9c`에서 최종 SUCCESS**, `runner-health` 및 `release-build` **EXIT=0 PASS**다. 빌드 전용 범위이므로 **전체 소스/GUI 최종 수용은 아니며**, GUI·픽셀·파일 복원/Undo는 NOT TESTED다.
 
 ## 후속 필수 단계 (순서 변경 금지)
 
