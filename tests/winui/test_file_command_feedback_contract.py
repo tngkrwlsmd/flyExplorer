@@ -27,7 +27,11 @@ class FileCommandFeedbackContract(unittest.TestCase):
         self.assertIn("BeginFileNameCommand(",command)
         self.assertIn("Kind::CreateTextFile",command)
         self.assertNotIn("ExecuteFileCommand",command)
-        self.assertNotIn("CreateFileW",toolbar)
+        # Scope the no-filesystem-write check to the New menu dispatchers.
+        # R12 has a separately gated diagnostic trace elsewhere in this file.
+        new_menu_handlers=toolbar.split("void FileToolbar::OnNewFolderMenu(",1)[1].split(
+            "void FileToolbar::OnClearFileSelection(",1)[0]
+        self.assertNotIn("CreateFileW",new_menu_handlers)
 
     def test_stale_completion_is_not_silent_or_claimed_success(self):
         body=(APP/"m21_commands.cpp").read_text(encoding="utf-8-sig")
