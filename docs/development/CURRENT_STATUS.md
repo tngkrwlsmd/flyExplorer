@@ -1,3 +1,12 @@
+# 2026-11-03 — R46 빈 배경 우클릭 이벤트 단계 계측: Windows 소스 3/3 PASS, Release·GUI 미실행
+
+- **변경 범위:** 수용되지 않은 [R44 진단 브랜치](https://github.com/tngkrwlsmd/flyExplorer/tree/diag/r44-background-details-context-20261103) `3d8082a0fcaaa62b388ba4bd34aa853cd2c9e642`에만 `app/winui/m22_transfers.cpp`의 환경 변수 `R44_UI_TRACE=1` 조건부 이벤트 추적과 소유 GUI 테스트 기록·소스 계약을 추가했다. 기존 메뉴 명령·탭/라우트·파일 작업 확인창 차단은 변경하지 않았다. 이벤트는 `OnFileRightTapped` 입력, 빈 배경 분기, `ShowAppBackgroundContextMenu` 진입/조기 반환, 메뉴 생성/`ShowAt` 호출, `Opening`/`Closed`를 고정 코드·정수로만 기록하며 파일명·경로·화면/사용자 내용을 기록하지 않는다. 진단 옵션 미설정 시 기록을 생성하지 않는다.
+- **확인된 검증:** [Windows 소스 계약 #41554376099](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41554376099)에서 정확한 후보 소스의 신규 계약 **3/3 PASS**, 빌드용 작업공간을 정확한 소스 SHA로 checkout한 뒤 변경 파일 범위와 Git 작업공간 청결을 확인했다. 이 결과는 **C++ 컴파일 또는 실제 이벤트 관측을 증명하지 않는다.**
+- **차단 경계:** R39 수용 EXE를 보존한 증분 Release 빌드 스크립트는 중앙 제어 저장소에 준비했으나 Windows VM 실행 요청 자체가 안전 검사에 의해 **차단**되어 빌드 및 R46 GUI 이벤트 추적은 실행하지 못했다. 다른 실행 수단으로 우회하지 않았다. [기존 수용 R12](https://github.com/tngkrwlsmd/flyExplorer/commit/d268c42190fab65125281ddb627a5adafba113b0)의 빌드/마우스/키보드 증거는 그대로 유지되며 R44/R46은 **미수용**이다.
+- **현재 안전 상태:** 실제 `main` 제품 C++/XAML은 변경하지 않았고, 사용자 파일·설정에 접근하거나 변경하지 않았다. 중앙 `windows-vm` 요청은 `idle`, 활성 Windows 검사 작업은 없는 것을 확인했다. 다음 유효한 실행 경로가 확보되면 정확한 R46 소스 대상으로 컴파일 후 전용 로그에서 이벤트 단계만 읽고, 그때 원인에 맞는 최소 제품/검사기 수정 여부를 결정한다.
+
+---
+
 # 2026-11-03 — R44 빈 배경 우클릭의 ‘보기 > 세부 정보 창’ 별도 검증 미수용
 
 - **기준:** R12 완전 물리 마우스·키보드 수용은 `main d268c42190fab65125281ddb627a5adafba113b0`, x64 Release 제품 코드 `a5a721f21ceab812ea9894d15d08184e35062296`, EXE SHA256 `5a1098cdd77cee4f7a33cedb55e1573e73f97219d921fc1d828c6d407db8c202`에서 기존 R39/R42/R43 PASS로 유지한다. 이 세션에서 제품 C++/XAML은 수정하거나 재컴파일하지 않았다.
