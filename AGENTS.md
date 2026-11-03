@@ -477,6 +477,24 @@ Any expansion to `scratch`, orphan copy stages, `ci-evidence` or
 system/installer folders needs a separate verified ownership and retention
 decision; do not automatically extend the allowed root.
 
+## Mandatory cross-repository branch cleanup at development completion (2026-11-03)
+
+The user explicitly requires **all non-main development, integration, test and
+instrumentation branches to be removed when the accepted development unit
+finishes**, in **both** `tngkrwlsmd/flyExplorer` and
+`tngkrwlsmd/personal-control-plane` (the central Windows control repository).
+This is a required completion gate, not an optional later housekeeping item.
+Before deleting any branch, confirm its work is accepted on the appropriate
+`main` or its unique evidence/code is safely preserved without needing that
+branch. Confirm no queued/active request, test or pull request references it.
+Do not delete an unfinished candidate or the only copy of unaccepted work;
+finish, integrate or explicitly report the blocker before claiming completion.
+After acceptance, enumerate **all** branches in both repositories, delete all
+superseded non-main refs via exact-name, non-force operations, verify each
+repository contains only `main`, and report any unresolved ref by name. Keep
+historical failures in committed docs and Actions evidence rather than leaving
+`work/*`, `fix/*`, `diag/*`, or `integrate/*` branches as archives.
+
 ## Git logical units
 
 flyExplorer intentionally overrides the generic branch-first integration
