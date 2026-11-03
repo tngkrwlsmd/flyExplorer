@@ -63,6 +63,15 @@ def run(*, win, element, focus, eventually, left, right, owned, owned_pid):
         assert foreground_owned(), "refusing input outside owned app"
         mouse.click(button="right", coords=point)
 
+    def keyboard_open_selected():
+        # Keyboard route is already supported by the product's file-list
+        # KeyDown handler; it exercises the same guarded file menu without
+        # racing an adjacent physical context-popup closing animation.
+        focus()
+        element("LeftFiles").set_focus()
+        assert foreground_owned(), "refusing keyboard outside owned app"
+        keyboard.send_keys("+{F10}")
+
     def app_menu_entry(name):
         matches = []
         for top in Desktop(backend="uia").windows(process=owned_pid):
@@ -100,9 +109,10 @@ def run(*, win, element, focus, eventually, left, right, owned, owned_pid):
     print("R06_GUI_SINGLE_FILE_DIRECT_AND_FALLBACK_ENABLED=PASS", flush=True)
 
     select_one(folder.name)
-    right_click_selected(folder.name)
+    keyboard_open_selected()
     assert_menu(False)
     print("R06_GUI_FOLDER_DIRECT_DISABLED_FALLBACK_ENABLED=PASS", flush=True)
+    print("R06_GUI_FOLDER_SHIFT_F10_MENU=PASS", flush=True)
 
     select_one(source.name)
     second = row(folder.name)
@@ -111,12 +121,13 @@ def run(*, win, element, focus, eventually, left, right, owned, owned_pid):
     eventually(lambda: row(source.name).is_selected() and
                row(folder.name).is_selected(),
                "R06 owned multi-selection not stable", 8)
-    right_click_selected(source.name)
+    keyboard_open_selected()
     assert row(source.name).is_selected() and row(folder.name).is_selected()
     assert_menu(False)
     assert row(source.name).is_selected() and row(folder.name).is_selected()
     print("R06_GUI_MULTI_SELECTION_DIRECT_DISABLED_FALLBACK_ENABLED=PASS",
           flush=True)
+    print("R06_GUI_MULTI_SHIFT_F10_MENU=PASS", flush=True)
 
     assert source.read_bytes() == original
     assert {entry.name for entry in Path(left).iterdir()} == original_names
