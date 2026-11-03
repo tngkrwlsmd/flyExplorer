@@ -71,7 +71,7 @@ class WindowsExplorerDelegationContracts(unittest.TestCase):
         self.assertIn("ui.RevealSelectedInWindowsExplorer(side)",file_menu)
         self.assertIn('make(L"Windows 탐색기에서 현재 폴더 열기 (새 ZIP 등)"',background)
         self.assertIn("ui.OpenCurrentFolderInWindowsExplorer(side)",background)
-        self.assertIn("압축 등 가능한 작업은 탐색기 메뉴에서 직접 선택하세요.",ui)
+        self.assertIn("공유·압축 등의 작업은 탐색기 메뉴에서 직접 선택하세요.",ui)
         self.assertIn("새 ZIP 등 가능한 작업은 탐색기 메뉴에서 직접 선택하세요.",ui)
         for forbidden in ("CreateSelectedZip(", "ExtractSelectedZip("):
             self.assertNotIn(forbidden,file_menu)
