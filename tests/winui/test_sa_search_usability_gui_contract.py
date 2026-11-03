@@ -1,9 +1,12 @@
 """SA01/SA02 focused GUI wiring and test-owned safety contract."""
 import ast
 from pathlib import Path
+import sys
 import unittest
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / "tools" / "winui"))
+from run_checks import sa_search_usability_evidence_ok
 
 
 def src(path):
@@ -78,7 +81,43 @@ class SearchUsabilityGuiContract(unittest.TestCase):
             self.assertIn(marker, src("tests/winui/test_sa_search_usability_gui.py") +
                           src("tests/winui/test_shell_gui.py") if marker.startswith("SA")
                           else runner)
-        self.assertIn("if not all(marker in lines for marker in markers)", runner)
+        self.assertIn("def sa_search_usability_evidence_ok(body: str) -> bool:", runner)
+        self.assertIn("if not sa_search_usability_evidence_ok(body):", runner)
+        self.assertIn("LEGACY_USER_PROFILE_SENTINEL_UNCHANGED True PRESENT ", runner)
+        self.assertIn("ORIGINAL_SIX_USER_CONFIG_SHA256_IDENTICAL True", runner)
+
+
+    def test_replays_real_20261103_gui_proof_without_loosening_evidence(self):
+        # Exact bounded markers observed in archived owned GUI #41628765731.
+        # No screenshots, private paths or user-profile bytes are embedded.
+        observed = (
+            "REAL_WINUI_SHELL_CONTROLS 12 DUAL_PANES_AND_TABS=True",
+            "ACTUAL_CPP_NATIVE_CORE_NULL_CONTRACT_LINKED True",
+            "REAL_FILE_LIST_IN_LEFT_PANE True",
+            "SA01_GUI_DIRECT_GUIDANCE=PASS",
+            "SA02_GUI_EXPANDED_PRESERVED_RESULT=PASS",
+            "SA02_GUI_COLLAPSED_PRESERVED_SELECTION=PASS",
+            "SA01_GUI_INDEXED_LIMITS_BEFORE_SUBMIT=PASS",
+            "SA01_GUI_UNSUPPORTED_OPTIONS_LIVE=PASS",
+            "SA01_GUI_MODE_RESTORE_WITHOUT_SEARCH=PASS",
+            "SA_SEARCH_USABILITY_FOCUSED_GUI_PASS=True",
+            "OWNED_WINUI_SHELL_EXIT 0",
+            "LEGACY_USER_PROFILE_SENTINEL_UNCHANGED True PRESENT 6",
+            "ORIGINAL_SIX_USER_CONFIG_SHA256_IDENTICAL True",
+            "OWNED_SYNTHETIC_FIXTURE_REMOVED True",
+        )
+        body = "\n".join(observed) + "\n"
+        self.assertTrue(sa_search_usability_evidence_ok(body))
+        for line in observed[3:]:
+            with self.subTest(missing=line):
+                self.assertFalse(sa_search_usability_evidence_ok(
+                    body.replace(line + "\n", "", 1)))
+        self.assertFalse(sa_search_usability_evidence_ok(
+            body.replace("PRESENT 6", "PRESENT not-a-count")))
+        self.assertFalse(sa_search_usability_evidence_ok(
+            body.replace("PRESENT 6", "")))
+        self.assertFalse(sa_search_usability_evidence_ok(
+            body + "Traceback (most recent call last)\n"))
 
 
 if __name__ == "__main__":
