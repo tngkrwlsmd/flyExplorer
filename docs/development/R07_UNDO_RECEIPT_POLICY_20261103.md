@@ -35,6 +35,12 @@
 - `FileOperationController`·MainWindow 명령·Ctrl+Z·파일 시스템 변경·세션 v4 및 Windows Explorer 전역 Undo 기록은 수정하지 않았다. 검사 사이와 실제 복원 사이에 다른 프로세스가 원래 이름을 만들거나 대상 파일을 교체할 수 있다. **열린 핸들 기반 경합 방지와 원자적 복원 방식은 아직 미구현**이며, 그전에는 Undo·Redo를 노출하지 않는다.
 - `m21_native_fixture.cpp`의 테스트 소유 폴더에서 현재 상태 일치, 유효하지 않은 영수증, 다른 부모/동일 이름, 원래 이름의 재점유, 바뀐 파일 ID, 대상 누락, 파일 내용 변경을 각각 확인한다. 이 과정의 파일 생성·변경·제거는 임시 테스트 소유 공간에만 한정한다. **실제 파일 복원은 전혀 실행하지 않는다.** 별도 Windows 빌드·실행 결과는 정확한 대상 SHA와 함께 후속으로 기록한다.
 
+### R07-3 한정 Windows 실행 증거
+
+[Windows VM #41662348650](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41662348650)는 정확한 변경 소스 `cd3c83d604ac5da4704cfba240a60ef1f6152683`에 대해 R07-1/2/3 소스 계약 **14/14 PASS**, M21 네이티브 x64 Release 빌드 PASS, 일회용 폴더에서의 실제 파일 명령 **55/55 PASS**, 변경 공백 검사 및 소유 임시 체크아웃 정리 PASS로 종료됐다. 사용자 기존 설정도 변경되지 않았다. 추가 7건은 원래 경로 비어 있음·이름 재점유·잘못된 영수증·부모 경로 불일치·파일 ID 불일치·대상 소실·외부 내용 변경의 순간 관측만 검증한다.
+
+공통 `src/base` 연결을 확인하는 [제품 Release 빌드 #41662666694](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41662666694)는 **본 단락 기록 당시 완료 결과 미확인**이다. Release와 독립적으로 실제 Undo/Redo·GUI·시각 검증은 NOT TESTED/NOT IMPLEMENTED이다.
+
 ## 후속 필수 단계 (순서 변경 금지)
 
 1. **개별 변경 증거 (R07-2 일부 구현):** 원본·결과의 정확한 단일 항목 식별자(볼륨 식별자와 파일 ID), 재분석 지점 제외, 최종 파일 상태, 실제 생성/이동/복구 성공 정보 등을 worker의 신뢰된 범위에서 수집한다. 이름이나 경로만으로 동일한 파일이라고 간주하지 않는다. 일괄 Copy/Move의 aggregate 완료 수치만으로는 영수증을 발행할 수 없다.
