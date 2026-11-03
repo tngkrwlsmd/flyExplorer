@@ -1,3 +1,12 @@
+# 2026-11-03 — R47 빈 배경 GUI 전면 창 사전 조건 보완: 소스 4/4 PASS, 실제 GUI 미실행
+
+- **범위:** [격리된 R47 테스트 브랜치](https://github.com/tngkrwlsmd/flyExplorer/tree/diag/r47-background-foreground-precondition-20261103) `200a172ac527b0c436e856782576917737d49591`에서 기존 R46 진단 C++/XAML·Release EXE를 유지하고 `tests/winui/test_r44_background_details_gui.py`와 `test_r44_background_events_contract.py`만 변경했다. 공통 앱 시작 헬퍼가 이미 호출하는 포커스 요청 뒤, 첫 배경 메뉴를 열기 전에 **소유 앱이 이미 전면이면 중복 `set_focus()`를 생략**한다. 아직 전면이 아니면 기존 전면 요청을 1회 유지하고, 실패 시 소유 창 유효성/표시/최소화/활성 및 소유 앱 생존 여부만 기록한 뒤 **물리 입력 전에 중단**한다. 다른 프로세스 PID·창 제목·핸들·사용자 파일은 기록하지 않고 외부 창 활성화 우회는 없다.
+- **Windows 환경 읽기 전용 확인:** [중앙 #41563115463](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41563115463)는 Explorer가 있는 사용자 세션 **1개(세션 3)**, 실행 중인 flyExplorer/helper **0개**, 제품 예약 작업 **0개**를 확인했다. 사용자 세션의 연결/잠금 정보는 조회 명령이 제공되지 않아 **미확인**이다. 앱 전면 실패 원인을 세션 잠금으로 단정하지 않는다.
+- **변경 범위 검증:** [중앙 Windows VM #41563593031](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41563593031)에서 R46 원본 `3d8082a0...` 대비 변경 파일 2개만 확인, `git diff --check`, 분리 소스 계약 **4/4 PASS** 및 검사용 디렉터리 정리 **PASS**. 기존 R46 C++ 진단 소스를 재컴파일하거나 소유 GUI를 재실행하지 않았다. `windows-vm` 원격 명령 슬롯 `idle`, 활동 중인 해당 작업 0건 확인.
+- **남은 경계:** R47의 수정 경로는 **정적/소스 수준 통과**만 확인됐다. 실제 소유 사용자 창의 전면 포커스 확보, 첫 우클릭 이벤트 단계, `MenuFlyout.ShowAt`/Opening/Closed, 두 번의 토글과 GUI/픽셀 수용은 **NOT TESTED**. 이전 R46 GUI FAIL과 R12/R42/R43 성공 증거를 소급 변경하지 않는다. 새 실행은 사용자 GUI 검증 요청과 적절한 대화형 입력 환경 확인 후, 정확한 R46 실행 파일을 재사용하고 처음 실패한 전면 조건부터 확인할 때만 수행한다. R47 진단 후보를 제품 `main`에 병합하지 않는다.
+
+---
+
 # 2026-11-03 — R46 빈 배경 우클릭 이벤트 단계 계측: 소스·Release PASS, GUI 전면 창 확보 전 중단
 
 - **변경 범위:** 수용되지 않은 [R44 진단 브랜치](https://github.com/tngkrwlsmd/flyExplorer/tree/diag/r44-background-details-context-20261103) `3d8082a0fcaaa62b388ba4bd34aa853cd2c9e642`에만 `app/winui/m22_transfers.cpp`의 환경 변수 `R44_UI_TRACE=1` 조건부 이벤트 추적과 소유 GUI 테스트 기록·소스 계약을 추가했다. 기존 메뉴 명령·탭/라우트·파일 작업 확인창 차단은 변경하지 않았다. 이벤트는 `OnFileRightTapped` 입력, 빈 배경 분기, `ShowAppBackgroundContextMenu` 진입/조기 반환, 메뉴 생성/`ShowAt` 호출, `Opening`/`Closed`를 고정 코드·정수로만 기록하며 파일명·경로·화면/사용자 내용을 기록하지 않는다. 진단 옵션 미설정 시 기록을 생성하지 않는다.
