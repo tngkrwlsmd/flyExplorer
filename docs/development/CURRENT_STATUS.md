@@ -2,7 +2,7 @@
 
 - **변경:** 주소 입력창에 3~1024자 경로를 편집하는 동안 이미 연 탭과 캐시에서 일치하는 추천 후보가 없으면 `추천할 주소가 없습니다. 경로를 입력하고 Enter를 누르면 직접 이동을 시도합니다.`를 표시한다. 한 개 이상 후보가 있으면 안내문을 감추고 기존 버튼 후보만 유지한다. 안내문은 `AddressSuggestionRows` 밖의 비클릭 `TextBlock`이며 키보드 방향키·Enter 선택 대상에 포함되지 않는다.
 - **경계 보존:** 캐시 조사 예산 2,048건, 최대 8개 후보, 미완료 탭 제외, 입력 중 디스크/네트워크/Shell 조회 금지, Enter 경로 직접 제출, ESC 취소, 기존 실패·보류 이동 시 마지막 정상 주소 유지 정책은 변경하지 않는다. 사용자 파일·세션·OS 설정은 수정하지 않는다.
-- **검증 구분:** 전용 `tests/winui/test_sa03_address_empty_guidance_contract.py`를 추가했다. 소스 계약의 실행 결과는 해당 작업 실행 증거로만 기록하고 **Windows Release 컴파일·실제 GUI/키보드·BEFORE/AFTER 화면 수용은 미실행**이므로 최종 UI 수용 완료로 주장하지 않는다. 기존 F06/PX12 수용 사례를 무의미하게 반복하지 않는다.
+- **검증 구분:** 전용 `tests/winui/test_sa03_address_empty_guidance_contract.py` 4건은 [중앙 Windows VM 소스 검사 #41586541585](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41586541585)에서 **4/4 PASS**. 정확한 소스 SHA `4aee103b`, `git diff --check` PASS, 테스트 소유 작업공간 삭제 PASS를 확인했다. **Windows Release 컴파일·실제 GUI/키보드·BEFORE/AFTER 화면 수용은 미실행**이므로 최종 UI 수용 완료로 주장하지 않는다. 기존 F06/PX12 수용 사례를 무의미하게 반복하지 않는다.
 
 ---
 
