@@ -1,3 +1,13 @@
+# 2026-11-03 — 폴더 탭 X·붙여넣기 안내: Release, 실제 마우스, 다크 화면 한정 수용
+
+- **수용 제품:** [`flyExplorer/main` `fd149bdc`](https://github.com/tngkrwlsmd/flyExplorer/commit/fd149bdc3dd346227d024872c429c213e11994eb). 제품 C++/XAML·공통 소스는 이전 본체 `b0c834f68873eadd30484c6078cc08eda14ce561`를 x64 Release로 빌드했다. 뒤의 `a533c3a3`, `fd149bdc`는 GUI Python 테스트만 수정했으며 제품 소스 차이는 0건이다. GUI용 Pillow 고정값 `13.0.0`은 앞선 보안 커밋 `8ed3631`에서 별도 수용되었다.
+- **소스·빌드:** [중앙 Windows VM #41573058875](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41573058875)에서 해당 원본의 Python 소스 계약 14건 실행(13 PASS·1 SKIP), x64 Release `EXIT=0`, 제품 EXE SHA-256 `839c6a4eed401a89ef73ce1a6aee9992ea2f6f7577d4bde2965b5b5d20938d10`을 기록했다. [최종 차이 검사 #41579279533](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41579279533)는 이전 `main` 대비 정확한 19개 제품/테스트 파일, `git diff --check` PASS.
+- **실제 마우스 GUI:** [Windows VM #41578744229](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41578744229)에서 좌측 패널의 앞쪽·뒤쪽 비활성 폴더 탭 X 클릭, 활성 탭의 폴더·선택 유지, 마지막 탭 보호, 기존 툴바 닫기, 반대 패널 보존 모두 PASS. 붙여넣기 버튼의 `Ctrl+V` 접근성 안내, 원본 테스트 파일 바이트, 기존 설정, 정상 종료, 테스트 전용 프로필·fixture·작업 정리 PASS. 원본/사용자 클립보드는 사용·변경하지 않았다.
+- **화면 확인:** [Windows VM #41579052393](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41579052393)의 소유 앱 1160×640 **다크 테마** 실제 창 2장(폴더 탭 3개/1개)에서 붙여넣기 텍스트, 탭 X, 독립 패널, 긴 이름 말줄임 및 스크롤 배치를 직접 확인했다. 확인한 화면에서 눈에 띄는 겹침·불필요한 잘림은 보이지 않았다. **라이트 테마, 다른 창 크기·배율, Windows 기본 탐색기와 직접 픽셀 대조 및 전체 GUI 회귀는 NOT TESTED**.
+- **실패 구별:** 첫 GUI 전의 62자리 기대 SHA 오기 및 PowerShell 요청 문자열 파손은 검사기 사전 결함이었다. 첫 실제 GUI에서 나타난 루트 폴더의 '첫 행은 파일' 가정 오류는 테스트만 수정했고, 그 이후 정확한 제품 코드의 한정 물리 마우스 GUI PASS를 확인했다. 이 실패들은 제품 기능 미수용 증거로 확대하지 않는다. 새로운 테스트는 `tests/winui/test_pane_tab_close_gui.py`; 다른 제품/기본 설정·파일 내용은 바꾸지 않았다.
+
+---
+
 # 2026-11-03 — R48 제품 main 원본 실행 파일: 빈 배경 우클릭 세부 정보 창 실제 마우스 2회 PASS
 
 - **정확한 제품 정체성:** [Windows VM R48 #41570052882](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41570052882)에서 현재 `flyExplorer/main`과 R39 원본 빌드 소스 `a5a721f21ceab812ea9894d15d08184e35062296`를 `app/winui`, `src/base`의 직접 Git tree 차이로 확인해 **제품 소스 차이 0건**을 통과했다. R39에서 수용한 계측 없는 제품 Release EXE SHA256 `5a1098cdd77cee4f7a33cedb55e1573e73f97219d921fc1d828c6d407db8c202`와 보조 실행 파일 `b8ceab71e686fc6732496d5f81e028feee91a0e621348d980fc41a2710c1de72`를 확인했다. [읽기 전용 제품·런타임 상태 #41569556678](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41569556678): 기존 런타임 파일 305개, 123,856,139바이트, reparse point 0개, 실행 중 제품 프로세스/예약 작업 0개. 새 빌드는 수행하지 않았다.

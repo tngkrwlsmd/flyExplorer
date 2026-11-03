@@ -8,6 +8,10 @@
 
 ## 현재 결론
 
+**2026-11-03 폴더 탭 X 및 붙여넣기 표시 개선 수용:** [제품 `fd149bdc`](https://github.com/tngkrwlsmd/flyExplorer/commit/fd149bdc3dd346227d024872c429c213e11994eb)로 `main`에 직접 반영했다. 원본 C++/XAML `b0c834f6`의 [x64 Release·소스 검사 #41573058875](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41573058875), [실제 비활성 폴더 탭 X·최소 1개 보호·활성/반대 패널 유지 #41578744229](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41578744229), [다크 화면 2장 검토 #41579052393](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41579052393), [19개 파일 범위·공백 검사 #41579279533](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41579279533)를 확인했다. 수용 범위를 넘어서는 라이트·다른 배율·전체 기능 회귀는 미실행으로 유지하고, 이미 통과한 탭 X를 새 미완료 작업으로 재등록하지 않는다.
+
+**2026-11-03 의존성 보안:** `tests/winui/requirements-gui.txt`의 Pillow `12.3.0`을 `13.0.0`으로 올린 [`main` 변경 `8ed3631`](https://github.com/tngkrwlsmd/flyExplorer/commit/8ed3631a67b6f17bd1c5b00b153912ae2d9c8b43) 후 [중앙 조회 #41576527179](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41576527179)에서 이전 Dependabot 경고 **41건 전부 Pillow, 41건 `fixed`, 열린 경고 0건**을 확인했다. Windows 실제 설치 버전 및 다른 공급망 도구의 취약점 0건을 확인한 것은 아니다.
+
 기본 탐색·두 단계 탭·선택·보기·검색·안전한 새 문서 생성·속성 열기는 기록된
 범위에서 구현·검증됐다. Windows 탐색기 전체와 같은 기능·환경을 지원한다는
 뜻은 아니다. 이미 통과한 사례는 완료로 보존하고 다시 할 일로 세지 않는다.
