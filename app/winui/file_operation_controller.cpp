@@ -408,7 +408,15 @@ FileOperationController::StartStatus FileOperationController::startFileCommand(
             value.ticket=ticket;
             value.context=std::move(context);
             value.kind=request.kind;
+            // Capture a value before the worker mutates the item; never ask
+            // another tab's current selection for a post-hoc undo source.
+            std::wstring originalRenameSource{};
+            if(request.kind==fxfile::filecommand::Kind::RenameSelected)
+                originalRenameSource=request.source;
             value.result=fxfile::filecommand::execute(request);
+            if(value.kind==fxfile::filecommand::Kind::RenameSelected&&
+               value.result.error==ERROR_SUCCESS)
+                value.originalRenameSource=std::move(originalRenameSource);
             bool posted=false;
             try{
                 posted=post([

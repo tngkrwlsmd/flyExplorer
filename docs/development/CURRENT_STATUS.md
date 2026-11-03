@@ -1,3 +1,11 @@
+# 2026-11-03 — R07-1 이름 변경 영수증 최소 데이터: 코드 반영, Undo 실행 미구현
+
+- **변경:** 기존 `FileOperationController`에서 단일 `RenameSelected` 요청의 원본 경로를 worker 실행 전에 값으로 고정하고, 네이티브 결과가 성공할 때만 `FileCommandCompletion.originalRenameSource`에 남긴다. 기존 결과의 target/ticket/context는 그대로 유지한다. [안전 설계·미구현 경계](R07_UNDO_RECEIPT_POLICY_20261103.md).
+- **범위 제한:** 실제 Ctrl+Z/Ctrl+Y, 파일 복원·삭제·이동, Explorer Undo 스택, 사용자 설정/세션은 변경하지 않았다. 원래 경로만으로는 파일 신원·외부 변경·충돌 안전을 증명할 수 없으므로 아직 Undo 가능이라고 표시하지 않는다.
+- **검증 상태:** 전용 `test_r07_rename_receipt_contract.py` 소스 계약 4건을 작성했다. Windows Release·GUI·복구 시나리오/픽셀 검사는 **NOT TESTED**. 본 작업은 R07-1 성공 원본 경로 전달만 구현한 단계다.
+
+---
+
 # 2026-11-03 — R06b 단일 파일 Windows 공유 창: 소스 구현, 실행 검증 대기
 
 - Windows 데스크톱 전용 `IDataTransferManagerInterop`으로 **파일시스템 파일 하나**에 대한 Windows 공유 시트 호출을 준비한다. WinRT 파일 항목을 만들어 `DataRequested`에서 `SetStorageItems`로 전달하고, 사용자가 공유 대상과 전송 여부를 직접 선택한다. 폴더·복수 선택·가상 항목의 기존 R06a 탐색기 위임은 유지한다.

@@ -63,6 +63,9 @@ public:
         Context context{};
         fxfile::filecommand::Kind kind=fxfile::filecommand::Kind::CreateFolder;
         fxfile::filecommand::Result result{};
+        // R07 phase 1: only a successful single-item Rename retains its
+        // original path for a future verified receipt. NOT undo authority.
+        std::wstring originalRenameSource{};
     };
 
     using UiTask=std::function<void()>;
