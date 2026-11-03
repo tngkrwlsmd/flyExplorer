@@ -76,6 +76,47 @@ bool sameRenameEvidence(
 }
 } // namespace
 
+RenameRestoreObservation inspectRenameRestore(
+ std::wstring const& originalPath,Result const& renamed) noexcept {
+ // Do not turn a previous rename success into authority to mutate anything.
+ // This function never issues a write, delete, move or retained handle.
+ if(renamed.error!=ERROR_SUCCESS||!renamed.renameEvidence.verified)
+  return RenameRestoreObservation::UnverifiedReceipt;
+ try{
+  std::filesystem::path const original(originalPath);
+  std::filesystem::path const target(renamed.target);
+  if(original.empty()||target.empty()||
+     !original.is_absolute()||!target.is_absolute()||
+     original.lexically_normal()!=original||
+     target.lexically_normal()!=target||
+     original.parent_path()!=target.parent_path()||
+     !validLeaf(original.filename().native())||
+     !validLeaf(target.filename().native())||
+     ::CompareStringOrdinal(original.c_str(),-1,target.c_str(),-1,TRUE)
+         ==CSTR_EQUAL||
+     !safeRenameEvidenceParent(original)||
+     !safeRenameEvidenceParent(target))
+   return RenameRestoreObservation::UnsafePaths;
+
+  // Only an explicit FILE_NOT_FOUND on an otherwise verified parent counts
+  // as an absent original name. Access denied, path not found, reparse and
+  // other uncertain results must fail closed.
+  DWORD const prior=::GetFileAttributesW(original.c_str());
+  if(prior!=INVALID_FILE_ATTRIBUTES||
+     ::GetLastError()!=ERROR_FILE_NOT_FOUND)
+   return RenameRestoreObservation::OriginalOccupiedOrUnknown;
+
+  RenameEvidence current{};
+  if(!readRenameEvidence(target,current)||
+     !sameRenameEvidence(renamed.renameEvidence,current))
+   return RenameRestoreObservation::TargetChangedOrUnavailable;
+
+  // Point-in-time observation only. This does NOT close the TOCTOU gap,
+  // reserve the original name, hold the target handle or enable Undo/Redo.
+  return RenameRestoreObservation::MatchingSnapshotOnly;
+ }catch(...){return RenameRestoreObservation::UnsafePaths;}
+}
+
 bool validLeaf(std::wstring const& name) noexcept{
  if(name.empty()||name.size()>240||name==L"."||name==L".."||
     name.back()==L'.'||name.back()==L' ')return false;
