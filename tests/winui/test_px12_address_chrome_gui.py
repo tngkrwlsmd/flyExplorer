@@ -60,7 +60,41 @@ def run(*, win, element, focus, eventually, left, right, owned):
         assert owned_foreground()
         return item
 
+    # SA03: a test-owned, uncached location offers passive guidance only.
+    def hint_visible():
+        hint = element("AddressSuggestionEmptyText")
+        return hint.exists(timeout=.2) and hint.is_visible()
+
+    def offered_candidates():
+        return [button for top in Desktop(backend="uia").windows(process=pid)
+                for button in top.descendants(control_type="Button")
+                if button.element_info.process_id == pid and
+                (button.element_info.name or "").startswith("주소 후보: ")]
+
     assert committed(left) and has_row("Nested") and has_row("readme.txt")
+    missing = left / "SA03NoCachedFolder"
+    assert missing.is_relative_to(owned) and not missing.exists()
+    focus()
+    assert owned_foreground()
+    send_keys("^l")
+    eventually(lambda: element("AddressBox").has_keyboard_focus(),
+               "SA03 owned editor did not receive Ctrl+L", 9)
+    element("AddressBox").set_edit_text(str(missing))
+    eventually(lambda: hint_visible() and not offered_candidates(),
+               "SA03 no-candidate guidance missing or selectable", 10)
+    assert element("AddressBox").has_keyboard_focus()
+    print("SA03_GUI_EMPTY_GUIDANCE_VISIBLE_NONINTERACTIVE=PASS", flush=True)
+    assert owned_foreground()
+    send_keys("{ESC}")
+    eventually(lambda: not hint_visible(),
+               "SA03 Escape did not dismiss guidance", 8)
+    assert owned_foreground()
+    send_keys("{ESC}")
+    eventually(lambda: committed(left) and
+               has_row("Nested") and has_row("readme.txt"),
+               "SA03 Escape did not restore committed pane", 9)
+    assert not missing.exists() and not offered_candidates()
+    print("SA03_GUI_ESCAPE_RESTORES_COMMITTED_PANE=PASS", flush=True)
     # PX12 keyboard-only focus path: two owned, in-memory sibling candidates.
     # No candidate gets invoked and the committed folder must not change.
     assert owned_foreground()
@@ -72,6 +106,8 @@ def run(*, win, element, focus, eventually, left, right, owned):
     vanishing = left / "PX12Vanishing"
     eventually(lambda: candidate(nearby) and candidate(vanishing),
                "PX12 two owned keyboard candidates missing", 9)
+    assert not hint_visible(), "SA03 empty guidance remained over real candidates"
+    print("SA03_GUI_HINT_HIDDEN_FOR_REAL_CANDIDATES=PASS", flush=True)
     # UIA SetValue does not guarantee real keyboard focus; explicitly ensure
     # that the owned TextBox, not an unrelated foreground element, receives Down.
     address = element("AddressBox")
