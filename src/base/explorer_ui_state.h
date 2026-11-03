@@ -16,7 +16,7 @@ struct Pane final {
  std::vector<std::wstring> filesystemPaths;
  size_t active=0;
 };
-enum class Command { ActivatePane,SelectTab,AddTab,CloseTab,ToggleSplit };
+enum class Command { ActivatePane,SelectTab,AddTab,CloseTab,CloseTabAt,ToggleSplit };
 struct Change final {
  bool accepted=false,changed=false;
  std::uint64_t createdRoute=0,releasedRoute=0;

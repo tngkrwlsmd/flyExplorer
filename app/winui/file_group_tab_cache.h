@@ -35,6 +35,32 @@ public:
             break;
         }
     }
+    // Keep the surviving route's grouping and collapsed headers when tab
+    // indices shift. Forget the removed route from both active and saved state.
+    void onTabClosed(std::size_t removed,std::uint64_t closedRoute,int side) {
+        if(side<0||side>1||!closedRoute)return;
+        saved_.erase(std::remove_if(saved_.begin(),saved_.end(),
+            [closedRoute,side](Saved const& state){
+                return state.route==closedRoute&&state.side==side;
+            }),saved_.end());
+        for(auto& saved:saved_){
+            if(saved.side==side&&saved.tab>removed){
+                --saved.tab;
+                saved.collapse.shiftTabAfterClose(removed,side);
+            }
+        }
+        if(side_!=side)return;
+        if(route_==closedRoute){
+            route_=0;
+            tab_=0;
+            enabled_=false;
+            pending_=false;
+            collapse_.resetFor(0,0,side);
+        }else if(route_!=0&&tab_>removed){
+            --tab_;
+            collapse_.shiftTabAfterClose(removed,side);
+        }
+    }
     // A pending tab resumes only when the exact current model is complete.
     bool onCompleteModel(bool metadataCurrent, bool enumerationComplete) {
         if (pending_ && metadataCurrent && enumerationComplete && route_!=0) {

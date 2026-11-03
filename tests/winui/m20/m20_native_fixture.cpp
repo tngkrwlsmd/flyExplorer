@@ -71,6 +71,33 @@ int main(){
        state.panes[0].routeIds[0]==left,
        "cannot_close_last_tab");
 
+ // A background close X must preserve the selected folder and active pane.
+ Model targeted;
+ const auto targetRoot=targeted.panes[0].routeIds[0];
+ const auto middle=targeted.dispatch(Command::AddTab,0);
+ const auto last=targeted.dispatch(Command::AddTab,0);
+ check(middle.accepted&&last.accepted&&
+       targeted.dispatch(Command::SelectTab,0,1).accepted&&
+       targeted.dispatch(Command::ActivatePane,1).accepted,
+       "targeted_close_fixture_created");
+ check(!targeted.dispatch(Command::CloseTabAt,0,99).accepted&&
+       targeted.panes[0].tabs.size()==3&&targeted.panes[0].active==1&&
+       targeted.activePane==1,"targeted_close_out_of_range");
+ check(targeted.markPending(0,0,501,false),"targeted_close_pending_owned");
+ const auto first=targeted.dispatch(Command::CloseTabAt,0,0);
+ check(first.accepted&&first.releasedRoute==targetRoot&&
+       targeted.panes[0].routeIds[0]==middle.createdRoute&&
+       targeted.panes[0].active==0&&targeted.activePane==1&&
+       !targeted.completeRequest(0,0,targetRoot,501)&&targeted.invariant(),
+       "targeted_close_preserves_active_folder_and_pane");
+ const auto tail=targeted.dispatch(Command::CloseTabAt,0,1);
+ check(tail.accepted&&tail.releasedRoute==last.createdRoute&&
+       targeted.panes[0].active==0&&targeted.activePane==1&&
+       targeted.panes[0].routeIds[0]==middle.createdRoute&&
+       targeted.invariant(),"targeted_close_inactive_right_tab");
+ check(!targeted.dispatch(Command::CloseTabAt,0,0).accepted&&
+       targeted.panes[0].tabs.size()==1,"targeted_close_protects_final_tab");
+
  using Restore=fxfile::previewrestore::WorkspaceRestoreCoordinator;
  Restore restore;
  restore.begin(0,{{1,L"one"},{2,L"two"}},500);

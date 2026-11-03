@@ -83,5 +83,60 @@ int main()
     assert(controller.activeIndex()==0);
     assert(controller.active().identity==10);
 
+    // The live sort survives removal of an inactive PaneTab before it.
+    using fxfile::explorerui::Command;
+    WindowWorkspaceController tabs;
+    const auto middle=tabs.dispatch(Command::AddTab,0);
+    const auto tail=tabs.dispatch(Command::AddTab,0);
+    assert(middle.accepted&&tail.accepted);
+    assert(tabs.dispatch(Command::SelectTab,0,1).accepted);
+    tabs.active().fileLists[0].sortMode=6;
+    const auto activeRoute=tabs.active().model.panes[0].routeIds[1];
+    auto& list=tabs.active().fileLists[0];
+    list.visibleRoute=activeRoute;
+    list.visibleTab=1;
+    list.metadataRoute=activeRoute;
+    list.metadataTab=1;
+    list.route=activeRoute;
+    list.tab=1;
+    list.fileCommandReveal.route=activeRoute;
+    list.fileCommandReveal.tab=1;
+    list.fileCommandReveal.target=L"owned-reveal";
+    list.groupTabCache.switchTo(activeRoute,1,0);
+    list.groupTabCache.choose(fxfile::filegroup::Mode::Name);
+    assert(list.groupTabCache.toggle(L"A-F"));
+    list.groupCollapse=list.groupTabCache.collapse();
+    const auto activePane=tabs.active().model.activePane;
+    const auto removedBackground=tabs.dispatch(Command::CloseTabAt,0,0);
+    assert(removedBackground.accepted);
+    assert(tabs.active().model.panes[0].active==0);
+    assert(tabs.active().model.panes[0].routeIds[0]==activeRoute);
+    assert(tabs.active().model.activePane==activePane);
+    assert(tabs.active().fileLists[0].sortMode==6);
+    assert(tabs.active().tabSortModes[0].size()==2);
+    assert(tabs.active().tabSortModes[0][0]==6);
+    assert(list.visibleRoute==activeRoute&&list.visibleTab==0);
+    assert(list.groupTabCache.route()==activeRoute&&list.groupTabCache.tab()==0);
+    assert(list.groupTabCache.enabled()&&
+           list.groupTabCache.collapse().isCollapsed(L"A-F"));
+    assert(list.groupCollapse.matches(activeRoute,0,0)&&
+           list.groupCollapse.isCollapsed(L"A-F"));
+    assert(list.fileCommandReveal.route==activeRoute&&
+           list.fileCommandReveal.tab==0&&
+           list.fileCommandReveal.target==L"owned-reveal");
+    // The old request indices remain stale so new requests are scheduled
+    // for index zero; an old worker never becomes a new valid completion.
+    assert(list.metadataTab==1&&list.tab==1);
+    assert(!list.acceptsMetadata(list.metadataEpoch,activeRoute,0));
+    assert(!list.accepts(list.epoch,activeRoute,0));
+    assert(tabs.active().model.invariant());
+    const auto removedTail=tabs.dispatch(Command::CloseTabAt,0,1);
+    assert(removedTail.accepted&&removedTail.releasedRoute==tail.createdRoute);
+    assert(tabs.active().model.panes[0].active==0);
+    assert(tabs.active().fileLists[0].sortMode==6);
+    assert(tabs.active().tabSortModes[0].size()==1);
+    assert(!tabs.dispatch(Command::CloseTabAt,0,0).accepted);
+    assert(!tabs.dispatch(Command::CloseTabAt,0,42).accepted);
+
     std::cout<<"WORKSPACE_REPLACE_INVARIANT_NATIVE_PASS\n";
 }

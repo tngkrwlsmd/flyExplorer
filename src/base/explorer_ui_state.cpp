@@ -80,15 +80,20 @@ Change Model::dispatch(Command command,int side,size_t tab){
   result.createdRoute=pane.routeIds.back();
   break;
  case Command::CloseTab:
-  if(pane.tabs.size()<=1)break;
-  result.releasedRoute=pane.routeIds[pane.active];
-  pane.tabs.erase(pane.tabs.begin()+pane.active);
-  pane.routeIds.erase(pane.routeIds.begin()+pane.active);
-  pane.pending.erase(pane.pending.begin()+pane.active);
-  pane.filesystemPaths.erase(pane.filesystemPaths.begin()+pane.active);
-  if(pane.active>=pane.tabs.size())pane.active=pane.tabs.size()-1;
+ case Command::CloseTabAt: {
+  const auto closing=command==Command::CloseTab?pane.active:tab;
+  if(pane.tabs.size()<=1||closing>=pane.tabs.size())break;
+  result.releasedRoute=pane.routeIds[closing];
+  pane.tabs.erase(pane.tabs.begin()+closing);
+  pane.routeIds.erase(pane.routeIds.begin()+closing);
+  pane.pending.erase(pane.pending.begin()+closing);
+  pane.filesystemPaths.erase(pane.filesystemPaths.begin()+closing);
+  if(closing<pane.active)--pane.active;
+  else if(pane.active>=pane.tabs.size())pane.active=pane.tabs.size()-1;
+  // Closing an inactive tab does not select it or activate its pane.
   result.accepted=result.changed=true;
   break;
+ }
  default:break;
  }
  return result;

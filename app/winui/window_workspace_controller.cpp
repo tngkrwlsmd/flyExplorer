@@ -88,21 +88,27 @@ fxfile::explorerui::Change WindowWorkspaceController::dispatch(
     auto& state=active();
     if(command!=fxfile::explorerui::Command::SelectTab&&
        command!=fxfile::explorerui::Command::AddTab&&
-       command!=fxfile::explorerui::Command::CloseTab)
+       command!=fxfile::explorerui::Command::CloseTab&&
+       command!=fxfile::explorerui::Command::CloseTabAt)
         return state.model.dispatch(command,side,tab);
     if(side<0||side>1)return {};
     auto& pane=state.model.panes[side];
     auto& modes=state.tabSortModes[side];
     if(modes.size()!=pane.tabs.size()||pane.active>=modes.size())return {};
     const auto previous=pane.active;
+    const bool targetedClose=
+        command==fxfile::explorerui::Command::CloseTabAt;
+    const auto closing=targetedClose?tab:previous;
+    if(targetedClose&&closing>=modes.size())return {};
     const int current=state.fileLists[side].sortMode;
     const auto result=state.model.dispatch(command,side,tab);
     if(!result.accepted)return result;
     modes[previous]=current;
     if(command==fxfile::explorerui::Command::AddTab){
         modes.push_back(0);
-    }else if(command==fxfile::explorerui::Command::CloseTab){
-        modes.erase(modes.begin()+static_cast<std::ptrdiff_t>(previous));
+    }else if(command==fxfile::explorerui::Command::CloseTab||targetedClose){
+        modes.erase(modes.begin()+static_cast<std::ptrdiff_t>(closing));
+        state.fileLists[side].onTabClosed(closing,result.releasedRoute,side);
     }
     state.fileLists[side].sortMode=modes[pane.active];
     return result;

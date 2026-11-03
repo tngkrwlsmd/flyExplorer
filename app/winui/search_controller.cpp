@@ -64,6 +64,20 @@ bool SearchController::sameContext(
            fxfile::preview::sameSearchQuery(a.query,b.query);
 }
 
+bool SearchController::rebaseAfterEarlierTabClosed(
+    Context& stored,Context const& live) noexcept
+{
+    // A route belongs to one WindowTab and one pane. Do not weaken the
+    // existing sameContext contract for navigation or stale work.
+    if(!stored.route||stored.route!=live.route||
+       stored.tab<=live.tab)return false;
+    const auto previousTab=stored.tab;
+    stored.tab=live.tab;
+    if(sameContext(stored,live))return true;
+    stored.tab=previousTab;
+    return false;
+}
+
 SearchController::StartStatus SearchController::start(
     Request request,Context context,Post post,
     CompletionCallback completion)

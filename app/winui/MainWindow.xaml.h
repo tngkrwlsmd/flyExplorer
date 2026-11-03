@@ -62,6 +62,7 @@ namespace winrt::FlyExplorer::implementation
         void OnHomeOverviewSizeChanged(IInspectable const&, Microsoft::UI::Xaml::SizeChangedEventArgs const&);
         void OnNewTabClicked(IInspectable const&, Microsoft::UI::Xaml::RoutedEventArgs const&);
         void OnCloseTabClicked(IInspectable const&, Microsoft::UI::Xaml::RoutedEventArgs const&);
+        void CloseFolderTab(int side,std::size_t index);
         void OnSplitClicked(IInspectable const&, Microsoft::UI::Xaml::RoutedEventArgs const&);
         void OnActivateLeft(IInspectable const&, Microsoft::UI::Xaml::RoutedEventArgs const&);
         void OnActivateRight(IInspectable const&, Microsoft::UI::Xaml::RoutedEventArgs const&);
@@ -84,6 +85,9 @@ namespace winrt::FlyExplorer::implementation
             Microsoft::UI::Xaml::Controls::SelectionChangedEventArgs const&);
         void OnRightTabSelectionChanged(IInspectable const&,
             Microsoft::UI::Xaml::Controls::SelectionChangedEventArgs const&);
+        void OnPaneTabCloseRequested(
+            Microsoft::UI::Xaml::Controls::TabView const&,
+            Microsoft::UI::Xaml::Controls::TabViewTabCloseRequestedEventArgs const&);
         void OnLeftFileDoubleTapped(IInspectable const&,
             Microsoft::UI::Xaml::Input::DoubleTappedRoutedEventArgs const&);
         void OnRightFileDoubleTapped(IInspectable const&,

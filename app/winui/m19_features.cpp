@@ -855,8 +855,13 @@ void MainWindow::OnCancelSearch(
 }
 void MainWindow::OnSearchCompleted(
     SearchController::Completion completion){
-    const auto accepted=mSearchController.accept(
-        completion,SearchContext());
+    const auto live=SearchContext();
+    // Closing an earlier background PaneTab only renumbers the same route.
+    // The worker's original index is immutable until this UI completion.
+    // Rebind it only when the full search context remains identical.
+    (void)SearchController::rebaseAfterEarlierTabClosed(
+        completion.context,live);
+    const auto accepted=mSearchController.accept(completion,live);
     using Disposition=SearchController::Disposition;
     if(accepted.disposition==Disposition::Ignored)return;
 

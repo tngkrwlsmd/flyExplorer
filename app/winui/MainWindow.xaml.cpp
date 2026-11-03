@@ -2016,11 +2016,14 @@ namespace winrt::FlyExplorer::implementation
         while(view.TabItems().Size()>count)view.TabItems().RemoveAtEnd();
         while(view.TabItems().Size()<count){
             TabViewItem item;
-            item.IsClosable(false); // explicit shared Close tab action
+            item.IsClosable(true); // native close affordance; final PaneTab is guarded
             view.TabItems().Append(item);
         }
         for(uint32_t i=0;i<count;++i){
             auto item=view.TabItems().GetAt(i).as<TabViewItem>();
+            // Explorer-like readable width without consuming the whole pane.
+            item.MinWidth(176);
+            item.MaxWidth(240);
             const auto& folder=pane.tabs[i].snapshot();
             const auto label=hstring(
                 folder.displayName.empty()?folder.parsingName:folder.displayName);
@@ -2103,10 +2106,16 @@ namespace winrt::FlyExplorer::implementation
                     const auto route=completed.route;
                     const auto ticket=completed.ticket;
                     const auto count=completed.metadata.size();
+                    if(ui->mClosing||side<0||side>1)return;
                     auto const& pane=ui->ActiveWindowTab().model.panes[side];
+                    if(tab>=pane.tabs.size()||tab>=pane.routeIds.size()||
+                       tab>=pane.pending.size()||pane.active!=tab||
+                       pane.routeIds[tab]!=route)return;
+                    auto const& current=ui->ActiveWindowTab().fileLists[side];
+                    if(!current.acceptsMetadata(ticket,route,tab)||
+                       pane.pending[tab])return;
                     auto const& snapshot=pane.tabs[tab].snapshot();
                     auto const& session=pane.tabs[tab];
-                    auto const& current=ui->ActiveWindowTab().fileLists[side];
                     const bool indexedComplete=
                         current.indexedMetadataSort&&
                         current.indexedNameProjection&&!current.indexToComplete&&
@@ -2118,10 +2127,7 @@ namespace winrt::FlyExplorer::implementation
                         !snapshot.baseOffset&&!snapshot.truncated&&
                         snapshot.residentEndOffset()==snapshot.nextOffset&&
                         snapshot.children.size()==count;
-                    if(!current.acceptsMetadata(ticket,route,tab)||
-                       pane.active!=tab||pane.pending[tab]||
-                       pane.routeIds[tab]!=route||
-                       (!indexedComplete&&!residentComplete))return;
+                    if(!indexedComplete&&!residentComplete)return;
                     auto& state=ui->ActiveWindowTab().fileLists[side];
                     if(completed.error!=ERROR_SUCCESS){
                         state.invalidateMetadata();
@@ -2245,11 +2251,13 @@ namespace winrt::FlyExplorer::implementation
                     const auto route=completed.route;
                     const auto ticket=completed.ticket;
                     auto const count=completed.details.size();
+                    if(ui->mClosing||side<0||side>1)return;
                     auto const& pane=ui->ActiveWindowTab().model.panes[side];
+                    if(tab>=pane.tabs.size()||tab>=pane.routeIds.size()||
+                       tab>=pane.pending.size()||pane.active!=tab||
+                       pane.routeIds[tab]!=route||pane.pending[tab])return;
                     if(!ui->ActiveWindowTab().fileLists[side].accepts(
                            ticket,route,tab)||
-                       pane.active!=tab||pane.pending[tab]||
-                       pane.routeIds[tab]!=route||
                        pane.tabs[tab].snapshot().children.size()!=count)return;
                     ui->ActiveWindowTab().fileLists[side].details=
                         std::move(completed.details);
@@ -4805,20 +4813,103 @@ namespace winrt::FlyExplorer::implementation
                   fxfile::shellnav::NavigationAction::Open);
         Refresh(L"새 탭의 폴더를 불러오는 중입니다.");
     }
-    void MainWindow::OnCloseTabClicked(IInspectable const&,RoutedEventArgs const&)
+    void MainWindow::CloseFolderTab(int side,std::size_t index)
     {
-        auto& pane=ActiveWindowTab().model.panes[static_cast<size_t>(ActiveWindowTab().model.activePane)];
-        if (pane.tabs.size()<=1) {
-            StatusText().Text(L"각 창에는 탭을 최소 한 개 유지해야 합니다.");
+        if(mClosing||side<0||side>1)return;
+        auto& model=ActiveWindowTab().model;
+        if(side==1&&!model.split)return;
+        auto& pane=model.panes[static_cast<std::size_t>(side)];
+        if(index>=pane.tabs.size())return;
+        if(pane.tabs.size()<=1){
+            StatusText().Text(L"각 패널에는 폴더 탭을 최소 한 개 유지해야 합니다.");
             return;
         }
+        // A background tab's close X must not select it or steal pane focus.
+        const bool visible=index==pane.active;
+        const bool activeSearch=visible&&model.activePane==side;
+        const auto previousActive=pane.active;
+        const auto countBefore=pane.tabs.size();
         const auto change=mWorkspace.dispatch(
-            fxfile::explorerui::Command::CloseTab,ActiveWindowTab().model.activePane);
+            fxfile::explorerui::Command::CloseTabAt,side,index);
         if(!change.accepted)return;
-        mSearchController.invalidate();
+        if(activeSearch)mSearchController.invalidate();
+        // Accepted search rows stay scoped to the same route, even when
+        // closing an earlier background tab shifts its numerical index.
+        // No other context changes are allowed by the rebase helper.
+        if(!visible&&index<previousActive&&model.activePane==side&&
+           mSearchResultValid){
+            const auto live=SearchContext();
+            (void)fxfile::previewsearch::SearchController::
+                rebaseAfterEarlierTabClosed(mSearchResultContext,live);
+        }
         mShellNavigation->forget(change.releasedRoute);
-        mWorkspaceRestore.reset(ActiveWindowTab().model.activePane);
-        Refresh(L"탭을 닫았습니다.");
+        mWorkspaceRestore.reset(side);
+        // Preserve the TabViewItem identity and focus of every surviving tab.
+        // RefreshTabs removes only trailing items, so remove the requested
+        // visual index here before it rebinds the surviving headers.
+        auto view=side==0?LeftTabs():RightTabs();
+        if(view.TabItems().Size()==countBefore){
+            const bool wasPopulating=mPopulatingTabs;
+            mPopulatingTabs=true;
+            try{view.TabItems().RemoveAt(static_cast<std::uint32_t>(index));}
+            catch(...){/* RefreshTabs will reconcile the remaining strip. */}
+            mPopulatingTabs=wasPopulating;
+        }
+        if(visible)Refresh(L"폴더 탭을 닫았습니다.");
+        else{
+            RefreshTabs(side);
+            if(index<previousActive){
+                // The route and folder are unchanged, but the active tab's
+                // numerical index moved. Rebind selected rows by parsing path;
+                // restart only the two tab-indexed metadata/detail workers.
+                FillFiles(side);
+                ScheduleFileMetadata(side);
+                ScheduleFileDetails(side);
+                if(model.activePane==side){
+                    UpdateCommandAvailability();
+                    UpdateFooterSummary();
+                }
+            }
+            StatusText().Text(L"폴더 탭을 닫았습니다.");
+        }
+    }
+    void MainWindow::OnCloseTabClicked(IInspectable const&,RoutedEventArgs const&)
+    {
+        const auto side=ActiveWindowTab().model.activePane;
+        CloseFolderTab(side,ActiveWindowTab().model.panes[side].active);
+    }
+    void MainWindow::OnPaneTabCloseRequested(
+        TabView const& sender,TabViewTabCloseRequestedEventArgs const& args)
+    {
+        if(mClosing||mPopulatingTabs)return;
+        const int side=sender==LeftTabs()?0:sender==RightTabs()?1:-1;
+        if(side<0||(side==1&&!ActiveWindowTab().model.split))return;
+        const auto requested=args.Tab();
+        if(!requested)return;
+        auto const& pane=ActiveWindowTab().model.panes[static_cast<std::size_t>(side)];
+        std::size_t index=0;
+        const auto items=sender.TabItems();
+        for(;index<items.Size();++index)
+            if(items.GetAt(static_cast<std::uint32_t>(index)).as<TabViewItem>()==requested)
+                break;
+        if(index>=items.Size()||index>=pane.routeIds.size())return;
+        const auto identity=ActiveWindowTab().identity;
+        const auto route=pane.routeIds[index];
+        // TabView owns the pointer event: defer any tab-strip/model rebuild.
+        // Another queued close can shift indices before this task executes.
+        // Resolve the original route again instead of dropping a valid click.
+        auto weak=get_weak();
+        DispatcherQueue().TryEnqueue([weak,side,identity,route]{
+            auto ui=weak.get();
+            if(!ui||ui->mClosing||ui->ActiveWindowTab().identity!=identity)return;
+            auto const& current=ui->ActiveWindowTab().model.panes[side];
+            std::size_t liveIndex=0;
+            while(liveIndex<current.routeIds.size()&&
+                  current.routeIds[liveIndex]!=route)
+                ++liveIndex;
+            if(liveIndex==current.routeIds.size())return;
+            ui->CloseFolderTab(side,liveIndex);
+        });
     }
     void MainWindow::OnSplitClicked(IInspectable const&,RoutedEventArgs const&)
     {

@@ -32,6 +32,10 @@ public:
         side_=side;
         collapsed_.clear();
     }
+    // The route is unchanged when a background tab before it is removed.
+    void shiftTabAfterClose(std::size_t removed,int side) noexcept {
+        if(route_!=0&&side_==side&&tab_>removed)--tab_;
+    }
     bool toggle(std::uint64_t route,std::size_t tab,
                 std::wstring const& category,int side=0) {
         if(route_!=route||tab_!=tab||side_!=side||category.empty())return false;

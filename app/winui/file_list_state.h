@@ -120,6 +120,24 @@ struct PaneState final {
     std::size_t metadataTab=0;
     std::uint64_t route=0,epoch=0;
     std::size_t tab=0;
+    // A background tab may be removed before the visible PaneTab. Rebase
+    // route-owned view state, not file paths or the selected model session.
+    // Keep metadataTab/detail tab unchanged so the previous worker cannot
+    // be mistaken for a new request: the UI schedules new tab-indexed work.
+    void onTabClosed(std::size_t removed,std::uint64_t closedRoute,int side) {
+        groupTabCache.onTabClosed(removed,closedRoute,side);
+        if(groupCollapse.matches(closedRoute,removed,side))
+            groupCollapse.resetFor(0,0,side);
+        else groupCollapse.shiftTabAfterClose(removed,side);
+        if(fileCommandReveal.route==closedRoute)
+            fileCommandReveal.clear();
+        else if(fileCommandReveal.route&&fileCommandReveal.tab>removed)
+            --fileCommandReveal.tab;
+        if(visibleRoute==closedRoute)visibleRoute=0;
+        else if(visibleRoute&&visibleTab>removed)--visibleTab;
+        if(metadataRoute==closedRoute)invalidateMetadata();
+        if(route==closedRoute)invalidateDetails();
+    }
     void invalidateMetadata() noexcept {
         ++metadataEpoch;
         metadata.clear();

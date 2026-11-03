@@ -119,6 +119,35 @@ int main(){
  a.query.mode=b.query.mode=fxfile::preview::SearchMode::WindowsIndex;
  b.query.includeSubfolders=true;
  assert(!fxfile::previewsearch::SearchController::sameContext(a,b));
+ // Exact route, folder, query and window retain identity after deleting
+ // a background tab before the selected one. Rebase only the tab index.
+ b.query.includeSubfolders=false;
+ a.windowIdentity=b.windowIdentity=71;
+ a.side=b.side=0;
+ a.route=b.route=907;
+ a.paneFolder=b.paneFolder=L"C:\\Owned";
+ a.scope=b.scope=L"C:\\Owned";
+ a.tab=2;b.tab=1;
+ assert(!fxfile::previewsearch::SearchController::sameContext(a,b));
+ assert(fxfile::previewsearch::SearchController::rebaseAfterEarlierTabClosed(a,b));
+ assert(a.tab==1&&fxfile::previewsearch::SearchController::sameContext(a,b));
+ // Neither a moved folder route nor a changed query/scope/window is accepted.
+ a.tab=3;b.route=908;
+ assert(!fxfile::previewsearch::SearchController::rebaseAfterEarlierTabClosed(a,b));
+ assert(a.tab==3);
+ b.route=907;b.query.term=L"changed";
+ assert(!fxfile::previewsearch::SearchController::rebaseAfterEarlierTabClosed(a,b));
+ assert(a.tab==3);
+ b.query.term=a.query.term;b.scope=L"other";
+ assert(!fxfile::previewsearch::SearchController::rebaseAfterEarlierTabClosed(a,b));
+ assert(a.tab==3);
+ b.scope=a.scope;b.windowIdentity=72;
+ assert(!fxfile::previewsearch::SearchController::rebaseAfterEarlierTabClosed(a,b));
+ assert(a.tab==3);
+ b.windowIdentity=71;
+ a.tab=0;b.tab=1;
+ assert(!fxfile::previewsearch::SearchController::rebaseAfterEarlierTabClosed(a,b));
+ assert(a.tab==0);
  std::puts("LEXICAL_SCOPE_AND_QUERY_CONTEXT_PASS");
 }
 '''

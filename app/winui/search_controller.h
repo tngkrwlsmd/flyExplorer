@@ -87,6 +87,10 @@ public:
     // The same pure identity check used for async acceptance must also
     // gate subsequent navigation from a visible accepted search result.
     static bool sameContext(Context const&,Context const&) noexcept;
+    // Only a deleted earlier PaneTab may move an unchanged route to a
+    // smaller tab index. All other search ownership must match exactly.
+    static bool rebaseAfterEarlierTabClosed(
+        Context& stored,Context const& live) noexcept;
 
 private:
     struct SharedState;
