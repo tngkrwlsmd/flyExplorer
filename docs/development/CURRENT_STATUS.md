@@ -1,3 +1,13 @@
+# 2026-11-03 — R48 제품 main 원본 실행 파일: 빈 배경 우클릭 세부 정보 창 실제 마우스 2회 PASS
+
+- **정확한 제품 정체성:** [Windows VM R48 #41570052882](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41570052882)에서 현재 `flyExplorer/main`과 R39 원본 빌드 소스 `a5a721f21ceab812ea9894d15d08184e35062296`를 `app/winui`, `src/base`의 직접 Git tree 차이로 확인해 **제품 소스 차이 0건**을 통과했다. R39에서 수용한 계측 없는 제품 Release EXE SHA256 `5a1098cdd77cee4f7a33cedb55e1573e73f97219d921fc1d828c6d407db8c202`와 보조 실행 파일 `b8ceab71e686fc6732496d5f81e028feee91a0e621348d980fc41a2710c1de72`를 확인했다. [읽기 전용 제품·런타임 상태 #41569556678](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41569556678): 기존 런타임 파일 305개, 123,856,139바이트, reparse point 0개, 실행 중 제품 프로세스/예약 작업 0개. 새 빌드는 수행하지 않았다.
+- **실제 제품 GUI 수용:** R48에서 305개 파일의 기존 런타임을 독립 테스트 디렉터리에 복사하고 **복사본 EXE만** 수용 R39 제품 EXE로 교체했다. 해시가 같은 복사본을 테스트 소유 다크 테마 창으로 실행한 뒤 **빈 배경 실제 우클릭 → 보기 → 세부 정보 창**을 물리 마우스로 두 번 선택해 **열기·닫기 PASS**. 첫 체크 해제/둘째 체크 설정, 두 번의 메뉴 자동 닫힘, 사용자 파일의 자동 본문 미리보기 없음, 전면 앱 소유 확인 `already_owned`도 모두 PASS. `R48_GUI_WORKER_EXIT=0`, `R48_BACKGROUND_CONTEXT_DETAILS_TWO_PHYSICAL_CLICKS_PASS`.
+- **진단 계측과의 차이:** 제품 EXE는 R46의 `R44_UI_TRACE` 코드가 없는 **정확한 비계측 실행 파일**이다. R48 검사에서 별도 이벤트 로그가 생성되지 않은 것이 예상대로 `R48_EXPECTED_NO_R44_TRACE=PASS`이며, R47 계측 EXE의 이벤트 20개 증거는 별도로 유지한다. R48에는 R47에서 검증한 **Python GUI 절차만** 원본 Git blob 해시와 대조해 격리 적용했다. 제품 C++/XAML·기존 바이너리와 빌드 작업공간 HEAD는 변경하지 않았다.
+- **원본/환경 보호 및 정리:** 전용 테스트 파일 원본 바이트, 기존 사용자 설정, 앱 정상 종료, 소유 임시 프로필 및 파일 fixture 정리, 대화형 GUI 예약 작업 제거, 별도 실행 폴더(overlay 포함) 제거와 이전 바이너리 해시 보호 **모두 PASS**. Windows VM 원격 명령 슬롯은 `idle`로 복원하고 해당 활성 작업 0개를 확인했다.
+- **수용 범위:** **현재 `main` 제품 코드와 동일한 R39 Release 실행 파일의 R44 빈 배경 세부 정보 창 물리 마우스 토글 기능은 한정 GUI 수용 완료**다. 이전 R44/R45/R46의 개별 FAIL과 R47 진단 PASS는 당시 증거로만 보존한다. 별도의 전체 파일 탐색기 기능 회귀 테스트와 픽셀 단위 시각 비교는 실행하지 않았으므로 **NOT TESTED**. 원인 진단용 R46 C++ 코드는 `main`에 병합하지 않는다.
+
+---
+
 # 2026-11-03 — R47 빈 배경 우클릭 세부 정보 창: 진단 Release 실제 마우스 2회 GUI PASS
 
 - **기준 소스와 실행 파일:** [R47 격리 테스트 소스](https://github.com/tngkrwlsmd/flyExplorer/tree/diag/r47-background-foreground-precondition-20261103) `200a172ac527b0c436e856782576917737d49591`(변경은 Python 검사기 2개), 이전 [R46 x64 Release #41555206143](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41555206143)로 빌드된 계측 실행 파일 소스 `3d8082a0fcaaa62b388ba4bd34aa853cd2c9e642`, EXE SHA256 `e4a0f06f72c31decd734b4d6b8310f97d5114fafdd0efdfe1dc030cfab608006`. 제품 `main`의 C++/XAML이나 기존 R39 수용 바이너리는 변경·재빌드하지 않았다.
