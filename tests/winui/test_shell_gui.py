@@ -374,6 +374,12 @@ try:
      for e in element("LeftFiles").descendants()),
      "async native Shell directory items never displayed",12)
  print("REAL_FILE_LIST_IN_LEFT_PANE",True,flush=True)
+ if os.environ.get("FLY_SA_SEARCH_USABILITY_ONLY")=="YES":
+  from test_sa_search_usability_gui import run as sa_search_probe
+  sa_search_probe(win=win,element=element,focus=ensure_owned_focus,
+                  eventually=eventually,left=left,right=right,owned=owned)
+  print("SA_SEARCH_USABILITY_FOCUSED_GUI_PASS=True",flush=True)
+  raise SystemExit(0)
  if os.environ.get("FLY_PX10_SELECTION_ONLY")=="YES":
   from test_px10_selection_projection_gui import run as px10_projection
   px10_projection(win=win,element=element,safe_click=safe_click,
