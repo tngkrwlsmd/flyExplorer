@@ -1,9 +1,9 @@
-# 2026-11-03 — R46 빈 배경 우클릭 이벤트 단계 계측: Windows 소스 3/3 PASS, Release·GUI 미실행
+# 2026-11-03 — R46 빈 배경 우클릭 이벤트 단계 계측: Windows 소스 3/3·x64 Release PASS, GUI 미실행
 
 - **변경 범위:** 수용되지 않은 [R44 진단 브랜치](https://github.com/tngkrwlsmd/flyExplorer/tree/diag/r44-background-details-context-20261103) `3d8082a0fcaaa62b388ba4bd34aa853cd2c9e642`에만 `app/winui/m22_transfers.cpp`의 환경 변수 `R44_UI_TRACE=1` 조건부 이벤트 추적과 소유 GUI 테스트 기록·소스 계약을 추가했다. 기존 메뉴 명령·탭/라우트·파일 작업 확인창 차단은 변경하지 않았다. 이벤트는 `OnFileRightTapped` 입력, 빈 배경 분기, `ShowAppBackgroundContextMenu` 진입/조기 반환, 메뉴 생성/`ShowAt` 호출, `Opening`/`Closed`를 고정 코드·정수로만 기록하며 파일명·경로·화면/사용자 내용을 기록하지 않는다. 진단 옵션 미설정 시 기록을 생성하지 않는다.
 - **확인된 검증:** [Windows 소스 계약 #41554376099](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41554376099)에서 정확한 후보 소스의 신규 계약 **3/3 PASS**, 빌드용 작업공간을 정확한 소스 SHA로 checkout한 뒤 변경 파일 범위와 Git 작업공간 청결을 확인했다. 이 결과는 **C++ 컴파일 또는 실제 이벤트 관측을 증명하지 않는다.**
-- **차단 경계:** R39 수용 EXE를 보존한 증분 Release 빌드 스크립트는 중앙 제어 저장소에 준비했으나 Windows VM 실행 요청 자체가 안전 검사에 의해 **차단**되어 빌드 및 R46 GUI 이벤트 추적은 실행하지 못했다. 다른 실행 수단으로 우회하지 않았다. [기존 수용 R12](https://github.com/tngkrwlsmd/flyExplorer/commit/d268c42190fab65125281ddb627a5adafba113b0)의 빌드/마우스/키보드 증거는 그대로 유지되며 R44/R46은 **미수용**이다.
-- **현재 안전 상태:** 실제 `main` 제품 C++/XAML은 변경하지 않았고, 사용자 파일·설정에 접근하거나 변경하지 않았다. 중앙 `windows-vm` 요청은 `idle`, 활성 Windows 검사 작업은 없는 것을 확인했다. 다음 유효한 실행 경로가 확보되면 정확한 R46 소스 대상으로 컴파일 후 전용 로그에서 이벤트 단계만 읽고, 그때 원인에 맞는 최소 제품/검사기 수정 여부를 결정한다.
+- **추가 확인된 Windows 빌드:** 최초 요청은 안전 검사에서 차단됐으나, 이후 정확한 후보 소스 `3d8082a0fcaaa62b388ba4bd34aa853cd2c9e642`와 기존 R39 수용 EXE를 확인한 [중앙 Windows VM R46 Release #41555206143](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41555206143)이 **빌드 종료 코드 0, PASS**로 완료됐다. 신규 EXE SHA256 `e4a0f06f72c31decd734b4d6b8310f97d5114fafdd0efdfe1dc030cfab608006`; 기존 R39 EXE의 백업 해시 보호도 통과했다. 이 증거는 **진단 후보의 C++ Release 컴파일**에 한정되며 실제 우클릭·메뉴 Opening/Closed·파일 보존 GUI는 미실행이다. [기존 수용 R12](https://github.com/tngkrwlsmd/flyExplorer/commit/d268c42190fab65125281ddb627a5adafba113b0)의 수용 상태와 R44/R46 미수용은 변함없다.
+- **현재 안전 상태와 다음 경계:** `main` 제품 C++/XAML은 변경하지 않았고 사용자 파일·설정은 이 진단의 대상이 아니다. 중앙 `windows-vm` 요청 슬롯은 2026-11-03 Codex 정리 후 `idle`로 복구됐고 활성 Windows 작업이 없는 상태를 확인했다. 이미 빌드된 **정확한 R46 진단 EXE**와 전용 테스트 프로필로 이벤트 단계만 제한 관측한 뒤 원인에 맞는 최소 수정 여부를 결정한다. **같은 소스의 Release 재빌드는 필요하지 않다.**
 
 ---
 
