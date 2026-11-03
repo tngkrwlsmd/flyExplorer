@@ -20,6 +20,8 @@
 
 ## 앞으로 진행할 작업
 
+**2026-11-03 소스·Release 검증 갱신:** 보기 8종/열 크기 조절/새 항목 메뉴에 관한 오래된 검사 5건을 제품 코드를 바꾸지 않고 교정했다. [현재 정확한 제품·검사 SHA `eabfebd4` 중앙 Windows CI #41617142673](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41617142673)에서 runner-health·policy·전체 source·**x64 Release 빌드 EXIT=0 PASS**가 확인됐다. 아래 SA01~SA03·R06a/R06b·R07-1 항목의 `Release 미검증` 문구는 **각 기능의 최초 코드 반영 당시 기록**이며, 현재의 컴파일 공백은 해소됐다. **그러나 해당 기능들의 실제 GUI/키보드/마우스·공유 창 실행/취소·화면 비교 및 R07 Undo 실행은 여전히 미검증 또는 미구현**이다. 이후 작업은 관련 실제 사용 경계를 한 단위씩 검증하고, 이미 수용된 소스/빌드/다른 UI 결과는 반복하지 않는다. [근거 및 변경 파일](CURRENT_STATUS.md).
+
 ### 2026-11-03 검색·주소창·Windows 11 탐색기 잔여 격차 검토 (현재 우선순위)
 
 [전용 소스·요구사항 검토](SEARCH_ADDRESS_WIN11_GAP_REVIEW_20261103.md)에 검색·주소창 기능과 2026-10-31 Windows 11 직접 대조의 수용 상태를 새 `main` 기준으로 정리했다. 이번은 **문서·소스 검토만** 수행했고 Windows GUI·Release·실제 탐색기 직접 비교를 새로 실행하지 않았다.
