@@ -21,6 +21,14 @@
 
 변경 결과 해석에 영향을 주는 baseline만 기록한다. 예: 시작 revision, 관련 schema/API contract, dependency/lockfile, test environment.
 
+### Resume checkpoint and current-state precedence
+
+개발 재개 시 이전 인계보다 **최신 기본 branch/HEAD, 관련 변경, 진행 중인 CI·외부 작업과 canonical 현황**을 우선한다. 작은 독립 작업에 불필요한 전체 재조사는 하지 않는다.
+
+- 해당 작업의 현재 구현과 검증된 **revision·환경·검사 범위**를 대조해 이미 수용된 단위를 재작업하지 않는다.
+- 기록과 현재 상태가 충돌하면 실제 근거를 확인해 갱신한다. 확인하지 못한 사항을 완료·PASS로 주장하지 않는다.
+- 진행 중 원격 작업은 식별자·소유권을 확인하고 [중복 실행 방지 절차](#asynchronous-external-operations-and-continuation)를 적용한다.
+
 ### Evidence-aware execution budget (human guidance)
 
 모든 개발 에이전트는 실제 필요 작업을 수행하면서 **불필요한 도구 호출과 반복 검증을 차단**한다. 호출 횟수 절감 자체가 목표는 아니며 필수 안전 확인·승인·검증을 생략하지 않는다.
@@ -54,6 +62,10 @@ explicit-opt-in tool/connector = DISABLED UNLESS EXPLICITLY REQUESTED
 따라서 "구현해", "수정해", "코드 리뷰해", "PR 확인해", "테스트해", "다음 작업 진행해" 같은 일반 개발 지시는 opt-in 제한 도구의 사용 허가가 아니다. 반대로 해당 제한을 일반 GitHub tooling이나 다른 connector로 자동 확장하지 않는다.
 
 이 절은 human-facing tool-selection guidance다. 실제 runtime에서 강제된다고 주장하려면 canonical contract, adapter/routing, enforcement test 등 별도의 machine evidence가 필요하다.
+
+### Prefer established, least-invasive execution paths
+
+작업을 지원하는 **기존 프로젝트 공식 스크립트·자동화·검증 경로**를 우선하고, 동일 작업을 직접 원격 명령·GUI·새 connector로 우회하지 않는다. 기존 경로의 미지원이 확인된 때에만 다른 수단을 검토하며 승인·위험 gate는 유지한다. 특정 runner·VM·도구의 우선순위와 opt-in 제한은 프로젝트·사용자 지침을 따른다.
 
 ### Command operational contract
 
@@ -460,6 +472,24 @@ Bootstrap:
 - **높은 위험**: auth/permission, payment, migration, 운영 데이터, import, state machine, transaction, concurrency, 외부 전송, public contract는 negative/boundary, rollback/failure path, stale/replay/idempotency, concurrency, security, 실제 integration/E2E 필요성을 검토한다.
 
 **고비용 E2E/실기 fixture**는 작은 대표 fixture와 source/contract/harness 점검 후 최종 acceptance에 사용한다. 하네스 디버깅으로 반복하지 않고 기존 유효한 PASS를 보존해 영향받은 단계만 재검증한다. 필요한 최종 E2E는 생략하거나 PASS로 추정하지 않는다.
+
+### Reuse and invalidation of verification evidence
+
+검증 계획은 **변경 영향 경계(change-invalidation frontier)**부터 결정한다. 이전 PASS를 무조건 폐기하거나, 반대로 다른 버전에서의 성공을 최신 버전의 성공으로 바꾸어 기록하지 않는다.
+
+- 각 근거의 **소스 revision 또는 content fingerprint, 변경/의존 범위, test/harness·fixture, 실행 환경·설정, 실제 검증 단계 및 결과**를 확인한다. 이 중 관측 불가능한 항목은 명시적으로 제한한다.
+- 실제 수정된 동작과 의존 모듈·공유 계약·테스트 판정 기준이 그 증거를 무효화하는지 조사한다. 영향이 없음이 확인된 검증은 재사용하고, 새 변경으로 무효화된 최소 범위만 다시 검증한다.
+- 한 번 통과한 개별 검사는 다른 변경이 없었다는 이유만으로 모든 환경·전체 제품의 PASS가 되지 않는다. 다른 revision의 결과를 사용하면 **어느 부분이 불변인지와 검증된 원래 revision**을 함께 적는다.
+- source·test·CI 판정기만 바뀐 경우에도 각각의 실제 영향 경계를 적용한다. 테스트 도구의 수정이 제품 자체의 결함 또는 이미 관측된 제품 실행 성공을 자동으로 뒤집지는 않지만, 새 판정기로 전체 검증이 통과했다고 주장할 수도 없다.
+- 안전·승인·필수 검증은 재사용 여부와 무관하게 해당 시점에 적용한다. 변경된 인증·권한·데이터·외부 영향에 필요한 검증을 예산 절약을 이유로 제외하지 않는다.
+
+### User-excluded checks and scope integrity
+
+사용자가 특정 검사·환경·기능 범위를 **명시적으로 제외하거나 중단**했다면 후속 작업을 진행하더라도 그 제외를 보존한다. 프로젝트가 요구하는 새 검증 항목으로 조용히 복구하거나 다른 테스트의 숨은 전제조건으로 넣지 않는다.
+
+- 제외 항목은 가능한 경우 `SKIPPED (USER-EXCLUDED)`와 같이 사유를 표시한다. `PASS`, 제품 결함, 영구적으로 필요 없어진 검증으로 해석하지 않는다.
+- 제외를 해제하려면 사용자가 그 정확한 범위의 재개를 명시해야 한다. 별도로 허가된 기능·환경 검증은 제외한 다른 범위까지 포괄하지 않는다.
+- 실제로 변경한 기능에 필요한 **필수 안전 gate**와 사용자 제외가 충돌할 때는 검증 없이 성공으로 간주하거나 제외를 몰래 해제하지 않는다. 해당 작업의 미검증·차단 경계를 설명하고 가능한 안전한 부분만 수행한다.
 
 ### Evidence levels
 
@@ -899,6 +929,15 @@ push 전 branch, remote target, remote 최신 상태, 포함 commit, secret/대�
 - conflict가 발생했다고 전체 파일을 오래된 버전으로 덮어쓰지 않는다.
 - 시작 시점의 기존 변경과 이번 작업의 변경을 가능한 한 구분한다.
 - 완료 직전 `git diff`와 status를 다시 보고 새 충돌, 의도하지 않은 변경, 다른 작업자 수정 손실이 없는지 확인한다.
+
+### Post-integration temporary branch hygiene
+
+수용된 변경을 기본 branch에 통합한 뒤에는 이번 작업이 만든 임시 개발·진단·검증 branch를 점검한다. **불필요한 branch를 계속 완료 대기 상태로 남기지 않되, 소유권과 보존 근거 없이 일괄 삭제하지 않는다.**
+
+- 삭제 전 각 ref가 최신 기본 branch에 통합되었거나 유일한 코드·검증 증거가 별도로 안전하게 보존된 상태인지 확인한다.
+- 해당 ref를 참조하는 활성 CI·원격 job·PR, 다른 작업자의 변경 또는 미완료 작업이 없는지 확인한다. 대기·실행 중인 작업의 ref를 먼저 제거하지 않는다.
+- 삭제가 허용된 ref만 정확한 이름으로 비강제 삭제하고, 삭제 후 남은 ref를 확인한다. 프로젝트가 별도의 보존·정리 지침을 정의했다면 그 지침을 따른다.
+- 삭제 권한·안전성·진행 중 작업이 불명확하면 임의로 지우지 않고 미정리 branch와 이유를 보고한다.
 
 ### Commit and integration details
 

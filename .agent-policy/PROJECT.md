@@ -4,7 +4,7 @@ This file contains current project-specific facts only. Generic policy remains
 in the vendored .agent-policy core.
 
 Vendored generic policy provenance: tngkrwlsmd/universal-agent-docs commit
-452c8bd556340d0e624e0371e424a7ce474fdd9a (release v0.6.4). Upstream-managed .agent-policy files are synchronized as one
+a544b263e350fb2562501ceb931c58a626540dd7 (release v0.6.5). Upstream-managed .agent-policy files are synchronized as one
 consumer core; this PROJECT.md remains project-owned across bundle refreshes.
 
 <!-- project-facts:start -->
