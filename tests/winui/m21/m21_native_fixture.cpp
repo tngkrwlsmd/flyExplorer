@@ -255,6 +255,18 @@ int wmain(int argc,wchar_t**argv){
       std::filesystem::file_size(dstRename)==14,
       "r07_guard_denies_stale_identity_without_restoring");
  }
+ // A forged size in an otherwise valid receipt must never authorize a lease.
+ {
+  auto wrongSize=renamedFile;
+  ++wrongSize.renameEvidence.fileSize;
+  filecommand::RenameTargetLease denied;
+  chk(denied.begin(srcRename.native(),wrongSize)==
+          Observation::TargetChangedOrUnavailable&&
+      denied.recheck()==Observation::UnverifiedReceipt&&
+      !std::filesystem::exists(srcRename)&&
+      std::filesystem::file_size(dstRename)==14,
+      "r07_guard_denies_forged_size_without_restoring");
+ }
  // A missing renamed target must not leave a lease or recreate the source.
  {
   auto missing=renamedFile;
