@@ -91,7 +91,7 @@ class R07RestoreObservationContract(unittest.TestCase):
             with self.subTest(name=name):
                 self.assertIn(name, native)
         wrapper = read("tests/winui/m21/test_native.py")
-        self.assertIn("M21_NATIVE_SUMMARY 60 passed, 0 failed.", wrapper)
+        self.assertIn("M21_NATIVE_SUMMARY 66 passed, 0 failed.", wrapper)
         self.assertIn("M21_LEGACY_USER_PROFILE_SENTINEL_UNCHANGED", wrapper)
 
     def test_policy_requires_atomic_protection_before_real_undo(self):

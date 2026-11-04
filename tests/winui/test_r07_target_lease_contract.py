@@ -96,7 +96,7 @@ class R07TargetLeaseContract(unittest.TestCase):
             with self.subTest(marker=marker):
                 self.assertIn(marker, native)
         wrapper = source("tests/winui/m21/test_native.py")
-        self.assertIn("M21_NATIVE_SUMMARY 60 passed, 0 failed.", wrapper)
+        self.assertIn("M21_NATIVE_SUMMARY 66 passed, 0 failed.", wrapper)
         policy = " ".join(
             source("docs/development/R07_UNDO_RECEIPT_POLICY_20261103.md").split()
         )
