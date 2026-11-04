@@ -47,7 +47,7 @@ class R07TargetLeaseContract(unittest.TestCase):
             "RenameTargetLease::recheck() const noexcept",
             "GetFileInformationByHandleEx(",
             "lockedId.VolumeSerialNumber!=expected_.volumeSerial",
-            "std::equal_n(lockedId.FileId.Identifier",
+            "std::equal(expected_.fileId.begin(),expected_.fileId.end()",
             "readRenameEvidence(target,visible)",
             "sameRenameEvidence(expected_,visible)",
             "::GetFileAttributesW(original.c_str())",
