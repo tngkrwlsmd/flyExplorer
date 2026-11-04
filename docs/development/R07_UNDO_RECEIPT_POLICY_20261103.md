@@ -41,6 +41,16 @@
 
 공통 `src/base` 연결을 확인하는 [제품 Release 빌드 #41662666694](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41662666694)는 **본 단락 기록 당시 완료 결과 미확인**이다. Release와 독립적으로 실제 Undo/Redo·GUI·시각 검증은 NOT TESTED/NOT IMPLEMENTED이다.
 
+## R07-4 구현 후보: 대상 파일 핸들 보호 및 재검증 (2026-11-04)
+
+`RenameTargetLease`는 기존 R07-2/3의 성공한 이름 변경 결과에만 결합할 수 있는 짧은 수명의 C++ 객체다. `begin`은 먼저 원래 경로의 빈 상태와 128비트 대상 파일 ID를 관측하고, 이어서 대상 파일을 **`FILE_READ_DATA|FILE_READ_ATTRIBUTES`, `FILE_SHARE_READ`, `OPEN_EXISTING`**으로 열어 핸들을 유지한다. 손상되거나 일치하지 않는 파일·다른 부모 경로·재분석 경로·경합으로 열기 실패한 파일은 거부한다. `recheck`는 유지된 핸들의 볼륨·128비트 ID와 대상 경로의 최신 ID·크기·수정 시각, 원래 이름의 비점유를 다시 확인한다. 객체가 소멸하거나 `reset`이 호출되면 `CloseHandle`로 닫는다. 구조체는 복사할 수 없으며 WinUI/작업 큐·세션 저장과 연동하지 않았다.
+
+- 이 핸들의 공유 옵션은 **열린 동안** 대상 파일에 대한 새로운 쓰기·이름 변경·삭제 접근을 제한한다. 기존 쓰기 핸들이 있는 경우 보호 획득 자체가 실패하는지 확인한다. <https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-createfilew>
+- **원래 이름을 예약하지 않는다.** 타 프로세스가 그 이름으로 새 파일을 만들 수 있어 `recheck`가 다시 거부할 수 있다. 핸들이 닫히면 대상 보호도 해제되므로 이 관측을 파일 복원이나 Undo 허가로 사용하면 안 된다. 기존 매핑, 부모 디렉터리 경합, 공유 모드·파일시스템 차이 등을 감안해 결과를 영구적인 안전 보증으로 간주하지 않는다.
+- 비교 API `CompareStringOrdinal`은 실패할 경우 0을 반환한다. R07-3 경로 판단뿐 아니라 기존 이름 변경 경계에서도 **`CSTR_LESS_THAN` 또는 `CSTR_GREATER_THAN`만 서로 다른 경로로 인정**, 0은 실패 폐쇄 처리한다. 같은 이름의 충돌 결과는 계속 `ERROR_ALREADY_EXISTS`, 잘못된 비교는 `ERROR_INVALID_NAME`을 사용한다. <https://learn.microsoft.com/en-us/windows/win32/api/stringapiset/nf-stringapiset-comparestringordinal>
+- 소유 테스트 파일에서 보호 중 다른 쓰기·삭제 핸들 열기 거부, 원래 이름 재점유의 재검증, 선행 쓰기 핸들 존재 시 획득 거부와 해제 후 재획득을 실험한다. `RenameTargetLease`는 **파일을 생성·이동·삭제·복원하지 않으며** `DELETE` 접근 권한도 요청하지 않는다. 실제 Undo/Redo·Ctrl+Z·경합 없는 최종 이름 예약/복원은 여전히 **미구현**이다.
+- 별도 한정 Windows C++ 네이티브·제품 Release 검증의 결과는 수행한 뒤 정확한 SHA와 함께 기록한다. 작성 당시 **새 변경의 빌드·실행 미검증**이다.
+
 ## 후속 필수 단계 (순서 변경 금지)
 
 1. **개별 변경 증거 (R07-2 일부 구현):** 원본·결과의 정확한 단일 항목 식별자(볼륨 식별자와 파일 ID), 재분석 지점 제외, 최종 파일 상태, 실제 생성/이동/복구 성공 정보 등을 worker의 신뢰된 범위에서 수집한다. 이름이나 경로만으로 동일한 파일이라고 간주하지 않는다. 일괄 Copy/Move의 aggregate 완료 수치만으로는 영수증을 발행할 수 없다.
