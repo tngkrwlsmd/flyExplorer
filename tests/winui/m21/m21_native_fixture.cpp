@@ -255,6 +255,19 @@ int wmain(int argc,wchar_t**argv){
       std::filesystem::file_size(dstRename)==14,
       "r07_guard_denies_stale_identity_without_restoring");
  }
+ // A missing renamed target must not leave a lease or recreate the source.
+ {
+  auto missing=renamedFile;
+  missing.target=(dir/L"r07-lease-missing.txt").native();
+  filecommand::RenameTargetLease denied;
+  chk(denied.begin(srcRename.native(),missing)==
+          Observation::TargetChangedOrUnavailable&&
+      denied.recheck()==Observation::UnverifiedReceipt&&
+      !std::filesystem::exists(srcRename)&&
+      !std::filesystem::exists(missing.target)&&
+      std::filesystem::file_size(dstRename)==14,
+      "r07_guard_denies_missing_target_without_restoring");
+ }
  auto unverifiedReceipt=renamedFile;
  unverifiedReceipt.renameEvidence.verified=false;
  // A receipt without verified identity must not acquire a protective lock.
