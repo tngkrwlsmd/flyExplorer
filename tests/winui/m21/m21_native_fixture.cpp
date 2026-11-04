@@ -216,6 +216,35 @@ int wmain(int argc,wchar_t**argv){
    fresh.reset(); }
  chk(writerGuarded&&std::filesystem::file_size(dstRename)==14,
      "r07_guard_denies_prior_writer_and_releases_cleanly");
+ // R07-4: a failed lease acquisition must not retain a target lock or
+ // change either file. The caller may not treat a stale receipt as authority.
+ {
+  { std::ofstream occupied(srcRename,std::ios::binary);occupied<<"lease collision"; }
+  filecommand::RenameTargetLease denied;
+  bool const rejected=denied.begin(srcRename.native(),renamedFile)==
+      Observation::OriginalOccupiedOrUnknown&&
+      denied.recheck()==Observation::UnverifiedReceipt;
+  HANDLE const writable=::CreateFileW(dstRename.c_str(),FILE_WRITE_DATA,
+      FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE,nullptr,
+      OPEN_EXISTING,FILE_ATTRIBUTE_NORMAL,nullptr);
+  bool const released=writable!=INVALID_HANDLE_VALUE;
+  if(released)::CloseHandle(writable);
+  chk(rejected&&released&&std::filesystem::file_size(srcRename)==15&&
+      std::filesystem::file_size(dstRename)==14,
+      "r07_guard_denies_occupied_original_without_locking_target");
+  std::filesystem::remove(srcRename);
+ }
+ {
+  auto stale=renamedFile;
+  stale.renameEvidence.fileId[0]^=1;
+  filecommand::RenameTargetLease denied;
+  chk(denied.begin(srcRename.native(),stale)==
+          Observation::TargetChangedOrUnavailable&&
+      denied.recheck()==Observation::UnverifiedReceipt&&
+      !std::filesystem::exists(srcRename)&&
+      std::filesystem::file_size(dstRename)==14,
+      "r07_guard_denies_stale_identity_without_restoring");
+ }
  auto unverifiedReceipt=renamedFile;
  unverifiedReceipt.renameEvidence.verified=false;
  chk(filecommand::inspectRenameRestore(
