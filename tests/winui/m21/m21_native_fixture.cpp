@@ -162,6 +162,60 @@ int wmain(int argc,wchar_t**argv){
      Observation::MatchingSnapshotOnly&&
      !std::filesystem::exists(srcRename)&&std::filesystem::exists(dstRename),
      "r07_preflight_snapshot_matches_without_restoring");
+ // R07-4: hold a read-only target handle and prove that competing writes
+ // and renames are denied. Never use the lease to restore a real file.
+ {
+  filecommand::RenameTargetLease guard;
+  chk(guard.begin(srcRename.native(),renamedFile)==
+       Observation::MatchingSnapshotOnly&&
+      guard.recheck()==Observation::MatchingSnapshotOnly,
+      "r07_guard_acquires_and_rechecks_exact_identity");
+  HANDLE const blockedWrite=::CreateFileW(
+      dstRename.c_str(),FILE_WRITE_DATA,
+      FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE,
+      nullptr,OPEN_EXISTING,FILE_ATTRIBUTE_NORMAL,nullptr);
+  bool const writeDenied=blockedWrite==INVALID_HANDLE_VALUE&&
+      ::GetLastError()==ERROR_SHARING_VIOLATION;
+  if(blockedWrite!=INVALID_HANDLE_VALUE)::CloseHandle(blockedWrite);
+  chk(writeDenied&&std::filesystem::file_size(dstRename)==14,
+      "r07_guard_denies_competing_writer_without_change");
+  HANDLE const blockedDelete=::CreateFileW(
+      dstRename.c_str(),DELETE,
+      FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE,
+      nullptr,OPEN_EXISTING,FILE_ATTRIBUTE_NORMAL,nullptr);
+  bool const deleteDenied=blockedDelete==INVALID_HANDLE_VALUE&&
+      ::GetLastError()==ERROR_SHARING_VIOLATION;
+  if(blockedDelete!=INVALID_HANDLE_VALUE)::CloseHandle(blockedDelete);
+  chk(deleteDenied&&std::filesystem::exists(dstRename),
+      "r07_guard_denies_competing_delete_without_change");
+  { std::ofstream occupied(srcRename,std::ios::binary);occupied<<"occupied"; }
+  bool const collisionSeen=guard.recheck()==Observation::OriginalOccupiedOrUnknown&&
+      std::filesystem::file_size(srcRename)==8;
+  std::filesystem::remove(srcRename);
+  chk(collisionSeen&&guard.recheck()==Observation::MatchingSnapshotOnly,
+      "r07_guard_rechecks_reoccupied_original_without_restoring");
+  guard.reset();
+ }
+ // An already opened writer must make exclusive lease acquisition fail.
+ HANDLE const preexistingWriter=::CreateFileW(
+     dstRename.c_str(),FILE_WRITE_DATA,
+     FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE,
+     nullptr,OPEN_EXISTING,FILE_ATTRIBUTE_NORMAL,nullptr);
+ bool writerGuarded=preexistingWriter!=INVALID_HANDLE_VALUE;
+ if(writerGuarded){
+  filecommand::RenameTargetLease blocked;
+  writerGuarded=blocked.begin(srcRename.native(),renamedFile)==
+                  Observation::TargetChangedOrUnavailable&&
+                blocked.recheck()==Observation::UnverifiedReceipt;
+  ::CloseHandle(preexistingWriter);
+ }
+ { filecommand::RenameTargetLease fresh;
+   writerGuarded=writerGuarded&&
+      fresh.begin(srcRename.native(),renamedFile)==
+          Observation::MatchingSnapshotOnly;
+   fresh.reset(); }
+ chk(writerGuarded&&std::filesystem::file_size(dstRename)==14,
+     "r07_guard_denies_prior_writer_and_releases_cleanly");
  auto unverifiedReceipt=renamedFile;
  unverifiedReceipt.renameEvidence.verified=false;
  chk(filecommand::inspectRenameRestore(
