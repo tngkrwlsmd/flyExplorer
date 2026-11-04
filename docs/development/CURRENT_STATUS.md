@@ -1,3 +1,13 @@
+# 2026-11-04 — R07-4 대상 파일 핸들 단기 보호: Windows 네이티브 60/60 PASS
+
+- **구현 범위:** `src/base/file_command_core.h/.cpp`에 비복사형 `RenameTargetLease`를 추가했다. R07-3 순간 관측이 유효할 때만 `CreateFileW(FILE_READ_DATA|FILE_READ_ATTRIBUTES, FILE_SHARE_READ, OPEN_EXISTING)`으로 **대상 일반 파일의 핸들을 유지**, 유지된 핸들과 현재 경로의 볼륨/128비트 ID·파일 크기·수정 시각 및 원래 이름의 비점유를 다시 확인한다. 핸들 유지 중 새로운 쓰기/삭제/이름변경 접근은 공유 충돌로 제한되고, 이미 쓰기 핸들이 열려 있으면 보호 획득을 거부한다. `reset`·소멸자에서 `CloseHandle`. **원래 이름은 예약하지 않으며 핸들 종료 뒤 보호는 사라진다.** 파일 복원·Undo/Redo·Ctrl+Z·UI/세션 v4 변경은 **없음**.
+- **경로 비교 실패 방어:** Windows `CompareStringOrdinal`의 0 반환(비교 실패)을 경로가 다르다고 수용하지 않도록, R07-3 검사와 기존 `RenameSelected` 모두 **`CSTR_LESS_THAN` 또는 `CSTR_GREATER_THAN`만 허용**하도록 기존 R07 작업 브랜치 수정안을 대조해 `main`에 반영했다. 별도 3건 계약은 올바른 오류·명령 실행 전 거부를 확인한다. 기존 작업 브랜치는 수정하지 않았다.
+- **검증 이력:** 첫 [Windows #41781410527](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41781410527)은 R07 소스 계약 **21/21 PASS**, 그러나 신규 C++ `std::equal_n` 오기로 네이티브 컴파일 FAIL. 정확히 `std::equal`로 고친 후 [Windows #41781670269](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41781670269), 코드 소스 SHA `ec44b50dccc12dc2eb0d48af71ff3262bf7cabf5`에서 **R07 소스 21/21 PASS**, M21 네이티브 x64 Release 빌드 PASS, 테스트 소유 파일 실제 검사 **60/60 PASS**, `git diff --check` PASS, 기존 설정 보호(`PRESENT 0`) 및 소유 임시 작업공간 정리 PASS. 성공 범위는 **네이티브 핸들·공유 충돌 증거**이며 기존 GUI/pixel 결과로 확대하지 않는다.
+- **제품 Release 진행 상태:** [중앙 Windows #41781872051](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41781872051)는 `desktop-a`, `scope=release-build-only`, 정확한 코드 SHA `ec44b50dccc12dc2eb0d48af71ff3262bf7cabf5`로 제출됐다. **문서 작성 당시 진행 중**이므로 실제 성공·실패 결과는 이후 확인한다. R07-3의 전용 [제품 Release #41662666694](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41662666694)은 **최종 SUCCESS**로 확인됐다. 이는 R07-4의 앱 빌드 수용을 대신하지 않는다.
+- **남은 문제:** 대상 파일 보호는 진행 중 외부 파일 변경을 일부 차단하나 **원래 이름을 원자적으로 예약하지 않는다**. 복원 작업 자체를 위한 DELETE 권한·`SetFileInformationByHandle` 무덮어쓰기 작업·창/탭/route/ticket 소유권·세션 경계·실제 Undo GUI는 **미구현·미검증**. 현재 `MatchingSnapshotOnly`와 단기 핸들 임대는 **파일 쓰기 승인 아님**. [자세한 정책](R07_UNDO_RECEIPT_POLICY_20261103.md).
+
+---
+
 # 2026-11-04 — R07-3 이름 변경 복원 전 읽기 전용 재관측: 소스·Windows 네이티브 PASS
 
 - **변경 범위:** `src/base/file_command_core.h/.cpp`에 `inspectRenameRestore(originalPath, renamedResult)`를 추가했다. 성공하고 128비트 파일 ID 증거가 확인된 R07-2 이름 변경에 대해서만, 원래 이름이 **정확히 `ERROR_FILE_NOT_FOUND`**인지와 현재 대상의 볼륨·128비트 ID·크기·수정 시각이 모두 저장된 값과 같은지 관측한다. 원래 이름 점유·불분명한 경로·다른 부모·재분석 경로·대상 누락·외부 내용 변경은 거부한다. `MatchingSnapshotOnly`는 순간 관측 결과이며 **복원 실행 권한이나 경합 방지 수단이 아니다**. `FileOperationController`, MainWindow, Ctrl+Z/Redo, 세션 v4 및 기존 파일 작업/전송·Undo 기록 변경은 **0건**.
