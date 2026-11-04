@@ -257,6 +257,21 @@ int wmain(int argc,wchar_t**argv){
  }
  auto unverifiedReceipt=renamedFile;
  unverifiedReceipt.renameEvidence.verified=false;
+ // A receipt without verified identity must not acquire a protective lock.
+ {
+  filecommand::RenameTargetLease denied;
+  bool const rejected=denied.begin(srcRename.native(),unverifiedReceipt)==
+      Observation::UnverifiedReceipt&&
+      denied.recheck()==Observation::UnverifiedReceipt;
+  HANDLE const writable=::CreateFileW(dstRename.c_str(),FILE_WRITE_DATA,
+      FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE,nullptr,
+      OPEN_EXISTING,FILE_ATTRIBUTE_NORMAL,nullptr);
+  bool const released=writable!=INVALID_HANDLE_VALUE;
+  if(released)::CloseHandle(writable);
+  chk(rejected&&released&&!std::filesystem::exists(srcRename)&&
+      std::filesystem::file_size(dstRename)==14,
+      "r07_guard_denies_unverified_receipt_without_locking_target");
+ }
  chk(filecommand::inspectRenameRestore(
        srcRename.native(),unverifiedReceipt)==Observation::UnverifiedReceipt,
      "r07_preflight_rejects_unverified_receipt");
