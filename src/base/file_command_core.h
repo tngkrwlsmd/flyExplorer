@@ -37,6 +37,26 @@ enum class RenameRestoreObservation {
 };
 RenameRestoreObservation inspectRenameRestore(
     std::wstring const& originalPath,Result const& renamed) noexcept;
+
+// R07-4: temporary read-attribute handle with no WRITE/DELETE sharing.
+// Non-copyable, never stores Undo authority, and does not reserve a name.
+// A MatchingSnapshotOnly response cannot authorize a subsequent mutation.
+class RenameTargetLease final {
+public:
+    RenameTargetLease() noexcept = default;
+    ~RenameTargetLease() noexcept;
+    RenameTargetLease(RenameTargetLease const&) = delete;
+    RenameTargetLease& operator=(RenameTargetLease const&) = delete;
+    RenameRestoreObservation begin(
+        std::wstring const& originalPath,Result const& renamed) noexcept;
+    RenameRestoreObservation recheck() const noexcept;
+    void reset() noexcept;
+private:
+    HANDLE handle_=INVALID_HANDLE_VALUE;
+    std::wstring originalPath_;
+    std::wstring targetPath_;
+    RenameEvidence expected_{};
+};
 bool validLeaf(std::wstring const& name) noexcept;
 bool validTextDocumentLeaf(std::wstring const& name) noexcept;
 bool validMarkdownDocumentLeaf(std::wstring const& name) noexcept;
