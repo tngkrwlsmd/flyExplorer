@@ -92,8 +92,9 @@ RenameRestoreObservation inspectRenameRestore(
      original.parent_path()!=target.parent_path()||
      !validLeaf(original.filename().native())||
      !validLeaf(target.filename().native())||
-     ::CompareStringOrdinal(original.c_str(),-1,target.c_str(),-1,TRUE)
-         ==CSTR_EQUAL||
+     ([](int comparison) noexcept {
+       return comparison != CSTR_LESS_THAN && comparison != CSTR_GREATER_THAN;
+     })(::CompareStringOrdinal(original.c_str(),-1,target.c_str(),-1,TRUE))||
      !safeRenameEvidenceParent(original)||
      !safeRenameEvidenceParent(target))
    return RenameRestoreObservation::UnsafePaths;
@@ -302,8 +303,12 @@ Result execute(Request const& task) noexcept{
      !validLeaf(src.filename().native())){
    result.error=ERROR_INVALID_NAME;return result;
   }
-  if(::CompareStringOrdinal(src.c_str(),-1,target.c_str(),-1,TRUE)==CSTR_EQUAL){
-   result.error=ERROR_ALREADY_EXISTS;return result;
+  int const renameComparison=::CompareStringOrdinal(
+   src.c_str(),-1,target.c_str(),-1,TRUE);
+  if(renameComparison!=CSTR_LESS_THAN&&renameComparison!=CSTR_GREATER_THAN){
+   result.error=renameComparison==CSTR_EQUAL?
+    ERROR_ALREADY_EXISTS:ERROR_INVALID_NAME;
+   return result;
   }
   // Capture only read-only identity evidence before and after a rename.
   // A probe failure never changes ordinary rename success/failure semantics.
