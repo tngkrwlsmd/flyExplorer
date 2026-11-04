@@ -195,6 +195,16 @@ int wmain(int argc,wchar_t**argv){
   chk(collisionSeen&&guard.recheck()==Observation::MatchingSnapshotOnly,
       "r07_guard_rechecks_reoccupied_original_without_restoring");
   guard.reset();
+  HANDLE const writableAfterReset=::CreateFileW(
+      dstRename.c_str(),FILE_WRITE_DATA,
+      FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE,
+      nullptr,OPEN_EXISTING,FILE_ATTRIBUTE_NORMAL,nullptr);
+  bool const resetReleased=writableAfterReset!=INVALID_HANDLE_VALUE;
+  if(resetReleased)::CloseHandle(writableAfterReset);
+  chk(resetReleased&&guard.recheck()==Observation::UnverifiedReceipt&&
+      std::filesystem::file_size(dstRename)==14&&
+      !std::filesystem::exists(srcRename),
+      "r07_guard_reset_releases_lock_and_invalidates_receipt");
  }
  // An already opened writer must make exclusive lease acquisition fail.
  HANDLE const preexistingWriter=::CreateFileW(
