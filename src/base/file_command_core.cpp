@@ -118,6 +118,91 @@ RenameRestoreObservation inspectRenameRestore(
  }catch(...){return RenameRestoreObservation::UnsafePaths;}
 }
 
+
+RenameTargetLease::~RenameTargetLease() noexcept {
+ reset();
+}
+void RenameTargetLease::reset() noexcept {
+ if(handle_!=INVALID_HANDLE_VALUE){
+  ::CloseHandle(handle_);
+  handle_=INVALID_HANDLE_VALUE;
+ }
+ originalPath_.clear();
+ targetPath_.clear();
+ expected_=RenameEvidence{};
+}
+RenameRestoreObservation RenameTargetLease::begin(
+ std::wstring const& originalPath,Result const& renamed) noexcept {
+ reset();
+ auto const first=inspectRenameRestore(originalPath,renamed);
+ if(first!=RenameRestoreObservation::MatchingSnapshotOnly)return first;
+ try{
+  // Allocate before acquiring the handle; nothing can throw while it is
+  // temporarily owned by a local variable.
+  std::wstring originalCopy(originalPath);
+  std::wstring targetCopy(renamed.target);
+  // FILE_READ_DATA makes Windows sharing checks cover pre-existing writers;
+  // FILE_SHARE_READ denies new write/delete/rename opens for this target.
+  // No DELETE right and no mutating API is used by this guard.
+  HANDLE const acquired=::CreateFileW(
+   targetCopy.c_str(),FILE_READ_DATA|FILE_READ_ATTRIBUTES,
+   FILE_SHARE_READ,nullptr,OPEN_EXISTING,
+   FILE_FLAG_OPEN_REPARSE_POINT,nullptr);
+  if(acquired==INVALID_HANDLE_VALUE)
+   return RenameRestoreObservation::TargetChangedOrUnavailable;
+  handle_=acquired;
+  originalPath_.swap(originalCopy);
+  targetPath_.swap(targetCopy);
+  expected_=renamed.renameEvidence;
+  auto const observed=recheck();
+  if(observed!=RenameRestoreObservation::MatchingSnapshotOnly)reset();
+  return observed;
+ }catch(...){
+  reset();
+  return RenameRestoreObservation::UnsafePaths;
+ }
+}
+RenameRestoreObservation RenameTargetLease::recheck() const noexcept {
+ if(handle_==INVALID_HANDLE_VALUE||!expected_.verified)
+  return RenameRestoreObservation::UnverifiedReceipt;
+ try{
+  std::filesystem::path const original(originalPath_);
+  std::filesystem::path const target(targetPath_);
+  if(original.empty()||target.empty()||
+     !original.is_absolute()||!target.is_absolute()||
+     original.lexically_normal()!=original||
+     target.lexically_normal()!=target||
+     original.parent_path()!=target.parent_path()||
+     !validLeaf(original.filename().native())||
+     !validLeaf(target.filename().native())||
+     !safeRenameEvidenceParent(original)||
+     !safeRenameEvidenceParent(target))
+   return RenameRestoreObservation::UnsafePaths;
+  int const comparison=::CompareStringOrdinal(
+   original.c_str(),-1,target.c_str(),-1,TRUE);
+  if(comparison!=CSTR_LESS_THAN&&comparison!=CSTR_GREATER_THAN)
+   return RenameRestoreObservation::UnsafePaths;
+  FILE_ID_INFO lockedId{};
+  if(!::GetFileInformationByHandleEx(
+      handle_,FileIdInfo,&lockedId,sizeof(lockedId))||
+     lockedId.VolumeSerialNumber!=expected_.volumeSerial||
+     !std::equal_n(lockedId.FileId.Identifier,expected_.fileId.size(),
+                   expected_.fileId.begin()))
+   return RenameRestoreObservation::TargetChangedOrUnavailable;
+  // Check the pathname again, not just the retained handle identity.
+  RenameEvidence visible{};
+  if(!readRenameEvidence(target,visible)||
+     !sameRenameEvidence(expected_,visible))
+   return RenameRestoreObservation::TargetChangedOrUnavailable;
+  DWORD const originalAttrs=::GetFileAttributesW(original.c_str());
+  if(originalAttrs!=INVALID_FILE_ATTRIBUTES||
+     ::GetLastError()!=ERROR_FILE_NOT_FOUND)
+   return RenameRestoreObservation::OriginalOccupiedOrUnknown;
+  // The original name is NOT reserved. This is never a write authorization.
+  return RenameRestoreObservation::MatchingSnapshotOnly;
+ }catch(...){return RenameRestoreObservation::UnsafePaths;}
+}
+
 bool validLeaf(std::wstring const& name) noexcept{
  if(name.empty()||name.size()>240||name==L"."||name==L".."||
     name.back()==L'.'||name.back()==L' ')return false;
