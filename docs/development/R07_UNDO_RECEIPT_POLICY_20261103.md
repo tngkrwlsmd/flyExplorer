@@ -39,7 +39,7 @@
 
 [Windows VM #41662348650](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41662348650)는 정확한 변경 소스 `cd3c83d604ac5da4704cfba240a60ef1f6152683`에 대해 R07-1/2/3 소스 계약 **14/14 PASS**, M21 네이티브 x64 Release 빌드 PASS, 일회용 폴더에서의 실제 파일 명령 **55/55 PASS**, 변경 공백 검사 및 소유 임시 체크아웃 정리 PASS로 종료됐다. 사용자 기존 설정도 변경되지 않았다. 추가 7건은 원래 경로 비어 있음·이름 재점유·잘못된 영수증·부모 경로 불일치·파일 ID 불일치·대상 소실·외부 내용 변경의 순간 관측만 검증한다.
 
-공통 `src/base` 연결을 확인하는 [제품 Release 빌드 #41662666694](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41662666694)는 **본 단락 기록 당시 완료 결과 미확인**이다. Release와 독립적으로 실제 Undo/Redo·GUI·시각 검증은 NOT TESTED/NOT IMPLEMENTED이다.
+공통 `src/base` 연결을 확인하는 [제품 Release 빌드 #41662666694](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41662666694)는 **정확한 R07-3 SHA에서 최종 SUCCESS**로 확인됐다. 이 결과는 후속 R07-4의 전체 제품 빌드를 대신하지 않는다. Release와 독립적으로 실제 Undo/Redo·GUI·시각 검증은 NOT TESTED/NOT IMPLEMENTED이다.
 
 ## R07-4 구현 후보: 대상 파일 핸들 보호 및 재검증 (2026-11-04)
 
@@ -49,7 +49,7 @@
 - **원래 이름을 예약하지 않는다.** 타 프로세스가 그 이름으로 새 파일을 만들 수 있어 `recheck`가 다시 거부할 수 있다. 핸들이 닫히면 대상 보호도 해제되므로 이 관측을 파일 복원이나 Undo 허가로 사용하면 안 된다. 기존 매핑, 부모 디렉터리 경합, 공유 모드·파일시스템 차이 등을 감안해 결과를 영구적인 안전 보증으로 간주하지 않는다.
 - 비교 API `CompareStringOrdinal`은 실패할 경우 0을 반환한다. R07-3 경로 판단뿐 아니라 기존 이름 변경 경계에서도 **`CSTR_LESS_THAN` 또는 `CSTR_GREATER_THAN`만 서로 다른 경로로 인정**, 0은 실패 폐쇄 처리한다. 같은 이름의 충돌 결과는 계속 `ERROR_ALREADY_EXISTS`, 잘못된 비교는 `ERROR_INVALID_NAME`을 사용한다. <https://learn.microsoft.com/en-us/windows/win32/api/stringapiset/nf-stringapiset-comparestringordinal>
 - 소유 테스트 파일에서 보호 중 다른 쓰기·삭제 핸들 열기 거부, 원래 이름 재점유의 재검증, 선행 쓰기 핸들 존재 시 획득 거부와 해제 후 재획득을 실험한다. `RenameTargetLease`는 **파일을 생성·이동·삭제·복원하지 않으며** `DELETE` 접근 권한도 요청하지 않는다. 실제 Undo/Redo·Ctrl+Z·경합 없는 최종 이름 예약/복원은 여전히 **미구현**이다.
-- 별도 한정 Windows C++ 네이티브·제품 Release 검증의 결과는 수행한 뒤 정확한 SHA와 함께 기록한다. 작성 당시 **새 변경의 빌드·실행 미검증**이다.
+- [첫 Windows #41781410527](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41781410527)은 R07 소스 계약 21/21 PASS지만 잘못 사용한 `std::equal_n` 때문에 네이티브 컴파일 FAIL. 이를 표준 `std::equal`로 수정한 뒤 [Windows #41781670269](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41781670269)에서 정확한 제품·테스트 SHA `ec44b50dccc12dc2eb0d48af71ff3262bf7cabf5`의 **R07 계약 21/21, M21 네이티브 Release 빌드, 테스트 소유 파일 작업 60/60, 원본 설정 보존, 소유 체크아웃 정리 PASS**를 확인했다. [전체 제품 x64 Release #41781872051](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41781872051)은 작성 당시 진행 중이며 **별도 최종 확인 대상**이다. GUI·화면 픽셀·실제 Undo/Redo는 미실행이다.
 
 ## 후속 필수 단계 (순서 변경 금지)
 
