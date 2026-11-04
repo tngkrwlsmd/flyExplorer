@@ -12,6 +12,15 @@ tngkrwlsmd/universal-agent-docs; update that core atomically rather than
 hand-editing individual generic files. Project facts belong in
 .agent-policy/PROJECT.md, while flyExplorer-specific overrides belong here.
 
+## New-chat infrastructure checkpoint (2026-11-04)
+
+Start development from live `flyExplorer/main`, current instructions, relevant status and accepted evidence; never treat an earlier conversation as a live status check. For runner/device, remote CI, GitHub administration or external release tasks, **also read current `tngkrwlsmd/personal-control-plane/AGENTS.md` and `docs/TARGETS.md` first**, including their new-chat preflight. The old `windows-vm-control` repository name redirects to `personal-control-plane`; it is not an independent active control plane.
+
+- A **GitHub Actions self-hosted runner** and an **RDC device** are different. Read live runner inventory before saying online/offline; one queued job, old successful job or offline runner does not establish that all runners are offline.
+- Before declaring a GitHub task impossible, check the connector's precise capabilities **and** available approved control-plane Remote Shell/`gh` paths, including actual authentication. RDC is not the default fallback; do not prematurely delegate executable Git steps to the user.
+- For a requested GitHub Release, verify exact source SHA, required CI, the **target repository's** tag-triggered release flow, published assets and final post-release verification. Keep this separate from a flyExplorer product Release build.
+- Report `NOT CHECKED`/`QUEUED`/`OFFLINE`/`PUBLISHED`/`VERIFIED` accurately; cancel stale queued probes and restore their slots. This preflight does **not** authorize additional product build/GUI checks, data changes or tools the user has excluded.
+
 ## User-directed direct-main and live comparison rule (2026-10-31)
 
 The user explicitly directs: when scoped review and actual use show no material
