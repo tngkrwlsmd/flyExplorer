@@ -186,8 +186,8 @@ RenameRestoreObservation RenameTargetLease::recheck() const noexcept {
   if(!::GetFileInformationByHandleEx(
       handle_,FileIdInfo,&lockedId,sizeof(lockedId))||
      lockedId.VolumeSerialNumber!=expected_.volumeSerial||
-     !std::equal_n(lockedId.FileId.Identifier,expected_.fileId.size(),
-                   expected_.fileId.begin()))
+     !std::equal(expected_.fileId.begin(),expected_.fileId.end(),
+                 lockedId.FileId.Identifier))
    return RenameRestoreObservation::TargetChangedOrUnavailable;
   // Check the pathname again, not just the retained handle identity.
   RenameEvidence visible{};
