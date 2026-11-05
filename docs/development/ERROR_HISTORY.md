@@ -1,3 +1,13 @@
+## 2026-11-05 — R07-10 NULL 루트 이름 변경의 실행 폴더 오이동
+
+**최초 두 접근:** 유지된 부모 핸들을 `FILE_RENAME_INFO.RootDirectory`에 넣은 `FileRenameInfo`와 `FileRenameInfoEx`는 모두 실제 Windows VM에서 `ERROR_INVALID_PARAMETER(87)`로 실패했다. 동일 폴더·같은 소스 핸들·단순 파일명·덮어쓰기 플래그 0을 유지하면서 **루트 핸들만 NULL로 교체**한 소스 `c1ab5b2cbbaa554afa621e4e6cdf1fb663e44a9e`의 [#41987547104](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41987547104)에서는 네이티브 호출 성공(`error=0`)으로 달라졌지만, 원래 폴더에서 파일이 사라지고 다시 발견되지 않았다. M21 x64 Release 컴파일 PASS, R07 소스 35/35 PASS, 네이티브 **75/77 FAIL**. **성공 반환과 올바른 폴더 이동은 별개의 검증 대상**이다.
+
+**원인 분리:** 테스트 전용 파일명으로 프로그램 실행 폴더의 후보를 열어 이전 볼륨+128비트 파일 ID와 비교하는 작은 진단을 추가한 SHA `5b42e633b643da0df186df3be21530735bc48df1`의 [#41988089601](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41988089601)에서 `cwd_id_match=1`이 확인됐다. Win32 함수는 해당 조합에서 파일을 **원래 부모가 아니라 프로세스 작업 폴더에 이동**시킨 것이다. 테스트 실행 폴더는 자체 소유 체크아웃 내부이고 사용자 파일/설정과 분리돼 있었다. 두 네이티브 실패 케이스는 예상 복원 위치에 파일이 없어 연쇄 실패한 것이며, 75개 다른 케이스의 과거 PASS는 유지한다.
+
+**수정과 재발 방지:** 제품의 위험한 `RootDirectory=nullptr`를 즉시 `parent.h`로 되돌리고, 소스 회귀 계약에서 NULL 루트 금지 및 현재 부모 디렉터리 ID 확인을 검사하도록 했다. 수정된 코드 SHA `43dcef7c020cec0fd235fd3988b5fc402954a36b`의 [#41988475539](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41988475539)는 변경된 Python 검사 **8/8 PASS**, 소유 체크아웃 정리 PASS였다. 이후 검사 함수 이름만 정리했으며 그 SHA의 네이티브 검사는 실행하지 않았다. 현재 부모 핸들 방식의 오류 87은 미해결이며 **정상 Undo/Redo를 구현·수용했다고 선언하지 않는다**.
+
+**규칙:** 같은 파일 ID가 유지되더라도 **경로와 실제 부모 디렉터리 위치**가 달라지면 파일 복원 실패다. Win32 API와 드라이버 API의 `RootDirectory=NULL` 의미를 혼동하지 말 것. 다음 수정은 독립적 테스트용 파일만 대상으로, 부모 핸들·원자적 충돌 거부·파일 ID·최종 경로를 함께 검증할 근거가 있을 때 진행한다. 오이동을 반환값 검증 성공으로 포장하거나 이름 변경 테스트 기대조건을 완화하지 않는다.
+
 ## 2026-11-05 — R07-9 파일 이름 복원 Win32 API 오류 87, 부모 핸들·상대 이름 유지 방식 미수용
 
 정확한 이전 소스 `3d02558fe5467eebf211bf9709d47666e3997813`로 [Windows VM #41981398953](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41981398953)의 M21 x64 Release 컴파일 PASS 이후 네이티브 파일 검사 **75/77 PASS, 2 FAIL**을 관측했다. 실패는 `r07_restore_owned_no_replace_commits_exact_file`와 `r07_restore_replay_rejected_and_original_preserved`이다. 테스트 전용 진단을 추가한 정확한 소스 `82bb78e0317f2668b21b94842c39da8f44be9114`의 [#41981791738](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41981791738)에서 첫 실패의 실제 `SetFileInformationByHandle(FileRenameInfo)` 결과가 `NativeCallFailedUnknownState`, Windows `ERROR_INVALID_PARAMETER=87`, `nativeCallAttempted=true`였고 원래 이름이 비어 있으며 변경 이름은 유지됐다. 두 번째 실패는 첫 번째 복원이 안 되어 중복 복원 거부 기대 상태에 도달하지 못한 연쇄 실패다. 실패 후 **사용자 데이터 변경 없이** 전용 임시 작업공간·사용자 설정 센티넬 정리가 기록됐다.
