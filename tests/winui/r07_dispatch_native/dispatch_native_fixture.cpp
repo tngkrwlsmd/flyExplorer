@@ -11,6 +11,8 @@
 #include <cstdlib>
 #include <chrono>
 #include <thread>
+#include <mutex>
+#include <condition_variable>
 namespace fs=std::filesystem;
 using Controller=fxfile::previewops::FileOperationController;
 using Candidate=Controller::RenameRestoreCandidate;
@@ -21,6 +23,27 @@ namespace fxfile::shelltransfer {
 Report execute(Request const&,Progress&) noexcept { std::abort(); }
 Report executeIsolated(Request const&,Progress&) noexcept { std::abort(); }
 }
+struct NativePause {
+    std::mutex mutex;
+    std::condition_variable signal;
+    bool entered=false;
+    bool resume=false;
+};
+static NativePause* gNativePause=nullptr;
+// Invoked only by the test-built file_command_core.cpp, just before the
+// native rename syscall. Never compiled into the product application.
+extern "C" void FlyR07RestoreRaceHook(unsigned stage) noexcept {
+    if(stage!=2||!gNativePause)return;
+    try {
+        std::unique_lock<std::mutex> lock(gNativePause->mutex);
+        gNativePause->entered=true;
+        gNativePause->signal.notify_all();
+        gNativePause->signal.wait(lock,[]{
+            return gNativePause->resume;
+        });
+    }catch(...){}
+}
+
 static constexpr char kBytes[]="r07-18-owned-unique-payload";
 static constexpr char kCollision[]="r07-18-test-occupant";
 static std::string read(fs::path const& p) {
@@ -197,6 +220,147 @@ int wmain(int argc,wchar_t** argv){
             check(once&&a.nativeCallAttempted!=b.nativeCallAttempted&&
                   f.restored(),"concurrent_claim_exactly_once");
         }else check(false,"concurrent_claim_exactly_once");
+    }
+    {
+        Fixture f(owned,L"native-paused-navigation");
+        auto c=f.ready?f.take():std::nullopt;
+        if(!c){
+            check(false,"inflight_navigation_returns_before_native");
+            check(false,"inflight_new_file_command_remains_busy");
+        }else{
+            NativePause pause{};
+            gNativePause=&pause;
+            auto worker=std::async(std::launch::async,[&]{
+                return f.ctrl.executeTakenRenameRestore(*c,f.ctx);
+            });
+            bool entered=false;
+            {
+                std::unique_lock<std::mutex> lock(pause.mutex);
+                entered=pause.signal.wait_for(lock,std::chrono::seconds(5),
+                    [&]{return pause.entered;});
+            }
+            auto navigation=std::async(std::launch::async,[&]{
+                f.ctrl.invalidateRenameOwnerOnNavigation();
+            });
+            auto checkBusy=std::async(std::launch::async,[&]{
+                return f.ctrl.busy();
+            });
+            auto request=std::async(std::launch::async,[&]{
+                fxfile::filecommand::Request req{};
+                req.kind=fxfile::filecommand::Kind::CreateFolder;
+                req.parent=f.dir.native();
+                req.name=L"invalid\\leaf";
+                return f.ctrl.startFileCommand(
+                    req,f.ctx,[](Controller::UiTask){return true;},
+                    [](Controller::FileCommandCompletion){});
+            });
+            const bool quickNav=navigation.wait_for(
+                std::chrono::milliseconds(750))==std::future_status::ready;
+            const bool quickBusy=checkBusy.wait_for(
+                std::chrono::milliseconds(750))==std::future_status::ready;
+            const bool quickRequest=request.wait_for(
+                std::chrono::milliseconds(750))==std::future_status::ready;
+            {
+                std::lock_guard<std::mutex> lock(pause.mutex);
+                pause.resume=true;
+            }
+            pause.signal.notify_all();
+            navigation.get();
+            const bool wasBusy=checkBusy.get();
+            const auto start=request.get();
+            const auto out=worker.get();
+            gNativePause=nullptr;
+            check(entered&&quickNav&&out.status==Status::CommittedVerified&&
+                  out.nativeCallAttempted&&f.restored()&&!f.ctrl.busy()&&
+                  !f.take(),"inflight_navigation_returns_before_native");
+            check(quickBusy&&quickRequest&&wasBusy&&
+                  start==Controller::StartStatus::Busy,
+                  "inflight_new_file_command_remains_busy");
+        }
+    }
+    {
+        Fixture f(owned,L"native-paused-close");
+        auto c=f.ready?f.take():std::nullopt;
+        if(!c){
+            check(false,"inflight_close_prompt_preserves_native_outcome");
+        }else{
+            NativePause pause{};
+            gNativePause=&pause;
+            auto worker=std::async(std::launch::async,[&]{
+                return f.ctrl.executeTakenRenameRestore(*c,f.ctx);
+            });
+            bool entered=false;
+            {
+                std::unique_lock<std::mutex> lock(pause.mutex);
+                entered=pause.signal.wait_for(lock,std::chrono::seconds(5),
+                    [&]{return pause.entered;});
+            }
+            auto close=std::async(std::launch::async,[&]{
+                f.ctrl.prepareForClose();
+            });
+            const bool quick=close.wait_for(
+                std::chrono::milliseconds(750))==std::future_status::ready;
+            {
+                std::lock_guard<std::mutex> lock(pause.mutex);
+                pause.resume=true;
+            }
+            pause.signal.notify_all();
+            close.get();
+            const auto out=worker.get();
+            gNativePause=nullptr;
+            check(entered&&quick&&out.status==Status::CommittedVerified&&
+                  out.nativeCallAttempted&&f.restored()&&!f.ctrl.busy()&&
+                  !f.take(),"inflight_close_prompt_preserves_native_outcome");
+        }
+    }
+    // For future UI result messages, source-native status and "attempted"
+    // must be considered together. Nothing here activates an Undo command.
+    using Category=Controller::RestoreOutcomeClass;
+    {
+        Result r{};
+        bool all=true;
+        for(auto code:{
+            Status::RejectedReceipt,Status::RejectedPaths,
+            Status::OriginalOccupiedOrUnknown,
+            Status::TargetChangedOrUnavailable,Status::AccessUnavailable
+        }){
+            r.status=code;
+            r.nativeCallAttempted=false;
+            all=all&&Controller::classifyRestoreOutcome(r)==
+                Category::NotAttempted;
+        }
+        check(all,"all_pre_native_rejections_classified_not_attempted");
+    }
+    {
+        Result r{};
+        r.status=Status::CommittedVerified;
+        r.nativeCallAttempted=true;
+        check(Controller::classifyRestoreOutcome(r)==
+              Category::VerifiedCommitted,
+              "verified_commit_requires_native_attempt");
+    }
+    {
+        Result r{};
+        r.nativeCallAttempted=true;
+        r.status=Status::NativeCallFailedUnknownState;
+        const bool first=Controller::classifyRestoreOutcome(r)==
+            Category::UncertainAfterAttempt;
+        r.status=Status::CommittedUnverified;
+        check(first&&Controller::classifyRestoreOutcome(r)==
+              Category::UncertainAfterAttempt,
+              "native_failure_and_unverified_commit_classified_uncertain");
+    }
+    {
+        Result r{};
+        r.status=Status::CommittedVerified;
+        r.nativeCallAttempted=false;
+        const bool impossible=Controller::classifyRestoreOutcome(r)==
+            Category::UncertainAfterAttempt;
+        r.status=Status::RejectedReceipt;
+        r.nativeCallAttempted=true;
+        check(impossible&&Controller::classifyRestoreOutcome(r)==
+              Category::UncertainAfterAttempt,
+              "contradictory_flags_fail_closed_for_reporting");
     }
     std::printf("R07_DISPATCH_NATIVE_SUMMARY %d passed, %d failed.\n",pass,fail);
     return fail?1:0;
