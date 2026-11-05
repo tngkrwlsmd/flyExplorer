@@ -125,6 +125,13 @@ public:
     std::optional<RenameRestoreCandidate> takeRenameRestoreCandidate(
         Context const& liveContext);
 
+    // R07-14: one last, single-use identity check of the already-taken
+    // candidate at the proposed dispatch boundary. Always retires the
+    // pending claim, even on mismatch. NO file I/O and NO restore authority:
+    // the actual native operation is not connected to this method.
+    bool recheckAndRetireRenameRestoreCandidate(
+        RenameRestoreCandidate const& taken,Context const& liveContext) noexcept;
+
 private:
     struct SharedState;
     struct PendingTransfer;

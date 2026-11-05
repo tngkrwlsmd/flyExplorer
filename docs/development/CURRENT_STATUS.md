@@ -1,3 +1,11 @@
+# 2026-11-05 — R07-14 복원 후보 실행 직전 소유권 단회 재확인 (소스 구현, Windows 실행 미검증)
+
+- **구현:** `FileOperationController::recheckAndRetireRenameRestoreCandidate`는 이미 한 번 인출한 Rename 후보의 `ticket`·창/패널/폴더 탭·route·표시 경로, 원본 경로, 대상 경로 및 파일 식별/크기/시간 영수증을 컨트롤러가 보관한 한 건의 원본 값과 mutex 안에서 다시 대조한다. 검사 결과가 성공·실패 어느 쪽이든 해당 대기 후보는 같은 잠금 안에서 폐기한다. 신규 파일 명령·전송·닫힘도 대기 값을 폐기한다. 기존 `takeRenameRestoreCandidate`는 원본 저장분을 반환 전에 폐기하는 동작을 유지한다.
+- **범위:** `tests/winui/test_r07_rename_owner_contract.py`에 한 번만 확인, 받은 후보의 변조/복사 후 재사용 방지, 새 작업/종료 폐기 및 파일 변경 코드 미연결을 요구하는 소스 계약을 추가했다. **이 단계는 소스 작성이며 새 C++ 컴파일·네이티브 실제 호출·GUI/픽셀은 NOT TESTED**다. 사용자에게 보이는 Undo/Redo·Ctrl+Z는 활성화하지 않았다.
+- **미완료 보안 경계:** 실행 중 탐색 변경을 UI로 즉시 전달하는 통지는 아직 없다. 호출 직전 재검증과 파일시스템의 실제 변경 사이의 경쟁은 잠금 하나로 막을 수 없다. 이 불변 검사 자체는 파일 복원의 승인이나 원래 이름 예약이 아니며, 이 단계에서 `restoreRenameNoReplace`와 연결하지 않았다. 이전 R07-13의 정확한 Windows 79/79 PASS는 변경 영향 밖이므로 재검증하지 않는다.
+
+---
+
 # 2026-11-05 — R07-13 외부 부모 폴더 이동·경로 재점유 네이티브 79/79 PASS (한정 수용)
 
 - **실제 검증된 소스:** `68d614a97e08bfc672c75cf0b6d213aaa0e6d385`. [중앙 Windows VM #42000391557](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/42000391557)은 정확한 SHA 확인, R07 복원 소스 계약 **PASS**, M21 x64 **Release 네이티브 빌드 PASS**, 격리된 테스트 소유 파일 **`M21_NATIVE_Release_79_PASS True`**, 기존 사용자 설정 불변 **`M21_LEGACY_USER_PROFILE_SENTINEL_UNCHANGED True PRESENT 0`**, 전용 작업공간 **`R07_R13_OWNED_CLEANUP=PASS`**를 기록했다. 전체 workflow와 검증 작업도 SUCCESS로 종료됐다.

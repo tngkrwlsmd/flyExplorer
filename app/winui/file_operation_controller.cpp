@@ -32,6 +32,9 @@ struct FileOperationController::SharedState final {
     std::optional<PendingTransfer> pending{};
     // Never persisted or exposed as file mutation authority.
     std::optional<FileOperationController::RenameRestoreCandidate> renameCandidate{};
+    // The original candidate is still erased by take(); this private copy
+    // binds one subsequent identity recheck and is not an Undo capability.
+    std::optional<FileOperationController::RenameRestoreCandidate> pendingRestoreCheck{};
 };
 
 FileOperationController::FileOperationController()
@@ -122,6 +125,7 @@ void FileOperationController::prepareForClose() noexcept
         state_->progress.reset();
         state_->pending.reset();
         state_->renameCandidate.reset();
+        state_->pendingRestoreCheck.reset();
         state_->busy=false;
     }catch(...){}
 }
@@ -138,6 +142,7 @@ FileOperationController::StartStatus FileOperationController::requestTransfer(
         // Any new accepted request supersedes the previous rename receipt,
         // including a transfer that first needs user confirmation.
         state_->renameCandidate.reset();
+        state_->pendingRestoreCheck.reset();
         if(request.kind==fxfile::shelltransfer::Kind::Recycle&&
            !request.recycleConfirmed){
             if(state_->confirmationSerial==
@@ -291,6 +296,7 @@ FileOperationController::StartStatus FileOperationController::launchTransfer(
             return StartStatus::ThreadStartFailed;
         ticket=++state_->epoch;
         state_->renameCandidate.reset();
+        state_->pendingRestoreCheck.reset();
         state_->busy=true;
         state_->progress=progress;
     }
@@ -405,6 +411,7 @@ FileOperationController::StartStatus FileOperationController::startFileCommand(
             return StartStatus::ThreadStartFailed;
         ticket=++state_->epoch;
         state_->renameCandidate.reset();
+        state_->pendingRestoreCheck.reset();
         state_->busy=true;
         state_->progress.reset();
         state_->pending.reset();
@@ -463,6 +470,7 @@ FileOperationController::acceptFileCommand(
         return CommandDisposition::Ignored;
     state_->busy=false;
     state_->renameCandidate.reset();
+    state_->pendingRestoreCheck.reset();
     if(!sameContext(completion.context,liveContext))
         return CommandDisposition::StaleContext;
     if(completion.result.error!=ERROR_SUCCESS)
@@ -509,10 +517,53 @@ FileOperationController::takeRenameRestoreCandidate(
     try{
         auto taken=std::move(state_->renameCandidate);
         state_->renameCandidate.reset();
+        // A private expected-value snapshot protects the subsequent check
+        // from a caller changing paths, receipt evidence or the ticket.
+        state_->pendingRestoreCheck=taken;
         return taken;
     }catch(...){
         state_->renameCandidate.reset();
+        state_->pendingRestoreCheck.reset();
         return std::nullopt;
+    }
+}
+
+bool FileOperationController::recheckAndRetireRenameRestoreCandidate(
+    RenameRestoreCandidate const& taken,Context const& liveContext) noexcept
+{
+    try{
+        std::lock_guard<std::mutex> lock(state_->mutex);
+        if(!state_->pendingRestoreCheck)return false;
+        auto const& expected=*state_->pendingRestoreCheck;
+        auto const& left=expected.renamed;
+        auto const& right=taken.renamed;
+        auto const& before=left.renameEvidence;
+        auto const& after=right.renameEvidence;
+        const bool current=
+            !state_->closing&&!state_->busy&&!state_->pending&&
+            taken.ticket!=0&&taken.ticket==state_->epoch&&
+            taken.ticket==expected.ticket&&
+            sameContext(expected.context,liveContext)&&
+            sameContext(taken.context,liveContext)&&
+            !expected.originalPath.empty()&&
+            expected.originalPath==taken.originalPath&&
+            left.error==ERROR_SUCCESS&&right.error==left.error&&
+            !left.target.empty()&&right.target==left.target&&
+            before.verified&&after.verified==before.verified&&
+            after.volumeSerial==before.volumeSerial&&
+            after.fileId==before.fileId&&
+            after.fileSize==before.fileSize&&
+            after.lastWriteTime==before.lastWriteTime;
+        // Consume the claim in the SAME lock whether it matched or not.
+        // A copied/stale candidate must never pass this check twice.
+        state_->pendingRestoreCheck.reset();
+        return current;
+    }catch(...){
+        try{
+            std::lock_guard<std::mutex> lock(state_->mutex);
+            state_->pendingRestoreCheck.reset();
+        }catch(...){}
+        return false;
     }
 }
 
