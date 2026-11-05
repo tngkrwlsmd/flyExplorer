@@ -133,7 +133,7 @@ class R07TargetLeaseContract(unittest.TestCase):
         self.assertIn("Directory DELETE access is not reliably excluded", native)
         self.assertIn("Neither outcome is permission to restore", native)
         wrapper = source("tests/winui/m21/test_native.py")
-        self.assertIn("M21_NATIVE_SUMMARY 69 passed, 0 failed.", wrapper)
+        self.assertIn("M21_NATIVE_SUMMARY 77 passed, 0 failed.", wrapper)
         policy = " ".join(
             source("docs/development/R07_UNDO_RECEIPT_POLICY_20261103.md").split()
         )
