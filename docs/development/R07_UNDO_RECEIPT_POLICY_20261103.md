@@ -82,6 +82,14 @@
 
 새 R07-7 소스 계약은 `tests/winui/test_r07_rename_owner_contract.py`에서 한번 인출·mutex 범위·반환 전 폐기·파일 변이 미도입을 검사한다. 정확한 소스 SHA `15251587b3e22b655a3bd0b67ad7dd76584ad925`의 [Windows VM #41959646943](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41959646943)에서 **신규 R07-7 Python 소스 계약 5/5 PASS**, 전용 체크아웃 정리 PASS를 확인했다. C++/WinUI 빌드·GUI·실제 Undo는 **NOT TESTED**다. 기존 R07-6 26/26 통과는 별도의 이전 SHA에서 검증한 결과다.
 
+## R07-20: 비동기 복원 완료 알림의 창 수명 보호 (2026-11-05)
+
+`startTakenRenameRestoreAsync`는 기존 단회 복원 실행을 **공유 내부 상태만 포획한 별도 스레드**에서 수행한다. 컨트롤러 객체가 파괴돼도 이미 시작된 네이티브 복원을 취소하거나 재시도하지 않는다. 완료 결과는 원래 `status`·`nativeCallAttempted`와 보수적 결과 분류를 그대로 보존한다.
+
+알림은 **UI 대기열 등록 직전과 실제 실행 직전** 두 차례 창 종료 여부·작업 번호·탐색 변경 세대를 확인한다. 소유권을 잃었다면 파일 변경 사실을 바꾸지 않고 사용자에게 보낼 알림만 폐기한다. 호출자가 제공하는 `Post`는 종료된 UI 객체를 안전하게 다뤄야 한다. 이 함수는 아직 실제 WinUI/Undo에 연결되지 않았다.
+
+정확한 소스 `26b8aaad1922df044fc64ea2d68859a9c7c23a`의 [Windows VM #42044879231](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/42044879231)에서 소스 **24/24**, 실제 네이티브 파일 복원과 완료 전달 **30/30**, WinUI x64 Release 빌드 모두 PASS. 사용자 설정 보존·작업공간 정리 PASS. **실제 DispatcherQueue/GUI 응답성·사용자 파일 Undo·외부 프로세스 파일 경합은 NOT TESTED**다.
+
 ## R07-19: 복원 중 UI 소유권 알림 비차단·완료 통지 재수용 차단 (2026-11-05)
 
 기존 R07-18은 컨트롤러의 동일 잠금을 네이티브 파일 변경 전체에 걸쳐 보유했기 때문에 운영체제 I/O가 지연되면 **탭·폴더 탐색 무효화와 창 종료를 알리는 컨트롤러 메서드도 대기**할 수 있었다. R07-19의 현행 `executeTakenRenameRestore`는 원본의 ticket/epoch·창/패널/폴더 탭/route·원본/대상·파일 ID·수정 시각을 **잠금 안에서 대조하고 일회용 소유권을 영구 소비**, 호출용 경로·증거를 **자체 값으로 복사**한다. 그 자리에서 `busy=true`와 별도의 `restoreInFlight=true`를 설정하고 잠금을 해제한 **후** 안전한 `restoreRenameNoReplace`를 실행한다. 실제 네이티브 작업이 끝난 뒤에는 잠금 안에서 현재 epoch·닫기 상태를 확인하고 실행 중 표시를 정리한다.
