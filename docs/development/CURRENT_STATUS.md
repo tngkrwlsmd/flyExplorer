@@ -1,3 +1,12 @@
+# 2026-11-06 — R07-22 복원 완료 알림의 원래 탭 귀속 경계: 소스 10/10·Release PASS
+
+- **변경:** 제품 `80309ab9ae2c7f92b2fd95c6a226e674a51b011a`에서 비동기 이름 복원 완료값을 받을 WinUI 콜백 경계를 추가했다. 약한 창 참조만 사용하고 원래 WindowTab identity·패널·PaneTab·route·표시 파일시스템/셸 폴더가 모두 그대로이며 로딩 중이 아닐 때만 원래 작업공간의 알림을 갱신한다. 확인된 성공·실행 후 불확실·미실행을 서로 다른 문구로 표시하고, 활성 작업공간이 원래 탭일 때만 현재 상태줄을 바꾼다.
+- **수용 근거:** [Windows VM #42055501856](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/42055501856)에서 관련 계약 **10/10 PASS**, WinUI x64 Release 빌드 **PASS**, EXE SHA-256 `a3c6aa40f42af4818caa732f706c818333ad15e9a34685aa91afe6c082da259e`, 소유 작업공간 정리 **PASS**를 확인했다.
+- **첫 실패 보존:** 선행 [#42054946021](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/42054946021)은 소스 계약 10/10 뒤 C++ 반환형 범위 누락(C2653/C2143)으로 Release **FAIL**했으며 한 줄 수정 후 성공했다.
+- **한계/다음:** `startTakenRenameRestoreAsync`·Ctrl+Z·Undo/Redo는 UI와 분리돼 있고 파일 I/O를 새로 연결하지 않았다. 실제 GUI 창 종료·탭 전환 순서, 사용자 파일 복원, 화면/픽셀은 **NOT TESTED**다.
+
+---
+
 # 2026-11-05 — R07-21A 실제 WinUI 완료 알림 전달의 창 수명 보호: 소스 7/7·Release PASS
 
 - **변경:** `MainWindow::FileOperationUiPost()`를 실제 WinUI `DispatcherQueue`를 사용하도록 구현했다. 작업 스레드에 창 객체를 강하게 전달하거나 작업 스레드에서 `weak.get()`을 호출하지 않는다. 대기열에 등록한 콜백이 UI 스레드에서 실행되는 시점에만 창의 약한 참조를 해석하고 `mClosing`을 확인한 뒤 작업을 실행한다. 창 종료·파괴 후에는 기존 파일 작업 완료 콜백을 실행하지 않는다. `TryEnqueue`가 실패하거나 대기열이 종료됐다면 `Post`는 false를 반환한다. 이 함수를 기존 `m21_commands.cpp` 파일 명령 완료 경로에 실제로 연결했다.
