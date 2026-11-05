@@ -88,7 +88,7 @@ Microsoft `FILE_RENAME_INFO` 문서에 따르면 `SetFileInformationByHandle(Fil
 
 `restoreRenameNoReplace`는 원래 이름의 공백을 단순 검사만으로 보증하지 않고, **열린 `DELETE` 권한 대상 핸들에서 실제 파일 동일성/변경 여부를 검증**한 다음 `FileRenameInfo`의 이 원자적 무덮어쓰기 조건을 사용한다. 대상 핸들은 R07-5의 `FILE_READ_DATA|FILE_READ_ATTRIBUTES` 읽기 전용 핸들과 독립적이며, 부모 디렉터리 핸들의 식별자를 유지하고 복원 대상 이름을 이 핸들에 상대적으로 전달한다. 이때 부모 디렉터리의 외부 DELETE 접근은 완전히 차단되지 않는다. 따라서 완료 뒤 경로 동일성이 실패하면 `CommittedUnverified`로 반환하고 자동 롤백하지 않는다. 호출 자체가 실패하면 `NativeCallFailedUnknownState`를 반환해 '아무 파일도 바뀌지 않았다'고 단정하지 않는다.
 
-**R07-8은 독립 원시 함수 소스만 추가된 상태**다. 호출자가 정확한 R07-7 ticket/창/패널/탭/route 소유권을 확인해 인출했는지 이 함수에서 검증하는 것은 아니며, 앱과 연결된 Undo/Redo 승인 권한도 아니다. 새 소스 계약 `tests/winui/test_r07_no_replace_restore_contract.py`는 비연결·부모/파일 동일성·DELETE 권한·원자적 비덮어쓰기·불확실한 완료 상태를 검사한다. 실제 Python 테스트 실행, C++ 빌드, 테스트 소유 파일의 실복원/경합 및 GUI는 **NOT TESTED**다. 독립 테스트에서 안전/실패 사례가 수용되기 전 사용자 데이터로 실험하거나 UI에 연결하지 않는다.
+**R07-8은 독립 원시 함수 소스만 추가된 상태**다. 호출자가 정확한 R07-7 ticket/창/패널/탭/route 소유권을 확인해 인출했는지 이 함수에서 검증하는 것은 아니며, 앱과 연결된 Undo/Redo 승인 권한도 아니다. 새 소스 계약 `tests/winui/test_r07_no_replace_restore_contract.py`는 비연결·부모/파일 동일성·DELETE 권한·원자적 비덮어쓰기·불확실한 완료 상태를 검사한다. [Windows VM #41962356186](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41962356186)에서 정확한 소스 `9cfba11ba63e0daeba3a84702d106991f6ed4f73`의 **R07 소스 32/32, 신규 R07-8 5/5 PASS**, 소유 체크아웃 정리 PASS를 확인했다. 첫 [#41962094352](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41962094352)은 기존 검사 범위가 새 주석까지 포함해 **31/32 FAIL**이었고, 금지 플래그 이름이 들어간 주석만 정리한 후 PASS했다. **C++ 빌드, 테스트 소유 파일의 실제 복원/경합 및 GUI는 NOT TESTED**다. 독립 테스트에서 안전/실패 사례가 수용되기 전 사용자 데이터로 실험하거나 UI에 연결하지 않는다.
 
 ## 후속 필수 단계 (순서 변경 금지)
 
@@ -99,6 +99,6 @@ Microsoft `FILE_RENAME_INFO` 문서에 따르면 `SetFileInformationByHandle(Fil
 
 ## 검증과 현재 상태
 
-- 이번 변경에는 **실제 실행 취소/다시 실행 명령·단축키·삭제/이동/복원 파일 I/O를 추가하지 않았다.**
+- R07-1 당시에는 **실제 실행 취소/다시 실행 명령·단축키·삭제/이동/복원 파일 I/O를 추가하지 않았다.** 이후 R07-8에는 위의 격리된 파일 이름 복원 원시 함수가 추가됐지만, 사용자 UI·작업 제어기에서 호출하는 경로는 아직 없다.
 - 전용 `tests/winui/test_r07_rename_receipt_contract.py`는 성공 전용 원래 경로 전달, 기존 ticket/컨텍스트 보존 및 파일 쓰기 로직 불변을 검사한다.
 - Windows Release, 실제 Ctrl+Z/파일 복원/충돌/픽셀: **NOT TESTED**. 이 단계는 **R07-1 영수증 기초 데이터 구현**, R07 전체 수용이 아니다.
