@@ -145,5 +145,49 @@ class R07NoReplaceRestoreContract(unittest.TestCase):
         self.assertNotIn("::SetFileInformationByHandle(", lease)
 
 
+    def test_owned_windows_fixture_checks_rejectors_and_file_identity(self):
+        fixture = source("tests/winui/m21/m21_native_fixture.cpp")
+        wrapper = source("tests/winui/m21/test_native.py")
+        markers = (
+            "r07_restore_owned_verified_rename_receipt",
+            "r07_restore_rejects_unverified_receipt_without_mutation",
+            "r07_restore_rejects_forged_file_id_without_mutation",
+            "r07_restore_rejects_missing_target_without_mutation",
+            "r07_restore_rejects_original_collision_preserves_bytes",
+            "r07_restore_rejects_preexisting_writer_without_mutation",
+            "r07_restore_owned_no_replace_commits_exact_file",
+            "r07_restore_replay_rejected_and_original_preserved",
+        )
+        for marker in markers:
+            with self.subTest(marker=marker):
+                self.assertIn(marker, fixture)
+        self.assertIn("readId(restoreTarget,restoredBefore)", fixture)
+        self.assertIn("readId(restoreOriginal,restoredAfter)", fixture)
+        self.assertIn("std::memcmp(restoredBefore.FileId.Identifier,", fixture)
+        self.assertIn("restoredBytes==ownedBytes", fixture)
+        self.assertIn("retainedCollision==occupiedBytes", fixture)
+        self.assertIn("rejectedWriter.status==WriteStatus::AccessUnavailable", fixture)
+        self.assertIn("!rejectedWriter.nativeCallAttempted", fixture)
+        self.assertIn("restored.status==WriteStatus::CommittedVerified", fixture)
+        self.assertIn('M21_NATIVE_SUMMARY 77 passed, 0 failed.', wrapper)
+        self.assertIn('M21_NATIVE_"+CFG+"_77_PASS', wrapper)
+        self.assertIn("m21-native-owned-", wrapper)
+
+    def test_fixture_only_mutates_its_generated_owned_directory(self):
+        fixture = source("tests/winui/m21/m21_native_fixture.cpp")
+        body = fixture.split(" // R07-8: exercise the isolated restore primitive ONLY", 1)[1].split(
+            " req.kind=filecommand::Kind::CreateTextFile;", 1
+        )[0]
+        self.assertIn('const auto restoreOriginal=dir/L"r07-', body)
+        self.assertIn('const auto restoreTarget=dir/L"r07-', body)
+        self.assertIn("restoreReq.parent=dir.native();", body)
+        self.assertIn("restoreReq.source=restoreOriginal.native();", body)
+        self.assertIn("std::filesystem::remove(restoreOriginal); // fixture-owned collision only", body)
+        self.assertNotIn("std::filesystem::remove_all(", body)
+        self.assertNotIn("DeleteFileW(", body)
+        self.assertNotIn("FILE_RENAME_FLAG_REPLACE_IF_EXISTS", body)
+        self.assertNotIn("MOVEFILE_REPLACE_EXISTING", body)
+
+
 if __name__ == "__main__":
     unittest.main()
