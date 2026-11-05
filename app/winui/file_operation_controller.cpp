@@ -584,11 +584,11 @@ FileOperationController::classifyRestoreOutcome(
 }
 
 fxfile::filecommand::RenameRestoreWriteResult
-FileOperationController::executeTakenRenameRestore(
+FileOperationController::executeTakenRenameRestoreOnState(
+    std::shared_ptr<SharedState> const& shared,
     RenameRestoreCandidate const& taken,Context const& liveContext) noexcept
 {
     fxfile::filecommand::RenameRestoreWriteResult denied{};
-    auto shared=state_;
     std::wstring originalCopy{};
     fxfile::filecommand::Result renamedCopy{};
     try{
@@ -655,6 +655,76 @@ FileOperationController::executeTakenRenameRestore(
         // The native outcome remains truthful, even if cleanup fails.
     }
     return outcome;
+}
+
+fxfile::filecommand::RenameRestoreWriteResult
+FileOperationController::executeTakenRenameRestore(
+    RenameRestoreCandidate const& taken,Context const& liveContext) noexcept
+{
+    return executeTakenRenameRestoreOnState(state_,taken,liveContext);
+}
+
+FileOperationController::StartStatus
+FileOperationController::startTakenRenameRestoreAsync(
+    RenameRestoreCandidate taken,Context liveContext,
+    Post post,RestoreCallback completion)
+{
+    if(!post||!completion)return StartStatus::ThreadStartFailed;
+    auto shared=state_;
+    std::uint64_t generation=0;
+    {
+        std::lock_guard<std::mutex> lock(shared->mutex);
+        if(shared->closing||shared->busy)return StartStatus::Busy;
+        if(!shared->pendingRestoreCheck||taken.ticket==0||
+           taken.ticket!=shared->epoch||
+           !sameContext(taken.context,liveContext))
+            return StartStatus::StaleConfirmation;
+        generation=shared->navigationGeneration;
+    }
+    try{
+        std::thread([
+            shared,generation,taken=std::move(taken),
+            liveContext=std::move(liveContext),post=std::move(post),
+            completion=std::move(completion)
+        ]() mutable {
+            RestoreCompletion value{};
+            value.ticket=taken.ticket;
+            value.context=liveContext;
+            value.result=executeTakenRenameRestoreOnState(
+                shared,taken,liveContext);
+            value.outcome=classifyRestoreOutcome(value.result);
+
+            // A file mutation may have succeeded even though the owner
+            // navigated or closed. Drop only the UI notification, NEVER
+            // rewrite the native outcome or retry it.
+            try{
+                std::lock_guard<std::mutex> lock(shared->mutex);
+                if(shared->closing||shared->epoch!=value.ticket||
+                   shared->navigationGeneration!=generation)
+                    return;
+            }catch(...){return;}
+            try{
+                post([shared,generation,completion=std::move(completion),
+                      value=std::move(value)]() mutable {
+                    // Revalidate AT DISPATCH, not just when it was queued.
+                    // The callback must be executed on the host UI queue,
+                    // where tab/close notifications are also serialized.
+                    {
+                        std::lock_guard<std::mutex> lock(shared->mutex);
+                        if(shared->closing||shared->epoch!=value.ticket||
+                           shared->navigationGeneration!=generation)
+                            return;
+                    }
+                    completion(std::move(value));
+                });
+            }catch(...){
+                // Post/callback delivery failures do not authorize a retry.
+            }
+        }).detach();
+        return StartStatus::Started;
+    }catch(...){
+        return StartStatus::ThreadStartFailed;
+    }
 }
 
 bool FileOperationController::recheckAndRetireRenameRestoreCandidate(

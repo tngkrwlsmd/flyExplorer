@@ -155,10 +155,33 @@ public:
     static RestoreOutcomeClass classifyRestoreOutcome(
         fxfile::filecommand::RenameRestoreWriteResult const& result) noexcept;
 
+    // R07-20: isolated, background-only delivery boundary. A host Post
+    // MUST safely post to its dispatcher without capturing a dead window.
+    // The callback is suppressed on close, navigation, or a newer ticket,
+    // both before enqueue and again when the queued task actually runs.
+    // It is not an Undo command and does not cancel native file I/O.
+    struct RestoreCompletion final {
+        std::uint64_t ticket=0;
+        Context context{};
+        fxfile::filecommand::RenameRestoreWriteResult result{};
+        RestoreOutcomeClass outcome=RestoreOutcomeClass::NotAttempted;
+    };
+    using RestoreCallback=std::function<void(RestoreCompletion)>;
+    StartStatus startTakenRenameRestoreAsync(
+        RenameRestoreCandidate taken,Context liveContext,
+        Post post,RestoreCallback completion);
+
 private:
     struct SharedState;
     struct PendingTransfer;
     std::shared_ptr<SharedState> state_;
+
+    // Uses a shared lifetime, never a captured FileOperationController*.
+    static fxfile::filecommand::RenameRestoreWriteResult
+    executeTakenRenameRestoreOnState(
+        std::shared_ptr<SharedState> const& shared,
+        RenameRestoreCandidate const& taken,
+        Context const& liveContext) noexcept;
 
     static bool sameContext(Context const&,Context const&) noexcept;
     static bool visibleForTransfer(
