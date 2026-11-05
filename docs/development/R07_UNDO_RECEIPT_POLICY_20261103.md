@@ -96,6 +96,12 @@ Microsoft `FILE_RENAME_INFO` 문서에 따르면 `SetFileInformationByHandle(Fil
 
 정확한 SHA `608404a7c9f1cf83cd557f7260259af7e5212bbf`의 [Windows VM #41977843188](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41977843188)에서 **Python R07 소스 계약 34/34 PASS**와 소유 체크아웃 정리만 확인했다. [첫 #41977661567](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41977661567)은 이전 예상 건수(69)를 사용한 소스 검사로 **33/34 FAIL**이었고, 해당 검사 값을 바로잡아 재검사했다. **M21 네이티브 컴파일, 테스트용 파일의 실제 복원 77건, WinUI 앱 빌드, GUI 및 실제 Undo/Redo는 NOT TESTED**다. 원본 파일을 다시 변경하는 함수는 컨트롤러와 UI에 여전히 연결하지 않는다.
 
+### R07-9 네이티브 복원 실제 실패와 현재 금지 조건 (2026-11-05)
+
+복원 함수는 Windows x64 Release 네이티브로 **컴파일 가능**하지만, 실제 소유 파일 이름 복원에서 아직 실패한다. 원본 `FileRenameInfo` 구현의 정확한 [Windows VM #41981398953](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41981398953)은 **75/77 PASS, 2 FAIL**(정상 복원·중복 복원), 진단을 추가한 [#41981791738](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41981791738)은 네이티브 결과 `NativeCallFailedUnknownState`, `ERROR_INVALID_PARAMETER=87`, 호출 시도 1, 원본 이름 부재/변경된 이름 존재를 출력했다. 이어 같은 디렉터리 핸들과 상대 이름을 유지하고 **확장 이름변경 `FileRenameInfoEx`, 플래그 0**만 바꾼 정확한 소스 `9065d22c1c0aeb4436efdd411ca8b7dc64cc4352`의 [#41982303138](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41982303138)은 Python 소스 34/34와 C++ 컴파일은 PASS지만 **네이티브 75/77 FAIL, 동일 오류 87**이었다.
+
+Microsoft 문서가 `RootDirectory`의 상대 이름을 허용하더라도 이번 오류 87이 반드시 그 필드만의 결함임을 입증한 것은 아니다. 원본 이름을 덮지 않는 원자적 변경과 바뀌지 않은 실제 부모 디렉터리의 식별자를 **동시에 보장할 수 있는 방식이 실행 증거로 수용되기 전까지 사용자용 Undo/Redo/단축키에 연결하지 않는다**. 단순 절대 경로 대체, 덮어쓰기 플래그 추가, 호출 실패 뒤 무조건 재시도·롤백, 77건의 정상복원 기대값 완화는 안전 해결책이 아니다. 제품 전체 앱 빌드/GUI/픽셀은 이번에 하지 않았다.
+
 ## 후속 필수 단계 (순서 변경 금지)
 
 1. **개별 변경 증거 (R07-2 일부 구현):** 원본·결과의 정확한 단일 항목 식별자(볼륨 식별자와 파일 ID), 재분석 지점 제외, 최종 파일 상태, 실제 생성/이동/복구 성공 정보 등을 worker의 신뢰된 범위에서 수집한다. 이름이나 경로만으로 동일한 파일이라고 간주하지 않는다. 일괄 Copy/Move의 aggregate 완료 수치만으로는 영수증을 발행할 수 없다.
