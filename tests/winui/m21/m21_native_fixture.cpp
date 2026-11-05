@@ -6,6 +6,7 @@
 #include <cstring>
 #include <cstdio>
 #include <fstream>
+#include <iterator>
 #include <string>
 using namespace fxfile;
 int wmain(int argc,wchar_t**argv){
@@ -445,7 +446,8 @@ int wmain(int argc,wchar_t**argv){
       restoreOriginal.native(),receipt);
   std::string retainedCollision{};
   { std::ifstream original(restoreOriginal,std::ios::binary);
-    retainedCollision.assign(std::istreambuf_iterator<char>(original),{}); }
+    retainedCollision.assign(std::istreambuf_iterator<char>(original),
+                             std::istreambuf_iterator<char>{}); }
   chk(rejectedCollision.status==WriteStatus::OriginalOccupiedOrUnknown&&
       !rejectedCollision.nativeCallAttempted&&
       retainedCollision==occupiedBytes&&std::filesystem::exists(restoreTarget),
@@ -473,7 +475,8 @@ int wmain(int argc,wchar_t**argv){
   std::string restoredBytes{};
   if(std::filesystem::exists(restoreOriginal)){
    std::ifstream original(restoreOriginal,std::ios::binary);
-   restoredBytes.assign(std::istreambuf_iterator<char>(original),{});
+   restoredBytes.assign(std::istreambuf_iterator<char>(original),
+                             std::istreambuf_iterator<char>{});
   }
   const bool identityKept=readId(restoreOriginal,restoredAfter)&&
       restoredBefore.VolumeSerialNumber==restoredAfter.VolumeSerialNumber&&
