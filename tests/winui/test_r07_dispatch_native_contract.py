@@ -16,7 +16,7 @@ class NativeDispatchContract(unittest.TestCase):
             self.assertNotIn("executeTakenRenameRestore(",read(path))
     def test_owner_claim_is_atomic_but_native_call_does_not_hold_ui_mutex(self):
         core=read("app/winui/file_operation_controller.cpp")
-        body=core.split("FileOperationController::executeTakenRenameRestore(",1)[1].split(
+        body=core.split("FileOperationController::executeTakenRenameRestoreOnState(",1)[1].split(
             "bool FileOperationController::recheckAndRetireRenameRestoreCandidate(",1)[0]
         for key in ("std::lock_guard<std::mutex> lock(shared->mutex)",
                     "taken.ticket==expected.ticket",
