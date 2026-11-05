@@ -605,13 +605,16 @@ RenameRestoreWriteResult restoreRenameNoReplace(
    outcome.status=RenameRestoreWriteStatus::OriginalOccupiedOrUnknown;
    outcome.error=originalError;return outcome;
   }
-  // FileRenameInfo + FALSE is the documented no-overwrite form.
-  // Replacement flags and overwrite-based moves are never used.
+  // R07-9 controlled Windows test: extended rename info, with zero flags,
+  // still forbids replacement while keeping the relative held-parent name.
+  // Previous FileRenameInfo on this Windows VM returned ERROR_INVALID_PARAMETER
+  // with RootDirectory set. Never fall back to an absolute path or overwrite.
   const DWORD nameBytes=static_cast<DWORD>(leaf.size()*sizeof(wchar_t));
   std::vector<unsigned char> buffer(
    sizeof(FILE_RENAME_INFO)+(leaf.size()+1)*sizeof(wchar_t),0);
   auto* info=reinterpret_cast<FILE_RENAME_INFO*>(buffer.data());
   info->ReplaceIfExists=FALSE;
+  info->Flags=0; // FileRenameInfoEx: no replace and no POSIX bypass flags
   info->RootDirectory=parent.h;
   info->FileNameLength=nameBytes;
   std::memcpy(info->FileName,leaf.data(),nameBytes);
@@ -620,7 +623,7 @@ RenameRestoreWriteResult restoreRenameNoReplace(
   // roll back; even a failed syscall cannot certify a pristine state.
   outcome.nativeCallAttempted=true;
   if(!::SetFileInformationByHandle(
-       item.h,FileRenameInfo,info,static_cast<DWORD>(buffer.size()))){
+       item.h,FileRenameInfoEx,info,static_cast<DWORD>(buffer.size()))){
    outcome.status=RenameRestoreWriteStatus::NativeCallFailedUnknownState;
    outcome.error=::GetLastError();return outcome;
   }
