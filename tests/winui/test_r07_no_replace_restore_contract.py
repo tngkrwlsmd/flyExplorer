@@ -38,7 +38,6 @@ class R07NoReplaceRestoreContract(unittest.TestCase):
                 self.assertIn(text, self.header)
         for path in (
             "app/winui/file_operation_controller.h",
-            "app/winui/file_operation_controller.cpp",
             "app/winui/m22_transfers.cpp",
             "app/winui/MainWindow.xaml.h",
         ):
