@@ -53,7 +53,7 @@ public:
     void reset() noexcept;
 private:
     HANDLE handle_=INVALID_HANDLE_VALUE;
-    HANDLE parentHandle_=INVALID_HANDLE_VALUE; // deny parent rename/delete while leased
+    HANDLE parentHandle_=INVALID_HANDLE_VALUE; // retain directory identity; not an Undo lock
     FILE_ID_INFO parentId_{}; // directory identity, not filename reservation
     std::wstring originalPath_;
     std::wstring targetPath_;
