@@ -23,7 +23,7 @@ hstring koreanError(DWORD code){
  }
 }
 }
-FileOperationController::Post MainWindow::FileOperationUiPost(){
+fxfile::previewops::FileOperationController::Post MainWindow::FileOperationUiPost(){
     // The queue is obtained on the UI thread. TryEnqueue may be called by
     // a worker, but the weak window MUST only be resolved by the UI queue.
     auto dispatch=DispatcherQueue();
