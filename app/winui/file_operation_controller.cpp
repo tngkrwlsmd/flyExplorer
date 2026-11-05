@@ -33,6 +33,9 @@ struct FileOperationController::SharedState final {
     std::uint64_t navigationGeneration=0;
     std::uint64_t fileCommandNavigationGeneration=0;
     bool busy=false;
+    // R07-19: distinguish a native restore from a pending file command.
+    // A duplicate completion with the old epoch must not be accepted.
+    bool restoreInFlight=false;
     bool closing=false;
     std::shared_ptr<fxfile::shelltransfer::Progress> progress{};
     std::optional<PendingTransfer> pending{};
@@ -382,7 +385,8 @@ FileOperationController::acceptTransfer(
     TransferCompletion const& completion,Context const& liveContext)
 {
     std::lock_guard<std::mutex> lock(state_->mutex);
-    if(state_->closing||completion.ticket!=state_->epoch)
+    if(state_->closing||completion.ticket!=state_->epoch||
+       state_->restoreInFlight)
         return TransferDisposition::Ignored;
     state_->busy=false;
     state_->progress.reset();
@@ -487,7 +491,7 @@ FileOperationController::acceptFileCommand(
 {
     std::lock_guard<std::mutex> lock(state_->mutex);
     if(state_->closing||completion.ticket!=state_->epoch||
-       completion.ticket==0||!state_->busy)
+       completion.ticket==0||!state_->busy||state_->restoreInFlight)
         return CommandDisposition::Ignored;
     state_->busy=false;
     state_->renameCandidate.reset();
@@ -624,6 +628,7 @@ FileOperationController::executeTakenRenameRestore(
             renamedCopy=taken.renamed;
             shared->pendingRestoreCheck.reset();
             shared->busy=true;
+            shared->restoreInFlight=true;
         }
     }catch(...){
         try{
@@ -641,6 +646,7 @@ FileOperationController::executeTakenRenameRestore(
         originalCopy,renamedCopy);
     try{
         std::lock_guard<std::mutex> lock(shared->mutex);
+        shared->restoreInFlight=false;
         if(!shared->closing&&shared->epoch==taken.ticket)
             shared->busy=false;
         // A closed window has already cleared busy and advanced its epoch;
