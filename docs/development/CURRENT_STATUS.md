@@ -1,3 +1,11 @@
+# 2026-11-06 — R07-23D WinUI 복원 후보의 단일 소유 인출 경계: 소스 17/17·Release PASS
+
+- **제품 변경:** 제품 커밋 `659d7b112d3557b7c2ee1966b7760519fa3c1a97`과 `4c4557e2847ed6e1d89ca663f3471294d38cfa81`에서 private WinUI 조합 메서드를 `StartPendingRenameRestoreForCurrentOwner(Context)`로 바꿨다. 호출자가 이미 인출한 후보를 넘기지 않고, 현재 소유 컨텍스트를 먼저 확인한 뒤 컨트롤러의 `takeRenameRestoreCandidate`로 후보를 한 번만 소비하고 즉시 기존 비동기 복원에 이동한다. 따라서 외부 호출자가 인출 후보를 복사·재사용하거나 잘못된 후보를 조합 경계에 주입할 수 있는 내부 API 면적을 줄였다. 실제 DispatcherQueue Post·약한 창 완료 콜백과 기존 ticket/탐색 세대·활성 패널 검사는 유지한다.
+- **정확한 검증:** 정확한 제품·검사 소스 `405972874b47a76c64f64a2b7e8ff9dabca8738c`의 [Windows VM #42100556669](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/42100556669)에서 관련 소스 계약 **17/17 PASS**, WinUI **x64 Release 제품 빌드 PASS**, EXE SHA-256 `d6deecc4e1f7268c75701c298bcaa4f5d26bff4328647f2e0b500cd14ace4a3f`, 테스트 소유 체크아웃 정리 PASS를 확인했다. 컨트롤러·네이티브 실행 로직은 바뀌지 않아 기존 38/38을 재실행하지 않았다.
+- **미완료/안전 경계:** 이 경계는 private이며 XAML·키보드·세션·사용자 명령에 연결되지 않았다. 실제 WinUI 런타임에서 테스트 소유 Rename 후보를 만들고 이 경계를 호출해 DispatcherQueue 완료 순서를 실행한 것은 아니다. GUI/픽셀, 사용자용 `Ctrl+Z`, Undo/Redo, 개인 파일 복원은 **NOT TESTED / NOT CONNECTED**다.
+
+---
+
 # 2026-11-06 — R07-23C WinUI 비동기 복원 조합 경계: 소스 15/15·Release PASS
 
 - **제품 변경:** 제품 커밋 `b33a155ac45aafa7a3bd4aca952a96d51ad42804`~`200c969c4814c29a9c0edfba7005c48136916ff3`에서 private `MainWindow::StartTakenRenameRestoreForCurrentOwner`를 추가했다. 이미 인출된 후보와 호출 시점 컨텍스트가 현재 WindowTab·활성 패널·PaneTab·route·표시 폴더에 그대로 속하는지 먼저 확인한 뒤에만 기존 `startTakenRenameRestoreAsync`에 실제 WinUI `FileOperationUiPost`와 `FileOperationRestoreCallback`을 함께 전달한다. 컨트롤러의 ticket/탐색 세대 재검사와 완료 단회 전달은 그대로 유지한다.
