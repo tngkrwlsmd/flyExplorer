@@ -552,52 +552,103 @@ FileOperationController::takeRenameRestoreCandidate(
     }
 }
 
+FileOperationController::RestoreOutcomeClass
+FileOperationController::classifyRestoreOutcome(
+    fxfile::filecommand::RenameRestoreWriteResult const& result) noexcept
+{
+    using Status=fxfile::filecommand::RenameRestoreWriteStatus;
+    if(result.nativeCallAttempted){
+        return result.status==Status::CommittedVerified?
+            RestoreOutcomeClass::VerifiedCommitted:
+            RestoreOutcomeClass::UncertainAfterAttempt;
+    }
+    switch(result.status){
+    case Status::RejectedReceipt:
+    case Status::RejectedPaths:
+    case Status::OriginalOccupiedOrUnknown:
+    case Status::TargetChangedOrUnavailable:
+    case Status::AccessUnavailable:
+        return RestoreOutcomeClass::NotAttempted;
+    case Status::NativeCallFailedUnknownState:
+    case Status::CommittedUnverified:
+    case Status::CommittedVerified:
+        // An impossible nativeCallAttempted/status combination is NOT proof
+        // that no changes occurred. Preserve the conservative classification.
+        return RestoreOutcomeClass::UncertainAfterAttempt;
+    }
+    return RestoreOutcomeClass::UncertainAfterAttempt;
+}
+
 fxfile::filecommand::RenameRestoreWriteResult
 FileOperationController::executeTakenRenameRestore(
     RenameRestoreCandidate const& taken,Context const& liveContext) noexcept
 {
     fxfile::filecommand::RenameRestoreWriteResult denied{};
+    auto shared=state_;
+    std::wstring originalCopy{};
+    fxfile::filecommand::Result renamedCopy{};
     try{
-        // Only worker callers may enter: the controller lock is intentionally
-        // held across the native syscall. Navigation, close, and new work
-        // cannot invalidate a ticket between its check and this call.
-        // The OS's external paths are NOT made atomic by this mutex.
-        std::lock_guard<std::mutex> lock(state_->mutex);
-        if(!state_->pendingRestoreCheck)return denied;
-        auto const& expected=*state_->pendingRestoreCheck;
-        auto const& left=expected.renamed;
-        auto const& right=taken.renamed;
-        auto const& before=left.renameEvidence;
-        auto const& after=right.renameEvidence;
-        const bool current=
-            !state_->closing&&!state_->busy&&!state_->pending&&
-            taken.ticket!=0&&taken.ticket==state_->epoch&&
-            taken.ticket==expected.ticket&&
-            sameContext(expected.context,liveContext)&&
-            sameContext(taken.context,liveContext)&&
-            !expected.originalPath.empty()&&
-            expected.originalPath==taken.originalPath&&
-            left.error==ERROR_SUCCESS&&right.error==left.error&&
-            !left.target.empty()&&right.target==left.target&&
-            before.verified&&after.verified==before.verified&&
-            after.volumeSerial==before.volumeSerial&&
-            after.fileId==before.fileId&&
-            after.fileSize==before.fileSize&&
-            after.lastWriteTime==before.lastWriteTime;
-        // Always consume, even for forged/stale candidates or native failure.
-        state_->pendingRestoreCheck.reset();
-        if(!current)return denied;
-        return fxfile::filecommand::restoreRenameNoReplace(
-            taken.originalPath,taken.renamed);
+        {
+            std::lock_guard<std::mutex> lock(shared->mutex);
+            if(!shared->pendingRestoreCheck)return denied;
+            auto const& expected=*shared->pendingRestoreCheck;
+            auto const& left=expected.renamed;
+            auto const& right=taken.renamed;
+            auto const& before=left.renameEvidence;
+            auto const& after=right.renameEvidence;
+            const bool current=
+                !shared->closing&&!shared->busy&&!shared->pending&&
+                taken.ticket!=0&&taken.ticket==shared->epoch&&
+                taken.ticket==expected.ticket&&
+                sameContext(expected.context,liveContext)&&
+                sameContext(taken.context,liveContext)&&
+                !expected.originalPath.empty()&&
+                expected.originalPath==taken.originalPath&&
+                left.error==ERROR_SUCCESS&&right.error==left.error&&
+                !left.target.empty()&&right.target==left.target&&
+                before.verified&&after.verified==before.verified&&
+                after.volumeSerial==before.volumeSerial&&
+                after.fileId==before.fileId&&
+                after.fileSize==before.fileSize&&
+                after.lastWriteTime==before.lastWriteTime;
+            // A rejected claim must never be replayed, even if its context
+            // becomes current again. No native file operation has started.
+            if(!current){
+                shared->pendingRestoreCheck.reset();
+                return denied;
+            }
+            // Own immutable values before leaving the lock. Allocation
+            // failure only drops the claim; never write from a borrowed
+            // candidate that its caller might subsequently change.
+            originalCopy=taken.originalPath;
+            renamedCopy=taken.renamed;
+            shared->pendingRestoreCheck.reset();
+            shared->busy=true;
+        }
     }catch(...){
-        // The native primitive is noexcept and reports ambiguous outcomes.
-        // This handler is for controller-side unexpected exceptions only.
         try{
-            std::lock_guard<std::mutex> lock(state_->mutex);
-            state_->pendingRestoreCheck.reset();
+            std::lock_guard<std::mutex> lock(shared->mutex);
+            shared->pendingRestoreCheck.reset();
         }catch(...){}
         return denied;
     }
+
+    // The ticket is now permanently claimed; new file/transfer operations
+    // see busy=true. Navigation and close are never blocked by a held
+    // controller mutex while Windows performs a potentially slow rename.
+    // Once this call starts, navigation/close cannot cancel its OS mutation.
+    auto outcome=fxfile::filecommand::restoreRenameNoReplace(
+        originalCopy,renamedCopy);
+    try{
+        std::lock_guard<std::mutex> lock(shared->mutex);
+        if(!shared->closing&&shared->epoch==taken.ticket)
+            shared->busy=false;
+        // A closed window has already cleared busy and advanced its epoch;
+        // preserve the native outcome without resurrecting controller state.
+    }catch(...){
+        // The native outcome remains truthful, even if cleanup fails.
+    }
+    return outcome;
 }
 
 bool FileOperationController::recheckAndRetireRenameRestoreCandidate(

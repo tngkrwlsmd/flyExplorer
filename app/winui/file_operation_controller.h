@@ -136,13 +136,24 @@ public:
     bool recheckAndRetireRenameRestoreCandidate(
         RenameRestoreCandidate const& taken,Context const& liveContext) noexcept;
 
-    // R07-18: isolated worker-only execution boundary. NOT wired to UI,
-    // Ctrl+Z or any user action. Under one controller mutex, consume the
-    // owner claim and call the native no-replace restore exactly once.
-    // An OS call can block: NEVER invoke this method on the UI thread.
-    // External filesystem races remain possible; not general Undo authority.
+    // R07-19: worker-only execution boundary; NOT wired to Ctrl+Z or UI.
+    // Consume the verified owner claim under the controller mutex, mark the
+    // operation busy, then release the mutex BEFORE native file I/O.
+    // Navigation/close can proceed; a started OS rename cannot be cancelled.
+    // MUST be invoked off the UI thread. Not general Undo authority.
     fxfile::filecommand::RenameRestoreWriteResult executeTakenRenameRestore(
         RenameRestoreCandidate const& taken,Context const& liveContext) noexcept;
+
+    // Future UI reporting policy only: no UI exposure or implicit retry.
+    // A native attempt with uncertain postconditions MUST NOT be presented
+    // as either confirmed restoration or definitely unchanged.
+    enum class RestoreOutcomeClass {
+        NotAttempted,
+        VerifiedCommitted,
+        UncertainAfterAttempt
+    };
+    static RestoreOutcomeClass classifyRestoreOutcome(
+        fxfile::filecommand::RenameRestoreWriteResult const& result) noexcept;
 
 private:
     struct SharedState;
