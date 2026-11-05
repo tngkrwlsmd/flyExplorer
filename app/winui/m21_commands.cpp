@@ -23,6 +23,25 @@ hstring koreanError(DWORD code){
  }
 }
 }
+FileOperationController::Post MainWindow::FileOperationUiPost(){
+    // The queue is obtained on the UI thread. TryEnqueue may be called by
+    // a worker, but the weak window MUST only be resolved by the UI queue.
+    auto dispatch=DispatcherQueue();
+    auto weak=get_weak();
+    return [dispatch,weak](FileOperationController::UiTask task) mutable {
+        if(!dispatch||!task)return false;
+        try{
+            return dispatch.TryEnqueue(
+                [weak,task=std::move(task)]() mutable {
+                    // The window may have been closed after TryEnqueue
+                    // succeeded. Suppress all post-close UI callbacks.
+                    if(auto ui=weak.get()){
+                        if(!ui->mClosing)task();
+                    }
+                });
+        }catch(...){return false;}
+    };
+}
 void MainWindow::OnCreateFolder(
  IInspectable const&,RoutedEventArgs const&){
  BeginFileNameCommand(fxfile::filecommand::Kind::CreateFolder);
@@ -212,12 +231,7 @@ void MainWindow::ExecuteFileCommand(fxfile::filecommand::Kind kind){
      }
      request.source=mPendingNameEdit->source;
  }
- auto dispatch=DispatcherQueue();
- FileOperationController::Post post=[dispatch](FileOperationController::UiTask task){
-     try{
-         return dispatch.TryEnqueue([task=std::move(task)]() mutable{task();});
-     }catch(...){return false;}
- };
+ auto post=FileOperationUiPost();
  auto weak=get_weak();
  const auto status=mFileOperations.startFileCommand(
      std::move(request),FileOperationContext(side),std::move(post),

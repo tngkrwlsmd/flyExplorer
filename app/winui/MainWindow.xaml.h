@@ -333,6 +333,11 @@ namespace winrt::FlyExplorer::implementation
         void PasteFromWindowsClipboard();
 
         using FileOperationController=fxfile::previewops::FileOperationController;
+        // R07-21: use the actual WinUI dispatcher, but do not retain a
+        // destroyed MainWindow in a detached worker or queued completion.
+        // This Post can also be supplied to the isolated restore boundary;
+        // that boundary is NOT connected to a user Undo command.
+        FileOperationController::Post FileOperationUiPost();
         FileOperationController::Context FileOperationContext(int side) const;
         bool ShareSelectionStillCurrent(int side,
             FileOperationController::Context const& origin,
