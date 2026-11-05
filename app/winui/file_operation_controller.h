@@ -123,7 +123,7 @@ public:
     // file operation, a closing window, or a mismatched live context.
     // The caller must never treat it as a write/restore capability.
     std::optional<RenameRestoreCandidate> renameRestoreCandidate(
-        Context const& liveContext) const;
+        Context const& liveContext);
 
 private:
     struct SharedState;
