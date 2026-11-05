@@ -1,3 +1,12 @@
+# 2026-11-05 — R07-12 네이티브 부모 핸들 기반 무덮어쓰기 복원: 제품 소스 반영, 실행 검증 대기
+
+- **확인한 별도 네이티브 증거:** 정확한 테스트 전용 소스 `015ce211714c2880aeb752ece9c9bf459fe9f8a0`를 이용한 [중앙 Windows VM #41992215529](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41992215529)에서 네이티브 클래스 10 (`NtSetInformationFile`)의 부모 핸들 기준 이름 변경은 **status=0**, 변경 전후 **same_parent=1**, 기존 원래 이름 점유 시 **0xC0000035**, **collision_preserved=1**로 확인됐다. 진단 소스 계약 2/2와 별도 네이티브 Release 컴파일도 통과했다. 다만 기존 제품 복원 함수가 그 시점에 여전히 Win32 경로를 사용했으므로 **전체 M21 77건은 75/77 FAIL**로 종료됐다. 테스트 전용 체크아웃과 사용자 설정 센티넬은 보호·정리했다.
+- **제품 구현 변경:** `src/base/file_command_core.cpp`의 UI 미연결 `restoreRenameNoReplace`에서 이전 `SetFileInformationByHandle(FileRenameInfoEx)` 호출 대신, **동적 로딩한 `NtSetInformationFile` 정보 클래스 10**으로 유지된 대상 파일 핸들·실제 부모 폴더 핸들·원래 이름 단순 파일명·덮어쓰기 금지 상태를 전달한다. Win32 87 오류나 NULL 루트의 작업 폴더 오이동을 fallback으로 재시도하지 않는다. ABI 구조 오프셋과 버퍼 정렬을 확인하고, NT 실패·비동기/불확실 상태는 `NativeCallFailedUnknownState`로 반환한다. 기존 영수증/부모·대상 파일 ID/크기/마지막 수정 시각 사전 검증과 호출 후 파일 위치 재검증은 유지하며, 실제 복원 실패를 자동 롤백하지 않는다.
+- **검증 범위:** 새 소스 `ff3ef1b4d3584744b1b6096f10b7e459c3d09cc1`의 [Windows VM #41992876059](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41992876059)에서 수정된 R07-8 소스 계약 **9/9 PASS**, 정확한 소스 SHA와 소유 체크아웃 정리 PASS를 확인했다. 제품 기능의 C++ 컴파일·77건 실제 파일 복원 네이티브 검사·WinUI 앱 전체 빌드·GUI/픽셀은 **이번 제품 코드 변경 기준 NOT TESTED**다. 과거 테스트용 네이티브 클래스 10 성공을 제품 함수 합격으로 혼동하지 않는다.
+- **안전 경계:** 단일 인출 ticket/창/탭/route와 네이티브 복원 함수는 아직 **연결되지 않았고**, 사용자용 Undo/Redo·Ctrl+Z도 계속 **미구현**이다. NT 경로의 경합·부모 이동·이름 충돌·결과 재검증까지 실제 소유 파일에서 통과하기 전에는 활성화하지 않는다. 사용자 기존 파일 및 세션 형식 변경 없음.
+
+---
+
 # 2026-11-05 — R07-10 NULL 루트 파일 오이동 확인 및 위험 경로 차단
 
 - **한 변수 비교:** 부모 폴더의 128비트 ID, 대상 파일의 `DELETE` 핸들, 단순 원본 파일명, 확장 이름 변경(`FileRenameInfoEx`)의 덮어쓰기/우회 플래그 **0**을 유지하고 `FILE_RENAME_INFO.RootDirectory`만 `parent.h → nullptr`로 변경했다. 정확한 SHA `c1ab5b2cbbaa554afa621e4e6cdf1fb663e44a9e`의 [Windows VM #41987547104](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41987547104)에서 Python 소스 **35/35 PASS**, M21 x64 Release 컴파일 PASS, 테스트 소유 파일 77건 **75 PASS / 2 FAIL**이었다. 네이티브 이름 변경 API는 이번에는 성공(`error=0`, `CommittedUnverified`)했으나 원본·이름 변경된 대상 경로 모두에서 파일이 발견되지 않았다. **API 성공은 의도한 폴더 복원 성공이 아니었다.**
