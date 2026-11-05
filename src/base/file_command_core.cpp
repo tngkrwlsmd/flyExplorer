@@ -605,28 +605,50 @@ RenameRestoreWriteResult restoreRenameNoReplace(
    outcome.status=RenameRestoreWriteStatus::OriginalOccupiedOrUnknown;
    outcome.error=originalError;return outcome;
   }
-  // R07-10: a NULL root and simple leaf moved the test file to the
-  // process working directory on this Windows VM, not its original parent.
-  // Preserve held-parent binding even though its observed rename call
-  // returns ERROR_INVALID_PARAMETER; this remains an unwired, unaccepted
-  // primitive. Never use NULL root, an absolute path, or overwrite flags.
+  // R07-12: the test-owned class-10 native ABI probe established
+  // parent-bound no-replace semantics. Win32 FileRenameInfoEx returned 87
+  // with this directory handle, while NULL root redirected to process CWD.
+  // Do not fall back to a path-based name, replace flags, or retry.
+  using NativeRenameFn=LONG (NTAPI*)(HANDLE,void*,void*,ULONG,ULONG);
+  using NtStatusToDosErrorFn=ULONG (WINAPI*)(LONG);
+  auto const ntdll=::GetModuleHandleW(L"ntdll.dll");
+  auto const native=ntdll?reinterpret_cast<NativeRenameFn>(
+     ::GetProcAddress(ntdll,"NtSetInformationFile")):nullptr;
+  if(!native){
+   outcome.status=RenameRestoreWriteStatus::AccessUnavailable;
+   outcome.error=ERROR_PROC_NOT_FOUND;return outcome;
+  }
+  struct NativeIoStatusBlock {
+   union {LONG Status;PVOID Pointer;};
+   ULONG_PTR Information;
+  };
+  static_assert(sizeof(NativeIoStatusBlock)==sizeof(void*)*2);
+  static_assert(offsetof(FILE_RENAME_INFO,RootDirectory)==8);
+  static_assert(offsetof(FILE_RENAME_INFO,FileName)==20);
   const DWORD nameBytes=static_cast<DWORD>(leaf.size()*sizeof(wchar_t));
-  std::vector<unsigned char> buffer(
-   sizeof(FILE_RENAME_INFO)+(leaf.size()+1)*sizeof(wchar_t),0);
-  auto* info=reinterpret_cast<FILE_RENAME_INFO*>(buffer.data());
+  const auto required=sizeof(FILE_RENAME_INFO)+(leaf.size()+1)*sizeof(wchar_t);
+  // An aligned buffer is required by the native information ABI.
+  std::vector<std::uint64_t> storage((required+7u)/8u,0);
+  auto* info=reinterpret_cast<FILE_RENAME_INFO*>(storage.data());
   info->ReplaceIfExists=FALSE;
-  info->Flags=0; // FileRenameInfoEx: no replace and no POSIX bypass flags
   info->RootDirectory=parent.h;
   info->FileNameLength=nameBytes;
   std::memcpy(info->FileName,leaf.data(),nameBytes);
-  info->FileName[leaf.size()]=L'\0';
-  // The sole mutation. Never retry, overwrite, remove, or automatically
-  // roll back; even a failed syscall cannot certify a pristine state.
+  info->FileName[leaf.size()]=L'\\0';
+
+  // This is the sole mutation, with no overwrite, rollback or retry.
+  // A failed or pending native call does not prove unchanged file state.
+  NativeIoStatusBlock io{};
   outcome.nativeCallAttempted=true;
-  if(!::SetFileInformationByHandle(
-       item.h,FileRenameInfoEx,info,static_cast<DWORD>(buffer.size()))){
+  const LONG status=native(item.h,&io,info,
+     static_cast<ULONG>(required),10u); // FileRenameInformation
+  if(status!=0||io.Status!=0){
    outcome.status=RenameRestoreWriteStatus::NativeCallFailedUnknownState;
-   outcome.error=::GetLastError();return outcome;
+   const auto translate=reinterpret_cast<NtStatusToDosErrorFn>(
+      ::GetProcAddress(ntdll,"RtlNtStatusToDosError"));
+   outcome.error=translate?translate(status!=0?status:io.Status):
+      ERROR_GEN_FAILURE;
+   return outcome;
   }
   nativeSucceeded=true;
   outcome.status=RenameRestoreWriteStatus::CommittedUnverified;
