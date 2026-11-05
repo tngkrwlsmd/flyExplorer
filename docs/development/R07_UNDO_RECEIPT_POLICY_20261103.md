@@ -82,6 +82,12 @@
 
 새 R07-7 소스 계약은 `tests/winui/test_r07_rename_owner_contract.py`에서 한번 인출·mutex 범위·반환 전 폐기·파일 변이 미도입을 검사한다. 정확한 소스 SHA `15251587b3e22b655a3bd0b67ad7dd76584ad925`의 [Windows VM #41959646943](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41959646943)에서 **신규 R07-7 Python 소스 계약 5/5 PASS**, 전용 체크아웃 정리 PASS를 확인했다. C++/WinUI 빌드·GUI·실제 Undo는 **NOT TESTED**다. 기존 R07-6 26/26 통과는 별도의 이전 SHA에서 검증한 결과다.
 
+## R07-22: 복원 완료 알림의 원래 탭 귀속 경계 (2026-11-06)
+
+`FileOperationRestoreCallback`은 창을 강하게 보유하지 않고 UI 대기열에서 약한 참조를 해석한다. `OnRenameRestoreCompleted`는 완료값의 WindowTab identity·패널·PaneTab·route·표시 파일시스템/셸 폴더와 로딩 상태를 다시 확인한 뒤에만 원래 작업공간 알림을 갱신한다. 성공·불확실·미실행 결과를 분리하며 다른 활성 탭의 상태줄을 바꾸지 않는다. 이 콜백은 아직 `startTakenRenameRestoreAsync` 또는 사용자 명령에 연결되지 않았다.
+
+정확한 제품 `80309ab9ae2c7f92b2fd95c6a226e674a51b011a`, [Windows VM #42055501856](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/42055501856): 관련 소스 10/10, WinUI x64 Release, 소유 작업공간 정리 PASS. EXE SHA-256 `a3c6aa40f42af4818caa732f706c818333ad15e9a34685aa91afe6c082da259e`. 선행 #42054946021의 반환형 범위 컴파일 실패는 보존한다. 실제 GUI/픽셀·사용자 파일·Ctrl+Z·Undo/Redo는 미검증·미연결이다.
+
 ## R07-21A: 실제 WinUI 작업 대기열에서 닫힌 창 콜백 폐기 (2026-11-05)
 
 `MainWindow::FileOperationUiPost()`는 실제 WinUI `DispatcherQueue`를 통해 `FileOperationController::UiTask`를 등록하되, worker가 `MainWindow`의 COM 객체를 직접 해석하거나 강하게 붙잡지 않는다. 큐에 등록된 함수가 UI 스레드에서 실행될 때 `get_weak()`로 받은 창 참조를 해석하고 `mClosing`을 확인하여 유효할 때에만 UI 완료 콜백을 호출한다. `TryEnqueue` 실패는 false로 보고한다. 이 안전 전달은 기존 M21 파일 작업에 실제 적용됐으며, 복원 API에는 **향후 안전한 `Post` 인수로 사용 가능하도록 준비된 단계**일 뿐 실제 Undo 명령 연결은 아니다.
