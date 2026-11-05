@@ -188,6 +188,43 @@ class R07RenameOwnerContract(unittest.TestCase):
             read("app/winui/m22_transfers.cpp")
         )
 
+    def test_navigation_owner_generation_and_all_ui_transition_bridges(self):
+        controller = read("app/winui/file_operation_controller.cpp")
+        header = read("app/winui/file_operation_controller.h")
+        ui = read("app/winui/MainWindow.xaml.cpp")
+        self.assertIn("void invalidateRenameOwnerOnNavigation() noexcept;", header)
+        generation = controller.split("void FileOperationController::invalidateRenameOwnerOnNavigation()", 1)[1].split(
+            "void FileOperationController::prepareForClose()", 1)[0]
+        for token in (
+            "std::lock_guard<std::mutex> lock(state_->mutex)",
+            "++state_->navigationGeneration;",
+            "state_->renameCandidate.reset();",
+            "state_->pendingRestoreCheck.reset();",
+        ):
+            self.assertIn(token, generation)
+        self.assertIn("fileCommandNavigationGeneration=state_->navigationGeneration", controller)
+        accept = controller.split("FileOperationController::acceptFileCommand(", 1)[1].split(
+            "FileOperationController::takeRenameRestoreCandidate(", 1)[0]
+        self.assertIn("state_->fileCommandNavigationGeneration!=state_->navigationGeneration", accept)
+        for segment, ending in (
+            ("std::uint64_t MainWindow::QueuePath(", "void MainWindow::QueuePidl("),
+            ("void MainWindow::QueuePidl(", "bool MainWindow::QueueNextFolderPage("),
+            ("void MainWindow::SuspendActiveWindowTab()", "void MainWindow::ApplyActiveWindowTab("),
+            ("bool MainWindow::CloseWindowTab(", "void MainWindow::UpdateNavigationChrome("),
+            ("void MainWindow::ActivatePane(", "void MainWindow::OnBackClicked("),
+            ("void MainWindow::OpenFolderInNewPaneTab(", "void MainWindow::OnNewTabClicked("),
+            ("void MainWindow::OnNewTabClicked(", "void MainWindow::CloseFolderTab("),
+            ("void MainWindow::CloseFolderTab(", "void MainWindow::OnCloseTabClicked("),
+            ("void MainWindow::OnSplitClicked(", "void MainWindow::OnActivateLeft("),
+            ("void MainWindow::OnLeftTabSelectionChanged(", "void MainWindow::OnRightTabSelectionChanged("),
+            ("void MainWindow::OnRightTabSelectionChanged(", "void MainWindow::OpenSelectedFolder("),
+        ):
+            part=ui.split(segment, 1)[1].split(ending, 1)[0]
+            with self.subTest(segment=segment):
+                self.assertIn("invalidateRenameOwnerOnNavigation();",part)
+        self.assertIn("if(id&&action!=fxfile::shellnav::NavigationAction::Refresh)", ui)
+        self.assertIn("if(changed)mFileOperations.invalidateRenameOwnerOnNavigation();", ui)
+
 
 if __name__ == "__main__":
     unittest.main()

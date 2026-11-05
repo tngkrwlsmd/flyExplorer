@@ -28,6 +28,10 @@ struct FileOperationController::SharedState final {
     mutable std::mutex mutex;
     std::uint64_t epoch=0;
     std::uint64_t confirmationSerial=0;
+    // R07-16: monotonic owner generation; saturation permanently disables
+    // acceptance of further rename receipts instead of wrapping to an old one.
+    std::uint64_t navigationGeneration=0;
+    std::uint64_t fileCommandNavigationGeneration=0;
     bool busy=false;
     bool closing=false;
     std::shared_ptr<fxfile::shelltransfer::Progress> progress{};
@@ -115,6 +119,20 @@ void FileOperationController::cancel() noexcept
 {
     auto current=progress();
     if(current)current->cancel.store(true);
+}
+
+void FileOperationController::invalidateRenameOwnerOnNavigation() noexcept
+{
+    try{
+        std::lock_guard<std::mutex> lock(state_->mutex);
+        if(state_->navigationGeneration<
+           (std::numeric_limits<std::uint64_t>::max)())
+            ++state_->navigationGeneration;
+        state_->renameCandidate.reset();
+        state_->pendingRestoreCheck.reset();
+        // Do not change the in-flight worker ticket or busy flag. Its
+        // completion will be rejected if the generation changed.
+    }catch(...){}
 }
 
 void FileOperationController::prepareForClose() noexcept
@@ -414,6 +432,7 @@ FileOperationController::StartStatus FileOperationController::startFileCommand(
         ticket=++state_->epoch;
         state_->renameCandidate.reset();
         state_->pendingRestoreCheck.reset();
+        state_->fileCommandNavigationGeneration=state_->navigationGeneration;
         state_->busy=true;
         state_->progress.reset();
         state_->pending.reset();
@@ -473,7 +492,10 @@ FileOperationController::acceptFileCommand(
     state_->busy=false;
     state_->renameCandidate.reset();
     state_->pendingRestoreCheck.reset();
-    if(!sameContext(completion.context,liveContext))
+    if(!sameContext(completion.context,liveContext)||
+       state_->navigationGeneration==
+           (std::numeric_limits<std::uint64_t>::max)()||
+       state_->fileCommandNavigationGeneration!=state_->navigationGeneration)
         return CommandDisposition::StaleContext;
     if(completion.result.error!=ERROR_SUCCESS)
         return CommandDisposition::Failed;

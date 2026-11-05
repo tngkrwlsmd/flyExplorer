@@ -33,7 +33,7 @@ struct Scenario {
         context.visibleShellFolder=L"shell:Downloads";
     }
 
-    bool prime(){
+    bool prime(bool invalidateBeforeCompletion=false){
         // An invalid leaf returns ERROR_INVALID_NAME BEFORE any disk access.
         // The worker only advances the real controller's ticket.
         fxfile::filecommand::Request request{};
@@ -65,6 +65,8 @@ struct Scenario {
         e.verified=true;e.volumeSerial=29;
         e.fileId[0]=0xAB;e.fileId[15]=0xCD;
         e.fileSize=42;e.lastWriteTime=987654;
+        if(invalidateBeforeCompletion)
+            controller.invalidateRenameOwnerOnNavigation();
         return controller.acceptFileCommand(completion,context)==
                Controller::CommandDisposition::Succeeded;
     }
@@ -174,6 +176,27 @@ int main(){
         auto other=s.context;++other.route;
         const auto stolen=ready?s.controller.takeRenameRestoreCandidate(other):std::nullopt;
         check(ready&&!stolen&&!s.take(),"stale_initial_owner_discarded");
+    }
+    {
+        Scenario s;
+        auto c=s.prime()?s.take():std::nullopt;
+        if(c){
+            s.controller.invalidateRenameOwnerOnNavigation();
+            s.controller.invalidateRenameOwnerOnNavigation(); // leave and return
+            check(!s.controller.recheckAndRetireRenameRestoreCandidate(*c,s.context),
+                  "aba_taken_context_return_rejected");
+        }else check(false,"aba_taken_context_return_rejected");
+    }
+    {
+        Scenario s;
+        const bool ready=s.prime();
+        s.controller.invalidateRenameOwnerOnNavigation();
+        s.controller.invalidateRenameOwnerOnNavigation();
+        check(ready&&!s.take(),"aba_unclaimed_context_return_rejected");
+    }
+    {
+        Scenario s;
+        check(!s.prime(true)&&!s.take(),"aba_inflight_completion_rejected");
     }
     std::cout<<"R07_OWNER_NATIVE_SUMMARY "<<passed<<" passed, "<<failed<<" failed.\n";
     return failed?1:0;

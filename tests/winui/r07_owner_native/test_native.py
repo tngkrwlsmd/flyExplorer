@@ -25,13 +25,13 @@ try:
         text=True, errors="replace", timeout=30
     )
     lines = result.stdout.splitlines()
-    summary = "R07_OWNER_NATIVE_SUMMARY 23 passed, 0 failed."
+    summary = "R07_OWNER_NATIVE_SUMMARY 26 passed, 0 failed."
     if result.returncode or summary not in lines:
         failures = [line for line in lines if line.startswith(
             ("R07_OWNER_FAIL", "R07_OWNER_NATIVE_SUMMARY"))]
         raise AssertionError((result.returncode, failures[:20],
                               lines[-6:], result.stderr[-600:]))
-    print("R07_OWNER_NATIVE_Release_23_PASS True")
+    print("R07_OWNER_NATIVE_Release_26_PASS True")
 finally:
     assert_legacy_profile_unchanged(real, original)
     shutil.rmtree(own)

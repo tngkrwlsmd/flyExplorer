@@ -1579,6 +1579,7 @@ namespace winrt::FlyExplorer::implementation
             "RIGHT_SUBMIT_ACCEPTED":"RIGHT_SUBMIT_REJECTED");
         if(id&&side==ActiveWindowTab().model.activePane)UpdateNavigationChrome();
         if(id)ActiveWindowTab().fileLists[side].fileCommandReveal.clear();
+        if(id)mFileOperations.invalidateRenameOwnerOnNavigation();
         if(id)StatusText().Text(L"폴더를 불러오는 중입니다.");
         else StatusText().Text(L"이 위치로 이동할 수 없습니다.");
         return id;
@@ -1599,6 +1600,8 @@ namespace winrt::FlyExplorer::implementation
         }
         const auto id=mShellNavigation->submitActive(
             ActiveWindowTab().model,side,std::move(target),action);
+        if(id&&action!=fxfile::shellnav::NavigationAction::Refresh)
+            mFileOperations.invalidateRenameOwnerOnNavigation();
         if(id&&side==ActiveWindowTab().model.activePane)UpdateNavigationChrome();
         if(id)StatusText().Text(L"폴더를 불러오는 중입니다.");
         else StatusText().Text(L"폴더를 불러올 수 없습니다.");
@@ -3778,6 +3781,7 @@ namespace winrt::FlyExplorer::implementation
     }
     void MainWindow::SuspendActiveWindowTab()
     {
+        mFileOperations.invalidateRenameOwnerOnNavigation();
         CancelTextPreview();
         mSearchController.invalidate();
         auto& state=ActiveWindowTab();
@@ -3853,6 +3857,7 @@ namespace winrt::FlyExplorer::implementation
         if(closingActive)SuspendActiveWindowTab();
         ReleaseWindowTabRoutes(mWorkspace.state(index));
         if(!mWorkspace.close(index))return false;
+        mFileOperations.invalidateRenameOwnerOnNavigation();
         if(closingActive)ApplyActiveWindowTab(L"창 탭을 닫았습니다.");
         else RefreshWindowTabs();
         return true;
@@ -3926,8 +3931,10 @@ namespace winrt::FlyExplorer::implementation
     void MainWindow::ActivatePane(int side)
     {
         CancelTextPreview();
+        const bool changed=side!=ActiveWindowTab().model.activePane;
         if(!mWorkspace.dispatch(fxfile::explorerui::Command::ActivatePane,side)
                     .accepted)return;
+        if(changed)mFileOperations.invalidateRenameOwnerOnNavigation();
         mSearchController.invalidate();
         const auto& nav=Current();
         const auto address=nav.snapshot().parsingName;
@@ -4801,6 +4808,7 @@ namespace winrt::FlyExplorer::implementation
             }
             if(!ui->mWorkspace.dispatch(fxfile::explorerui::Command::AddTab,side)
                           .accepted)return;
+            ui->mFileOperations.invalidateRenameOwnerOnNavigation();
             ui->mWorkspaceRestore.reset(side);
             ui->QueuePath(side,std::move(path));
             ui->Refresh(L"새 탭의 폴더를 불러오는 중입니다.");
@@ -4821,6 +4829,7 @@ namespace winrt::FlyExplorer::implementation
         }
         if(!mWorkspace.dispatch(fxfile::explorerui::Command::AddTab,
                             ActiveWindowTab().model.activePane).accepted)return;
+        mFileOperations.invalidateRenameOwnerOnNavigation();
         QueuePidl(ActiveWindowTab().model.activePane,std::move(start),
                   fxfile::shellnav::NavigationAction::Open);
         Refresh(L"새 탭의 폴더를 불러오는 중입니다.");
@@ -4844,6 +4853,7 @@ namespace winrt::FlyExplorer::implementation
         const auto change=mWorkspace.dispatch(
             fxfile::explorerui::Command::CloseTabAt,side,index);
         if(!change.accepted)return;
+        mFileOperations.invalidateRenameOwnerOnNavigation();
         if(activeSearch)mSearchController.invalidate();
         // Accepted search rows stay scoped to the same route, even when
         // closing an earlier background tab shifts its numerical index.
@@ -4927,6 +4937,7 @@ namespace winrt::FlyExplorer::implementation
     {
         if(!mWorkspace.dispatch(fxfile::explorerui::Command::ToggleSplit)
                   .accepted)return;
+        mFileOperations.invalidateRenameOwnerOnNavigation();
         SecondaryPane().Visibility(ActiveWindowTab().model.split?Visibility::Visible:Visibility::Collapsed);
         PaneDivider().Visibility(ActiveWindowTab().model.split?Visibility::Visible:Visibility::Collapsed);
         SecondaryColumn().Width(ActiveWindowTab().model.split?
@@ -4973,6 +4984,7 @@ namespace winrt::FlyExplorer::implementation
         if (static_cast<size_t>(view.SelectedIndex())==pane.active)return;
         if(!mWorkspace.dispatch(fxfile::explorerui::Command::SelectTab,0,
                  static_cast<size_t>(view.SelectedIndex())).accepted)return;
+        mFileOperations.invalidateRenameOwnerOnNavigation();
         mSearchController.invalidate();
         Refresh(L"왼쪽 탭을 선택했습니다.");
     }
@@ -4986,6 +4998,7 @@ namespace winrt::FlyExplorer::implementation
         if (static_cast<size_t>(view.SelectedIndex())==pane.active)return;
         if(!mWorkspace.dispatch(fxfile::explorerui::Command::SelectTab,1,
                  static_cast<size_t>(view.SelectedIndex())).accepted)return;
+        mFileOperations.invalidateRenameOwnerOnNavigation();
         mSearchController.invalidate();
         Refresh(L"오른쪽 탭을 선택했습니다.");
     }

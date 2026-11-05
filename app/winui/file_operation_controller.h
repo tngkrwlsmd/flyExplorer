@@ -91,6 +91,10 @@ public:
     std::shared_ptr<fxfile::shelltransfer::Progress> progress() const noexcept;
     void cancel() noexcept;
     void prepareForClose() noexcept;
+    // R07-16: invalidate all unclaimed and already-taken rename receipts
+    // whenever an accepted UI ownership/navigation transition occurs.
+    // No filesystem operation, no undo authority and no worker cancellation.
+    void invalidateRenameOwnerOnNavigation() noexcept;
     // A dialog must carry the identity of the exact request it displays.
     // Zero means no live pending confirmation.
     std::uint64_t pendingConfirmationToken() const noexcept;

@@ -16,6 +16,8 @@ class R07OwnerNativeContract(unittest.TestCase):
         cpp=read("app/winui/file_operation_controller.cpp")
         self.assertTrue(cpp.startswith('#if !defined(FLY_R07_OWNER_NATIVE_CONTRACT)\n#include "pch.h"\n#endif'))
         self.assertIn("recheckAndRetireRenameRestoreCandidate(",cpp)
+        self.assertIn("invalidateRenameOwnerOnNavigation()",cpp)
+        self.assertIn("fileCommandNavigationGeneration=state_->navigationGeneration",cpp)
     def test_test_fixture_never_calls_real_restore(self):
         fixture=read("tests/winui/r07_owner_native/owner_gate_native_fixture.cpp")
         self.assertIn('request.name=L"invalid\\\\leaf";',fixture)
@@ -27,7 +29,7 @@ class R07OwnerNativeContract(unittest.TestCase):
         self.assertNotIn("recheckAndRetireRenameRestoreCandidate(",read("app/winui/m22_transfers.cpp"))
     def test_wrapper_exact_result_and_user_guard(self):
         wrapper=read("tests/winui/r07_owner_native/test_native.py")
-        self.assertIn("R07_OWNER_NATIVE_SUMMARY 23 passed, 0 failed.",wrapper)
+        self.assertIn("R07_OWNER_NATIVE_SUMMARY 26 passed, 0 failed.",wrapper)
         self.assertIn("snapshot_legacy_profile()",wrapper)
         self.assertIn("assert_legacy_profile_unchanged(real, original)",wrapper)
         self.assertIn("shutil.rmtree(own)",wrapper)
