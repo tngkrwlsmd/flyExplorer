@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parents[2]
 HEADER = ROOT / "app/winui/MainWindow.xaml.h"
 SOURCE = ROOT / "app/winui/m21_commands.cpp"
 XAML = ROOT / "app/winui/MainWindow.xaml"
-NAME = "StartTakenRenameRestoreForCurrentOwner"
+NAME = "StartPendingRenameRestoreForCurrentOwner"
 
 
 class RestoreEntryBoundaryContract(unittest.TestCase):
@@ -26,7 +26,16 @@ class RestoreEntryBoundaryContract(unittest.TestCase):
         # A declaration and a single method definition are permitted; no
         # call from a toolbar, menu, keyboard or file-command handler.
         self.assertEqual(len(re.findall(r"\b" + NAME + r"\s*\(", source)), 1)
-        self.assertIn("mFileOperations.startTakenRenameRestoreAsync(", source)
+        body = source.split("MainWindow::" + NAME + "(", 1)[1].split(
+            "bool MainWindow::RestoreCompletionContextCurrent(", 1
+        )[0]
+        self.assertIn("mFileOperations.takeRenameRestoreCandidate(liveContext)", body)
+        self.assertIn("mFileOperations.startTakenRenameRestoreAsync(", body)
+        self.assertLess(
+            body.index("takeRenameRestoreCandidate(liveContext)"),
+            body.index("startTakenRenameRestoreAsync("),
+        )
+        self.assertIn("std::move(*taken)", body)
         self.assertNotIn("OnUndo", source)
         self.assertNotIn("OnRedo", source)
 
