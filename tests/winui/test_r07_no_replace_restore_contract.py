@@ -107,7 +107,7 @@ class R07NoReplaceRestoreContract(unittest.TestCase):
             )
             self.assertNotIn(text, clean)
 
-    def test_simple_name_null_root_retains_same_parent_identity_guard(self):
+    def test_null_root_is_forbidden_and_held_parent_identity_is_rechecked(self):
         body = self.restore
         for token in (
             "const std::wstring leaf=original.filename().native();",
