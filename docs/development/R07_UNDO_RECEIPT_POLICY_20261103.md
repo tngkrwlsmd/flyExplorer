@@ -82,6 +82,14 @@
 
 새 R07-7 소스 계약은 `tests/winui/test_r07_rename_owner_contract.py`에서 한번 인출·mutex 범위·반환 전 폐기·파일 변이 미도입을 검사한다. 정확한 소스 SHA `15251587b3e22b655a3bd0b67ad7dd76584ad925`의 [Windows VM #41959646943](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41959646943)에서 **신규 R07-7 Python 소스 계약 5/5 PASS**, 전용 체크아웃 정리 PASS를 확인했다. C++/WinUI 빌드·GUI·실제 Undo는 **NOT TESTED**다. 기존 R07-6 26/26 통과는 별도의 이전 SHA에서 검증한 결과다.
 
+## R07-23A: 창별 비동기 시작 소유권과 완료 콜백 단회 전달 (2026-11-06)
+
+R07-20의 `startTakenRenameRestoreAsync`는 작업 시작 전 후보의 원래 `Context`와 호출자의 `liveContext`를 비교한다. WindowTab 식별자·패널·PaneTab·route·파일시스템 및 Shell 폴더 중 한 필드라도 다르면 `StaleConfirmation`을 반환하고 네이티브 파일 변경을 시작하지 않는다. 이 판단은 UI 전용 상태 표시를 허용하는 것과 구별된다. R07-23A에서는 잘못된 owner 여섯 종류와 서로 다른 두 창에서의 실제 복원 실행 및 대기열 분리를 **테스트 소유 파일**로 검증했다.
+
+또한 완료 `UiTask`는 대기열을 제공하는 `Post`가 같은 작업을 복사해 다시 실행하는 경우에도 안전하도록 공유 `atomic_bool` 표식을 소비한다. 첫 실행만 기존 창 종료·ticket/epoch·탐색 세대 재확인을 진행하고 원래 결과 콜백을 전달할 수 있으며, 이후 호출은 즉시 폐기한다. 이는 네이티브 파일 변경의 재시도가 아니라 **완료 이벤트 중복 전달 방어**다. 오래된 창 소유권이 되살아나지 않으며, 실행 불명 결과를 확인된 성공 또는 무변경으로 바꾸지도 않는다.
+
+정확한 코드·테스트 `457b9f11a803202528eb766524ed78d17261b3a1`, [Windows VM #42058086853](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/42058086853): 관련 소스 계약 **14/14 PASS**, 제품 컨트롤러와 네이티브 파일 명령을 실제 컴파일한 테스트 **38/38 PASS**, WinUI x64 Release 빌드 **PASS**, 기존 프로필 불변·소유 작업공간 정리 PASS. **실제 WinUI `FileOperationRestoreCallback`과 비동기 시작 호출을 서로 연결한 것은 아니다.** 사용자용 Undo/Redo·Ctrl+Z, 실제 GUI 탭·창 이벤트, 개인 파일 복원 및 외부 파일 경합은 여전히 NOT CONNECTED / NOT TESTED다.
+
 ## R07-22: 복원 완료 알림의 원래 탭 귀속 경계 (2026-11-06)
 
 `FileOperationRestoreCallback`은 창을 강하게 보유하지 않고 UI 대기열에서 약한 참조를 해석한다. `OnRenameRestoreCompleted`는 완료값의 WindowTab identity·패널·PaneTab·route·표시 파일시스템/셸 폴더와 로딩 상태를 다시 확인한 뒤에만 원래 작업공간 알림을 갱신한다. 성공·불확실·미실행 결과를 분리하며 다른 활성 탭의 상태줄을 바꾸지 않는다. 이 콜백은 아직 `startTakenRenameRestoreAsync` 또는 사용자 명령에 연결되지 않았다.
