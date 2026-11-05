@@ -82,6 +82,14 @@
 
 새 R07-7 소스 계약은 `tests/winui/test_r07_rename_owner_contract.py`에서 한번 인출·mutex 범위·반환 전 폐기·파일 변이 미도입을 검사한다. 정확한 소스 SHA `15251587b3e22b655a3bd0b67ad7dd76584ad925`의 [Windows VM #41959646943](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41959646943)에서 **신규 R07-7 Python 소스 계약 5/5 PASS**, 전용 체크아웃 정리 PASS를 확인했다. C++/WinUI 빌드·GUI·실제 Undo는 **NOT TESTED**다. 기존 R07-6 26/26 통과는 별도의 이전 SHA에서 검증한 결과다.
 
+## R07-14: 인출 후 일회성 소유권 재확인 (2026-11-05)
+
+R07-7의 `takeRenameRestoreCandidate`는 기존 후보를 원본 저장소에서 제거하며, 인출한 복사본은 이후 자동으로 유효해지지 않는다. 새 `recheckAndRetireRenameRestoreCandidate(taken,liveContext)`는 별도로 보관한 기대 영수증과 파일 ID·볼륨·크기·시간, 정확한 경로, 창·패널·탭·route·ticket를 다시 대조한다. **일치 여부와 관계없이 잠금 안에서 기대값을 폐기**하므로 동일 후보의 후속 재검사는 실패한다. 새 파일 작업과 전송, 창 종료도 인출된 대기 후보를 폐기한다. 파일 I/O나 실제 이름 복원은 이 단계에 없다.
+
+정확한 소스 `3b055ce1a76924c399e91c6ae266caf823c81717`에서 [소유권 소스 계약 #42003245497](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/42003245497) **7/7 PASS**, [x64 Release 빌드 #42004028953](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/42004028953) **PASS**. 첫 시도 [#42003728525](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/42003728525)의 긴 작업 경로 NuGet 복원 FAIL은 소스 C++ 미컴파일로 분류했고 짧은 소유 경로에서 재검증했다. 독립 컨트롤러 런타임/GUI/픽셀 및 복원 실행은 **NOT TESTED**.
+
+이 검사는 파일 복원 권한이 아니다. 실제 UI에서 사용하려면 탭/route 변경의 전달, 재확인에서 실제 네이티브 호출까지의 원자성·동시 경합, 한 번만 실행되는 작업 수명 계약이 추가로 필요하다. 사용자용 Undo/Redo·Ctrl+Z/세션 영속화를 아직 활성화하지 않는다.
+
 ## R07-8 구현: UI와 격리된 원본 이름 무덮어쓰기 네이티브 함수 (2026-11-05)
 
 Microsoft `FILE_RENAME_INFO` 문서에 따르면 `SetFileInformationByHandle(FileRenameInfo)`에서 `ReplaceIfExists=FALSE`는 새 이름이 이미 사용 중인 경우 오류로 거부하며 `RootDirectory`는 상대 이름을 해석할 기준 디렉터리 핸들이다. 공식 참조: https://learn.microsoft.com/en-us/windows/win32/api/winbase/ns-winbase-file_rename_info

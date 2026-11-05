@@ -1,8 +1,9 @@
-# 2026-11-05 — R07-14 복원 후보 실행 직전 소유권 단회 재확인 (소스 구현, Windows 실행 미검증)
+# 2026-11-05 — R07-14 인출 후 복원 후보 단회 소유권 재검증: 관련 소스 7/7·x64 Release 빌드 PASS
 
-- **구현:** `FileOperationController::recheckAndRetireRenameRestoreCandidate`는 이미 한 번 인출한 Rename 후보의 `ticket`·창/패널/폴더 탭·route·표시 경로, 원본 경로, 대상 경로 및 파일 식별/크기/시간 영수증을 컨트롤러가 보관한 한 건의 원본 값과 mutex 안에서 다시 대조한다. 검사 결과가 성공·실패 어느 쪽이든 해당 대기 후보는 같은 잠금 안에서 폐기한다. 신규 파일 명령·전송·닫힘도 대기 값을 폐기한다. 기존 `takeRenameRestoreCandidate`는 원본 저장분을 반환 전에 폐기하는 동작을 유지한다.
-- **범위:** `tests/winui/test_r07_rename_owner_contract.py`에 한 번만 확인, 받은 후보의 변조/복사 후 재사용 방지, 새 작업/종료 폐기 및 파일 변경 코드 미연결을 요구하는 소스 계약을 추가했다. **이 단계는 소스 작성이며 새 C++ 컴파일·네이티브 실제 호출·GUI/픽셀은 NOT TESTED**다. 사용자에게 보이는 Undo/Redo·Ctrl+Z는 활성화하지 않았다.
-- **미완료 보안 경계:** 실행 중 탐색 변경을 UI로 즉시 전달하는 통지는 아직 없다. 호출 직전 재검증과 파일시스템의 실제 변경 사이의 경쟁은 잠금 하나로 막을 수 없다. 이 불변 검사 자체는 파일 복원의 승인이나 원래 이름 예약이 아니며, 이 단계에서 `restoreRenameNoReplace`와 연결하지 않았다. 이전 R07-13의 정확한 Windows 79/79 PASS는 변경 영향 밖이므로 재검증하지 않는다.
+- **정확한 제품 소스:** `3b055ce1a76924c399e91c6ae266caf823c81717`. [중앙 Windows VM 소스 검사 #42003245497](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/42003245497)에서 `test_r07_rename_owner_contract.py`의 기존/신규 소스 계약 **7/7 PASS**, 정확한 SHA 및 테스트 전용 체크아웃 정리 PASS를 확인했다. [중앙 Windows VM #42004028953](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/42004028953)에서 같은 소스의 **x64 Release 제품 빌드 PASS**, EXE SHA-256 `2bcfca3e43ae23ae58fb12d4eec5a73081495fe4afe63a516a6970e826d29d30`, 소유 임시 빌드 작업공간 정리 PASS를 확인했다.
+- **구현 내용:** `FileOperationController::recheckAndRetireRenameRestoreCandidate`가 이미 꺼낸 한 건의 Rename 후보를 `ticket`, 창/패널/폴더 탭/route·경로, 원본·대상 경로, 검증된 파일 ID·볼륨·크기·수정 시각과 다시 대조한다. 결과가 참/거짓 어느 쪽이든 mutex 내부에서 재확인 대기 후보를 즉시 폐기한다. 새 파일 작업·전송·창 종료도 발급된 임시 후보를 폐기한다. R07-7의 기존 단일 인출·원본 저장 폐기 계약은 유지한다.
+- **실패/회복 경계:** [첫 Release #42003728525](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/42003728525)는 Windows 긴 작업 디렉터리의 NuGet 복원에서 **MAX_PATH 초과로 FAIL**, 변경된 C++ 컴파일 단계에 도달하지 않았다. 더 짧은 **전용 소유 경로**를 사용해 동일 소스의 빌드를 성공시켰다. 두 실행 모두 소유 임시 작업공간 정리를 확인했으며, 첫 실패를 제품 결함으로 분류하지 않는다.
+- **수용 한계:** 메서드는 실제 복원 호출과 **미연결**, 파일 I/O·UI Undo/Redo·Ctrl+Z·세션 v4 변경 없음. 실사용 시 인출된 값을 넘기는 UI/worker 경로가 없으므로 **단회 재확인의 C++ 동작을 실제 GUI에서 시험한 것은 아니다.** 창/탭 이동 이벤트의 즉각적 취소, 호출 직후 실제 파일 변경까지의 경쟁, 외부 프로세스에 의한 부모 폴더 동시 이동·삭제는 미검증이다. 제품 GUI/픽셀 및 다른 환경은 **NOT TESTED**이며, R07-13 네이티브 79/79 수용은 변경 영향 밖이어서 반복하지 않았다. 다음에는 실제 컨트롤러 동작을 격리해 검증하고 그 결과로 후속 연동 안전성을 판단한다.
 
 ---
 
