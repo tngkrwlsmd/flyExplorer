@@ -42,6 +42,53 @@ fxfile::previewops::FileOperationController::Post MainWindow::FileOperationUiPos
         }catch(...){return false;}
     };
 }
+FileOperationController::RestoreCallback MainWindow::FileOperationRestoreCallback(){
+    auto weak=get_weak();
+    return [weak](FileOperationController::RestoreCompletion completion){
+        if(auto ui=weak.get())ui->OnRenameRestoreCompleted(std::move(completion));
+    };
+}
+bool MainWindow::RestoreCompletionContextCurrent(
+ FileOperationController::Context const& origin) const{
+    if(mClosing||origin.side<0||origin.side>1||
+       !origin.windowTabIdentity||!origin.route)return false;
+    for(std::size_t i=0;i<mWorkspace.count();++i){
+        auto const& state=mWorkspace.state(i);
+        if(state.identity!=origin.windowTabIdentity)continue;
+        auto const& pane=state.model.panes[static_cast<std::size_t>(origin.side)];
+        if(pane.active!=origin.tab||origin.tab>=pane.tabs.size()||
+           origin.tab>=pane.pending.size()||pane.pending[origin.tab]||
+           origin.tab>=pane.routeIds.size()||
+           pane.routeIds[origin.tab]!=origin.route||
+           origin.tab>=pane.filesystemPaths.size()||
+           pane.filesystemPaths[origin.tab]!=origin.visibleFolder)return false;
+        return pane.tabs[origin.tab].snapshot().parsingName==
+               origin.visibleShellFolder;
+    }
+    return false;
+}
+void MainWindow::OnRenameRestoreCompleted(
+ FileOperationController::RestoreCompletion completion){
+    if(!RestoreCompletionContextCurrent(completion.context))return;
+    using Outcome=FileOperationController::RestoreOutcomeClass;
+    std::wstring notice;
+    if(completion.outcome==Outcome::VerifiedCommitted){
+        notice=L"이름 변경을 안전하게 되돌렸습니다.";
+    }else if(completion.outcome==Outcome::UncertainAfterAttempt){
+        notice=L"되돌리기 결과를 확인할 수 없습니다. 원본 폴더에서 파일을 확인하세요.";
+    }else{
+        notice=L"이름 변경을 되돌리지 않았습니다.";
+    }
+    for(std::size_t i=0;i<mWorkspace.count();++i){
+        auto& state=mWorkspace.state(i);
+        if(state.identity==completion.context.windowTabIdentity){
+            state.fileOperationNotice=notice;
+            break;
+        }
+    }
+    if(ActiveWindowTab().identity==completion.context.windowTabIdentity)
+        StatusText().Text(hstring(notice));
+}
 void MainWindow::OnCreateFolder(
  IInspectable const&,RoutedEventArgs const&){
  BeginFileNameCommand(fxfile::filecommand::Kind::CreateFolder);

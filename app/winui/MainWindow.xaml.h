@@ -338,6 +338,14 @@ namespace winrt::FlyExplorer::implementation
         // This Post can also be supplied to the isolated restore boundary;
         // that boundary is NOT connected to a user Undo command.
         FileOperationController::Post FileOperationUiPost();
+        // R07-21B: completion reporting is bound to the exact originating
+        // WindowTab, pane, PaneTab, route and visible folder. It remains
+        // disconnected from any user Undo command.
+        FileOperationController::RestoreCallback FileOperationRestoreCallback();
+        bool RestoreCompletionContextCurrent(
+            FileOperationController::Context const& origin) const;
+        void OnRenameRestoreCompleted(
+            FileOperationController::RestoreCompletion completion);
         FileOperationController::Context FileOperationContext(int side) const;
         bool ShareSelectionStillCurrent(int side,
             FileOperationController::Context const& origin,
