@@ -605,18 +605,18 @@ RenameRestoreWriteResult restoreRenameNoReplace(
    outcome.status=RenameRestoreWriteStatus::OriginalOccupiedOrUnknown;
    outcome.error=originalError;return outcome;
   }
-  // R07-10: a simple leaf and NULL root names the existing directory
-  // of the held file, not a process-relative path. Keep the verified
-  // parent handle independently for identity checks before/after rename.
-  // Only RootDirectory differs from the failed R07-9 extended call.
-  // Never provide an absolute path, replacement flags, or a retry.
+  // R07-10: a NULL root and simple leaf moved the test file to the
+  // process working directory on this Windows VM, not its original parent.
+  // Preserve held-parent binding even though its observed rename call
+  // returns ERROR_INVALID_PARAMETER; this remains an unwired, unaccepted
+  // primitive. Never use NULL root, an absolute path, or overwrite flags.
   const DWORD nameBytes=static_cast<DWORD>(leaf.size()*sizeof(wchar_t));
   std::vector<unsigned char> buffer(
    sizeof(FILE_RENAME_INFO)+(leaf.size()+1)*sizeof(wchar_t),0);
   auto* info=reinterpret_cast<FILE_RENAME_INFO*>(buffer.data());
   info->ReplaceIfExists=FALSE;
   info->Flags=0; // FileRenameInfoEx: no replace and no POSIX bypass flags
-  info->RootDirectory=nullptr;
+  info->RootDirectory=parent.h;
   info->FileNameLength=nameBytes;
   std::memcpy(info->FileName,leaf.data(),nameBytes);
   info->FileName[leaf.size()]=L'\0';
