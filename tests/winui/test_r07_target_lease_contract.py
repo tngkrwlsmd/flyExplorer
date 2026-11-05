@@ -21,6 +21,8 @@ class R07TargetLeaseContract(unittest.TestCase):
             "RenameRestoreObservation recheck() const noexcept",
             "void reset() noexcept",
             "HANDLE handle_=INVALID_HANDLE_VALUE",
+            "HANDLE parentHandle_=INVALID_HANDLE_VALUE",
+            "FILE_ID_INFO parentId_{}",
         ):
             self.assertIn(part, header)
         app = source("app/winui/file_operation_controller.cpp")
@@ -38,6 +40,11 @@ class R07TargetLeaseContract(unittest.TestCase):
         for part in (
             "RenameTargetLease::reset() noexcept",
             "::CloseHandle(handle_)",
+            "::CloseHandle(parentHandle_)",
+            "readDirectoryId(parentHandle_,parentId_)",
+            "FILE_FLAG_BACKUP_SEMANTICS|FILE_FLAG_OPEN_REPARSE_POINT",
+            "sameDirectoryId(parentId_,lockedParent)",
+            "sameDirectoryId(parentId_,visibleParent)",
             "RenameTargetLease::begin(",
             "reset();",
             "inspectRenameRestore(originalPath,renamed)",
@@ -88,6 +95,9 @@ class R07TargetLeaseContract(unittest.TestCase):
             "r07_guard_denies_competing_delete_without_change",
             "r07_guard_rechecks_reoccupied_original_without_restoring",
             "r07_guard_denies_prior_writer_and_releases_cleanly",
+            "r07_guard_denies_parent_directory_delete_during_lease",
+            "r07_guard_reset_releases_parent_directory_lock",
+            "r07_guard_denies_preexisting_parent_delete_access",
             "ERROR_SHARING_VIOLATION",
             "FILE_WRITE_DATA",
             "DELETE,",
@@ -96,7 +106,7 @@ class R07TargetLeaseContract(unittest.TestCase):
             with self.subTest(marker=marker):
                 self.assertIn(marker, native)
         wrapper = source("tests/winui/m21/test_native.py")
-        self.assertIn("M21_NATIVE_SUMMARY 66 passed, 0 failed.", wrapper)
+        self.assertIn("M21_NATIVE_SUMMARY 69 passed, 0 failed.", wrapper)
         policy = " ".join(
             source("docs/development/R07_UNDO_RECEIPT_POLICY_20261103.md").split()
         )
