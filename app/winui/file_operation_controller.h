@@ -136,6 +136,14 @@ public:
     bool recheckAndRetireRenameRestoreCandidate(
         RenameRestoreCandidate const& taken,Context const& liveContext) noexcept;
 
+    // R07-18: isolated worker-only execution boundary. NOT wired to UI,
+    // Ctrl+Z or any user action. Under one controller mutex, consume the
+    // owner claim and call the native no-replace restore exactly once.
+    // An OS call can block: NEVER invoke this method on the UI thread.
+    // External filesystem races remain possible; not general Undo authority.
+    fxfile::filecommand::RenameRestoreWriteResult executeTakenRenameRestore(
+        RenameRestoreCandidate const& taken,Context const& liveContext) noexcept;
+
 private:
     struct SharedState;
     struct PendingTransfer;

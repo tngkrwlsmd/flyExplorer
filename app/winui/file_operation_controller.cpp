@@ -552,6 +552,54 @@ FileOperationController::takeRenameRestoreCandidate(
     }
 }
 
+fxfile::filecommand::RenameRestoreWriteResult
+FileOperationController::executeTakenRenameRestore(
+    RenameRestoreCandidate const& taken,Context const& liveContext) noexcept
+{
+    fxfile::filecommand::RenameRestoreWriteResult denied{};
+    try{
+        // Only worker callers may enter: the controller lock is intentionally
+        // held across the native syscall. Navigation, close, and new work
+        // cannot invalidate a ticket between its check and this call.
+        // The OS's external paths are NOT made atomic by this mutex.
+        std::lock_guard<std::mutex> lock(state_->mutex);
+        if(!state_->pendingRestoreCheck)return denied;
+        auto const& expected=*state_->pendingRestoreCheck;
+        auto const& left=expected.renamed;
+        auto const& right=taken.renamed;
+        auto const& before=left.renameEvidence;
+        auto const& after=right.renameEvidence;
+        const bool current=
+            !state_->closing&&!state_->busy&&!state_->pending&&
+            taken.ticket!=0&&taken.ticket==state_->epoch&&
+            taken.ticket==expected.ticket&&
+            sameContext(expected.context,liveContext)&&
+            sameContext(taken.context,liveContext)&&
+            !expected.originalPath.empty()&&
+            expected.originalPath==taken.originalPath&&
+            left.error==ERROR_SUCCESS&&right.error==left.error&&
+            !left.target.empty()&&right.target==left.target&&
+            before.verified&&after.verified==before.verified&&
+            after.volumeSerial==before.volumeSerial&&
+            after.fileId==before.fileId&&
+            after.fileSize==before.fileSize&&
+            after.lastWriteTime==before.lastWriteTime;
+        // Always consume, even for forged/stale candidates or native failure.
+        state_->pendingRestoreCheck.reset();
+        if(!current)return denied;
+        return fxfile::filecommand::restoreRenameNoReplace(
+            taken.originalPath,taken.renamed);
+    }catch(...){
+        // The native primitive is noexcept and reports ambiguous outcomes.
+        // This handler is for controller-side unexpected exceptions only.
+        try{
+            std::lock_guard<std::mutex> lock(state_->mutex);
+            state_->pendingRestoreCheck.reset();
+        }catch(...){}
+        return denied;
+    }
+}
+
 bool FileOperationController::recheckAndRetireRenameRestoreCandidate(
     RenameRestoreCandidate const& taken,Context const& liveContext) noexcept
 {
