@@ -53,11 +53,11 @@
 
 ## R07-5 구현: 원본 부모 디렉터리 동일성 유지 (2026-11-05)
 
-`RenameTargetLease`는 대상 파일과 더불어 **원본 이름 및 결과 파일의 공통 부모 디렉터리 핸들**을 유지한다. 부모 디렉터리를 `FILE_READ_ATTRIBUTES`, `FILE_SHARE_READ|FILE_SHARE_WRITE`, `FILE_FLAG_BACKUP_SEMANTICS|FILE_FLAG_OPEN_REPARSE_POINT`로 열고 비재분석 디렉터리와 볼륨/128비트 파일 ID를 확인한다. 열려 있는 동안 부모 디렉터리 자체에 대한 새로운 DELETE/이름 변경 접근을 제한하고, 이미 DELETE 핸들이 열려 있으면 보호 획득을 거부한다. `recheck`에서 유지된 부모 핸들과 최신 경로의 디렉터리 ID가 일치하는지 다시 검사하고, `reset` 및 소멸자에서 두 핸들을 해제한다.
+`RenameTargetLease`는 대상 파일과 더불어 **원본 이름 및 결과 파일의 공통 부모 디렉터리 핸들**을 유지한다. 부모 디렉터리를 `FILE_READ_ATTRIBUTES`, `FILE_SHARE_READ|FILE_SHARE_WRITE`, `FILE_FLAG_BACKUP_SEMANTICS|FILE_FLAG_OPEN_REPARSE_POINT`로 열고 비재분석 디렉터리와 볼륨/128비트 파일 ID를 확인한다. 부모 디렉터리의 삭제/이름 변경에 대한 배타적 차단은 이 핸들만으로 보장되지 않는다. 실제 Windows 네이티브 검사에서는 DELETE 접근이 열릴 수 있어, 기존 DELETE 핸들을 반드시 거부한다는 가정도 폐기한다. 따라서 부모 핸들은 현재 디렉터리의 동일성 재관측용이며 원본 이름·상위 경로의 경합 방지 권한이 아니다. `recheck`에서 유지된 부모 핸들과 최신 경로의 디렉터리 ID가 일치하는지 다시 검사하고, `reset` 및 소멸자에서 두 핸들을 해제한다.
 
 - **원래 파일명은 원자적으로 예약하지 않는다.** 동일 부모에 새 파일을 만드는 경합은 가능하므로 복원 실행을 승인하지 않는다. 조상 디렉터리 경합은 재검증 시 발견할 수 있어도 모든 경합을 차단하는 것은 아니다.
 - UI·Undo/Redo·Ctrl+Z·세션 v4·실제 파일 복원 또는 데이터 변경 명령은 연결하지 않는다.
-- 소유 Windows 네이티브 검증은 신규 부모 DELETE 충돌 3건을 포함한 69건이 대상이며, 실제 실행 전 결과는 **NOT CHECKED**다. 이전 66건 수용 증거와 구분한다.
+- 소유 Windows 네이티브 검증 69건 중 최초 실행은 **67 PASS / 2 FAIL**이었다([#41951610572](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41951610572)). 두 실패는 부모 DELETE 접근이 언제나 차단된다는 부정확한 가정을 드러냈다. 이후 테스트는 파일 보존·현재 동일성 재확인과 비승인 원칙을 요구하도록 수정했다. 수정본의 실제 Windows 네이티브 재실행은 **NOT CHECKED**이며, 69건 성공으로 단정하지 않는다.
 
 ## 후속 필수 단계 (순서 변경 금지)
 
