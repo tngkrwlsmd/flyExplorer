@@ -605,10 +605,10 @@ RenameRestoreWriteResult restoreRenameNoReplace(
    outcome.status=RenameRestoreWriteStatus::OriginalOccupiedOrUnknown;
    outcome.error=originalError;return outcome;
   }
-  // R07-9 controlled Windows test: extended rename info, with zero flags,
-  // still forbids replacement while keeping the relative held-parent name.
-  // Previous FileRenameInfo on this Windows VM returned ERROR_INVALID_PARAMETER
-  // with RootDirectory set. Never fall back to an absolute path or overwrite.
+  // R07-9: this extended zero-flags form also returned ERROR_INVALID_PARAMETER
+  // on the Windows VM, just like FileRenameInfo with a held RootDirectory.
+  // Keep no-replace and parent-handle binding; never silently fall back to
+  // an unanchored absolute path, retry, or enable user-facing Undo.
   const DWORD nameBytes=static_cast<DWORD>(leaf.size()*sizeof(wchar_t));
   std::vector<unsigned char> buffer(
    sizeof(FILE_RENAME_INFO)+(leaf.size()+1)*sizeof(wchar_t),0);
