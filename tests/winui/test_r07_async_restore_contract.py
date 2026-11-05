@@ -27,9 +27,32 @@ class R07AsyncRestoreContract(unittest.TestCase):
         for key in ("shared->closing","shared->epoch!=value.ticket",
                     "shared->navigationGeneration!=generation"):
             self.assertGreaterEqual(worker.count(key),2)
-        self.assertIn("post([shared,generation,completion=std::move(completion)",worker)
+        self.assertIn("post([shared,generation,delivered,",worker)
         self.assertIn("completion(std::move(value));",worker)
         self.assertIn("classifyRestoreOutcome(value.result)",worker)
+
+    def test_replayed_ui_queue_task_is_delivered_once(self):
+        source=read("app/winui/file_operation_controller.cpp")
+        worker=source.split("FileOperationController::startTakenRenameRestoreAsync(",1)[1].split(
+            "bool FileOperationController::recheckAndRetireRenameRestoreCandidate(",1)[0]
+        self.assertIn("#include <atomic>",source)
+        self.assertIn("std::make_shared<std::atomic_bool>(false)",worker)
+        self.assertIn("delivered->exchange(true,std::memory_order_acq_rel)",worker)
+        self.assertLess(worker.index("delivered->exchange("),
+                        worker.index("completion(std::move(value));"))
+        fixture=read("tests/winui/r07_dispatch_native/dispatch_native_fixture.cpp")
+        for test in (
+            "async_foreign_window_not_started",
+            "async_foreign_pane_not_started",
+            "async_foreign_panetab_not_started",
+            "async_foreign_route_not_started",
+            "async_foreign_folder_not_started",
+            "async_foreign_shell_folder_not_started",
+            "async_separate_windows_cannot_exchange_queued_results",
+            "async_duplicate_queued_task_delivers_callback_once",
+        ):
+            with self.subTest(test=test):
+                self.assertIn(test,fixture)
 
     def test_no_gui_or_session_wiring(self):
         for path in ("app/winui/MainWindow.xaml.cpp",

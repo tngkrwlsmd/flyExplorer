@@ -48,7 +48,7 @@ class R07WinUiDispatchContract(unittest.TestCase):
         for field in ("shared->closing","shared->epoch!=value.ticket",
                       "shared->navigationGeneration!=generation"):
             self.assertGreaterEqual(func.count(field),2)
-        self.assertIn("post([shared,generation,completion=std::move(completion)",func)
+        self.assertIn("post([shared,generation,delivered,",func)
 
 if __name__=="__main__":
     unittest.main()
