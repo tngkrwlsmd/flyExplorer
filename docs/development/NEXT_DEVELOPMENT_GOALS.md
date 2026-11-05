@@ -20,7 +20,7 @@
 
 ## 앞으로 진행할 작업
 
-**2026-11-05 R07-7 단일 후보 인출(소스 반영, 검사 대기):** 기존 임시 Rename 후보를 `takeRenameRestoreCandidate`로 **동일 mutex 아래 한 번만 반환·삭제**하도록 변경했다. 다중 호출 중복 인출, 오래된 ticket/창·패널·탭·route/폴더의 불일치 및 예외 시 안전하게 실패하도록 계약을 추가했다. 후보를 가져간 후의 재사용·UI 탭 이동 이벤트·원본 이름 충돌을 막는 보증은 아니며 **파일 쓰기·실제 복원·Ctrl+Z/Redo 없음**. **다음 우선 단위: 신규 R07-7의 소스 계약 실제 실행 → 파일과 경로 식별자·DELETE 핸들·원자적 무덮어쓰기 복원을 별도 안전 경계로 설계·검증**. 이 변경의 Python 실행·C++ 빌드·GUI는 아직 NOT TESTED다.
+**2026-11-05 R07-7 단일 후보 인출(전용 소스 계약 5/5 PASS):** 기존 임시 Rename 후보를 `takeRenameRestoreCandidate`로 **동일 mutex 아래 한 번만 반환·삭제**하도록 변경했다. 다중 호출 중복 인출, 오래된 ticket/창·패널·탭·route/폴더의 불일치 및 예외 시 안전하게 실패하도록 계약을 추가했다. 후보를 가져간 후의 재사용·UI 탭 이동 이벤트·원본 이름 충돌을 막는 보증은 아니며 **파일 쓰기·실제 복원·Ctrl+Z/Redo 없음**. 정확한 R07-7 SHA `15251587b3e22b655a3bd0b67ad7dd76584ad925`의 [Windows VM 전용 #41959646943](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41959646943)에서 **Python 소유권 계약 5/5 PASS**, 소유 체크아웃 정리 PASS를 확인했다. **다음 우선 단위: 작업 소유권 재확인·파일과 경로 식별자·유지된 DELETE 핸들·원본 이름 무덮어쓰기 원자적 복원을 별도 안전 경계로 설계·검증**. 이 변경의 C++ 빌드·GUI·실제 복원은 NOT TESTED다.
 
 **2026-11-05 R07-6 작업 소유권 후보(소스 한정 수용):** `FileOperationController`가 성공한 단일 Rename의 검증된 파일 ID·완료 ticket·창 탭·패널·폴더 탭·route·표시 경로를 일치시켜 임시 후보를 보관하고, 새 작업/창 종료/조회 불일치에서 폐기하는 범위는 정확한 SHA `67d9ba35be3fb10d1ed466fa8a854772453be26f`의 [Windows VM #41958774791](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41958774791)에서 R07 Python 소스 계약 **26/26 PASS**(신규 4건 포함), 소유 체크아웃 정리 PASS로 확인했다. **C++ 빌드·GUI·사용자 파일 복원은 미검증·미구현**. R07-7은 별도 변경이므로 동일 SHA의 통과로 대신하지 않는다.
 
