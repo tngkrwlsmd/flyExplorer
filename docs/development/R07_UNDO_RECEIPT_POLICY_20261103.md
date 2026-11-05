@@ -51,6 +51,14 @@
 - 소유 테스트 파일에서 보호 중 다른 쓰기·삭제 핸들 열기 거부, 원래 이름 재점유의 재검증, 선행 쓰기 핸들 존재 시 획득 거부와 해제 후 재획득을 실험한다. `RenameTargetLease`는 **파일을 생성·이동·삭제·복원하지 않으며** `DELETE` 접근 권한도 요청하지 않는다. 실제 Undo/Redo·Ctrl+Z·경합 없는 최종 이름 예약/복원은 여전히 **미구현**이다.
 - [첫 Windows #41781410527](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41781410527)은 R07 소스 계약 21/21 PASS지만 잘못 사용한 `std::equal_n` 때문에 네이티브 컴파일 FAIL. 이를 표준 `std::equal`로 수정한 뒤 [Windows #41781670269](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41781670269)에서 정확한 제품·테스트 SHA `ec44b50dccc12dc2eb0d48af71ff3262bf7cabf5`의 **R07 계약 21/21, M21 네이티브 Release 빌드, 테스트 소유 파일 작업 60/60, 원본 설정 보존, 소유 체크아웃 정리 PASS**를 확인했다. [전체 제품 x64 Release #41781872051](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41781872051)은 작성 당시 진행 중이며 **별도 최종 확인 대상**이다. GUI·화면 픽셀·실제 Undo/Redo는 미실행이다.
 
+## R07-5 구현: 원본 부모 디렉터리 동일성 유지 (2026-11-05)
+
+`RenameTargetLease`는 대상 파일과 더불어 **원본 이름 및 결과 파일의 공통 부모 디렉터리 핸들**을 유지한다. 부모 디렉터리를 `FILE_READ_ATTRIBUTES`, `FILE_SHARE_READ|FILE_SHARE_WRITE`, `FILE_FLAG_BACKUP_SEMANTICS|FILE_FLAG_OPEN_REPARSE_POINT`로 열고 비재분석 디렉터리와 볼륨/128비트 파일 ID를 확인한다. 열려 있는 동안 부모 디렉터리 자체에 대한 새로운 DELETE/이름 변경 접근을 제한하고, 이미 DELETE 핸들이 열려 있으면 보호 획득을 거부한다. `recheck`에서 유지된 부모 핸들과 최신 경로의 디렉터리 ID가 일치하는지 다시 검사하고, `reset` 및 소멸자에서 두 핸들을 해제한다.
+
+- **원래 파일명은 원자적으로 예약하지 않는다.** 동일 부모에 새 파일을 만드는 경합은 가능하므로 복원 실행을 승인하지 않는다. 조상 디렉터리 경합은 재검증 시 발견할 수 있어도 모든 경합을 차단하는 것은 아니다.
+- UI·Undo/Redo·Ctrl+Z·세션 v4·실제 파일 복원 또는 데이터 변경 명령은 연결하지 않는다.
+- 소유 Windows 네이티브 검증은 신규 부모 DELETE 충돌 3건을 포함한 69건이 대상이며, 실제 실행 전 결과는 **NOT CHECKED**다. 이전 66건 수용 증거와 구분한다.
+
 ## 후속 필수 단계 (순서 변경 금지)
 
 1. **개별 변경 증거 (R07-2 일부 구현):** 원본·결과의 정확한 단일 항목 식별자(볼륨 식별자와 파일 ID), 재분석 지점 제외, 최종 파일 상태, 실제 생성/이동/복구 성공 정보 등을 worker의 신뢰된 범위에서 수집한다. 이름이나 경로만으로 동일한 파일이라고 간주하지 않는다. 일괄 Copy/Move의 aggregate 완료 수치만으로는 영수증을 발행할 수 없다.
