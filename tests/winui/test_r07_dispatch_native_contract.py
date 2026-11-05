@@ -12,20 +12,32 @@ class NativeDispatchContract(unittest.TestCase):
         for path in ("app/winui/MainWindow.xaml.cpp","app/winui/MainWindow.xaml.h",
                      "app/winui/m22_transfers.cpp","app/winui/m21_commands.cpp"):
             self.assertNotIn("executeTakenRenameRestore(",read(path))
-    def test_owner_is_checked_and_retired_before_mutation(self):
+    def test_owner_claim_is_atomic_but_native_call_does_not_hold_ui_mutex(self):
         core=read("app/winui/file_operation_controller.cpp")
         body=core.split("FileOperationController::executeTakenRenameRestore(",1)[1].split(
             "bool FileOperationController::recheckAndRetireRenameRestoreCandidate(",1)[0]
-        for key in ("std::lock_guard<std::mutex> lock(state_->mutex)",
+        for key in ("std::lock_guard<std::mutex> lock(shared->mutex)",
                     "taken.ticket==expected.ticket",
                     "after.fileId==before.fileId",
                     "sameContext(taken.context,liveContext)",
-                    "state_->pendingRestoreCheck.reset();",
-                    "if(!current)return denied;","restoreRenameNoReplace("):
-            self.assertIn(key,body)
-        self.assertLess(body.index("state_->pendingRestoreCheck.reset();"),
+                    "shared->pendingRestoreCheck.reset();",
+                    "originalCopy=taken.originalPath;",
+                    "renamedCopy=taken.renamed;",
+                    "shared->busy=true;",
+                    "restoreRenameNoReplace("):
+            with self.subTest(key=key):
+                self.assertIn(key,body)
+        self.assertLess(body.index("shared->pendingRestoreCheck.reset();"),
+                        body.index("shared->busy=true;"))
+        self.assertLess(body.index("shared->busy=true;"),
                         body.index("restoreRenameNoReplace("))
-        self.assertEqual(body.count("restoreRenameNoReplace("),1)
+        self.assertLess(body.index("restoreRenameNoReplace("),
+                        body.index("if(!shared->closing&&shared->epoch==taken.ticket)"))
+        self.assertEqual(1,body.count("restoreRenameNoReplace("))
+        self.assertIn("return outcome;",body)
+        self.assertIn("classifyRestoreOutcome(",core)
+        self.assertIn("Status::CommittedUnverified",core)
+        self.assertIn("Status::NativeCallFailedUnknownState",core)
     def test_real_owned_file_fixture_and_wrapper(self):
         fixture=read("tests/winui/r07_dispatch_native/dispatch_native_fixture.cpp")
         self.assertIn("Kind::RenameSelected",fixture)
