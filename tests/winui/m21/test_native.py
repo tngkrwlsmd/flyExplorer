@@ -27,6 +27,11 @@ try:
   normalized=result.stdout.replace(chr(92)+"n","\n")
   failures=[line for line in normalized.splitlines()
             if line.startswith(("M21_FAIL ","M21_DEBUG_R07_","M21_DIAG_R07_NT","M21_NATIVE_SUMMARY "))]
+  # The native ABI result must appear on its own bounded log line; the
+  # exception formatter and Remote Shell output otherwise truncate it.
+  for line in failures:
+   if line.startswith("M21_DIAG_R07_NT"):
+    print("M21_R07_NATIVE_ABI_RESULT",line[:220],flush=True)
   raise AssertionError((result.returncode,failures[:12],
                         result.stdout.splitlines()[-3:],result.stderr[-500:]))
  print("M21_NATIVE_"+CFG+"_77_PASS",True)
