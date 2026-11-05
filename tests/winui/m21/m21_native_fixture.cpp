@@ -3,6 +3,7 @@
 #include <windows.h>
 #include <shobjidl.h>
 #include <filesystem>
+#include <system_error>
 #include <cstring>
 #include <cstdio>
 #include <fstream>
@@ -521,6 +522,78 @@ int wmain(int argc,wchar_t**argv){
       std::filesystem::exists(restoreOriginal)&&
       !std::filesystem::exists(restoreTarget)&&restoredBytes==ownedBytes,
       "r07_restore_replay_rejected_and_original_preserved");
+ }
+
+ // R07-13: simulate an external parent relocation AFTER receipt creation.
+ // This is deliberately before the call, NOT a concurrent native-call race.
+ {
+  using WriteStatus=filecommand::RenameRestoreWriteStatus;
+  const auto priorParent=dir/L"r07-parent-origin";
+  const auto movedParent=dir/L"r07-parent-relocated";
+  const auto priorName=priorParent/L"r07-parent-before.txt";
+  const auto changedName=priorParent/L"r07-parent-after.txt";
+  const auto movedName=movedParent/changedName.filename();
+  const std::string payload="r07-parent-relocation-owned";
+  std::error_code createError{};
+  const bool created=std::filesystem::create_directory(priorParent,createError)&&
+      !createError;
+  filecommand::Result receipt{};
+  FILE_ID_INFO before{},after{};
+  bool renamed=false;
+  if(created){
+   { std::ofstream out(priorName,std::ios::binary);
+     out.write(payload.data(),static_cast<std::streamsize>(payload.size())); }
+   filecommand::Request change{};
+   change.kind=filecommand::Kind::RenameSelected;
+   change.parent=priorParent.native();
+   change.source=priorName.native();
+   change.name=changedName.filename().native();
+   receipt=filecommand::execute(change);
+   renamed=receipt.error==ERROR_SUCCESS&&receipt.renameEvidence.verified&&
+       readId(changedName,before)&&!std::filesystem::exists(priorName);
+  }
+  std::error_code moveError{};
+  if(renamed)std::filesystem::rename(priorParent,movedParent,moveError);
+  const bool moved=renamed&&!moveError&&
+      std::filesystem::is_directory(movedParent)&&
+      !std::filesystem::exists(priorParent);
+  filecommand::RenameRestoreWriteResult missingParent{};
+  // Never attempt a restore if our isolated fixture setup failed.
+  if(moved)missingParent=filecommand::restoreRenameNoReplace(
+      priorName.native(),receipt);
+  const bool sameAfterMove=moved&&readId(movedName,after)&&
+      before.VolumeSerialNumber==after.VolumeSerialNumber&&
+      std::memcmp(before.FileId.Identifier,after.FileId.Identifier,16)==0;
+  chk(moved&&missingParent.status==WriteStatus::RejectedPaths&&
+      !missingParent.nativeCallAttempted&&sameAfterMove&&
+      !std::filesystem::exists(priorName)&&
+      !std::filesystem::exists(changedName),
+      "r07_restore_rejects_moved_parent_before_native_call");
+
+  // Rebind the OLD pathname to a new empty directory (different ID).
+  std::error_code reboundError{};
+  const bool rebound=moved&&
+      std::filesystem::create_directory(priorParent,reboundError)&&
+      !reboundError;
+  filecommand::RenameRestoreWriteResult reboundResult{};
+  if(rebound)reboundResult=filecommand::restoreRenameNoReplace(
+      priorName.native(),receipt);
+  std::string retained{};
+  if(moved&&std::filesystem::exists(movedName)){
+   std::ifstream in(movedName,std::ios::binary);
+   retained.assign(std::istreambuf_iterator<char>(in),
+                   std::istreambuf_iterator<char>{});
+  }
+  FILE_ID_INFO afterRebound{};
+  const bool sameAfterRebound=moved&&readId(movedName,afterRebound)&&
+      before.VolumeSerialNumber==afterRebound.VolumeSerialNumber&&
+      std::memcmp(before.FileId.Identifier,afterRebound.FileId.Identifier,16)==0;
+  chk(rebound&&
+      reboundResult.status==WriteStatus::TargetChangedOrUnavailable&&
+      !reboundResult.nativeCallAttempted&&sameAfterRebound&&
+      retained==payload&&!std::filesystem::exists(priorName)&&
+      !std::filesystem::exists(changedName),
+      "r07_restore_rejects_rebound_parent_preserves_original_file");
  }
 
  // R07-11 independent native-ABI diagnostic. Owns two disposable files

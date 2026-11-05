@@ -19,7 +19,7 @@ try:
       "TEMP":str(own),"TMP":str(own)}
  result=subprocess.run([str(exe),str(own)],env=env,cwd=exe.parent,
   capture_output=True,text=True,errors="replace",timeout=40)
- summary="M21_NATIVE_SUMMARY 77 passed, 0 failed."
+ summary="M21_NATIVE_SUMMARY 79 passed, 0 failed."
  if result.returncode!=0 or summary not in result.stdout:
   # Keep the first relevant native failures, not the full fixture transcript.
   # Some native diagnostics emit a literal backslash-n rather than a real
@@ -34,7 +34,7 @@ try:
     print("M21_R07_NATIVE_ABI_RESULT",line[:220],flush=True)
   raise AssertionError((result.returncode,failures[:12],
                         result.stdout.splitlines()[-3:],result.stderr[-500:]))
- print("M21_NATIVE_"+CFG+"_77_PASS",True)
+ print("M21_NATIVE_"+CFG+"_79_PASS",True)
 finally:
  assert_legacy_profile_unchanged(real,original)
  shutil.rmtree(own)

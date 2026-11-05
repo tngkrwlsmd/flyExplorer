@@ -46,7 +46,7 @@ class R07NativeParentProbeContract(unittest.TestCase):
         )[0]
         self.assertIn('std::printf("M21_DIAG_R07_NT ', probe)
         self.assertNotIn('chk(', probe)
-        self.assertIn('M21_NATIVE_SUMMARY 77 passed, 0 failed.', wrapper)
+        self.assertIn('M21_NATIVE_SUMMARY 79 passed, 0 failed.', wrapper)
         self.assertIn('"M21_DIAG_R07_NT"', wrapper)
         self.assertNotIn("NtSetInformationFile", read("src/base/file_command_core.cpp"))
         self.assertNotIn("NtSetInformationFile", read("app/winui/file_operation_controller.cpp"))

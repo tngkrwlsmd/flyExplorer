@@ -221,8 +221,8 @@ class R07NoReplaceRestoreContract(unittest.TestCase):
         self.assertIn("rejectedWriter.status==WriteStatus::AccessUnavailable", fixture)
         self.assertIn("!rejectedWriter.nativeCallAttempted", fixture)
         self.assertIn("restored.status==WriteStatus::CommittedVerified", fixture)
-        self.assertIn('M21_NATIVE_SUMMARY 77 passed, 0 failed.', wrapper)
-        self.assertIn('M21_NATIVE_"+CFG+"_77_PASS', wrapper)
+        self.assertIn('M21_NATIVE_SUMMARY 79 passed, 0 failed.', wrapper)
+        self.assertIn('M21_NATIVE_"+CFG+"_79_PASS', wrapper)
         self.assertIn("m21-native-owned-", wrapper)
 
     def test_fixture_only_mutates_its_generated_owned_directory(self):
@@ -239,6 +239,33 @@ class R07NoReplaceRestoreContract(unittest.TestCase):
         self.assertNotIn("DeleteFileW(", body)
         self.assertNotIn("FILE_RENAME_FLAG_REPLACE_IF_EXISTS", body)
         self.assertNotIn("MOVEFILE_REPLACE_EXISTING", body)
+
+
+    def test_parent_relocation_fixture_is_disposable_and_not_ui_wired(self):
+        fixture = source("tests/winui/m21/m21_native_fixture.cpp")
+        section = fixture.split(" // R07-13: simulate an external parent relocation", 1)[1].split(
+            " // R07-11 independent native-ABI diagnostic.", 1
+        )[0]
+        for token in (
+            'const auto priorParent=dir/L"r07-parent-origin";',
+            'const auto movedParent=dir/L"r07-parent-relocated";',
+            "std::filesystem::rename(priorParent,movedParent,moveError);",
+            "if(moved)missingParent=filecommand::restoreRenameNoReplace(",
+            "if(rebound)reboundResult=filecommand::restoreRenameNoReplace(",
+            "missingParent.status==WriteStatus::RejectedPaths",
+            "reboundResult.status==WriteStatus::TargetChangedOrUnavailable",
+            "!missingParent.nativeCallAttempted",
+            "!reboundResult.nativeCallAttempted",
+            "retained==payload",
+            "r07_restore_rejects_moved_parent_before_native_call",
+            "r07_restore_rejects_rebound_parent_preserves_original_file",
+        ):
+            with self.subTest(token=token):
+                self.assertIn(token, section)
+        self.assertNotIn("std::filesystem::remove_all(", section)
+        self.assertNotIn("::DeleteFileW(", section)
+        self.assertNotIn("::MoveFileExW(", section)
+        self.assertNotIn("restoreRenameNoReplace(", source("app/winui/file_operation_controller.cpp"))
 
 
 if __name__ == "__main__":
