@@ -1,3 +1,10 @@
+## 2026-11-05 — R07-16 Windows 제품 C1020: 조건부 PCH 포함과 컴파일 설정 충돌
+
+- **첫 실패:** `27e6586421d2826c8e0cda3343bee26b4a602765`의 [Windows VM #42019376501](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/42019376501)에서 **소스 11/11, 네이티브 26/26 PASS**였으나 앱 Release 빌드의 `file_operation_controller.cpp(3,1)`에서 **C1020(예기치 않은 #endif)** 오류가 발생하여 전체 workflow는 FAIL. 이 파일의 R07-15 테스트용 조건부 PCH 헤더 포함 지시와 제품 프로젝트의 PCH 사용 설정이 함께 작동하면서 MSVC가 조건부 전처리 경계를 잘못 인식한 것으로 분류했다. 파일 작업 로직 실패나 네이티브 26건 실패로 해석하지 않는다.
+- **최소 수정:** 전역 `pch.h` 및 컨트롤러 동작을 다시 쓰지 않고, 추적되는 `app/winui/flyExplorer.project-template.xml`에서 **`file_operation_controller.cpp`의 PCH 모드만 NotUsing**으로 설정했다. 추적되지 않는 생성 프로젝트 파일을 직접 수정하지 않았다.
+- **실제 수정 후 수용:** `1999db07b102965dedbbda88bea457cd7549c783`의 [Windows VM #42020414704](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/42020414704)에서 **WinUI x64 Release 빌드 PASS**, 실행 파일 확인·SHA-256 기록, 소유 체크아웃 정리 PASS. 첫 빌드의 실패 이력을 지우지 않고 두 정확한 실행 범위를 구분한다.
+- **재발 방지:** 격리된 C++ 시험에서 제품 소스를 재사용하더라도 실제 WinUI 컴파일러의 PCH 설정을 독립적으로 확인한다. 테스트용 조건부 헤더 포함을 가진 파일에 PCH 사용을 강제하지 않는다. 사용자 GUI·실제 Undo 및 외부 파일 이동 경합을 PASS로 오인하지 않는다.
+
 ## 2026-11-05 — R07-12 네이티브 클래스 10은 부모 바인딩과 충돌 거부를 별도 테스트에서 확인
 
 기존 Win32 `SetFileInformationByHandle(FileRenameInfo/Ex)` + 유지된 부모 디렉터리 핸들은 오류 87로 실패했고, NULL 루트는 파일을 프로그램 작업 폴더로 잘못 옮겼다. 원래 Windows 파일 위치를 보존할 독립적 대안으로 **NT API 클래스 10**을 테스트 전용 파일에만 도입한 정확한 SHA `c25c004e28bcd2c080f46fe6e80c05e9b884409c`의 [첫 #41990259769](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41990259769)에서 진단 로그가 Python 예외 출력 길이에 의해 잘려 결론을 읽을 수 없었다. 사용자가 볼 수 있는 결과는 여전히 M21 75/77 실패였다.

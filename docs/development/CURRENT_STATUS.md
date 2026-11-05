@@ -1,3 +1,13 @@
+# 2026-11-05 — R07-16 탐색 왕복(ABA) 복원 소유권 무효화: 네이티브 26/26·WinUI Release PASS
+
+- **변경:** `FileOperationController::invalidateRenameOwnerOnNavigation()`가 탐색 변경 세대 값을 증가시키며 미인출 및 이미 인출한 Rename 복원 후보를 동일 잠금에서 폐기한다. 이름 변경 비동기 작업의 시작 세대를 컨트롤러가 기억하여, 작업 도중 이동했다가 창·패널·탭·경로가 이전과 같아져도 해당 완료 결과가 복원 후보로 등록되지 않도록 `acceptFileCommand`에서 세대를 재검증한다. 세대 값이 상한에 도달하면 새 복원 후보 수용을 금지하며, 진행 중인 파일 명령·전송 작업을 강제 중단하지 않는다.
+- **UI 알림 범위:** `MainWindow.xaml.cpp`의 성공적으로 접수된 폴더 경로/PIDL 이동, 창 탭 전환·닫기·세션 복원에 연결된 활성 창 탭 일시 중지, 패널 변경, 폴더 탭 추가·선택·닫기, 분할 표시 변경 경로에서 알림을 전달한다. 같은 패널 재활성화 또는 수동 Refresh와 같이 작업 소유권 이탈을 뜻하지 않는 동작은 의도적으로 제외했다. UI에서 복원 실행/Undo 명령을 연결한 것은 아니다.
+- **Windows 수용 증거(각각 정확한 SHA):** [첫 Windows VM #42019376501](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/42019376501)의 소스 `27e6586421d2826c8e0cda3343bee26b4a602765`에서 관련 소스 계약 **11/11 PASS**, 실제 `FileOperationController.cpp` x64 Release 네이티브 빌드 **PASS**, 기존 23건 및 탐색 왕복 3건 **26/26 PASS**, 사용자 프로필 불변·소유 작업공간 정리 PASS를 확인했다. 그러나 **같은 실행의 전체 workflow는 FAIL**: WinUI 제품 빌드에서 `file_operation_controller.cpp` **C1020(예기치 않은 #endif)**이 발생했다. 이는 R07-15의 테스트 전용 조건부 PCH 포함과 MSVC의 제품 PCH 사용 설정이 충돌한 컴파일 오류다.
+- **집중 수정 및 재검증:** 제품 프로젝트 템플릿에서 **이 컨트롤러 파일 하나만 PCH 사용을 NotUsing으로 변경**한 정확한 SHA `1999db07b102965dedbbda88bea457cd7549c783`의 [Windows VM #42020414704](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/42020414704)에서 WinUI **x64 Release 빌드 PASS**, EXE SHA-256 `cdab0259f0707b72e2292f07a36e346b702a6e40227911468bc73905025bfffa`, 소유 빌드 작업공간 정리 PASS를 확인했다. 변경된 것은 빌드 설정뿐이며, 이전 정확한 네이티브 26/26 수용을 무효화하지 않는다. 전체 공통 PCH 헤더/다른 제품 소스는 손대지 않았다.
+- **남은 한계:** 실제 GUI에서 탭·폴더를 왕복시키는 동작/픽셀, 실제 파일 이름 복원, 사용자가 소유한 파일 변경 및 네이티브 호출 중 부모 디렉터리 동시 이동 경합은 이번에 **NOT TESTED**다. 현재 테스트는 합성 Rename 영수증 및 안전하게 거부되는 가상 파일 명령을 이용한다. 소유권 알림과 복원 원자적 호출 사이 간극이 있으므로 사용자용 Ctrl+Z/Undo/Redo는 여전히 **미연결**이며, 이 코드를 실제 Undo 승인으로 취급하지 않는다.
+
+---
+
 # 2026-11-05 — R07-15 실제 파일 작업 컨트롤러의 복원 후보 소유권 C++ 23/23 PASS (한정 수용)
 
 - **검증 대상 소스:** `ee39c31ea928b31bccabbae6425ac75de583bdd9`. [중앙 Windows VM #42017316589](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/42017316589)에서 R07-15 전용 소스·보호 계약 **3/3 PASS**, MSVC x64 **Release 네이티브 컴파일 PASS**, 실제 `FileOperationController.cpp`를 포함한 별도 콘솔 실행 파일의 **`R07_OWNER_NATIVE_Release_23_PASS True`**, 기존 프로필 불변, 소유 임시 작업공간 정리 PASS를 확인했다. 중앙 VM 작업 슬롯은 유휴 상태로 복구했다.

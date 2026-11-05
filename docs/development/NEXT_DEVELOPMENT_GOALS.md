@@ -20,7 +20,9 @@
 
 ## 앞으로 진행할 작업
 
-**R07-16 다음 우선 작업(2026-11-05):** R07-15에서 **실제 C++ 컨트롤러 소유권 검사 23/23 PASS**를 수용했다. 이제 인출된 Rename 후보가 발생 이후 탭·route·패널에서 **이탈했다가 같은 값으로 다시 복귀하는 경우(ABA)**에도 일회성 검사가 무효화되도록, 사용자 탐색 변화 시점의 세대 번호/명시적 취소 전달을 좁은 범위에서 설계·검증한다. 별도로 재확인 직후부터 실제 파일 변경 호출 사이의 원자성과 외부 파일 이동 경합을 평가한다. 새 기능은 검증 전 UI Undo/Redo·Ctrl+Z 또는 세션 v4에 연결하지 않는다.
+**R07-17 다음 우선 작업(2026-11-05):** 탐색 왕복 후 이전 Rename 후보 재사용과 비동기 작업 완료 뒤의 재발급을 방지하는 R07-16은 **네이티브 26/26 및 WinUI Release 빌드 범위에서 수용**했다. 남은 핵심 위험은 컨트롤러 소유권 재검증에서 실제 원자적 무덮어쓰기 네이티브 호출까지의 시간 간극과 외부 프로세스에 의한 부모 디렉터리 이동·삭제 동시 경합이다. **사용자용 Undo/Redo·Ctrl+Z는 이 경계가 안전하게 검증되기 전 연결하지 않는다.** 다음에는 테스트 소유 파일만 사용하는 호출 경합의 판정 조건을 별도로 설계·검증한다. 전체 GUI/픽셀 검증 및 다른 OS 버전은 수행하지 않은 상태다.
+
+**R07-16 탐색 왕복 소유권 무효화 한정 수용(2026-11-05):** `invalidateRenameOwnerOnNavigation()` 및 작업 시작 세대 재검증을 실제 탐색 승인 경로에 추가했다. [Windows VM #42019376501](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/42019376501)에서는 정확한 소스 `27e6586421d2826c8e0cda3343bee26b4a602765`의 관련 소스 **11/11 PASS**, 실제 컨트롤러 네이티브 **26/26 PASS**이나 전체 WinUI 빌드 **C1020 FAIL**이었다. R07-15에서 사용한 조건부 PCH 포함과 제품 MSVC PCH 설정의 충돌로 확인하여 컨트롤러 파일 하나의 프로젝트 설정을 NotUsing으로 수정했다. 수정된 정확한 소스 `1999db07b102965dedbbda88bea457cd7549c783`에서 [Windows VM #42020414704](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/42020414704) **WinUI x64 Release 빌드 PASS**, 체크아웃 정리 PASS. UI GUI/픽셀 및 실제 파일 복원은 **NOT TESTED**이고, 변경되지 않은 네이티브 동작 26건은 기존 정확한 소스 근거를 재사용했다.
 
 **R07-15 실제 C++ 컨트롤러 23/23 한정 수용(2026-11-05):** 정확한 소스 `ee39c31ea928b31bccabbae6425ac75de583bdd9`의 [Windows VM #42017316589](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/42017316589)에서 네이티브 Release 빌드 PASS, 실제 제품 `FileOperationController.cpp`를 포함하는 전용 테스트 23/23 PASS 및 소스 보호 계약 3/3 PASS, 기존 프로필 불변·소유 작업공간 정리 PASS를 확인했다. 합성된 성공 영수증, 무효한 파일명, 전송 함수 호출 시 중단하는 테스트 전용 경계로 검사한 결과다. **전체 WinUI 제품 빌드·GUI·실제 파일 복원은 NOT TESTED.** 기존 R07-13의 79건을 다시 실행하지 않았고 사용자용 Undo/Redo는 미구현으로 유지한다.
 
