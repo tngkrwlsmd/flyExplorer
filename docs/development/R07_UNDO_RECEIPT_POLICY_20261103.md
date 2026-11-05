@@ -102,6 +102,16 @@ Microsoft `FILE_RENAME_INFO` 문서에 따르면 `SetFileInformationByHandle(Fil
 
 Microsoft 문서가 `RootDirectory`의 상대 이름을 허용하더라도 이번 오류 87이 반드시 그 필드만의 결함임을 입증한 것은 아니다. 원본 이름을 덮지 않는 원자적 변경과 바뀌지 않은 실제 부모 디렉터리의 식별자를 **동시에 보장할 수 있는 방식이 실행 증거로 수용되기 전까지 사용자용 Undo/Redo/단축키에 연결하지 않는다**. 단순 절대 경로 대체, 덮어쓰기 플래그 추가, 호출 실패 뒤 무조건 재시도·롤백, 77건의 정상복원 기대값 완화는 안전 해결책이 아니다. 제품 전체 앱 빌드/GUI/픽셀은 이번에 하지 않았다.
 
+### R07-10 NULL 루트와 단순 파일명의 작업 폴더 오이동 (2026-11-05)
+
+Windows 드라이버 자료는 단순 파일명을 `RootDirectory=NULL`과 사용하는 동일 폴더 이름 변경 형태를 설명하지만, 이 프로젝트가 실제 사용하는 **Win32 `SetFileInformationByHandle(FileRenameInfoEx)`**에서는 그 조합이 의도한 동일 폴더 동작을 제공하지 않았다. Microsoft Win32 문서도 NULL 루트를 기본값으로 설명하면서 FileName에 현재 작업 폴더 상대 이름을 허용한다. 따라서 각 인터페이스의 설명을 섞어 안전을 추정하지 않는다. 문서: https://learn.microsoft.com/en-us/windows/win32/api/winbase/ns-winbase-file_rename_info 및 https://learn.microsoft.com/en-us/windows-hardware/drivers/ddi/ntifs/ns-ntifs-_file_rename_information
+
+정확한 소스 `c1ab5b2cbbaa554afa621e4e6cdf1fb663e44a9e`의 [Windows VM #41987547104](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41987547104)에서 **R07 소스 35/35·네이티브 x64 Release 컴파일 PASS**, 테스트용 파일 네이티브 **75/77 FAIL**, 복원 호출 자체는 성공이었으나 `CommittedUnverified`·원래 파일명과 대상 파일명 모두 미관측으로 끝났다. 현재 작업 폴더 내 후보 파일의 **볼륨/128비트 파일 ID가 복원 직전 파일과 동일**한지를 조사한 정확한 진단 SHA `5b42e633b643da0df186df3be21530735bc48df1`의 [#41988089601](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41988089601)에서 `cwd_id_match=1`이었다. 즉, **복원할 파일을 원래 부모가 아닌 실행 폴더로 이동**시킨 위험한 동작이었다. 두 폴더 모두 임시 소유 체크아웃이며 사용자 파일·설정은 대상이 아니었다. 호출의 0 오류 코드만으로 안전한 복원이라고 판정하는 것은 금지한다.
+
+제품 함수에서는 `RootDirectory=nullptr`를 되돌려 `RootDirectory=parent.h`를 유지하고, `test_r07_no_replace_restore_contract.py`에 NULL 루트 금지와 부모 ID 재검증을 명시했다. 이 변경 소스 `43dcef7c020cec0fd235fd3988b5fc402954a36b`에서 [Windows VM #41988475539](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41988475539)의 **R07 관련 Python 8/8 PASS**가 확인됐다. 이후 이름만 정리한 테스트 함수 자체는 Windows 재실행하지 않았다. 부모 핸들을 지정한 실행은 기존 **오류 87**을 내므로, 안전한 네이티브 복원 기능 자체는 여전히 **미수용**이다. 파일 내용을 보호한다는 사전 확인과 파일의 **최종 저장 경로**를 보호한다는 사실은 서로 다르다.
+
+사용자용 Undo/Redo 또는 작업 소유권 후보와 연결하기 전, 정확한 **원본 파일 핸들 + 실제 부모 디렉터리 동일성 + 목적지 이름 무덮어쓰기 + 최종 경로/파일 ID 확인**을 같은 테스트에서 검증한다. 루트 핸들을 없애거나 절대 경로로 바꾸는 우회, 오류 이후 자동 재시도·롤백, 검증 없는 GUI 노출은 하지 않는다.
+
 ## 후속 필수 단계 (순서 변경 금지)
 
 1. **개별 변경 증거 (R07-2 일부 구현):** 원본·결과의 정확한 단일 항목 식별자(볼륨 식별자와 파일 ID), 재분석 지점 제외, 최종 파일 상태, 실제 생성/이동/복구 성공 정보 등을 worker의 신뢰된 범위에서 수집한다. 이름이나 경로만으로 동일한 파일이라고 간주하지 않는다. 일괄 Copy/Move의 aggregate 완료 수치만으로는 영수증을 발행할 수 없다.
