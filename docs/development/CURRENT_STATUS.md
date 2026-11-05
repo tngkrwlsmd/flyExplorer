@@ -1,3 +1,11 @@
+# 2026-11-05 — R07-8 테스트 소유 네이티브 복원 사례 8건 추가, 소스 34/34 통과
+
+- **새 개발:** `tests/winui/m21/m21_native_fixture.cpp`에 테스트 전용 로컬 폴더에서 실행할 R07-8 복원 사례 8건을 추가했다. 검증된 이름 변경 영수증, 비검증 영수증 거부, 위조 ID 거부, 대상 파일 누락, 원본 이름 충돌과 기존 바이트 보호, 사전 열린 쓰기 핸들 거부, 이름 복원 후 내용/128비트 파일 ID 일치, 중복 복원 거부를 각각 평가한다. 새 테스트는 실제 파일 이름 변경 함수를 호출하도록 작성됐지만 **이번에는 실행하지 않았다**. M21 총 네이티브 기대 건수는 이전 69건에서 **77건**으로 갱신했다.
+- **실행 증거 구분:** 새 테스트와 기존 코드의 연결을 확인하는 R07 전용 Python 소스 계약은 정확한 SHA `608404a7c9f1cf83cd557f7260259af7e5212bbf`의 [중앙 Windows VM #41977843188](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41977843188)에서 **34/34 PASS**, 커밋 공백 검사와 자체 소유 체크아웃 정리 PASS였다. 첫 [#41977661567](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41977661567)은 이전 69건 기대 문자열을 확인하던 소스 계약 1건 때문에 **33/34 FAIL**이었다. 누락된 기대값을 수정한 뒤 재검사했고 실패 이력은 유지한다.
+- **수용 한계:** 이번 검증은 **Python 소스 계약만** 수행했다. 변경된 네이티브 테스트를 포함한 M21 x64 Release **컴파일 및 77건 실제 실행은 NOT TESTED**, 제품 WinUI 빌드·GUI·실제 사용자 Undo/Redo도 NOT TESTED/미구현이다. 원본 이름 무덮어쓰기의 Windows 실제 동작, 삭제 권한 취득, 파일 핸들 경합·부모 폴더 변경은 앞으로 테스트용 파일에서 실증해야 한다. 사용자 파일 및 세션 저장 형식 변경 없음.
+
+---
+
 # 2026-11-05 — R07-8 독립 네이티브 무덮어쓰기 복원 경계: 소스 32/32 PASS, C++ 실행 미검증
 
 - **제품 코드 추가:** `src/base/file_command_core.h/.cpp`에 `restoreRenameNoReplace(originalPath,renamed)`를 추가했다. R07-2~R07-5의 성공·동일성·동일 부모·원래 이름 부재 사전 조건을 재확인한 뒤, **별도의 `DELETE|FILE_READ_DATA|FILE_READ_ATTRIBUTES` 대상 파일 핸들**과 부모의 실제 128비트 디렉터리 ID를 획득한다. 유지된 대상 핸들과 경로의 128비트 ID·크기·마지막 수정 시각·일반 파일/링크 1개/삭제 대기를 대조하고, 정확한 부모 디렉터리 핸들을 `RootDirectory`로 사용한 `SetFileInformationByHandle(FileRenameInfo)`를 `ReplaceIfExists=FALSE`로 한 번만 호출하도록 구성했다. 이는 Windows API가 정의한 원자적 이름 충돌 거부를 사용하며 수동 대상 삭제/교체/롤백을 수행하지 않는다.
