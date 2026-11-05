@@ -1,8 +1,8 @@
-# 2026-11-05 — R07-8 독립 네이티브 원본명 무덮어쓰기 복원 경계 (실행 검증 대기)
+# 2026-11-05 — R07-8 독립 네이티브 무덮어쓰기 복원 경계: 소스 32/32 PASS, C++ 실행 미검증
 
 - **제품 코드 추가:** `src/base/file_command_core.h/.cpp`에 `restoreRenameNoReplace(originalPath,renamed)`를 추가했다. R07-2~R07-5의 성공·동일성·동일 부모·원래 이름 부재 사전 조건을 재확인한 뒤, **별도의 `DELETE|FILE_READ_DATA|FILE_READ_ATTRIBUTES` 대상 파일 핸들**과 부모의 실제 128비트 디렉터리 ID를 획득한다. 유지된 대상 핸들과 경로의 128비트 ID·크기·마지막 수정 시각·일반 파일/링크 1개/삭제 대기를 대조하고, 정확한 부모 디렉터리 핸들을 `RootDirectory`로 사용한 `SetFileInformationByHandle(FileRenameInfo)`를 `ReplaceIfExists=FALSE`로 한 번만 호출하도록 구성했다. 이는 Windows API가 정의한 원자적 이름 충돌 거부를 사용하며 수동 대상 삭제/교체/롤백을 수행하지 않는다.
 - **결과의 불확실성 보존:** 네이티브 호출 전 거부·호출 실패의 불확실 상태·네이티브 이름 변경 성공 후 경로/동일성 재검증 실패(`CommittedUnverified`)·관측된 성공(`CommittedVerified`)을 서로 다른 결과로 반환한다. **성공 직후에도 외부 경로/부모 이동 경합을 완전히 원천 차단하지 못하며, 파일 ID/크기/시간 증거가 내용의 암호학적 무결성을 입증하지는 않는다.** 후속 복원 단계는 다시 실제 사용 조건에서 검증해야 한다.
-- **수용 경계:** 새 함수는 **어느 UI/컨트롤러에서도 호출하지 않는다.** 사용자용 Ctrl+Z/Redo·세션 저장·OS Undo 기록·외부 전송은 없고, 기존 R07-5 읽기 전용 임대를 변경하지 않았다. 신규 Python 소스 계약 5건은 작성했으나 **실제 소스 검사 실행·C++ 빌드·테스트 소유 파일의 실제 복원·GUI는 아직 NOT TESTED**다. 원자적 무덮어쓰기의 문서상 의미와 이 구현의 Windows 파일시스템 실제 동작을 혼동하지 않는다. 제품/일반 사용자 파일을 복원했다는 주장이 아니다.
+- **수용 경계:** 새 함수는 **어느 UI/컨트롤러에서도 호출하지 않는다.** 사용자용 Ctrl+Z/Redo·세션 저장·OS Undo 기록·외부 전송은 없고, 기존 R07-5 읽기 전용 임대를 변경하지 않았다. 전용 신규 Python 소스 계약 **5/5**, 관련 R07 전체 소스 계약 **32/32 PASS**를 정확한 소스 `9cfba11ba63e0daeba3a84702d106991f6ed4f73`의 [Windows VM #41962356186](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41962356186)에서 확인했다. 기존 [첫 검사 #41962094352](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41962094352)는 새 소스의 주석에 있는 금지 플래그 명칭을 오래된 rename 범위 검사에 포함해 **31/32 FAIL**이었다. 주석만 변경한 뒤 재실행했으며 최초 실패는 보존한다. **C++ 빌드·테스트 소유 파일의 실제 복원/충돌 시험·GUI는 NOT TESTED**다. 원자적 무덮어쓰기의 문서상 의미와 이 구현의 Windows 파일시스템 실제 동작을 혼동하지 않는다. 제품/일반 사용자 파일을 복원했다는 주장이 아니다.
 
 ---
 
