@@ -11,14 +11,14 @@ class R07WinUiDispatchContract(unittest.TestCase):
         header=read("app/winui/MainWindow.xaml.h")
         cpp=read("app/winui/m21_commands.cpp")
         self.assertIn("FileOperationController::Post FileOperationUiPost();",header)
-        self.assertIn("FileOperationController::Post MainWindow::FileOperationUiPost()",cpp)
+        self.assertIn("fxfile::previewops::FileOperationController::Post MainWindow::FileOperationUiPost()",cpp)
         self.assertIn("auto post=FileOperationUiPost();",cpp)
         self.assertIn("std::move(post)",cpp)
         self.assertIn("mFileOperations.startFileCommand(",cpp)
 
     def test_background_enqueue_does_not_resolve_window(self):
         cpp=read("app/winui/m21_commands.cpp")
-        body=cpp.split("FileOperationController::Post MainWindow::FileOperationUiPost()",1)[1].split(
+        body=cpp.split("fxfile::previewops::FileOperationController::Post MainWindow::FileOperationUiPost()",1)[1].split(
             "void MainWindow::OnCreateFolder(",1)[0]
         self.assertIn("auto dispatch=DispatcherQueue();",body)
         self.assertIn("auto weak=get_weak();",body)
