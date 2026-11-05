@@ -72,7 +72,7 @@ class R07NoReplaceRestoreContract(unittest.TestCase):
         self.assertLess(body.index("inspectRenameRestore(originalPath,renamed)"),
                         body.index("target.c_str(),DELETE|FILE_READ_DATA"))
         self.assertLess(body.index("readRenameEvidence(target,visible)"),
-                        body.index("::SetFileInformationByHandle("))
+                        body.index("status=native(item.h,&io,info,"))
 
     def test_atomic_same_parent_collision_refusal_without_absolute_path(self):
         body = self.restore
@@ -86,13 +86,15 @@ class R07NoReplaceRestoreContract(unittest.TestCase):
             "info->RootDirectory=parent.h;",
             "info->FileNameLength=nameBytes;",
             "std::memcpy(info->FileName,leaf.data(),nameBytes);",
-            "item.h,FileRenameInfoEx,info",
+            "status=native(item.h,&io,info,",
+            "static_cast<ULONG>(required),10u",
+            '::GetProcAddress(ntdll,"NtSetInformationFile")',
         ):
             with self.subTest(text=text):
                 self.assertIn(text, body)
-        self.assertEqual(1, body.count("::SetFileInformationByHandle("))
+        self.assertEqual(1, body.count("status=native(item.h,&io,info,"))
         self.assertLess(body.index("originalError!=ERROR_FILE_NOT_FOUND"),
-                        body.index("::SetFileInformationByHandle("))
+                        body.index("status=native(item.h,&io,info,"))
         for text in (
             "MOVEFILE_REPLACE_EXISTING",
             "FILE_RENAME_FLAG_REPLACE_IF_EXISTS",
@@ -129,9 +131,32 @@ class R07NoReplaceRestoreContract(unittest.TestCase):
         self.assertNotIn("std::memcpy(info->FileName,original", body)
         self.assertNotIn("std::memcpy(info->FileName,target", body)
         self.assertLess(body.index("parentStillVisible()"),
-                        body.index("::SetFileInformationByHandle("))
+                        body.index("status=native(item.h,&io,info,"))
         self.assertLess(body.index("parentStillVisible()", body.index("nativeSucceeded=true;")),
                         body.index("RenameRestoreWriteStatus::CommittedVerified"))
+
+    def test_native_parent_anchored_call_has_no_win32_fallback(self):
+        body=self.restore
+        for token in (
+            '"NtSetInformationFile"',
+            '"RtlNtStatusToDosError"',
+            "NativeIoStatusBlock io{};",
+            "static_assert(sizeof(NativeIoStatusBlock)==sizeof(void*)*2)",
+            "static_assert(offsetof(FILE_RENAME_INFO,RootDirectory)==8)",
+            "static_assert(offsetof(FILE_RENAME_INFO,FileName)==20)",
+            "std::vector<std::uint64_t> storage(",
+            "info->ReplaceIfExists=FALSE;",
+            "info->RootDirectory=parent.h;",
+            "status=native(item.h,&io,info,",
+            "static_cast<ULONG>(required),10u",
+            "status!=0||io.Status!=0",
+        ):
+            with self.subTest(token=token):
+                self.assertIn(token,body)
+        self.assertEqual(1,body.count("status=native(item.h,&io,info,"))
+        self.assertNotIn("::SetFileInformationByHandle(",body)
+        self.assertNotIn("::MoveFileExW(",body)
+        self.assertNotIn("info->RootDirectory=nullptr;",body)
 
     def test_committed_unverified_never_misreported_as_noop(self):
         body = self.restore
