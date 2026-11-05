@@ -72,6 +72,31 @@ class R07TargetLeaseContract(unittest.TestCase):
             with self.subTest(forbidden=forbidden):
                 self.assertNotIn(forbidden, body)
 
+    def test_held_file_metadata_is_rechecked_before_path(self):
+        body = source("src/base/file_command_core.cpp").split(
+            "RenameRestoreObservation RenameTargetLease::recheck() const noexcept", 1
+        )[1].split("\nbool validLeaf(", 1)[0]
+        for token in (
+            "FileAttributeTagInfo,&lockedTag",
+            "FILE_ATTRIBUTE_DIRECTORY|FILE_ATTRIBUTE_REPARSE_POINT",
+            "FileIdInfo,&lockedId",
+            "lockedId.VolumeSerialNumber!=expected_.volumeSerial",
+            "FileStandardInfo,&lockedStandard",
+            "lockedStandard.Directory||lockedStandard.DeletePending",
+            "lockedStandard.NumberOfLinks!=1",
+            "lockedStandard.EndOfFile.QuadPart<0",
+            "expected_.fileSize",
+            "FileBasicInfo,&lockedBasic",
+            "lockedBasic.LastWriteTime.QuadPart!=expected_.lastWriteTime",
+            "return RenameRestoreObservation::TargetChangedOrUnavailable;",
+        ):
+            with self.subTest(token=token):
+                self.assertIn(token, body)
+        self.assertLess(body.index("FileStandardInfo,&lockedStandard"),
+                        body.index("readRenameEvidence(target,visible)"))
+        self.assertLess(body.index("FileBasicInfo,&lockedBasic"),
+                        body.index("readRenameEvidence(target,visible)"))
+
     def test_original_name_not_reserved_and_lease_recheck_requires_identity(self):
         body = source("src/base/file_command_core.cpp").split(
             "RenameRestoreObservation RenameTargetLease::recheck() const noexcept", 1
