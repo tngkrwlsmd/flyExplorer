@@ -57,14 +57,14 @@ class R07AsyncRestoreContract(unittest.TestCase):
     def test_no_user_command_or_session_wiring(self):
         commands=read("app/winui/m21_commands.cpp")
         self.assertEqual(commands.count("startTakenRenameRestoreAsync("),1)
-        self.assertIn("StartTakenRenameRestoreForCurrentOwner(",commands)
+        self.assertIn("StartPendingRenameRestoreForCurrentOwner(",commands)
         for path in ("app/winui/MainWindow.xaml.cpp",
                      "app/winui/MainWindow.xaml",
                      "app/winui/m22_transfers.cpp",
                      "app/winui/m23_session.cpp"):
             body=read(path)
             self.assertNotIn("startTakenRenameRestoreAsync(",body)
-            self.assertNotIn("StartTakenRenameRestoreForCurrentOwner(",body)
+            self.assertNotIn("StartPendingRenameRestoreForCurrentOwner(",body)
         self.assertNotIn("startTakenRenameRestoreAsync(",
                          read("src/base/file_command_core.cpp"))
 
