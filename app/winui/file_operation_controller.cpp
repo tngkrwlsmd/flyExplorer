@@ -3,6 +3,7 @@
 #endif
 #include "file_operation_controller.h"
 #include <algorithm>
+#include <atomic>
 #include <filesystem>
 #include <limits>
 #include <mutex>
@@ -704,8 +705,15 @@ FileOperationController::startTakenRenameRestoreAsync(
                     return;
             }catch(...){return;}
             try{
-                post([shared,generation,completion=std::move(completion),
+                // Even a faulty host Post that replays or copies one task
+                // must not deliver a restore result more than once.
+                // The native mutation itself remains single-use as well.
+                auto delivered=std::make_shared<std::atomic_bool>(false);
+                post([shared,generation,delivered,
+                      completion=std::move(completion),
                       value=std::move(value)]() mutable {
+                    if(delivered->exchange(true,std::memory_order_acq_rel))
+                        return;
                     // Revalidate AT DISPATCH, not just when it was queued.
                     // The callback must be executed on the host UI queue,
                     // where tab/close notifications are also serialized.
