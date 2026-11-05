@@ -1,3 +1,12 @@
+# 2026-11-05 — R07-21A 실제 WinUI 완료 알림 전달의 창 수명 보호: 소스 7/7·Release PASS
+
+- **변경:** `MainWindow::FileOperationUiPost()`를 실제 WinUI `DispatcherQueue`를 사용하도록 구현했다. 작업 스레드에 창 객체를 강하게 전달하거나 작업 스레드에서 `weak.get()`을 호출하지 않는다. 대기열에 등록한 콜백이 UI 스레드에서 실행되는 시점에만 창의 약한 참조를 해석하고 `mClosing`을 확인한 뒤 작업을 실행한다. 창 종료·파괴 후에는 기존 파일 작업 완료 콜백을 실행하지 않는다. `TryEnqueue`가 실패하거나 대기열이 종료됐다면 `Post`는 false를 반환한다. 이 함수를 기존 `m21_commands.cpp` 파일 명령 완료 경로에 실제로 연결했다.
+- **수용 근거:** 정확한 소스 `50d2e7f87fa8e27d949aae7440b78d30149be203`의 [Windows VM #42052008690](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/42052008690)에서 관련 Python 소스 계약 **7/7 PASS**, WinUI **x64 Release 제품 빌드 PASS**, EXE SHA-256 `52b742676c329e23c3d40b2ea84343eccf4f7eb723d5f367165387c62a655e19`, 소유 작업공간 정리 PASS를 확인했다. 기존 R07-20 컨트롤러·네이티브 복원 로직은 수정하지 않았고, 이전 네이티브 30/30 근거를 **재사용**하며 이번에 재실행하지 않았다.
+- **첫 실패 보존:** 처음 `d1c5ccefd45a1185e8772d3c1cad2f0d3b4c6a48`의 [Windows VM #42051238274](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/42051238274)에서는 소스 검사 PASS였으나 `m21_commands.cpp`의 반환형을 구현부에서 내부 별칭으로 표기해 C++ **C2143/C4430/C2556 컴파일 FAIL**이었다. `fxfile::previewops::FileOperationController::Post`로 한 줄 수정하고 해당 소스 계약을 갱신해 후속 실행에서 통과했다. 첫 실행을 최종 Release 성공으로 오인하지 않는다.
+- **한계/다음 단계:** 이번 개선은 **기존 파일 명령의 실제 WinUI 작업 큐 전달 경계**에 적용했다. `startTakenRenameRestoreAsync`는 아직 WinUI에서 호출되지 않으며, 실제 복원 완료 결과를 어떤 창·탭에 귀속시켜 표시할지의 UI 콜백은 연결하지 않았다. 실제 GUI 클릭·창 닫기 장면, UI 프레임·픽셀, 사용자 파일 Undo/Redo·Ctrl+Z, 외부 파일 시스템 경합은 **NOT TESTED / NOT IMPLEMENTED**다. 새 Post의 약한 창 생존 검사는 기존 컨트롤러의 ticket·탐색 세대 검사를 대신하지 않는다.
+
+---
+
 # 2026-11-05 — R07-20 백그라운드 복원 수명·대기열 완료 알림 보호: 네이티브 30/30·WinUI Release PASS
 
 - **구현:** `FileOperationController::startTakenRenameRestoreAsync`는 인출된 Rename 후보·컨텍스트·안전한 UI 전달 함수(`Post`)·완료 콜백을 받아 **별도 C++ 작업 스레드**에서 기존 `executeTakenRenameRestoreOnState`를 실행한다. 기존 동기 메서드는 같은 공유 상태 기반 실행 로직을 호출하도록 분리했다. 작업 스레드는 `FileOperationController*`나 창 객체를 붙잡지 않고 `shared_ptr<SharedState>`를 보유하여 **창 컨트롤러 파괴 이후에도 이미 시작된 네이티브 파일 변경 작업의 수명을 보장**한다. OS 호출을 중단하거나 반복 실행하지 않는다.
