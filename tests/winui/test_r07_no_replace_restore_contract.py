@@ -264,7 +264,17 @@ class R07NoReplaceRestoreContract(unittest.TestCase):
         self.assertNotIn("std::filesystem::remove_all(", section)
         self.assertNotIn("::DeleteFileW(", section)
         self.assertNotIn("::MoveFileExW(", section)
-        self.assertNotIn("restoreRenameNoReplace(", source("app/winui/file_operation_controller.cpp"))
+        # R07-18: a worker-only, single-use controller boundary exists,
+        # but the UI, session and generic transfer routes remain unconnected.
+        controller=source("app/winui/file_operation_controller.cpp")
+        self.assertIn("executeTakenRenameRestore(",controller)
+        self.assertEqual(1,controller.count("restoreRenameNoReplace("))
+        for path in ("app/winui/m22_transfers.cpp",
+                     "app/winui/m21_commands.cpp",
+                     "app/winui/MainWindow.xaml.cpp",
+                     "app/winui/m23_session.cpp"):
+            self.assertNotIn("restoreRenameNoReplace(",source(path))
+            self.assertNotIn("executeTakenRenameRestore(",source(path))
 
 
 if __name__ == "__main__":
