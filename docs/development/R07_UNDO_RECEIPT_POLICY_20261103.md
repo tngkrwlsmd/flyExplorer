@@ -80,7 +80,7 @@
 
 이것은 단지 **일회성 메모리 인출 계약**이다. `RenameTargetLease`의 R07-5 읽기 핸들 및 `inspectRenameRestore` 순간 관측과 마찬가지로 원래 이름의 원자적 무덮어쓰기·파일 변경 보호·실제 작업 소유권의 미래 유효성을 증명하지 않는다. 파일을 복원하는 API, 삭제 권한 핸들, `SetFileInformationByHandle`, 복원 승인, GUI Ctrl+Z/Redo는 추가하지 않는다.
 
-새 R07-7 소스 계약은 `tests/winui/test_r07_rename_owner_contract.py`에서 한번 인출·mutex 범위·반환 전 폐기·파일 변이 미도입을 검사한다. **새 변경의 Python 실제 실행, C++/WinUI 빌드, GUI/실제 Undo는 NOT TESTED**다. 기존 R07-6 26/26 통과는 이전 SHA에만 유효하다.
+새 R07-7 소스 계약은 `tests/winui/test_r07_rename_owner_contract.py`에서 한번 인출·mutex 범위·반환 전 폐기·파일 변이 미도입을 검사한다. 정확한 소스 SHA `15251587b3e22b655a3bd0b67ad7dd76584ad925`의 [Windows VM #41959646943](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41959646943)에서 **신규 R07-7 Python 소스 계약 5/5 PASS**, 전용 체크아웃 정리 PASS를 확인했다. C++/WinUI 빌드·GUI·실제 Undo는 **NOT TESTED**다. 기존 R07-6 26/26 통과는 별도의 이전 SHA에서 검증한 결과다.
 
 ## 후속 필수 단계 (순서 변경 금지)
 
