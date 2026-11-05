@@ -112,6 +112,14 @@ Windows 드라이버 자료는 단순 파일명을 `RootDirectory=NULL`과 사�
 
 사용자용 Undo/Redo 또는 작업 소유권 후보와 연결하기 전, 정확한 **원본 파일 핸들 + 실제 부모 디렉터리 동일성 + 목적지 이름 무덮어쓰기 + 최종 경로/파일 ID 확인**을 같은 테스트에서 검증한다. 루트 핸들을 없애거나 절대 경로로 바꾸는 우회, 오류 이후 자동 재시도·롤백, 검증 없는 GUI 노출은 하지 않는다.
 
+### R07-12 네이티브 클래스 10의 부모 핸들 기준 복원 경계 (2026-11-05)
+
+이전 `SetFileInformationByHandle(FileRenameInfo/Ex)`의 동일 부모 핸들 입력은 오류 87을 반환했고 `RootDirectory=NULL`은 임시 파일을 프로세스 실행 폴더로 이동시켰다. 별도 테스트 소유 경로에서 실제 `NtSetInformationFile`의 정보 클래스 **10(FileRenameInformation)**을 동적 로딩한 [Windows VM #41992215529](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41992215529)은 **status=0, same_parent=1**, 원본 이름 점유시 **0xC0000035** 거부 및 **collision_preserved=1**을 기록했다. 별도 fixture의 결과로서 **제품 복원 함수가 통과했다는 뜻은 아니다**. 기존 M21 전체 검사에는 여전히 이전 실패 2건이 있었다.
+
+`restoreRenameNoReplace`는 기존 보호 조건과 부모 디렉터리/대상 파일의 유지 핸들을 그대로 사용하며, 오직 이름변경 실행 부분만 같은 네이티브 ABI로 교체했다. `FILE_RENAME_INFO` 버퍼를 정렬하고 레이아웃을 컴파일 시 검사한다. `ReplaceIfExists=FALSE` 및 flags=0만 지정하며, 유지된 디렉터리 핸들을 `RootDirectory`에 넣고 상대 **단일 파일명**만 전달한다. 이 함수가 리턴한 NT 상태가 성공이 아니거나 완료 확인이 실패하면 네이티브 호출 시도와 실패를 구분해서 보고하고, 절대 경로 fallback/무조건 재시도/덮어쓰기/롤백은 수행하지 않는다. 성공한 호출에도 실제 부모 동일성·파일 ID·원본 이름과 대상 이름의 사후 증거를 따로 확인해야 한다. 네이티브 ABI 또는 OS 버전별 지원 차이는 아직 제품 수용 근거가 없다.
+
+변경된 제품 소스 `ff3ef1b4d3584744b1b6096f10b7e459c3d09cc1`의 [Windows VM #41992876059](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41992876059)에서 **R07-8 소스 계약 9/9 PASS**만 확인했으며, **제품 C++ 컴파일/77건 실제 파일 복원 검사·GUI는 NOT TESTED**다. 이번 네이티브 함수는 **독립적이고 UI 미연결**이므로, 일회성 ticket·창/패널/탭/route가 실제 쓰기 시점에 유효함을 별도 증명하기 전까지 사용자용 Undo/Redo를 노출하지 않는다.
+
 ## 후속 필수 단계 (순서 변경 금지)
 
 1. **개별 변경 증거 (R07-2 일부 구현):** 원본·결과의 정확한 단일 항목 식별자(볼륨 식별자와 파일 ID), 재분석 지점 제외, 최종 파일 상태, 실제 생성/이동/복구 성공 정보 등을 worker의 신뢰된 범위에서 수집한다. 이름이나 경로만으로 동일한 파일이라고 간주하지 않는다. 일괄 Copy/Move의 aggregate 완료 수치만으로는 영수증을 발행할 수 없다.
