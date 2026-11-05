@@ -4,7 +4,7 @@
 
 검사 래퍼의 이스케이프 줄바꿈을 정규화하고 진단 결과를 별도 짧은 줄에 출력하도록 수정한 정확한 소스 `015ce211714c2880aeb752ece9c9bf459fe9f8a0`의 [#41992215529](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41992215529)에서 **`available=1 parent=1 status=0x00000000 same_parent=1 collision_status=0xC0000035 collision_preserved=1`**을 읽었다. 별도 테스트의 변경 전후 파일 ID와 기존 이름 충돌 후 바이트 보존을 확인했다. 이 시점의 실제 제품 코드는 아직 구 Win32 API를 사용했으므로 **기존 두 복원 실패와 전체 M21 75/77 FAIL은 보존한다.**
 
-이 근거를 이용해 독립 제품 복원 원시 함수의 이름 변경 호출을 네이티브 클래스 10으로 교체했다. 정확한 변경 소스 `ff3ef1b4d3584744b1b6096f10b7e459c3d09cc1`의 [#41992876059](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41992876059)에서는 관련 Python 소스 계약 **9/9 PASS**, 체크아웃 정리만 확인했다. **새 제품 함수의 C++ 컴파일·실제 M21 77건·GUI는 아직 수행하지 않았다.**
+이 근거를 이용해 독립 제품 복원 원시 함수의 이름 변경 호출을 네이티브 클래스 10으로 교체했다. 정확한 변경 소스 `ff3ef1b4d3584744b1b6096f10b7e459c3d09cc1`의 [#41992876059](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41992876059)에서는 관련 Python 소스 계약 **9/9 PASS**, 체크아웃 정리만 확인했다. **그 시점에는** 새 제품 함수의 C++ 컴파일·실제 M21 77건·GUI를 수행하지 않았다. **이후** 정확한 제품 코드 `fa1771934c744e60eec9e53c950f40dc0909477f`의 [Windows VM #41995665162](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41995665162)에서 **M21 x64 Release 컴파일 PASS, 테스트 소유 파일 77/77 PASS, 사용자 프로필 불변·테스트 전용 체크아웃 정리 PASS**를 확인했다. 전체 WinUI 빌드·GUI와 외부 부모 폴더 이동 경합, 실행 시점 소유권 결합은 미검증이다.
 
 **재발 방지:** 진단이 필요한 native fixture의 출력은 예외 직렬화나 원격 로그의 길이에 묻히지 않도록 짧은 줄에 별도 출력한다. 분리된 테스트용 원시 API 성공을 실제 제품 함수 합격으로 확대하지 않는다. 네이티브 경로는 NT 버전별 지원과 파일·부모 이동 경합에 대해 후속 시험이 필요하고, 기본 파일을 덮어쓰는 우회나 UI Undo 자동 활성화를 금지한다.
 
