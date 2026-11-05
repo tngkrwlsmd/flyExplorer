@@ -7,6 +7,9 @@
 #include <cstdio>
 #include <fstream>
 #include <iterator>
+#include <cstddef>
+#include <cstdint>
+#include <vector>
 #include <string>
 using namespace fxfile;
 int wmain(int argc,wchar_t**argv){
@@ -518,6 +521,85 @@ int wmain(int argc,wchar_t**argv){
       std::filesystem::exists(restoreOriginal)&&
       !std::filesystem::exists(restoreTarget)&&restoredBytes==ownedBytes,
       "r07_restore_replay_rejected_and_original_preserved");
+ }
+
+ // R07-11 independent native-ABI diagnostic. Owns two disposable files
+ // inside 'dir' and does NOT call the product restore primitive. It does
+ // not add a passing fixture case or authorize UI Undo.
+ {
+  const auto probeSource=dir/L"r07-nt-probe-source.txt";
+  const auto probeDest=dir/L"r07-nt-probe-renamed.txt";
+  const std::string probePayload="r07-nt-owned";
+  {std::ofstream out(probeSource,std::ios::binary);out<<probePayload;}
+  FILE_ID_INFO probeBefore{},probeAfter{};
+  const bool beforeKnown=readId(probeSource,probeBefore);
+  using NativeRenameFn=LONG (NTAPI*)(HANDLE,void*,void*,ULONG,ULONG);
+  auto const nativeFn=reinterpret_cast<NativeRenameFn>(
+   ::GetProcAddress(::GetModuleHandleW(L"ntdll.dll"),"NtSetInformationFile"));
+  struct NativeIoStatusBlock {
+   union {LONG Status;PVOID Pointer;};
+   ULONG_PTR Information;
+  };
+  static_assert(sizeof(NativeIoStatusBlock)==sizeof(void*)*2);
+  static_assert(offsetof(FILE_RENAME_INFO,RootDirectory)==8);
+  static_assert(offsetof(FILE_RENAME_INFO,FileName)==20);
+  const HANDLE nativeParent=::CreateFileW(
+   dir.c_str(),FILE_TRAVERSE|FILE_READ_ATTRIBUTES,
+   FILE_SHARE_READ|FILE_SHARE_WRITE,nullptr,OPEN_EXISTING,
+   FILE_FLAG_BACKUP_SEMANTICS|FILE_FLAG_OPEN_REPARSE_POINT,nullptr);
+  bool const parentReady=nativeParent!=INVALID_HANDLE_VALUE;
+  auto nativeRenameOwned=[&](std::filesystem::path const& source,
+                              std::wstring const& leaf)->LONG{
+   if(!nativeFn||!parentReady)return static_cast<LONG>(0xC0000001u);
+   const HANDLE item=::CreateFileW(
+    source.c_str(),DELETE|FILE_READ_DATA|FILE_READ_ATTRIBUTES,
+    FILE_SHARE_READ,nullptr,OPEN_EXISTING,FILE_FLAG_OPEN_REPARSE_POINT,nullptr);
+   if(item==INVALID_HANDLE_VALUE)return static_cast<LONG>(0xC0000022u);
+   const DWORD nameBytes=static_cast<DWORD>(leaf.size()*sizeof(wchar_t));
+   const auto required=sizeof(FILE_RENAME_INFO)+(leaf.size()+1)*sizeof(wchar_t);
+   std::vector<std::uint64_t> storage((required+7u)/8u,0);
+   auto* info=reinterpret_cast<FILE_RENAME_INFO*>(storage.data());
+   info->ReplaceIfExists=FALSE;
+   info->RootDirectory=nativeParent;
+   info->FileNameLength=nameBytes;
+   std::memcpy(info->FileName,leaf.data(),nameBytes);
+   info->FileName[leaf.size()]=L'\0';
+   NativeIoStatusBlock io{};
+   const LONG status=nativeFn(item,&io,info,
+      static_cast<ULONG>(required),10u); // native FileRenameInformation
+   ::CloseHandle(item);
+   return status;
+  };
+  const LONG nativeFirst=nativeRenameOwned(
+   probeSource,probeDest.filename().native());
+  const bool nativeIdentity=readId(probeDest,probeAfter)&&beforeKnown&&
+    probeBefore.VolumeSerialNumber==probeAfter.VolumeSerialNumber&&
+    std::memcmp(probeBefore.FileId.Identifier,
+                probeAfter.FileId.Identifier,16)==0;
+  const bool boundToParent=nativeIdentity&&
+   !std::filesystem::exists(probeSource)&&std::filesystem::exists(probeDest);
+  // This second request must fail atomically without touching the
+  // existing fixture-owned destination bytes.
+  LONG nativeCollision=static_cast<LONG>(0xC0000001u);
+  bool collisionPreserved=false;
+  if(boundToParent){
+   {std::ofstream occupied(probeSource,std::ios::binary);
+    occupied<<"r07-nt-collision";}
+   nativeCollision=nativeRenameOwned(probeDest,probeSource.filename().native());
+   std::string collisionBytes{};
+   {std::ifstream existing(probeSource,std::ios::binary);
+    collisionBytes.assign(std::istreambuf_iterator<char>(existing),
+                          std::istreambuf_iterator<char>{});}
+   collisionPreserved=nativeCollision!=0&&
+     collisionBytes=="r07-nt-collision"&&
+     std::filesystem::exists(probeDest);
+  }
+  if(parentReady)::CloseHandle(nativeParent);
+  std::printf("M21_DIAG_R07_NT available=%d parent=%d status=0x%08lX same_parent=%d collision_status=0x%08lX collision_preserved=%d\n",
+   static_cast<int>(nativeFn!=nullptr),static_cast<int>(parentReady),
+   static_cast<unsigned long>(nativeFirst),static_cast<int>(boundToParent),
+   static_cast<unsigned long>(nativeCollision),
+   static_cast<int>(collisionPreserved));
  }
  req.kind=filecommand::Kind::CreateTextFile;
  req.source.clear();
