@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <functional>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -68,6 +69,15 @@ public:
         std::wstring originalRenameSource{};
     };
 
+    // R07-6: one accepted, exact-context rename observation candidate.
+    // This value cannot authorize an Undo, a file mutation or persistence.
+    struct RenameRestoreCandidate final {
+        std::uint64_t ticket=0;
+        Context context{};
+        std::wstring originalPath{};
+        fxfile::filecommand::Result renamed{};
+    };
+
     using UiTask=std::function<void()>;
     using Post=std::function<bool(UiTask)>;
     using TransferCallback=std::function<void(TransferCompletion)>;
@@ -108,6 +118,12 @@ public:
         Post post,FileCommandCallback completion);
     CommandDisposition acceptFileCommand(
         FileCommandCompletion const& completion,Context const& liveContext);
+
+    // Read-only, transient receipt lookup. Invalidated by any new accepted
+    // file operation, a closing window, or a mismatched live context.
+    // The caller must never treat it as a write/restore capability.
+    std::optional<RenameRestoreCandidate> renameRestoreCandidate(
+        Context const& liveContext) const;
 
 private:
     struct SharedState;
