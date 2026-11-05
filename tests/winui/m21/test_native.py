@@ -22,7 +22,10 @@ try:
  summary="M21_NATIVE_SUMMARY 77 passed, 0 failed."
  if result.returncode!=0 or summary not in result.stdout:
   # Keep the first relevant native failures, not the full fixture transcript.
-  failures=[line for line in result.stdout.splitlines()
+  # Some native diagnostics emit a literal backslash-n rather than a real
+  # line break. Normalize diagnostic separators, not the pass/fail criterion.
+  normalized=result.stdout.replace(chr(92)+"n","\n")
+  failures=[line for line in normalized.splitlines()
             if line.startswith(("M21_FAIL ","M21_DEBUG_R07_","M21_DIAG_R07_NT","M21_NATIVE_SUMMARY "))]
   raise AssertionError((result.returncode,failures[:12],
                         result.stdout.splitlines()[-3:],result.stderr[-500:]))
