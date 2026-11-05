@@ -20,7 +20,9 @@
 
 ## 앞으로 진행할 작업
 
-**R07-21 다음 우선 작업(2026-11-05):** 실제 WinUI `DispatcherQueue`와 창 수명을 안전하게 연결하는 완료 전달 경계를 검증한다. R07-20은 공유 내부 상태 기반 백그라운드 복원과 완료 알림 두 단계 재확인을 **가상 대기열에서 30/30** 수용했지만, 실제 GUI 결과 표시·단축키·창/탭 수명 결합은 아직 미검증이다. 일반 사용자용 Undo/Redo·Ctrl+Z는 연결하지 않는다.
+**R07-21B 다음 우선 작업(2026-11-05):** 실제 WinUI `DispatcherQueue`에 창의 약한 참조를 전달하고 대기열 **실행 시점**에 닫힌 창의 콜백을 폐기하는 R07-21A를 소스 7/7·Release 빌드 범위에서 수용했다. 남은 R07-21 목표는 `RestoreCompletion`의 정확한 원래 창 탭·폴더 탭·route 귀속을 검사하는 UI 결과 콜백과 실제 창 종료·탭 변경 시 디스패치 순서를 안전하게 검증하는 것이다. 이때도 사용자용 Undo를 직접 활성화하지 않으며, 먼저 테스트 소유 파일/상태만 사용하고 실제 GUI 동작은 미검증으로 유지한다. **Ctrl+Z·Redo·사용자 파일 복원은 안전성 검증 전 미연결**이다.
+
+**R07-21A WinUI 완료 알림 약한 창 참조 수용(2026-11-05):** `MainWindow::FileOperationUiPost()`가 실제 WinUI 큐에 작업을 등록하되 창 객체를 worker에서 해석하지 않고, UI 대기열에서 실행될 때에만 `weak.get()`과 `mClosing`을 확인한다. 기존 M21 파일 작업 완료 경로에서 사용 중이며, `startTakenRenameRestoreAsync`는 아직 GUI에 연결되지 않았다. 정확한 소스 `50d2e7f87fa8e27d949aae7440b78d30149be203`의 [Windows VM #42052008690](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/42052008690)에서 관련 계약 **7/7 PASS**, WinUI x64 Release 빌드 PASS, 소유 작업공간 정리 PASS. 최초 [#42051238274](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/42051238274)의 반환형 컴파일 오류는 수정했으며 해당 실행은 빌드 FAIL이었다. GUI 화면, 실제 Undo/Redo 및 기존 네이티브 30건은 이번에 재검증하지 않았다.
 
 **R07-20 백그라운드 복원 수명 보호 한정 수용(2026-11-05):** 정확한 소스 `26b8aaad1922dfde044fc64ea2d68859a9c7c23a`의 [Windows VM #42044879231](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/42044879231)에서 관련 소스 계약 **24/24 PASS**, 실제 테스트 소유 파일의 C++ 네이티브 동작 **30/30 PASS**, WinUI x64 Release 빌드 PASS, 개인 설정 보존·임시 작업공간 정리 PASS를 확인했다. 백그라운드 작업은 창 객체가 아닌 공유 상태를 보유하며, 완료 대기열 등록 전과 실제 실행 직전에 창 종료·작업 번호·탐색 세대를 재검증한다. 사용자 GUI·실제 DispatcherQueue·Undo는 NOT TESTED다.
 
