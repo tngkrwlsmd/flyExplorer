@@ -484,6 +484,108 @@ int wmain(int argc,wchar_t** argv){
               f.restored()&&count->load()==0,
               "async_close_after_enqueue_suppresses_callback");
     }
+    {
+        Fixture f(owned,L"async-mid-native-nav");
+        auto claim=f.ready?f.take():std::nullopt;
+        auto q=std::make_shared<AsyncUiQueue>();
+        auto count=std::make_shared<std::atomic<int>>(0);
+        NativePause pause{};
+        gNativePause=&pause;
+        auto started=claim?f.ctrl.startTakenRenameRestoreAsync(
+            *claim,f.ctx,q->poster(),
+            [count](Controller::RestoreCompletion){++*count;})
+            :Controller::StartStatus::StaleConfirmation;
+        bool entered=false;
+        {
+            std::unique_lock<std::mutex> lock(pause.mutex);
+            entered=pause.signal.wait_for(lock,std::chrono::seconds(5),
+                [&]{return pause.entered;});
+        }
+        f.ctrl.invalidateRenameOwnerOnNavigation();
+        {
+            std::lock_guard<std::mutex> lock(pause.mutex);
+            pause.resume=true;
+        }
+        pause.signal.notify_all();
+        for(int i=0;i<120&&!f.restored();++i)
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        auto late=q->popFor(std::chrono::milliseconds(300));
+        gNativePause=nullptr;
+        check(claim&&started==Controller::StartStatus::Started&&
+              entered&&f.restored()&&!late&&count->load()==0,
+              "async_navigation_during_native_suppresses_callback");
+    }
+    {
+        auto f=std::make_unique<Fixture>(owned,L"async-owner-destroy");
+        auto claim=f->ready?f->take():std::nullopt;
+        auto q=std::make_shared<AsyncUiQueue>();
+        auto count=std::make_shared<std::atomic<int>>(0);
+        const auto original=f->original;
+        NativePause pause{};
+        gNativePause=&pause;
+        auto started=claim?f->ctrl.startTakenRenameRestoreAsync(
+            *claim,f->ctx,q->poster(),
+            [count](Controller::RestoreCompletion){++*count;})
+            :Controller::StartStatus::StaleConfirmation;
+        bool entered=false;
+        {
+            std::unique_lock<std::mutex> lock(pause.mutex);
+            entered=pause.signal.wait_for(lock,std::chrono::seconds(5),
+                [&]{return pause.entered;});
+        }
+        // The detached worker must have captured SharedState, not &Fixture.
+        f.reset();
+        {
+            std::lock_guard<std::mutex> lock(pause.mutex);
+            pause.resume=true;
+        }
+        pause.signal.notify_all();
+        for(int i=0;i<120&&read(original)!=kBytes;++i)
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        auto late=q->popFor(std::chrono::milliseconds(300));
+        gNativePause=nullptr;
+        check(claim&&started==Controller::StartStatus::Started&&
+              entered&&read(original)==kBytes&&!late&&count->load()==0,
+              "async_destroy_during_native_mutation_is_safe");
+    }
+    {
+        Fixture f(owned,L"async-post-rejected");
+        auto claim=f.ready?f.take():std::nullopt;
+        auto count=std::make_shared<std::atomic<int>>(0);
+        auto started=claim?f.ctrl.startTakenRenameRestoreAsync(
+            *claim,f.ctx,[](Controller::UiTask){return false;},
+            [count](Controller::RestoreCompletion){++*count;})
+            :Controller::StartStatus::StaleConfirmation;
+        for(int i=0;i<120&&(!f.restored()||f.ctrl.busy());++i)
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        check(claim&&started==Controller::StartStatus::Started&&
+              f.restored()&&!f.ctrl.busy()&&count->load()==0,
+              "async_failed_post_does_not_retry_native_mutation");
+    }
+    {
+        Fixture f(owned,L"async-occupied-outcome");
+        auto claim=f.ready?f.take():std::nullopt;
+        if(claim){
+            std::ofstream occupant(f.original,std::ios::binary);
+            occupant<<kCollision;
+        }
+        auto q=std::make_shared<AsyncUiQueue>();
+        auto got=std::make_shared<std::optional<Controller::RestoreCompletion>>();
+        auto started=claim?f.ctrl.startTakenRenameRestoreAsync(
+            *claim,f.ctx,q->poster(),
+            [got](Controller::RestoreCompletion value){
+                *got=std::move(value);
+            }):Controller::StartStatus::StaleConfirmation;
+        auto task=q->popFor(std::chrono::milliseconds(4500));
+        if(task)(*task)();
+        check(claim&&started==Controller::StartStatus::Started&&
+              got->has_value()&&
+              got->value().outcome==Controller::RestoreOutcomeClass::NotAttempted&&
+              got->value().result.status==Status::OriginalOccupiedOrUnknown&&
+              !got->value().result.nativeCallAttempted&&
+              read(f.original)==kCollision&&read(f.target)==kBytes,
+              "async_occupied_original_reports_no_native_attempt");
+    }
     std::printf("R07_DISPATCH_NATIVE_SUMMARY %d passed, %d failed.\n",pass,fail);
     return fail?1:0;
 }
