@@ -160,9 +160,9 @@ RenameRestoreObservation RenameTargetLease::begin(
   std::wstring originalCopy(originalPath);
   std::wstring targetCopy(renamed.target);
   auto const parent=std::filesystem::path(originalCopy).parent_path();
-  // Hold the original parent directory; deny DELETE sharing so that its
-  // own rename/delete cannot silently retarget the original path.
-  // This does NOT reserve the original filename.
+  // Retain the original parent directory identity for rechecking.
+  // Directory DELETE sharing is not a reliable exclusion guarantee;
+  // neither this handle nor the target handle reserves the original name.
   HANDLE const acquiredParent=::CreateFileW(
    parent.c_str(),FILE_READ_ATTRIBUTES,FILE_SHARE_READ|FILE_SHARE_WRITE,
    nullptr,OPEN_EXISTING,
