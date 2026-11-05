@@ -1,3 +1,11 @@
+## 2026-11-05 — R07-9 파일 이름 복원 Win32 API 오류 87, 부모 핸들·상대 이름 유지 방식 미수용
+
+정확한 이전 소스 `3d02558fe5467eebf211bf9709d47666e3997813`로 [Windows VM #41981398953](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41981398953)의 M21 x64 Release 컴파일 PASS 이후 네이티브 파일 검사 **75/77 PASS, 2 FAIL**을 관측했다. 실패는 `r07_restore_owned_no_replace_commits_exact_file`와 `r07_restore_replay_rejected_and_original_preserved`이다. 테스트 전용 진단을 추가한 정확한 소스 `82bb78e0317f2668b21b94842c39da8f44be9114`의 [#41981791738](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41981791738)에서 첫 실패의 실제 `SetFileInformationByHandle(FileRenameInfo)` 결과가 `NativeCallFailedUnknownState`, Windows `ERROR_INVALID_PARAMETER=87`, `nativeCallAttempted=true`였고 원래 이름이 비어 있으며 변경 이름은 유지됐다. 두 번째 실패는 첫 번째 복원이 안 되어 중복 복원 거부 기대 상태에 도달하지 못한 연쇄 실패다. 실패 후 **사용자 데이터 변경 없이** 전용 임시 작업공간·사용자 설정 센티넬 정리가 기록됐다.
+
+동일 부모 핸들(`RootDirectory`) 및 상대 파일명·덮어쓰기 금지를 유지한 채 `FileRenameInfoEx`와 플래그 0만 비교한 정확한 소스 `9065d22c1c0aeb4436efdd411ca8b7dc64cc4352`의 [#41982303138](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41982303138)은 Python 소스 **34/34 PASS**, x64 Release 네이티브 컴파일 **PASS**, 파일 검사 **75/77 FAIL**, **동일 오류 87**이다. 이 비교는 `RootDirectory` 필드 자체가 유일한 원인이라는 증거는 아니다. 두 실행에서는 네이티브 성공 증거가 없어 R07-8/9 복원은 **미수용**, GUI/Undo/Redo 연결도 없다.
+
+**재발 방지:** 일반적인 사전 관측 통과나 C++ 컴파일/소스 테스트 PASS를 파일 복원 성공으로 확대하지 않는다. `FILE_RENAME_INFO`의 Win32 문서만을 믿고 부모 디렉터리 상대 이름의 실제 동작을 단정하지 않는다. 다음에는 추가 반복 실행 전에 **정확한 Win32 정보 클래스/버퍼/디렉터리 상대 이름 계약을 독립 테스트 소유 파일에서 한 변수씩 판별**하고, 필요하면 안전한 디렉터리 핸들 기준 원자적 대안의 지원 여부를 조사한다. 절대 경로 단순 우회, 기존 이름 덮어쓰기, 자동 재시도/롤백, 테스트의 성공 조건 완화는 하지 않는다.
+
 ## 2026-11-05 — R07-8 네이티브 테스트 추가 뒤 기존 소스 계약의 총건수 기대값 누락
 
 테스트 소유 파일의 복원 정상·거부 상황을 M21에 8건 추가해 총 예상 건수를 **69에서 77**로 늘렸지만, 첫 [Windows 소스 검사 #41977661567](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41977661567)에서 `test_r07_restore_observation_contract.py`가 여전히 **69건**이라는 오래된 정적 문자열을 요구해 **33/34 FAIL**했다. 실패는 새 네이티브 복원 함수의 실행 결과가 아니라 테스트 래퍼 총건수와 소스 계약의 기대값 불일치였다.
