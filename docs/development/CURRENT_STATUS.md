@@ -1,3 +1,11 @@
+# 2026-11-05 — R07-19 복원 네이티브 I/O 중 UI 비차단·중복 완료 차단: 실제 22/22·Release PASS
+
+- **제품 변경:** `FileOperationController::executeTakenRenameRestore`는 소유권 후보를 mutex 아래에서 단 한 번 소비하고 `busy/restoreInFlight`를 설정한 뒤, 실제 Windows 이름 복원 I/O 전에 mutex를 해제한다. 따라서 탐색·창 닫기는 느린 네이티브 호출 동안 컨트롤러 잠금에 막히지 않으며, 새 파일 작업과 이전 ticket의 늦은 완료 통지는 복원 중 수용되지 않는다. 완료 결과는 네이티브 시도 여부를 기준으로 미시도·확정 성공·시도 후 불확실로 보수적으로 분류한다.
+- **Windows 수용:** 정확한 제품·검사 SHA `3a2f99674e2c7747d22014e84f19259a636e319d`의 [Windows VM #42040643673](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/42040643673)에서 관련 소스 **21/21 PASS**, 전용 MSVC x64 Release 빌드 PASS, 테스트 소유 파일의 정상 복원·위조/중복 거부·복원 중 탐색/닫기·오래된 완료 통지 차단·결과 불확실성 분류 **22/22 PASS**, WinUI x64 Release 빌드 PASS를 확인했다. EXE SHA-256 `731d291b5a827b3ba0b5066955b03fc47f88fccbdccc829ac0da190f25fa03b3`. 기존 프로필 불변·소유 작업공간 정리 PASS.
+- **한계:** 이 실행 경계는 여전히 UI·Ctrl+Z·Undo/Redo에 연결되지 않았다. 실제 사용자가 누르는 복원 명령, GUI 응답성·픽셀, 사용자 파일, 네이티브 호출 중 진짜 외부 프로세스 경합은 **NOT TESTED**다. 호출이 시작된 뒤의 탐색·닫기는 OS 파일 변경을 취소하지 않으며, 불확실 결과를 성공 또는 무변경으로 표시해서는 안 된다.
+
+---
+
 # 2026-11-05 — R07-18 일회성 복원 소유권과 실제 네이티브 실행 결합: 13/13 PASS
 
 - **제품 변경:** `FileOperationController::executeTakenRenameRestore(taken,liveContext)`를 추가했다. 소유권 후보를 인출한 **뒤** 별도 worker에서 호출할 전용 경계이며, 동일한 컨트롤러 `state_->mutex` 잠금 아래에서 원래 수용된 작업 ticket·창 탭/패널/폴더 탭/route·가시 경로·원본/대상 경로·파일 증거를 대조하고 후보를 **성공/실패 관계없이 단 한 번 폐기**한 뒤에만 `filecommand::restoreRenameNoReplace`를 호출한다. 기존 읽기 전용 `recheckAndRetireRenameRestoreCandidate`는 그대로 유지하며, 이 함수에서 이미 소비한 후보는 실제 복원에 재사용할 수 없다. OS 호출이 잠금 안에서 실행돼 호출 시간이 길어질 수 있으므로 **UI 스레드에서는 호출 금지**이며 사용자 인터페이스·Ctrl+Z·Redo·세션에는 연결하지 않았다.
