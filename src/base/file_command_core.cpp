@@ -235,12 +235,31 @@ RenameRestoreObservation RenameTargetLease::recheck() const noexcept {
    original.c_str(),-1,target.c_str(),-1,TRUE);
   if(comparison!=CSTR_LESS_THAN&&comparison!=CSTR_GREATER_THAN)
    return RenameRestoreObservation::UnsafePaths;
+  // Recheck metadata on the retained handle, not only the path. The
+  // pathname can be observed separately and no observation grants Undo.
+  FILE_ATTRIBUTE_TAG_INFO lockedTag{};
   FILE_ID_INFO lockedId{};
+  FILE_STANDARD_INFO lockedStandard{};
+  FILE_BASIC_INFO lockedBasic{};
   if(!::GetFileInformationByHandleEx(
+      handle_,FileAttributeTagInfo,&lockedTag,sizeof(lockedTag))||
+     (lockedTag.FileAttributes&
+      (FILE_ATTRIBUTE_DIRECTORY|FILE_ATTRIBUTE_REPARSE_POINT))||
+     !::GetFileInformationByHandleEx(
       handle_,FileIdInfo,&lockedId,sizeof(lockedId))||
      lockedId.VolumeSerialNumber!=expected_.volumeSerial||
      !std::equal(expected_.fileId.begin(),expected_.fileId.end(),
-                 lockedId.FileId.Identifier))
+                 lockedId.FileId.Identifier)||
+     !::GetFileInformationByHandleEx(
+      handle_,FileStandardInfo,&lockedStandard,sizeof(lockedStandard))||
+     lockedStandard.Directory||lockedStandard.DeletePending||
+     lockedStandard.NumberOfLinks!=1||
+     lockedStandard.EndOfFile.QuadPart<0||
+     static_cast<std::uint64_t>(lockedStandard.EndOfFile.QuadPart)!=
+      expected_.fileSize||
+     !::GetFileInformationByHandleEx(
+      handle_,FileBasicInfo,&lockedBasic,sizeof(lockedBasic))||
+     lockedBasic.LastWriteTime.QuadPart!=expected_.lastWriteTime)
    return RenameRestoreObservation::TargetChangedOrUnavailable;
   // Check the pathname again, not just the retained handle identity.
   RenameEvidence visible{};
