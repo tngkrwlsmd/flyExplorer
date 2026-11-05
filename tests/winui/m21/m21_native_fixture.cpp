@@ -170,6 +170,16 @@ int wmain(int argc,wchar_t**argv){
        Observation::MatchingSnapshotOnly&&
       guard.recheck()==Observation::MatchingSnapshotOnly,
       "r07_guard_acquires_and_rechecks_exact_identity");
+  HANDLE const blockedParentDelete=::CreateFileW(
+      dir.c_str(),DELETE,
+      FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE,
+      nullptr,OPEN_EXISTING,
+      FILE_FLAG_BACKUP_SEMANTICS|FILE_FLAG_OPEN_REPARSE_POINT,nullptr);
+  bool const parentDeleteDenied=blockedParentDelete==INVALID_HANDLE_VALUE&&
+      ::GetLastError()==ERROR_SHARING_VIOLATION;
+  if(blockedParentDelete!=INVALID_HANDLE_VALUE)::CloseHandle(blockedParentDelete);
+  chk(parentDeleteDenied,
+      "r07_guard_denies_parent_directory_delete_during_lease");
   HANDLE const blockedWrite=::CreateFileW(
       dstRename.c_str(),FILE_WRITE_DATA,
       FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE,
@@ -205,6 +215,33 @@ int wmain(int argc,wchar_t**argv){
       std::filesystem::file_size(dstRename)==14&&
       !std::filesystem::exists(srcRename),
       "r07_guard_reset_releases_lock_and_invalidates_receipt");
+  HANDLE const parentAfterReset=::CreateFileW(
+      dir.c_str(),DELETE,
+      FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE,
+      nullptr,OPEN_EXISTING,
+      FILE_FLAG_BACKUP_SEMANTICS|FILE_FLAG_OPEN_REPARSE_POINT,nullptr);
+  bool const parentReleased=parentAfterReset!=INVALID_HANDLE_VALUE;
+  if(parentReleased)::CloseHandle(parentAfterReset);
+  chk(parentReleased,"r07_guard_reset_releases_parent_directory_lock");
+ }
+ // A preexisting DELETE handle to the parent must prevent a lease.
+ {
+  HANDLE const priorParentDelete=::CreateFileW(
+      dir.c_str(),DELETE,
+      FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE,
+      nullptr,OPEN_EXISTING,
+      FILE_FLAG_BACKUP_SEMANTICS|FILE_FLAG_OPEN_REPARSE_POINT,nullptr);
+  bool denied=priorParentDelete!=INVALID_HANDLE_VALUE;
+  if(denied){
+   filecommand::RenameTargetLease blocked;
+   denied=blocked.begin(srcRename.native(),renamedFile)==
+       Observation::UnsafePaths&&
+       blocked.recheck()==Observation::UnverifiedReceipt;
+   ::CloseHandle(priorParentDelete);
+  }
+  chk(denied&&std::filesystem::file_size(dstRename)==14&&
+      !std::filesystem::exists(srcRename),
+      "r07_guard_denies_preexisting_parent_delete_access");
  }
  // An already opened writer must make exclusive lease acquisition fail.
  HANDLE const preexistingWriter=::CreateFileW(
