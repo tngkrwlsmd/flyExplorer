@@ -1,5 +1,12 @@
 # R07 실행 취소·다시 실행: 안전한 작업 영수증 기준 (2026-11-03)
 
+## R07-23C: WinUI 비동기 시작·완료 전달의 단일 private 조합 경계 (2026-11-06)
+
+`MainWindow::StartTakenRenameRestoreForCurrentOwner`는 이미 인출된 복원 후보를 실제 WinUI에 결합하는 단일 private 경계다. 호출 시점의 WindowTab·현재 활성 패널·PaneTab·route·표시 파일시스템/Shell 폴더가 그대로인지 먼저 검사하고, 통과한 경우에만 기존 컨트롤러 비동기 시작에 `FileOperationUiPost`와 `FileOperationRestoreCallback`을 함께 전달한다. 컨트롤러는 ticket·탐색 세대를 다시 검사하고 완료 작업은 한 번만 소비한다. 이 조합은 사용자 Undo 권한을 만들지 않는다.
+
+정확한 제품·검사 소스 `a516a2c2601422b07d7c7403dbd2ea53d9cfdece`의 [Windows VM #42091222477](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/42091222477)에서 관련 소스 계약 **15/15 PASS**, WinUI x64 Release 빌드 PASS, EXE SHA-256 `3b491a121cbe01f615fec2c89ede0912a645cf521fa40c2bafbfe02e65768138`, 소유 작업공간 정리 PASS를 확인했다. 메서드는 XAML·키보드·세션·사용자 명령에 연결하지 않았다. 실제 WinUI 런타임 호출, GUI/픽셀, 사용자 파일 복원과 Ctrl+Z·Undo/Redo는 미검증·미연결이다.
+
+
 ## R07-23B: 완료 시점의 활성 패널 재검증 (2026-11-06)
 
 비동기 복원 완료는 원래 WindowTab identity가 남아 있는 것만으로 수용하지 않는다. 완료 컨텍스트의 패널이 그 WindowTab의 **현재 `activePane`** 과도 같아야 이후 PaneTab·route·표시 파일시스템/Shell 폴더 검사와 알림 갱신으로 진행한다. 같은 창 탭에서 반대 패널로 이동한 사이 도착한 결과는 파일 변경 사실을 되돌리거나 다른 작업공간에 표시하지 않고 알림만 폐기한다.
