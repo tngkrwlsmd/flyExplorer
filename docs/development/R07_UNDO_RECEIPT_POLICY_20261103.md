@@ -88,7 +88,7 @@
 
 알림은 **UI 대기열 등록 직전과 실제 실행 직전** 두 차례 창 종료 여부·작업 번호·탐색 변경 세대를 확인한다. 소유권을 잃었다면 파일 변경 사실을 바꾸지 않고 사용자에게 보낼 알림만 폐기한다. 호출자가 제공하는 `Post`는 종료된 UI 객체를 안전하게 다뤄야 한다. 이 함수는 아직 실제 WinUI/Undo에 연결되지 않았다.
 
-정확한 소스 `26b8aaad1922df044fc64ea2d68859a9c7c23a`의 [Windows VM #42044879231](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/42044879231)에서 소스 **24/24**, 실제 네이티브 파일 복원과 완료 전달 **30/30**, WinUI x64 Release 빌드 모두 PASS. 사용자 설정 보존·작업공간 정리 PASS. **실제 DispatcherQueue/GUI 응답성·사용자 파일 Undo·외부 프로세스 파일 경합은 NOT TESTED**다.
+정확한 소스 `26b8aaad1922dfde044fc64ea2d68859a9c7c23a`의 [Windows VM #42044879231](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/42044879231)에서 소스 **24/24**, 실제 네이티브 파일 복원과 완료 전달 **30/30**, WinUI x64 Release 빌드 모두 PASS. 사용자 설정 보존·작업공간 정리 PASS. **실제 DispatcherQueue/GUI 응답성·사용자 파일 Undo·외부 프로세스 파일 경합은 NOT TESTED**다.
 
 ## R07-19: 복원 중 UI 소유권 알림 비차단·완료 통지 재수용 차단 (2026-11-05)
 
