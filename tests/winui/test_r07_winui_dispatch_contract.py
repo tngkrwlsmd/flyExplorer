@@ -32,14 +32,20 @@ class R07WinUiDispatchContract(unittest.TestCase):
         self.assertNotIn("get_strong()",body)
         self.assertNotIn("[this",body)
 
-    def test_not_connected_to_undo_or_restore_button(self):
+    def test_restore_composition_stays_private_and_user_disconnected(self):
         cpp=read("app/winui/m21_commands.cpp")
-        self.assertNotIn("startTakenRenameRestoreAsync(",cpp)
+        header=read("app/winui/MainWindow.xaml.h")
+        self.assertEqual(cpp.count("startTakenRenameRestoreAsync("),1)
+        self.assertIn("StartTakenRenameRestoreForCurrentOwner(",cpp)
+        self.assertIn("StartTakenRenameRestoreForCurrentOwner(",header)
         self.assertNotIn("executeTakenRenameRestore(",cpp)
         for path in ("app/winui/MainWindow.xaml.cpp",
                      "app/winui/m22_transfers.cpp",
-                     "app/winui/m23_session.cpp"):
-            self.assertNotIn("startTakenRenameRestoreAsync(",read(path))
+                     "app/winui/m23_session.cpp",
+                     "app/winui/MainWindow.xaml"):
+            body=read(path)
+            self.assertNotIn("startTakenRenameRestoreAsync(",body)
+            self.assertNotIn("StartTakenRenameRestoreForCurrentOwner(",body)
 
     def test_controller_still_double_rechecks_before_result_delivery(self):
         code=read("app/winui/file_operation_controller.cpp")
