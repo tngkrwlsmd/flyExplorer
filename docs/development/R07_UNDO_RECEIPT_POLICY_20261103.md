@@ -82,6 +82,14 @@
 
 새 R07-7 소스 계약은 `tests/winui/test_r07_rename_owner_contract.py`에서 한번 인출·mutex 범위·반환 전 폐기·파일 변이 미도입을 검사한다. 정확한 소스 SHA `15251587b3e22b655a3bd0b67ad7dd76584ad925`의 [Windows VM #41959646943](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41959646943)에서 **신규 R07-7 Python 소스 계약 5/5 PASS**, 전용 체크아웃 정리 PASS를 확인했다. C++/WinUI 빌드·GUI·실제 Undo는 **NOT TESTED**다. 기존 R07-6 26/26 통과는 별도의 이전 SHA에서 검증한 결과다.
 
+## R07-8 구현: UI와 격리된 원본 이름 무덮어쓰기 네이티브 함수 (2026-11-05)
+
+Microsoft `FILE_RENAME_INFO` 문서에 따르면 `SetFileInformationByHandle(FileRenameInfo)`에서 `ReplaceIfExists=FALSE`는 새 이름이 이미 사용 중인 경우 오류로 거부하며 `RootDirectory`는 상대 이름을 해석할 기준 디렉터리 핸들이다. 공식 참조: https://learn.microsoft.com/en-us/windows/win32/api/winbase/ns-winbase-file_rename_info
+
+`restoreRenameNoReplace`는 원래 이름의 공백을 단순 검사만으로 보증하지 않고, **열린 `DELETE` 권한 대상 핸들에서 실제 파일 동일성/변경 여부를 검증**한 다음 `FileRenameInfo`의 이 원자적 무덮어쓰기 조건을 사용한다. 대상 핸들은 R07-5의 `FILE_READ_DATA|FILE_READ_ATTRIBUTES` 읽기 전용 핸들과 독립적이며, 부모 디렉터리 핸들의 식별자를 유지하고 복원 대상 이름을 이 핸들에 상대적으로 전달한다. 이때 부모 디렉터리의 외부 DELETE 접근은 완전히 차단되지 않는다. 따라서 완료 뒤 경로 동일성이 실패하면 `CommittedUnverified`로 반환하고 자동 롤백하지 않는다. 호출 자체가 실패하면 `NativeCallFailedUnknownState`를 반환해 '아무 파일도 바뀌지 않았다'고 단정하지 않는다.
+
+**R07-8은 독립 원시 함수 소스만 추가된 상태**다. 호출자가 정확한 R07-7 ticket/창/패널/탭/route 소유권을 확인해 인출했는지 이 함수에서 검증하는 것은 아니며, 앱과 연결된 Undo/Redo 승인 권한도 아니다. 새 소스 계약 `tests/winui/test_r07_no_replace_restore_contract.py`는 비연결·부모/파일 동일성·DELETE 권한·원자적 비덮어쓰기·불확실한 완료 상태를 검사한다. 실제 Python 테스트 실행, C++ 빌드, 테스트 소유 파일의 실복원/경합 및 GUI는 **NOT TESTED**다. 독립 테스트에서 안전/실패 사례가 수용되기 전 사용자 데이터로 실험하거나 UI에 연결하지 않는다.
+
 ## 후속 필수 단계 (순서 변경 금지)
 
 1. **개별 변경 증거 (R07-2 일부 구현):** 원본·결과의 정확한 단일 항목 식별자(볼륨 식별자와 파일 ID), 재분석 지점 제외, 최종 파일 상태, 실제 생성/이동/복구 성공 정보 등을 worker의 신뢰된 범위에서 수집한다. 이름이나 경로만으로 동일한 파일이라고 간주하지 않는다. 일괄 Copy/Move의 aggregate 완료 수치만으로는 영수증을 발행할 수 없다.
