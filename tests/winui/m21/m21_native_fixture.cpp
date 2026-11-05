@@ -482,6 +482,14 @@ int wmain(int argc,wchar_t**argv){
       restoredBefore.VolumeSerialNumber==restoredAfter.VolumeSerialNumber&&
       std::memcmp(restoredBefore.FileId.Identifier,
                   restoredAfter.FileId.Identifier,16)==0;
+  if(restored.status!=WriteStatus::CommittedVerified){
+   std::printf("M21_DEBUG_R07_RESTORE status=%u error=%lu attempted=%d orig=%d target=%d identity=%d bytes=%d\\n",
+     static_cast<unsigned>(restored.status),static_cast<unsigned long>(restored.error),
+     static_cast<int>(restored.nativeCallAttempted),
+     static_cast<int>(std::filesystem::exists(restoreOriginal)),
+     static_cast<int>(std::filesystem::exists(restoreTarget)),
+     static_cast<int>(identityKept),static_cast<int>(restoredBytes==ownedBytes));
+  }
   chk(restored.status==WriteStatus::CommittedVerified&&
       restored.nativeCallAttempted&&restored.error==ERROR_SUCCESS&&
       identityKept&&restoredBytes==ownedBytes&&
@@ -490,6 +498,13 @@ int wmain(int argc,wchar_t**argv){
 
   const auto replay=filecommand::restoreRenameNoReplace(
       restoreOriginal.native(),receipt);
+  if(replay.status!=WriteStatus::OriginalOccupiedOrUnknown){
+   std::printf("M21_DEBUG_R07_REPLAY status=%u error=%lu attempted=%d orig=%d target=%d\\n",
+     static_cast<unsigned>(replay.status),static_cast<unsigned long>(replay.error),
+     static_cast<int>(replay.nativeCallAttempted),
+     static_cast<int>(std::filesystem::exists(restoreOriginal)),
+     static_cast<int>(std::filesystem::exists(restoreTarget)));
+  }
   chk(replay.status==WriteStatus::OriginalOccupiedOrUnknown&&
       !replay.nativeCallAttempted&&
       std::filesystem::exists(restoreOriginal)&&
