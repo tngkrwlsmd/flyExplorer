@@ -26,6 +26,8 @@ class NativeDispatchContract(unittest.TestCase):
                     "originalCopy=taken.originalPath;",
                     "renamedCopy=taken.renamed;",
                     "shared->busy=true;",
+                    "shared->restoreInFlight=true;",
+                    "shared->restoreInFlight=false;",
                     "restoreRenameNoReplace("):
             with self.subTest(key=key):
                 self.assertIn(key,body)
@@ -48,8 +50,13 @@ class NativeDispatchContract(unittest.TestCase):
         self.assertIn("inflight_navigation_returns_before_native",fixture)
         self.assertIn("inflight_close_prompt_preserves_native_outcome",fixture)
         self.assertIn("all_pre_native_rejections_classified_not_attempted",fixture)
+        self.assertIn("inflight_duplicate_file_completion_rejected",fixture)
+        self.assertIn("inflight_duplicate_transfer_completion_rejected",fixture)
+        controller=read("app/winui/file_operation_controller.cpp")
+        self.assertIn("!state_->busy||state_->restoreInFlight",controller)
+        self.assertIn("state_->restoreInFlight)\n        return TransferDisposition::Ignored;",controller)
         wrapper=read("tests/winui/r07_dispatch_native/test_native.py")
-        self.assertIn("R07_DISPATCH_NATIVE_SUMMARY 20 passed, 0 failed.",wrapper)
+        self.assertIn("R07_DISPATCH_NATIVE_SUMMARY 22 passed, 0 failed.",wrapper)
         self.assertIn("assert_legacy_profile_unchanged(real,original)",wrapper)
         self.assertIn("shutil.rmtree(owned)",wrapper)
 if __name__=="__main__":
