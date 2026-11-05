@@ -631,10 +631,11 @@ RenameRestoreWriteResult restoreRenameNoReplace(
   std::vector<std::uint64_t> storage((required+7u)/8u,0);
   auto* info=reinterpret_cast<FILE_RENAME_INFO*>(storage.data());
   info->ReplaceIfExists=FALSE;
+  info->Flags=0; // class 10 requires no replace or POSIX flags
   info->RootDirectory=parent.h;
   info->FileNameLength=nameBytes;
   std::memcpy(info->FileName,leaf.data(),nameBytes);
-  info->FileName[leaf.size()]=L'\\0';
+  info->FileName[leaf.size()]=L'\0';
 
   // This is the sole mutation, with no overwrite, rollback or retry.
   // A failed or pending native call does not prove unchanged file state.
