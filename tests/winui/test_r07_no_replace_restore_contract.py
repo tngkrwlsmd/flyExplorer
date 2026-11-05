@@ -74,7 +74,7 @@ class R07NoReplaceRestoreContract(unittest.TestCase):
         self.assertLess(body.index("readRenameEvidence(target,visible)"),
                         body.index("::SetFileInformationByHandle("))
 
-    def test_atomic_collision_refusal_uses_held_parent_and_never_overwrites(self):
+    def test_atomic_same_parent_collision_refusal_without_absolute_path(self):
         body = self.restore
         for text in (
             "validLeaf(leaf)",
@@ -83,7 +83,7 @@ class R07NoReplaceRestoreContract(unittest.TestCase):
             "originalError!=ERROR_FILE_NOT_FOUND",
             "info->ReplaceIfExists=FALSE;",
             "info->Flags=0;",
-            "info->RootDirectory=parent.h;",
+            "info->RootDirectory=nullptr;",
             "info->FileNameLength=nameBytes;",
             "std::memcpy(info->FileName,leaf.data(),nameBytes);",
             "item.h,FileRenameInfoEx,info",
@@ -106,6 +106,30 @@ class R07NoReplaceRestoreContract(unittest.TestCase):
                 if not line.lstrip().startswith("//")
             )
             self.assertNotIn(text, clean)
+
+    def test_simple_name_null_root_retains_same_parent_identity_guard(self):
+        body = self.restore
+        for token in (
+            "const std::wstring leaf=original.filename().native();",
+            "validLeaf(leaf)",
+            "parentPath!=target.parent_path()",
+            "readDirectoryId(parent.h,retainedParent)",
+            "sameDirectoryId(retainedParent,visible)",
+            "parentStillVisible()",
+            "info->RootDirectory=nullptr;",
+            "info->Flags=0;",
+            "info->FileNameLength=nameBytes;",
+            "std::memcpy(info->FileName,leaf.data(),nameBytes);",
+        ):
+            with self.subTest(token=token):
+                self.assertIn(token, body)
+        self.assertNotIn("info->RootDirectory=parent.h;", body)
+        self.assertNotIn("std::memcpy(info->FileName,original", body)
+        self.assertNotIn("std::memcpy(info->FileName,target", body)
+        self.assertLess(body.index("parentStillVisible()"),
+                        body.index("::SetFileInformationByHandle("))
+        self.assertLess(body.index("parentStillVisible()", body.index("nativeSucceeded=true;")),
+                        body.index("RenameRestoreWriteStatus::CommittedVerified"))
 
     def test_committed_unverified_never_misreported_as_noop(self):
         body = self.restore
