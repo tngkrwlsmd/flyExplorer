@@ -42,7 +42,7 @@ fxfile::previewops::FileOperationController::Post MainWindow::FileOperationUiPos
         }catch(...){return false;}
     };
 }
-FileOperationController::RestoreCallback MainWindow::FileOperationRestoreCallback(){
+fxfile::previewops::FileOperationController::RestoreCallback MainWindow::FileOperationRestoreCallback(){
     auto weak=get_weak();
     return [weak](FileOperationController::RestoreCompletion completion){
         if(auto ui=weak.get())ui->OnRenameRestoreCompleted(std::move(completion));
