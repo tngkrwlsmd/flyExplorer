@@ -489,7 +489,7 @@ FileOperationController::acceptFileCommand(
 }
 
 std::optional<FileOperationController::RenameRestoreCandidate>
-FileOperationController::renameRestoreCandidate(
+FileOperationController::takeRenameRestoreCandidate(
     Context const& liveContext)
 {
     std::lock_guard<std::mutex> lock(state_->mutex);
@@ -504,7 +504,16 @@ FileOperationController::renameRestoreCandidate(
         state_->renameCandidate.reset();
         return std::nullopt;
     }
-    return state_->renameCandidate;
+    // No second retrieval is possible from this controller, including when
+    // multiple callers race. The returned value is still not Undo authority.
+    try{
+        auto taken=std::move(state_->renameCandidate);
+        state_->renameCandidate.reset();
+        return taken;
+    }catch(...){
+        state_->renameCandidate.reset();
+        return std::nullopt;
+    }
 }
 
 } // namespace fxfile::previewops
