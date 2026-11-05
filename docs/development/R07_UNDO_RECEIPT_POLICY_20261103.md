@@ -90,6 +90,12 @@ Microsoft `FILE_RENAME_INFO` 문서에 따르면 `SetFileInformationByHandle(Fil
 
 **R07-8은 독립 원시 함수 소스만 추가된 상태**다. 호출자가 정확한 R07-7 ticket/창/패널/탭/route 소유권을 확인해 인출했는지 이 함수에서 검증하는 것은 아니며, 앱과 연결된 Undo/Redo 승인 권한도 아니다. 새 소스 계약 `tests/winui/test_r07_no_replace_restore_contract.py`는 비연결·부모/파일 동일성·DELETE 권한·원자적 비덮어쓰기·불확실한 완료 상태를 검사한다. [Windows VM #41962356186](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41962356186)에서 정확한 소스 `9cfba11ba63e0daeba3a84702d106991f6ed4f73`의 **R07 소스 32/32, 신규 R07-8 5/5 PASS**, 소유 체크아웃 정리 PASS를 확인했다. 첫 [#41962094352](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41962094352)은 기존 검사 범위가 새 주석까지 포함해 **31/32 FAIL**이었고, 금지 플래그 이름이 들어간 주석만 정리한 후 PASS했다. **C++ 빌드, 테스트 소유 파일의 실제 복원/경합 및 GUI는 NOT TESTED**다. 독립 테스트에서 안전/실패 사례가 수용되기 전 사용자 데이터로 실험하거나 UI에 연결하지 않는다.
 
+### R07-8 테스트 전용 Windows 네이티브 복원 사례 추가 (2026-11-05)
+
+`tests/winui/m21/m21_native_fixture.cpp`에 **테스트 소유 로컬 파일에서만** 실행할 정상 복원·원래 이름 충돌/바이트 보호·위조/누락된 영수증·기존 쓰기 핸들 거부·복원 뒤 파일 ID/바이트 보존·중복 복원 거부를 8건 추가했다. M21 네이티브 예상 건수는 **69 → 77건**이다. 사용자 프로필 보호와 임시 작업공간 정리는 기존 테스트 실행 래퍼 계약을 유지한다. 현재 이것은 *실행될 테스트 시나리오*를 만든 것이지, 파일 복원이 성공했다고 관측한 결과가 아니다.
+
+정확한 SHA `608404a7c9f1cf83cd557f7260259af7e5212bbf`의 [Windows VM #41977843188](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41977843188)에서 **Python R07 소스 계약 34/34 PASS**와 소유 체크아웃 정리만 확인했다. [첫 #41977661567](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41977661567)은 이전 예상 건수(69)를 사용한 소스 검사로 **33/34 FAIL**이었고, 해당 검사 값을 바로잡아 재검사했다. **M21 네이티브 컴파일, 테스트용 파일의 실제 복원 77건, WinUI 앱 빌드, GUI 및 실제 Undo/Redo는 NOT TESTED**다. 원본 파일을 다시 변경하는 함수는 컨트롤러와 UI에 여전히 연결하지 않는다.
+
 ## 후속 필수 단계 (순서 변경 금지)
 
 1. **개별 변경 증거 (R07-2 일부 구현):** 원본·결과의 정확한 단일 항목 식별자(볼륨 식별자와 파일 ID), 재분석 지점 제외, 최종 파일 상태, 실제 생성/이동/복구 성공 정보 등을 worker의 신뢰된 범위에서 수집한다. 이름이나 경로만으로 동일한 파일이라고 간주하지 않는다. 일괄 Copy/Move의 aggregate 완료 수치만으로는 영수증을 발행할 수 없다.
