@@ -416,6 +416,74 @@ int wmain(int argc,wchar_t** argv){
               Category::UncertainAfterAttempt,
               "contradictory_flags_fail_closed_for_reporting");
     }
+    // R07-20: the native worker may finish before the UI task is executed.
+    // Delivery is not a mutation authority and never names a global tab.
+    {
+        Fixture f(owned,L"async-delivery");
+        auto claim=f.ready?f.take():std::nullopt;
+        auto q=std::make_shared<AsyncUiQueue>();
+        auto got=std::make_shared<std::optional<Controller::RestoreCompletion>>();
+        auto s=claim?f.ctrl.startTakenRenameRestoreAsync(
+            *claim,f.ctx,q->poster(),
+            [got](Controller::RestoreCompletion value){
+                *got=std::move(value);
+            }):Controller::StartStatus::StaleConfirmation;
+        auto task=q->popFor(std::chrono::milliseconds(4500));
+        const bool notYet=!got->has_value();
+        if(task)(*task)();
+        check(f.ready&&claim&&s==Controller::StartStatus::Started&&
+              task&&notYet&&got->has_value()&&f.restored()&&
+              got->value().outcome==Controller::RestoreOutcomeClass::VerifiedCommitted&&
+              got->value().result.nativeCallAttempted&&
+              got->value().ticket==claim->ticket,
+              "async_restore_delivered_on_owner_queue");
+    }
+    {
+        Fixture f(owned,L"async-bad-owner");
+        auto claim=f.ready?f.take():std::nullopt;
+        auto q=std::make_shared<AsyncUiQueue>();
+        auto live=f.ctx;
+        ++live.route;
+        auto s=claim?f.ctrl.startTakenRenameRestoreAsync(
+            *claim,live,q->poster(),
+            [](Controller::RestoreCompletion){})
+            :Controller::StartStatus::ThreadStartFailed;
+        check(claim&&s==Controller::StartStatus::StaleConfirmation&&
+              f.unchanged(),"async_wrong_live_context_not_started");
+    }
+    {
+        Fixture f(owned,L"async-nav-after-queue");
+        auto claim=f.ready?f.take():std::nullopt;
+        auto q=std::make_shared<AsyncUiQueue>();
+        auto count=std::make_shared<std::atomic<int>>(0);
+        auto s=claim?f.ctrl.startTakenRenameRestoreAsync(
+            *claim,f.ctx,q->poster(),
+            [count](Controller::RestoreCompletion){++*count;})
+            :Controller::StartStatus::StaleConfirmation;
+        auto task=q->popFor(std::chrono::milliseconds(4500));
+        f.ctrl.invalidateRenameOwnerOnNavigation();
+        f.ctrl.invalidateRenameOwnerOnNavigation();
+        if(task)(*task)();
+        check(claim&&s==Controller::StartStatus::Started&&task&&
+              f.restored()&&count->load()==0,
+              "async_navigation_after_enqueue_suppresses_callback");
+    }
+    {
+        Fixture f(owned,L"async-close-after-queue");
+        auto claim=f.ready?f.take():std::nullopt;
+        auto q=std::make_shared<AsyncUiQueue>();
+        auto count=std::make_shared<std::atomic<int>>(0);
+        auto s=claim?f.ctrl.startTakenRenameRestoreAsync(
+            *claim,f.ctx,q->poster(),
+            [count](Controller::RestoreCompletion){++*count;})
+            :Controller::StartStatus::StaleConfirmation;
+        auto task=q->popFor(std::chrono::milliseconds(4500));
+        f.ctrl.prepareForClose();
+        if(task)(*task)();
+        check(claim&&s==Controller::StartStatus::Started&&task&&
+              f.restored()&&count->load()==0,
+              "async_close_after_enqueue_suppresses_callback");
+    }
     std::printf("R07_DISPATCH_NATIVE_SUMMARY %d passed, %d failed.\n",pass,fail);
     return fail?1:0;
 }
