@@ -1,3 +1,12 @@
+# 2026-11-05 — R07-10 NULL 루트 파일 오이동 확인 및 위험 경로 차단
+
+- **한 변수 비교:** 부모 폴더의 128비트 ID, 대상 파일의 `DELETE` 핸들, 단순 원본 파일명, 확장 이름 변경(`FileRenameInfoEx`)의 덮어쓰기/우회 플래그 **0**을 유지하고 `FILE_RENAME_INFO.RootDirectory`만 `parent.h → nullptr`로 변경했다. 정확한 SHA `c1ab5b2cbbaa554afa621e4e6cdf1fb663e44a9e`의 [Windows VM #41987547104](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41987547104)에서 Python 소스 **35/35 PASS**, M21 x64 Release 컴파일 PASS, 테스트 소유 파일 77건 **75 PASS / 2 FAIL**이었다. 네이티브 이름 변경 API는 이번에는 성공(`error=0`, `CommittedUnverified`)했으나 원본·이름 변경된 대상 경로 모두에서 파일이 발견되지 않았다. **API 성공은 의도한 폴더 복원 성공이 아니었다.**
+- **실제 오이동 위치 확인:** 동일 함수에 테스트용 **프로세스 현재 작업 폴더**의 원본명 후보에 대해 이름 변경 이전의 **볼륨 + 128비트 파일 ID**를 비교하는 진단을 추가한 SHA `5b42e633b643da0df186df3be21530735bc48df1`의 [Windows VM #41988089601](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41988089601)에서 `cwd_id_match=1`을 관측했다. 즉, 반환된 성공 뒤에 파일은 **원래 폴더가 아니라 실행 폴더로 이동**했다. 실행 폴더도 임시로 생성한 자체 소유 체크아웃 내부였다. 기존 설정 센티넬/임시 작업공간 정리는 PASS.
+- **보호 수정:** 위험한 `RootDirectory=nullptr`를 제거하고 **`RootDirectory=parent.h`로 복귀**, 동시에 소스 계약에서 NULL 루트 경로 재도입을 금지했다. 수정된 정확한 SHA `43dcef7c020cec0fd235fd3988b5fc402954a36b`에 대해 [Windows VM #41988475539](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41988475539)에서 변경된 Python 소스 **8/8 PASS**, 자체 소유 작업공간 정리 PASS를 확인했다. 뒤이어 검사 함수 이름만 의도가 명확하도록 변경했으며 이 이름 변경을 별도 Windows 실행으로 재검증하지는 않았다.
+- **남은 경계:** 부모 핸들을 유지한 이전 방식은 [#41982303138](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41982303138)에서 **오류 87, 75/77 FAIL**이므로 R07 원본명 실제 복원은 **미수용**이다. 부모 경로 경합과 무덮어쓰기 원자성을 함께 증명할 방식이 없으므로 사용자용 Undo/Redo/단축키는 계속 **미구현·비활성화**. 새 사용자 파일 변경 없음; 전체 WinUI 제품 빌드·GUI·픽셀은 이번에 NOT TESTED. 검증된 다른 기능의 수용 증거는 그대로 유지한다.
+
+---
+
 # 2026-11-05 — R07-9 Windows 복원 이름 변경 2가지 방식 실증: C++ 컴파일 통과, 네이티브 75/77 미수용
 
 - **실제 결과:** 최초 소스 `3d02558fe5467eebf211bf9709d47666e3997813`의 [Windows VM #41981398953](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41981398953)에서 M21 x64 Release 컴파일 **PASS**, 테스트 소유 파일 네이티브 **75/77 PASS, 2 FAIL**. 정상 이름 복원과 복원 후 중복 요청 차단 사례가 실패했다. 테스트용 임시 폴더와 기존 사용자 설정 센티넬 정리는 PASS였다.
