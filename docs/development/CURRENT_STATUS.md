@@ -1,3 +1,11 @@
+# 2026-11-06 — R07-23B 비동기 복원 완료의 활성 패널 귀속 차단: 소스 12/12·Release PASS
+
+- **제품 변경:** 제품 커밋 `74db62bfc5ce6aa59917403b9f76baf02b584f46`에서 `MainWindow::RestoreCompletionContextCurrent`가 원래 WindowTab을 찾은 뒤 그 탭의 현재 `activePane`도 완료 컨텍스트의 패널과 일치하는지 확인한다. 사용자가 같은 WindowTab 안에서 반대 패널로 이동한 동안 끝난 복원은 이전 패널의 알림이나 현재 상태줄을 갱신하지 않고 폐기한다. 기존 WindowTab identity·PaneTab·route·파일시스템/Shell 폴더·로딩 상태 검사와 파일 작업 자체는 변경하지 않았다.
+- **정확한 검증:** 제품·검사 소스 `dcfa78a467fa141f6ee4892ba401124125c0df1a`의 [Windows VM #42060829871](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/42060829871)에서 관련 소스 계약 **12/12 PASS**, WinUI **x64 Release 제품 빌드 PASS**, EXE SHA-256 `83a60318be28e0be5345412c5e2fca27c99868922ba4e872dbdba2611b52d123`, 테스트 소유 체크아웃 정리 PASS를 확인했다.
+- **미완료/안전 경계:** 이번 단위는 실제 WinUI 완료 콜백의 **현재 활성 패널 재검증**만 강화했다. `startTakenRenameRestoreAsync`를 WinUI 사용자 명령과 연결하지 않았고 테스트 전용 흐름에서도 실제 네이티브 복원 시작과 완료 콜백을 한 번에 조합하지 않았다. GUI 창 종료·탭 전환, 화면/픽셀, 사용자용 `Ctrl+Z`·Undo/Redo, 개인 파일 복원은 **NOT TESTED / NOT CONNECTED**다.
+
+---
+
 # 2026-11-06 — R07-23A 복원 완료 알림 단회 전달·창별 작업 소유권: 네이티브 38/38·Release PASS
 
 - **제품 변경:** `FileOperationController::startTakenRenameRestoreAsync`에서 네이티브 복원이 끝난 뒤 UI로 보내는 작업에 공유 `atomic_bool` 일회성 소비 표식을 추가했다. `Post` 제공자가 우연히 같은 `UiTask`를 복사하거나 재호출해도 첫 실행만 창 종료·ticket/epoch·탐색 세대 검사를 거쳐 완료 콜백을 호출한다. 두 번째 실행은 무조건 폐기한다. **네이티브 파일 복원은 원래대로 한 번만 수행**하고 잘못된 owner에 파일 변경 권한을 주지 않는다.
