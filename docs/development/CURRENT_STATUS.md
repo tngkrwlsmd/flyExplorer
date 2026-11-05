@@ -1,3 +1,12 @@
+# 2026-11-06 — R07-23C WinUI 비동기 복원 조합 경계: 소스 15/15·Release PASS
+
+- **제품 변경:** 제품 커밋 `b33a155ac45aafa7a3bd4aca952a96d51ad42804`~`200c969c4814c29a9c0edfba7005c48136916ff3`에서 private `MainWindow::StartTakenRenameRestoreForCurrentOwner`를 추가했다. 이미 인출된 후보와 호출 시점 컨텍스트가 현재 WindowTab·활성 패널·PaneTab·route·표시 폴더에 그대로 속하는지 먼저 확인한 뒤에만 기존 `startTakenRenameRestoreAsync`에 실제 WinUI `FileOperationUiPost`와 `FileOperationRestoreCallback`을 함께 전달한다. 컨트롤러의 ticket/탐색 세대 재검사와 완료 단회 전달은 그대로 유지한다.
+- **정확한 검증:** 정확한 제품·검사 소스 `a516a2c2601422b07d7c7403dbd2ea53d9cfdece`의 [Windows VM #42091222477](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/42091222477)에서 관련 소스 계약 **15/15 PASS**, WinUI **x64 Release 제품 빌드 PASS**, EXE SHA-256 `3b491a121cbe01f615fec2c89ede0912a645cf521fa40c2bafbfe02e65768138`, 테스트 소유 체크아웃 정리 PASS를 확인했다. 기존 네이티브 38/38과 R12 GUI는 변경되지 않아 재실행하지 않았다.
+- **첫 실패 보존:** 선행 [#42090858077](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/42090858077)은 신규 조합 관련 14건 PASS 뒤 “m21_commands.cpp에 비동기 시작 호출 없음”을 요구하던 이전 단계 검사 1건이 실패해 제품 컴파일 전에 중단됐다. private 조합 한 곳만 허용하고 XAML·키보드·세션 미연결을 직접 검사하도록 테스트를 수정했으며 제품 코드는 바꾸지 않았다.
+- **미완료/안전 경계:** 이 메서드는 private이며 XAML 이벤트·키보드·세션·사용자 명령에서 호출하지 않는다. 실제 WinUI 런타임에서 테스트 소유 Rename 후보를 넣어 DispatcherQueue 완료 순서를 실행한 것은 아니며, GUI/픽셀·사용자용 `Ctrl+Z`·Undo/Redo·개인 파일 복원은 **NOT TESTED / NOT CONNECTED**다.
+
+---
+
 # 2026-11-06 — R07-23B 비동기 복원 완료의 활성 패널 귀속 차단: 소스 12/12·Release PASS
 
 - **제품 변경:** 제품 커밋 `74db62bfc5ce6aa59917403b9f76baf02b584f46`에서 `MainWindow::RestoreCompletionContextCurrent`가 원래 WindowTab을 찾은 뒤 그 탭의 현재 `activePane`도 완료 컨텍스트의 패널과 일치하는지 확인한다. 사용자가 같은 WindowTab 안에서 반대 패널로 이동한 동안 끝난 복원은 이전 패널의 알림이나 현재 상태줄을 갱신하지 않고 폐기한다. 기존 WindowTab identity·PaneTab·route·파일시스템/Shell 폴더·로딩 상태 검사와 파일 작업 자체는 변경하지 않았다.
