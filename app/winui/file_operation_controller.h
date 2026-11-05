@@ -119,10 +119,10 @@ public:
     CommandDisposition acceptFileCommand(
         FileCommandCompletion const& completion,Context const& liveContext);
 
-    // Read-only, transient receipt lookup. Invalidated by any new accepted
-    // file operation, a closing window, or a mismatched live context.
-    // The caller must never treat it as a write/restore capability.
-    std::optional<RenameRestoreCandidate> renameRestoreCandidate(
+    // R07-7: retrieve the owner-matched candidate at most once.
+    // Removes it under the controller lock; NOT an Undo/restore capability.
+    // It is not a filesystem check and does not reserve the original name.
+    std::optional<RenameRestoreCandidate> takeRenameRestoreCandidate(
         Context const& liveContext);
 
 private:
