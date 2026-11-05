@@ -48,6 +48,31 @@ class RestoreWinUiDispatchContract(unittest.TestCase):
             self.completion.index("state.fileOperationNotice=notice;"),
         )
 
+    def test_private_composition_rechecks_owner_before_async_start(self):
+        source = SOURCE.read_text(encoding="utf-8-sig")
+        body = source.split(
+            "MainWindow::StartTakenRenameRestoreForCurrentOwner(", 1
+        )[1].split("bool MainWindow::RestoreCompletionContextCurrent(", 1)[0]
+        for token in (
+            "RestoreCompletionContextCurrent(liveContext)",
+            "FileOperationUiPost()",
+            "FileOperationRestoreCallback()",
+            "mFileOperations.startTakenRenameRestoreAsync(",
+        ):
+            self.assertIn(token, body)
+        self.assertLess(
+            body.index("RestoreCompletionContextCurrent(liveContext)"),
+            body.index("mFileOperations.startTakenRenameRestoreAsync("),
+        )
+        self.assertLess(
+            body.index("FileOperationUiPost()"),
+            body.index("mFileOperations.startTakenRenameRestoreAsync("),
+        )
+        self.assertLess(
+            body.index("FileOperationRestoreCallback()"),
+            body.index("mFileOperations.startTakenRenameRestoreAsync("),
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
