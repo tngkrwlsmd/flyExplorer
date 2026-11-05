@@ -20,7 +20,7 @@
 
 ## 앞으로 진행할 작업
 
-**R07-23B 다음 우선 작업(2026-11-06):** 이번 R07-23A에서는 컨트롤러의 실제 네이티브 복원에서 창/패널/폴더 탭·route·표시 폴더가 다른 후보를 시작 전에 거부하고, 서로 다른 두 창의 UI 대기열을 격리하며, 복사된 완료 작업이 여러 번 실행돼도 콜백을 단 한 번만 전달하도록 수용했다. 다음은 R07-22의 실제 WinUI `FileOperationRestoreCallback`·`FileOperationUiPost`와 R07-20의 `startTakenRenameRestoreAsync`를 **사용자 명령과 분리된 테스트 전용 소유 파일 흐름**에서 결합해 창 종료·WindowTab·PaneTab·route 변경 후 완료 알림이 원래 탭의 상태만 갱신하거나 폐기되는지를 검증한다. GUI 실사용·픽셀은 아직 검증되지 않았고, **Ctrl+Z·Undo/Redo·개인 파일 복원은 활성화하지 않는다.**
+**R07-23C 다음 우선 작업(2026-11-06):** R07-23B는 같은 WindowTab 안에서 사용자가 반대 패널로 전환한 동안 도착한 복원 완료가 이전 패널의 알림을 갱신하지 않도록 실제 WinUI 소유권 검사에 `activePane` 일치를 추가했고, 정확한 소스 `dcfa78a467fa141f6ee4892ba401124125c0df1a`의 [Windows VM #42060829871](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/42060829871)에서 관련 계약 **12/12 PASS**, WinUI x64 Release 빌드 PASS를 확인했다. 다음은 R07-22의 실제 WinUI `FileOperationRestoreCallback`·`FileOperationUiPost`와 R07-20의 `startTakenRenameRestoreAsync`를 **사용자 명령과 분리된 테스트 전용 소유 파일 흐름**에서 결합해 정상 소유 상태의 단회 전달과 창 종료·WindowTab·PaneTab·route 변경 시 폐기를 실제 비동기 순서로 검증한다. **Ctrl+Z·Undo/Redo·개인 파일 복원은 활성화하지 않는다.**
 
 **R07-23A 창별 비동기 소유권·결과 단회 전달 한정 수용(2026-11-06):** 정확한 소스 `457b9f11a803202528eb766524ed78d17261b3a1`의 [Windows VM #42058086853](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/42058086853)에서 관련 소스 계약 **14/14 PASS**, 실제 테스트 소유 파일 기반 네이티브 C++ **38/38 PASS**, WinUI x64 Release 빌드 PASS, 기존 사용자 프로필 불변·전용 작업공간 정리 PASS. 원래 소유자와 다른 WindowTab/패널/PaneTab/route/파일시스템·Shell 폴더가 작업을 시작하지 못하고, 서로 다른 두 창의 결과가 각 대기열로만 전달되며, 동일 `UiTask`가 재실행돼도 결과 콜백은 한 번만 호출된다. **실제 WinUI 복원 시작·결과 표시 연결과 GUI/사용자 파일 Undo는 미완료·미검증**이다.
 
