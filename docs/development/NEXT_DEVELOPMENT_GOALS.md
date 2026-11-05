@@ -20,7 +20,9 @@
 
 ## 앞으로 진행할 작업
 
-**R07-20 다음 우선 작업(2026-11-05):** R07-19에서 복원 소유권의 단회 소비, 네이티브 I/O 중 mutex 해제, 새 작업·오래된 완료 통지 차단과 결과 분류를 실제 22/22 및 WinUI Release로 수용했다. 다음에는 사용자용 Undo/Redo를 바로 노출하지 않고, 이 실행 경계를 호출할 전용 백그라운드 작업의 수명·DispatcherQueue 결과 전달·창 종료 후 결과 폐기 정책을 작은 단위로 설계·검증한다. 불확실한 네이티브 결과는 자동 재시도하거나 성공/무변경으로 축약하지 않는다.
+**R07-21 다음 우선 작업(2026-11-05):** 실제 WinUI `DispatcherQueue`와 창 수명을 안전하게 연결하는 완료 전달 경계를 검증한다. R07-20은 공유 내부 상태 기반 백그라운드 복원과 완료 알림 두 단계 재확인을 **가상 대기열에서 30/30** 수용했지만, 실제 GUI 결과 표시·단축키·창/탭 수명 결합은 아직 미검증이다. 일반 사용자용 Undo/Redo·Ctrl+Z는 연결하지 않는다.
+
+**R07-20 백그라운드 복원 수명 보호 한정 수용(2026-11-05):** 정확한 소스 `26b8aaad1922df044fc64ea2d68859a9c7c23a`의 [Windows VM #42044879231](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/42044879231)에서 관련 소스 계약 **24/24 PASS**, 실제 테스트 소유 파일의 C++ 네이티브 동작 **30/30 PASS**, WinUI x64 Release 빌드 PASS, 개인 설정 보존·임시 작업공간 정리 PASS를 확인했다. 백그라운드 작업은 창 객체가 아닌 공유 상태를 보유하며, 완료 대기열 등록 전과 실제 실행 직전에 창 종료·작업 번호·탐색 세대를 재검증한다. 사용자 GUI·실제 DispatcherQueue·Undo는 NOT TESTED다.
 
 **R07-19 UI 비차단 복원 실행 한정 수용(2026-11-05):** 정확한 소스 `3a2f99674e2c7747d22014e84f19259a636e319d`의 [Windows VM #42040643673](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/42040643673)에서 관련 소스 21/21, 전용 네이티브 Release와 소유 파일·동시성 22/22, WinUI x64 Release, 프로필 불변·소유 작업공간 정리 PASS. EXE SHA-256 `731d291b5a827b3ba0b5066955b03fc47f88fccbdccc829ac0da190f25fa03b3`. UI/단축키/실사용 파일/화면은 NOT TESTED이며 아직 연결하지 않았다.
 
