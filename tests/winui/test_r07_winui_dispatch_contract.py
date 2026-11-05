@@ -36,8 +36,8 @@ class R07WinUiDispatchContract(unittest.TestCase):
         cpp=read("app/winui/m21_commands.cpp")
         header=read("app/winui/MainWindow.xaml.h")
         self.assertEqual(cpp.count("startTakenRenameRestoreAsync("),1)
-        self.assertIn("StartTakenRenameRestoreForCurrentOwner(",cpp)
-        self.assertIn("StartTakenRenameRestoreForCurrentOwner(",header)
+        self.assertIn("StartPendingRenameRestoreForCurrentOwner(",cpp)
+        self.assertIn("StartPendingRenameRestoreForCurrentOwner(",header)
         self.assertNotIn("executeTakenRenameRestore(",cpp)
         for path in ("app/winui/MainWindow.xaml.cpp",
                      "app/winui/m22_transfers.cpp",
@@ -45,7 +45,7 @@ class R07WinUiDispatchContract(unittest.TestCase):
                      "app/winui/MainWindow.xaml"):
             body=read(path)
             self.assertNotIn("startTakenRenameRestoreAsync(",body)
-            self.assertNotIn("StartTakenRenameRestoreForCurrentOwner(",body)
+            self.assertNotIn("StartPendingRenameRestoreForCurrentOwner(",body)
 
     def test_controller_still_double_rechecks_before_result_delivery(self):
         code=read("app/winui/file_operation_controller.cpp")
