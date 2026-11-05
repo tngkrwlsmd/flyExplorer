@@ -1,3 +1,12 @@
+# 2026-11-05 — R07-15 실제 파일 작업 컨트롤러의 복원 후보 소유권 C++ 23/23 PASS (한정 수용)
+
+- **검증 대상 소스:** `ee39c31ea928b31bccabbae6425ac75de583bdd9`. [중앙 Windows VM #42017316589](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/42017316589)에서 R07-15 전용 소스·보호 계약 **3/3 PASS**, MSVC x64 **Release 네이티브 컴파일 PASS**, 실제 `FileOperationController.cpp`를 포함한 별도 콘솔 실행 파일의 **`R07_OWNER_NATIVE_Release_23_PASS True`**, 기존 프로필 불변, 소유 임시 작업공간 정리 PASS를 확인했다. 중앙 VM 작업 슬롯은 유휴 상태로 복구했다.
+- **정확한 범위:** 정상 인출·단회 확인·중복 거부, 창 탭·패널·폴더 탭·route·가시 경로 변경, 인출 후보의 작업 번호·원본/대상 경로·검증된 파일 ID·볼륨·크기·수정 시각의 위조, 새 파일 명령·확인 대기 전송·창 종료에 따른 후보 무효화, 두 스레드에서 같은 후보를 동시에 확인할 때 성공 최대 한 번을 확인했다. 컴파일한 것은 **제품과 동일한 실제 컨트롤러 구현**이며, 테스트 코드의 조작 가능한 영수증은 실제 파일 이름 변경 성공을 가장한 **합성 값**이다. 테스트용 파일 명령은 유효하지 않은 단일 파일명으로 첫 검사에서 거부되며, Shell 전송 함수는 실수로 호출되면 중단하게 구성했다.
+- **제품 변경:** `app/winui/file_operation_controller.cpp`의 WinUI 전용 사전 컴파일 헤더(PCH) 포함을 테스트 빌드 매크로 조건으로 감싸 실제 구현 소스를 콘솔 테스트에서도 컴파일할 수 있게 했다. **일반 WinUI 제품 빌드 경로에서 실행 로직은 바꾸지 않았다.** 새 테스트 전용 프로젝트·실행·소스 회귀 검사만 추가했다. 실제 이름 복원 `restoreRenameNoReplace`, 사용자용 Undo/Redo·Ctrl+Z, 세션 v4 및 사용자 파일은 연결/수정하지 않았다.
+- **남은 안전성:** 이번 정확한 소스의 전체 WinUI 빌드, GUI/픽셀, 실제 파일 복원, 다른 OS 환경은 **NOT TESTED**다. 같은 창/패널/route로 돌아오면 `sameContext`가 동일 값으로 판단할 수 있으므로 **이탈 후 복귀(ABA)**를 발견할 추가 세대·무효화 통지가 필요하다. 네이티브 파일 변경 호출 바로 전후의 동시 경합과 소유권 원자적 연결도 미해결이다. 다음 개발 단위 R07-16에서 전역 Undo를 활성화하지 않은 채 이 경계를 분리한다.
+
+---
+
 # 2026-11-05 — R07-14 인출 후 복원 후보 단회 소유권 재검증: 관련 소스 7/7·x64 Release 빌드 PASS
 
 - **정확한 제품 소스:** `3b055ce1a76924c399e91c6ae266caf823c81717`. [중앙 Windows VM 소스 검사 #42003245497](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/42003245497)에서 `test_r07_rename_owner_contract.py`의 기존/신규 소스 계약 **7/7 PASS**, 정확한 SHA 및 테스트 전용 체크아웃 정리 PASS를 확인했다. [중앙 Windows VM #42004028953](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/42004028953)에서 같은 소스의 **x64 Release 제품 빌드 PASS**, EXE SHA-256 `2bcfca3e43ae23ae58fb12d4eec5a73081495fe4afe63a516a6970e826d29d30`, 소유 임시 빌드 작업공간 정리 PASS를 확인했다.

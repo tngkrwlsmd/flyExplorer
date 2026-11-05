@@ -82,6 +82,14 @@
 
 새 R07-7 소스 계약은 `tests/winui/test_r07_rename_owner_contract.py`에서 한번 인출·mutex 범위·반환 전 폐기·파일 변이 미도입을 검사한다. 정확한 소스 SHA `15251587b3e22b655a3bd0b67ad7dd76584ad925`의 [Windows VM #41959646943](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41959646943)에서 **신규 R07-7 Python 소스 계약 5/5 PASS**, 전용 체크아웃 정리 PASS를 확인했다. C++/WinUI 빌드·GUI·실제 Undo는 **NOT TESTED**다. 기존 R07-6 26/26 통과는 별도의 이전 SHA에서 검증한 결과다.
 
+## R07-15: 실제 컨트롤러 네이티브 단위 실행 검증 (2026-11-05)
+
+전용 `tests/winui/r07_owner_native/` 테스트 실행 파일은 제품 `app/winui/file_operation_controller.cpp`의 **실제 구현**과 `src/base/file_command_core.cpp`를 직접 컴파일한다. 사용자 파일이나 기존 GUI는 열지 않는다. 작업 번호를 만드는 사전 파일 요청은 유효하지 않은 파일명으로 즉시 거부되며, 비동기 결과는 폐기한다. 이후 **합성된 검증 성공 영수증**을 컨트롤러에 제공하여 일반적인 후보 인출·실행 직전 재확인·무효화를 실제 C++ 메서드로 검증한다. Shell 전송 함수는 실수로 실행되면 중단하도록 대체했다. 프로덕션 코드에서는 WinUI 사전 컴파일 헤더 포함만 테스트 매크로로 분기했고 실제 컨트롤러 로직은 그대로다.
+
+[중앙 Windows VM #42017316589](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/42017316589), 정확한 소스 `ee39c31ea928b31bccabbae6425ac75de583bdd9`: 소스/보호 계약 **3/3 PASS**, C++ 네이티브 x64 Release 컴파일 PASS, 소유권 상태 검사 **23/23 PASS**, 사용자 프로필 불변·임시 작업공간 정리 PASS. WinUI 애플리케이션 전체 빌드·GUI·파일 변경은 이 소스에서 **NOT TESTED**다. 이 결과는 실제 파일을 복원할 수 있다는 승인이 아니다.
+
+**남은 위험:** 컨트롤러로 탐색 변경 이벤트가 연결되지 않아 이탈했다가 동일 컨텍스트로 돌아올 때 `sameContext`의 단순 값 비교를 통과할 수 있다. 완료 직전의 소유권 검사와 네이티브 파일 이름 변경 사이의 동시 경합도 아직 닫히지 않았다. 사용자용 Undo/Redo·Ctrl+Z는 계속 활성화하지 않는다.
+
 ## R07-14: 인출 후 일회성 소유권 재확인 (2026-11-05)
 
 R07-7의 `takeRenameRestoreCandidate`는 기존 후보를 원본 저장소에서 제거하며, 인출한 복사본은 이후 자동으로 유효해지지 않는다. 새 `recheckAndRetireRenameRestoreCandidate(taken,liveContext)`는 별도로 보관한 기대 영수증과 파일 ID·볼륨·크기·시간, 정확한 경로, 창·패널·탭·route·ticket를 다시 대조한다. **일치 여부와 관계없이 잠금 안에서 기대값을 폐기**하므로 동일 후보의 후속 재검사는 실패한다. 새 파일 작업과 전송, 창 종료도 인출된 대기 후보를 폐기한다. 파일 I/O나 실제 이름 복원은 이 단계에 없다.
