@@ -97,7 +97,7 @@ class RenameIdentityContract(unittest.TestCase):
         ):
             self.assertIn(token, native)
         harness = read("tests/winui/m21/test_native.py")
-        self.assertIn("M21_NATIVE_SUMMARY 66 passed, 0 failed.", harness)
+        self.assertIn("M21_NATIVE_SUMMARY 69 passed, 0 failed.", harness)
         self.assertIn("M21_LEGACY_USER_PROFILE_SENTINEL_UNCHANGED", harness)
 
     def test_undo_or_redo_still_not_exposed(self):
