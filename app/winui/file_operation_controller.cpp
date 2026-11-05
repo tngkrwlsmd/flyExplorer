@@ -287,6 +287,8 @@ FileOperationController::StartStatus FileOperationController::launchTransfer(
         if(state_->closing||state_->busy)return StartStatus::Busy;
         if(!visibleForTransfer(request,context))
             return StartStatus::InvalidVisibleContext;
+        if(state_->epoch==(std::numeric_limits<std::uint64_t>::max)())
+            return StartStatus::ThreadStartFailed;
         ticket=++state_->epoch;
         state_->renameCandidate.reset();
         state_->busy=true;
@@ -399,6 +401,8 @@ FileOperationController::StartStatus FileOperationController::startFileCommand(
         if(context.side<0||context.side>1||context.visibleFolder.empty()||
            request.parent!=context.visibleFolder)
             return StartStatus::InvalidVisibleContext;
+        if(state_->epoch==(std::numeric_limits<std::uint64_t>::max)())
+            return StartStatus::ThreadStartFailed;
         ticket=++state_->epoch;
         state_->renameCandidate.reset();
         state_->busy=true;
@@ -486,15 +490,20 @@ FileOperationController::acceptFileCommand(
 
 std::optional<FileOperationController::RenameRestoreCandidate>
 FileOperationController::renameRestoreCandidate(
-    Context const& liveContext) const
+    Context const& liveContext)
 {
     std::lock_guard<std::mutex> lock(state_->mutex);
     if(state_->closing||state_->busy||state_->pending||
-       !state_->renameCandidate||
-       state_->renameCandidate->ticket==0||
-       state_->renameCandidate->ticket!=state_->epoch||
-       !sameContext(state_->renameCandidate->context,liveContext))
+       !state_->renameCandidate)
         return std::nullopt;
+    if(state_->renameCandidate->ticket==0||
+       state_->renameCandidate->ticket!=state_->epoch||
+       !sameContext(state_->renameCandidate->context,liveContext)){
+        // A stale owner must not become valid again if the user returns
+        // to an earlier pane. This check is not a filesystem preflight.
+        state_->renameCandidate.reset();
+        return std::nullopt;
+    }
     return state_->renameCandidate;
 }
 
