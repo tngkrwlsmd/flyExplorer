@@ -605,17 +605,18 @@ RenameRestoreWriteResult restoreRenameNoReplace(
    outcome.status=RenameRestoreWriteStatus::OriginalOccupiedOrUnknown;
    outcome.error=originalError;return outcome;
   }
-  // R07-9: this extended zero-flags form also returned ERROR_INVALID_PARAMETER
-  // on the Windows VM, just like FileRenameInfo with a held RootDirectory.
-  // Keep no-replace and parent-handle binding; never silently fall back to
-  // an unanchored absolute path, retry, or enable user-facing Undo.
+  // R07-10: a simple leaf and NULL root names the existing directory
+  // of the held file, not a process-relative path. Keep the verified
+  // parent handle independently for identity checks before/after rename.
+  // Only RootDirectory differs from the failed R07-9 extended call.
+  // Never provide an absolute path, replacement flags, or a retry.
   const DWORD nameBytes=static_cast<DWORD>(leaf.size()*sizeof(wchar_t));
   std::vector<unsigned char> buffer(
    sizeof(FILE_RENAME_INFO)+(leaf.size()+1)*sizeof(wchar_t),0);
   auto* info=reinterpret_cast<FILE_RENAME_INFO*>(buffer.data());
   info->ReplaceIfExists=FALSE;
   info->Flags=0; // FileRenameInfoEx: no replace and no POSIX bypass flags
-  info->RootDirectory=parent.h;
+  info->RootDirectory=nullptr;
   info->FileNameLength=nameBytes;
   std::memcpy(info->FileName,leaf.data(),nameBytes);
   info->FileName[leaf.size()]=L'\0';
