@@ -1,3 +1,13 @@
+# 2026-11-05 — R07-18 일회성 복원 소유권과 실제 네이티브 실행 결합: 13/13 PASS
+
+- **제품 변경:** `FileOperationController::executeTakenRenameRestore(taken,liveContext)`를 추가했다. 소유권 후보를 인출한 **뒤** 별도 worker에서 호출할 전용 경계이며, 동일한 컨트롤러 `state_->mutex` 잠금 아래에서 원래 수용된 작업 ticket·창 탭/패널/폴더 탭/route·가시 경로·원본/대상 경로·파일 증거를 대조하고 후보를 **성공/실패 관계없이 단 한 번 폐기**한 뒤에만 `filecommand::restoreRenameNoReplace`를 호출한다. 기존 읽기 전용 `recheckAndRetireRenameRestoreCandidate`는 그대로 유지하며, 이 함수에서 이미 소비한 후보는 실제 복원에 재사용할 수 없다. OS 호출이 잠금 안에서 실행돼 호출 시간이 길어질 수 있으므로 **UI 스레드에서는 호출 금지**이며 사용자 인터페이스·Ctrl+Z·Redo·세션에는 연결하지 않았다.
+- **정확한 검증 소스:** `37f566dca823dae13f9cb54ea48f289433d4761c`의 [Windows VM #42036519845](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/42036519845)에서 관련 Python 소스/안전 계약 **24/24 PASS**, 실제 제품 `file_operation_controller.cpp` 및 `file_command_core.cpp`를 직접 빌드한 별도 MSVC x64 Release 콘솔 테스트 **13/13 PASS**, WinUI **x64 Release 제품 빌드 PASS**, EXE SHA-256 `fe1802e946b0fd0491afd0fc690cc6a91fd1b2418cc48aa76fa68532e592ecf5`, 실제 사용자 프로필 불변 및 모든 테스트 소유 작업공간 정리 PASS를 확인했다.
+- **검증 내용:** 일회용 테스트 폴더의 실제 RenameSelected 완료에서 **검증된 파일 ID 영수증**을 수용한 뒤 실제 복원 1회 성공·원본 바이트/파일 ID 유지, 동일 후보 재실행 거부, 읽기 전용 재확인으로 소비된 후보의 실행 거부, 변조된 ticket/원본/대상/파일 ID/route 거부, 탐색 왕복·창 종료의 무효화, 원래 이름 선점 시 양측 파일 보존과 후보 소비, 동시 호출 두 개 중 정확히 하나만 실제 네이티브 복원 성공을 확인했다. 테스트에 사용한 파일은 모두 자체 임시 폴더 소유이며 GUI나 개인 파일을 복원하지 않았다.
+- **실패 이력 보존:** 최초 [Windows VM #42036224625](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/42036224625)에서는 이전의 '컨트롤러에서 어떤 복원 함수 호출도 금지'라는 구계약이 새로운 격리 경계를 고려하지 않아 **23/24 PASS, 1건 FAIL**로 후속 빌드 이전 중단됐다. UI 호출 금지 조건은 유지하고 컨트롤러 내 실행 함수만 예외 허용하도록 관련 계약을 수정한 후속 실행 #42036519845만 최종 PASS로 수용한다.
+- **미검증·안전 제한:** 현재는 **전용 작업 스레드 테스트에서만** 컨트롤러와 네이티브 호출을 연결했다. GUI의 실제 탭·폴더 전환과 실행 경합, UI 모델이 변경된 시점부터 컨트롤러의 무효화 알림까지의 간격, 네이티브 호출 중 외부 프로세스의 부모 경로 이동/삭제 및 타이밍, 장시간 I/O로 인한 UI 대기, 실제 Undo/Redo 키바인딩은 **NOT TESTED / NOT IMPLEMENTED**다. 컨트롤러 잠금은 내부 상태만 직렬화하며 외부 파일 시스템에 원자적 잠금을 제공하지 않는다. R07-17에서 실제 부모 폴더 이동 시도는 공유 위반 32로 차단됐다는 관측 결과도 그대로 유지한다.
+
+---
+
 # 2026-11-05 — R07-17 네이티브 복원 직전 경합 재확인: 실제 8/8·WinUI Release PASS
 
 - **제품 변경:** `restoreRenameNoReplace`가 단일 네이티브 무덮어쓰기 호출 직전에 유지 중인 부모 핸들의 경로 동일성, 원본·대상 경로 안전성, 원본 이름 비점유를 마지막으로 재확인한다. 기존 부모/대상 핸들, `ReplaceIfExists=FALSE`, 단일 호출·무재시도·무롤백 계약은 유지하며 사용자용 Undo/Redo에는 연결하지 않았다.
