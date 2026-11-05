@@ -30,6 +30,8 @@ struct FileOperationController::SharedState final {
     bool closing=false;
     std::shared_ptr<fxfile::shelltransfer::Progress> progress{};
     std::optional<PendingTransfer> pending{};
+    // Never persisted or exposed as file mutation authority.
+    std::optional<FileOperationController::RenameRestoreCandidate> renameCandidate{};
 };
 
 FileOperationController::FileOperationController()
@@ -119,6 +121,7 @@ void FileOperationController::prepareForClose() noexcept
         if(state_->progress)state_->progress->cancel.store(true);
         state_->progress.reset();
         state_->pending.reset();
+        state_->renameCandidate.reset();
         state_->busy=false;
     }catch(...){}
 }
@@ -132,6 +135,9 @@ FileOperationController::StartStatus FileOperationController::requestTransfer(
         if(state_->closing||state_->busy)return StartStatus::Busy;
         if(!visibleForTransfer(request,context))
             return StartStatus::InvalidVisibleContext;
+        // Any new accepted request supersedes the previous rename receipt,
+        // including a transfer that first needs user confirmation.
+        state_->renameCandidate.reset();
         if(request.kind==fxfile::shelltransfer::Kind::Recycle&&
            !request.recycleConfirmed){
             if(state_->confirmationSerial==
@@ -282,6 +288,7 @@ FileOperationController::StartStatus FileOperationController::launchTransfer(
         if(!visibleForTransfer(request,context))
             return StartStatus::InvalidVisibleContext;
         ticket=++state_->epoch;
+        state_->renameCandidate.reset();
         state_->busy=true;
         state_->progress=progress;
     }
@@ -393,6 +400,7 @@ FileOperationController::StartStatus FileOperationController::startFileCommand(
            request.parent!=context.visibleFolder)
             return StartStatus::InvalidVisibleContext;
         ticket=++state_->epoch;
+        state_->renameCandidate.reset();
         state_->busy=true;
         state_->progress.reset();
         state_->pending.reset();
@@ -446,13 +454,48 @@ FileOperationController::acceptFileCommand(
     FileCommandCompletion const& completion,Context const& liveContext)
 {
     std::lock_guard<std::mutex> lock(state_->mutex);
-    if(state_->closing||completion.ticket!=state_->epoch)
+    if(state_->closing||completion.ticket!=state_->epoch||
+       completion.ticket==0||!state_->busy)
         return CommandDisposition::Ignored;
     state_->busy=false;
+    state_->renameCandidate.reset();
     if(!sameContext(completion.context,liveContext))
         return CommandDisposition::StaleContext;
-    return completion.result.error==ERROR_SUCCESS?
-        CommandDisposition::Succeeded:CommandDisposition::Failed;
+    if(completion.result.error!=ERROR_SUCCESS)
+        return CommandDisposition::Failed;
+
+    // Only the actually accepted success from this controller's live
+    // ticket/context can be remembered. A verified file ID alone is not
+    // permission to execute a restore or to reuse the receipt after navigation.
+    if(completion.kind==fxfile::filecommand::Kind::RenameSelected&&
+       completion.result.renameEvidence.verified&&
+       !completion.originalRenameSource.empty()&&
+       !completion.result.target.empty()){
+        try{
+            state_->renameCandidate.emplace(RenameRestoreCandidate{
+                completion.ticket,completion.context,
+                completion.originalRenameSource,completion.result});
+        }catch(...){
+            // An allocation failure must not reinterpret an already
+            // successful rename as a failed file command.
+            state_->renameCandidate.reset();
+        }
+    }
+    return CommandDisposition::Succeeded;
+}
+
+std::optional<FileOperationController::RenameRestoreCandidate>
+FileOperationController::renameRestoreCandidate(
+    Context const& liveContext) const
+{
+    std::lock_guard<std::mutex> lock(state_->mutex);
+    if(state_->closing||state_->busy||state_->pending||
+       !state_->renameCandidate||
+       state_->renameCandidate->ticket==0||
+       state_->renameCandidate->ticket!=state_->epoch||
+       !sameContext(state_->renameCandidate->context,liveContext))
+        return std::nullopt;
+    return state_->renameCandidate;
 }
 
 } // namespace fxfile::previewops
