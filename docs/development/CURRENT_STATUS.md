@@ -1,3 +1,11 @@
+# 2026-11-05 — R07-12 독립 파일 이름 복원: 테스트 소유 Windows 네이티브 77/77 PASS
+
+- **정확한 실행 소스:** `fa1771934c744e60eec9e53c950f40dc0909477f`. [Windows VM #41995665162](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41995665162)에서 M21 x64 **Release 네이티브 컴파일 PASS**, **`M21_NATIVE_Release_77_PASS True`**, **`M21_LEGACY_USER_PROFILE_SENTINEL_UNCHANGED True PRESENT 0`**, 자체 소유 체크아웃 **`OWNED_CLEANUP=PASS`**를 확인했다. 이는 전용 테스트용 로컬 파일의 실제 Windows 이름 변경·복원·충돌 및 ID 보존 확인을 포함한다. 이전 Win32 경로의 75/77 실패와 NULL 루트 오이동 문제는 해당 정확한 소스에서 더 이상 동일 증상으로 재현되지 않았다.
+- **수용 범위:** UI와 격리된 `restoreRenameNoReplace`의 **M21 시험 범위 내 네이티브 실행**을 수용한다. 검증된 Rename 영수증의 위조·누락, 원본 이름 충돌과 기존 바이트 보존, 사전 열린 쓰기 핸들, 정상 복원 후 128비트 파일 ID·바이트 보존, 재실행 거부 사례가 77건 M21 검사에 포함돼 있다. 이 결과는 사용자 원본 파일을 대상으로 확인한 것이 아니다.
+- **남은 보호 조건:** 외부 프로세스에 의한 부모 디렉터리 이동·삭제 경합, 대규모/다중 항목 Undo, 운영체제 버전 호환성, 창·패널·탭·route/ticket의 실행 순간 소유권 결합, 실제 WinUI 앱 빌드·GUI·화면은 **이번 실행에서 NOT TESTED / 미구현**이다. 테스트 전용 복원 성공을 곧바로 사용자용 Undo/Redo·Ctrl+Z 활성화 근거로 삼지 않는다. 사용자 데이터 및 세션 저장 형식은 변경하지 않았다.
+
+---
+
 # 2026-11-05 — R07-12 네이티브 부모 핸들 기반 무덮어쓰기 복원: 제품 소스 반영, 실행 검증 대기
 
 - **확인한 별도 네이티브 증거:** 정확한 테스트 전용 소스 `015ce211714c2880aeb752ece9c9bf459fe9f8a0`를 이용한 [중앙 Windows VM #41992215529](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41992215529)에서 네이티브 클래스 10 (`NtSetInformationFile`)의 부모 핸들 기준 이름 변경은 **status=0**, 변경 전후 **same_parent=1**, 기존 원래 이름 점유 시 **0xC0000035**, **collision_preserved=1**로 확인됐다. 진단 소스 계약 2/2와 별도 네이티브 Release 컴파일도 통과했다. 다만 기존 제품 복원 함수가 그 시점에 여전히 Win32 경로를 사용했으므로 **전체 M21 77건은 75/77 FAIL**로 종료됐다. 테스트 전용 체크아웃과 사용자 설정 센티넬은 보호·정리했다.
