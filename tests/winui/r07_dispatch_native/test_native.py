@@ -17,11 +17,11 @@ try:
     result=subprocess.run([str(exe),str(owned)],cwd=exe.parent,env=env,
         capture_output=True,text=True,errors="replace",timeout=50)
     lines=result.stdout.splitlines()
-    expect="R07_DISPATCH_NATIVE_SUMMARY 12 passed, 0 failed."
+    expect="R07_DISPATCH_NATIVE_SUMMARY 13 passed, 0 failed."
     if result.returncode or expect not in lines:
         problems=[line for line in lines if line.startswith(("R07_DISPATCH_FAIL","R07_DISPATCH_NATIVE_SUMMARY"))]
         raise AssertionError((result.returncode,problems[:20],lines[-5:],result.stderr[-500:]))
-    print("R07_DISPATCH_NATIVE_Release_12_PASS True")
+    print("R07_DISPATCH_NATIVE_Release_13_PASS True")
 finally:
     assert_legacy_profile_unchanged(real,original)
     shutil.rmtree(owned)

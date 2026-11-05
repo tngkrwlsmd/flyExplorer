@@ -32,7 +32,7 @@ class NativeDispatchContract(unittest.TestCase):
         self.assertIn("CommittedVerified",fixture)
         self.assertIn("concurrent_claim_exactly_once",fixture)
         wrapper=read("tests/winui/r07_dispatch_native/test_native.py")
-        self.assertIn("R07_DISPATCH_NATIVE_SUMMARY 12 passed, 0 failed.",wrapper)
+        self.assertIn("R07_DISPATCH_NATIVE_SUMMARY 13 passed, 0 failed.",wrapper)
         self.assertIn("assert_legacy_profile_unchanged(real,original)",wrapper)
         self.assertIn("shutil.rmtree(owned)",wrapper)
 if __name__=="__main__":
