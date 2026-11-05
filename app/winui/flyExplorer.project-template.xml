@@ -201,7 +201,7 @@
       <PrecompiledHeader>Use</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="file_operation_controller.cpp">
-      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="file_metadata_controller.cpp">
       <PrecompiledHeader>Use</PrecompiledHeader>
