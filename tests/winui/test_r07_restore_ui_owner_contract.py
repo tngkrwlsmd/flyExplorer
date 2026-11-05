@@ -41,7 +41,13 @@ class R07RestoreUiOwnerContract(unittest.TestCase):
 
     def test_user_undo_stays_disconnected(self):
         source=read("app/winui/m21_commands.cpp")
-        self.assertNotIn("startTakenRenameRestoreAsync(",source)
+        wrapper=source.split(
+            "MainWindow::StartTakenRenameRestoreForCurrentOwner(",1
+        )[1].split("bool MainWindow::RestoreCompletionContextCurrent(",1)[0]
+        self.assertIn("startTakenRenameRestoreAsync(",wrapper)
+        self.assertIn("RestoreCompletionContextCurrent(liveContext)",wrapper)
+        self.assertNotIn("Ctrl+Z",wrapper)
+        self.assertNotIn("OnKey",wrapper)
 
 if __name__=="__main__":
     unittest.main()
