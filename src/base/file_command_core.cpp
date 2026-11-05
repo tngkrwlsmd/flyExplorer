@@ -605,8 +605,8 @@ RenameRestoreWriteResult restoreRenameNoReplace(
    outcome.status=RenameRestoreWriteStatus::OriginalOccupiedOrUnknown;
    outcome.error=originalError;return outcome;
   }
-  // FileRenameInfo + FALSE is the documented no-overwrite form. No
-  // FILE_RENAME_FLAG_REPLACE_IF_EXISTS or MOVEFILE_REPLACE_EXISTING.
+  // FileRenameInfo + FALSE is the documented no-overwrite form.
+  // Replacement flags and overwrite-based moves are never used.
   const DWORD nameBytes=static_cast<DWORD>(leaf.size()*sizeof(wchar_t));
   std::vector<unsigned char> buffer(
    sizeof(FILE_RENAME_INFO)+(leaf.size()+1)*sizeof(wchar_t),0);
