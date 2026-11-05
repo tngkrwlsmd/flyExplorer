@@ -82,10 +82,11 @@ class R07NoReplaceRestoreContract(unittest.TestCase):
             "::GetFileAttributesW(original.c_str())",
             "originalError!=ERROR_FILE_NOT_FOUND",
             "info->ReplaceIfExists=FALSE;",
+            "info->Flags=0;",
             "info->RootDirectory=parent.h;",
             "info->FileNameLength=nameBytes;",
             "std::memcpy(info->FileName,leaf.data(),nameBytes);",
-            "item.h,FileRenameInfo,info",
+            "item.h,FileRenameInfoEx,info",
         ):
             with self.subTest(text=text):
                 self.assertIn(text, body)
