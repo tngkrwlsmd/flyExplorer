@@ -1,5 +1,12 @@
 # R07 실행 취소·다시 실행: 안전한 작업 영수증 기준 (2026-11-03)
 
+## R07-23B: 완료 시점의 활성 패널 재검증 (2026-11-06)
+
+비동기 복원 완료는 원래 WindowTab identity가 남아 있는 것만으로 수용하지 않는다. 완료 컨텍스트의 패널이 그 WindowTab의 **현재 `activePane`** 과도 같아야 이후 PaneTab·route·표시 파일시스템/Shell 폴더 검사와 알림 갱신으로 진행한다. 같은 창 탭에서 반대 패널로 이동한 사이 도착한 결과는 파일 변경 사실을 되돌리거나 다른 작업공간에 표시하지 않고 알림만 폐기한다.
+
+정확한 제품·검사 소스 `dcfa78a467fa141f6ee4892ba401124125c0df1a`의 [Windows VM #42060829871](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/42060829871)에서 관련 소스 계약 **12/12 PASS**, WinUI x64 Release 빌드 PASS, EXE SHA-256 `83a60318be28e0be5345412c5e2fca27c99868922ba4e872dbdba2611b52d123`, 소유 작업공간 정리 PASS를 확인했다. 실제 `startTakenRenameRestoreAsync`와 WinUI 콜백의 결합, GUI/픽셀, 사용자 명령·개인 파일 복원은 아직 미연결·미검증이며 이 정책 추가가 Undo 권한을 승인하지 않는다.
+
+
 ## 현행 사실과 위험
 
 - 현재 flyExplorer의 파일 전송은 `IFileOperation`이며 여러 항목을 개별로 처리할 수 있다. 실패·취소 보고에도 앞 항목의 실제 변경이 남을 수 있다. `Report.queued`는 성공 개수나 각각의 결과가 아니다.
