@@ -20,6 +20,11 @@
 
 ## 앞으로 진행할 작업
 
+**R07-18 다음 우선 작업(2026-11-05):** R07-17은 네이티브 호출 직전 부모/경로/원본 이름 재검사와 테스트 소유 경합 8/8, WinUI Release 빌드를 수용했다. 부모 디렉터리 이동은 현재 공유 계약에서 오류 32로 차단됐으므로 이동 성공 분기를 검증했다고 표시하지 않는다. 다음에는 실제 복원 호출을 UI Undo/Redo에 연결하기 전에 컨트롤러의 단회 소유권 재확인과 이 네이티브 함수 호출 사이를 하나의 명시적 실행 경계로 묶을 수 있는지 설계·검증한다. 사용자용 Ctrl+Z/Redo와 실제 사용자 파일 변경은 계속 미연결이다.
+
+**R07-17 복원 직전 경합 한정 수용(2026-11-05):** 정확한 소스 `06d6c6097c97278b672695ab40c67f3dec3db832`의 [Windows VM #42032411343](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/42032411343)에서 관련 소스 13/13, 전용 네이티브 Release 빌드와 소유 파일 경합 8/8, WinUI x64 Release 빌드, 프로필 불변·소유 작업공간 정리 PASS. EXE SHA-256 `7929f60ffadcde1325438dbeca668d707b5b1cbab9ccb8de9d139b3fdb46be4d`. 원본명 선점은 최종 재검사 또는 OS 무덮어쓰기 호출에서 안전하게 거부되고, 부모 이동 시도는 오류 32로 차단됐다. GUI Undo/Redo·실사용 파일·픽셀은 NOT TESTED.
+
+
 **R07-17 다음 우선 작업(2026-11-05):** 탐색 왕복 후 이전 Rename 후보 재사용과 비동기 작업 완료 뒤의 재발급을 방지하는 R07-16은 **네이티브 26/26 및 WinUI Release 빌드 범위에서 수용**했다. 남은 핵심 위험은 컨트롤러 소유권 재검증에서 실제 원자적 무덮어쓰기 네이티브 호출까지의 시간 간극과 외부 프로세스에 의한 부모 디렉터리 이동·삭제 동시 경합이다. **사용자용 Undo/Redo·Ctrl+Z는 이 경계가 안전하게 검증되기 전 연결하지 않는다.** 다음에는 테스트 소유 파일만 사용하는 호출 경합의 판정 조건을 별도로 설계·검증한다. 전체 GUI/픽셀 검증 및 다른 OS 버전은 수행하지 않은 상태다.
 
 **R07-16 탐색 왕복 소유권 무효화 한정 수용(2026-11-05):** `invalidateRenameOwnerOnNavigation()` 및 작업 시작 세대 재검증을 실제 탐색 승인 경로에 추가했다. [Windows VM #42019376501](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/42019376501)에서는 정확한 소스 `27e6586421d2826c8e0cda3343bee26b4a602765`의 관련 소스 **11/11 PASS**, 실제 컨트롤러 네이티브 **26/26 PASS**이나 전체 WinUI 빌드 **C1020 FAIL**이었다. R07-15에서 사용한 조건부 PCH 포함과 제품 MSVC PCH 설정의 충돌로 확인하여 컨트롤러 파일 하나의 프로젝트 설정을 NotUsing으로 수정했다. 수정된 정확한 소스 `1999db07b102965dedbbda88bea457cd7549c783`에서 [Windows VM #42020414704](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/42020414704) **WinUI x64 Release 빌드 PASS**, 체크아웃 정리 PASS. UI GUI/픽셀 및 실제 파일 복원은 **NOT TESTED**이고, 변경되지 않은 네이티브 동작 26건은 기존 정확한 소스 근거를 재사용했다.

@@ -1,3 +1,11 @@
+# 2026-11-05 — R07-17 네이티브 복원 직전 경합 재확인: 실제 8/8·WinUI Release PASS
+
+- **제품 변경:** `restoreRenameNoReplace`가 단일 네이티브 무덮어쓰기 호출 직전에 유지 중인 부모 핸들의 경로 동일성, 원본·대상 경로 안전성, 원본 이름 비점유를 마지막으로 재확인한다. 기존 부모/대상 핸들, `ReplaceIfExists=FALSE`, 단일 호출·무재시도·무롤백 계약은 유지하며 사용자용 Undo/Redo에는 연결하지 않았다.
+- **Windows 수용:** 정확한 제품·검사 SHA `06d6c6097c97278b672695ab40c67f3dec3db832`의 [Windows VM #42032411343](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/42032411343)에서 관련 소스 **13/13 PASS**, 전용 MSVC x64 Release 빌드 PASS, 테스트 소유 파일의 정상 복원·재실행 거부·최종 검사 전/후 원본 이름 선점·대상 쓰기 차단·부모 이동 경합·위조 영수증 거부 **8/8 PASS**, WinUI x64 Release 빌드 PASS를 확인했다. EXE SHA-256 `7929f60ffadcde1325438dbeca668d707b5b1cbab9ccb8de9d139b3fdb46be4d`. 기존 프로필 불변 및 소유 작업공간 정리 PASS.
+- **관측 경계:** 부모 이동 시도는 Windows 오류 32로 차단돼 이동 성공 분기는 이번 환경에서 실행되지 않았다. 원본 이름이 마지막 검사 뒤 선점된 경우 네이티브 호출은 상태 불명 실패로 보고했지만 선점 파일과 원래 대상 파일의 ID·바이트를 보존했다. 실제 사용자 파일, GUI Undo/Redo, 외부 프로세스의 진짜 동시 타이밍, 화면 픽셀은 **NOT TESTED**다.
+
+---
+
 # 2026-11-05 — R07-16 탐색 왕복(ABA) 복원 소유권 무효화: 네이티브 26/26·WinUI Release PASS
 
 - **변경:** `FileOperationController::invalidateRenameOwnerOnNavigation()`가 탐색 변경 세대 값을 증가시키며 미인출 및 이미 인출한 Rename 복원 후보를 동일 잠금에서 폐기한다. 이름 변경 비동기 작업의 시작 세대를 컨트롤러가 기억하여, 작업 도중 이동했다가 창·패널·탭·경로가 이전과 같아져도 해당 완료 결과가 복원 후보로 등록되지 않도록 `acceptFileCommand`에서 세대를 재검증한다. 세대 값이 상한에 도달하면 새 복원 후보 수용을 금지하며, 진행 중인 파일 명령·전송 작업을 강제 중단하지 않는다.
