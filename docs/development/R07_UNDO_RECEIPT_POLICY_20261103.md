@@ -66,6 +66,14 @@
 기존 부모 DELETE 공유 차단 가정을 완화한 테스트와 이번 메타데이터 보강은 [Windows VM #41955278343](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41955278343)에서 정확한 소스의 **22/22 소스 계약·M21 x64 Release 네이티브 컴파일·69/69 소유 파일 검사 PASS**로 확인됐다. 기존 [#41951610572](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41951610572)의 **67/69** 실패 이력은 그대로 보존한다. 앱 전체 WinUI 빌드·GUI·픽셀은 이번에는 검증하지 않았다. 파일 복원용 DELETE 권한 획득, 경합 없는 원본 이름 예약, `SetFileInformationByHandle` 기반 복원, 작업 소유권·Ctrl+Z·Redo는 구현하지 않았다.
 
 
+## R07-6 구현: 수용된 이름 변경의 임시 작업 소유권 후보 (2026-11-05)
+
+`FileOperationController`는 한 번에 하나의 실제 **수용된 성공 Rename 완료**가 정확한 ticket·현재 창 탭 ID·활성 패널/폴더 탭·route·표시 경로와 일치하고 128비트 파일 ID 영수증이 `verified`일 때만 메모리 후보를 보관한다. 결과를 무조건 Undo 가능으로 표시하지 않으며 복사·이동·폴더 작업·실패·오래된 완료의 결과는 후보가 아니다. 새로운 파일 작업·전송 요청, 창 종료, 조회 시 소유권 불일치는 후보를 무효화하고 ticket 최대값 재사용을 거부한다.
+
+후보 조회는 **파일시스템 작업이 없는 데이터 조회**다. 실제 Undo 실행과 원본 경로 예약을 허용하지 않는다. UI에서 탭 이동을 즉시 알려 후보를 무효화하는 통지는 **아직 연결되지 않았으며**, 미조회 사이의 탭 이동·재진입을 감지할 수 있다고 주장하지 않는다. 향후 복원 작업은 *파일 자체의 열린 DELETE 권한 핸들과 실제 128비트 식별자 재확인, 동일 부모 식별자 재확인, 현재 이름 충돌 원자적 거부, 외부 변경 시 거부, 성공 후 재검증*의 별도 안전 계약을 갖추어야 한다. 기존 R07-5 `RenameTargetLease`의 읽기 전용 핸들은 이름 복원을 수행할 수 없고 부모 DELETE 공유 방식도 원본 이름을 예약하지 않는다.
+
+새 `tests/winui/test_r07_rename_owner_contract.py`는 자료 발급 조건과 거절·무효화 계약을 소스로 검사한다. 실제 Python 테스트 실행, C++/WinUI 빌드, GUI, 파일 복원은 **NOT TESTED / NOT IMPLEMENTED**이다. 이전 R07-5의 [69/69 네이티브 수용](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41955278343)을 이 새 코드의 수용으로 확대하지 않는다.
+
 ## 후속 필수 단계 (순서 변경 금지)
 
 1. **개별 변경 증거 (R07-2 일부 구현):** 원본·결과의 정확한 단일 항목 식별자(볼륨 식별자와 파일 ID), 재분석 지점 제외, 최종 파일 상태, 실제 생성/이동/복구 성공 정보 등을 worker의 신뢰된 범위에서 수집한다. 이름이나 경로만으로 동일한 파일이라고 간주하지 않는다. 일괄 Copy/Move의 aggregate 완료 수치만으로는 영수증을 발행할 수 없다.
