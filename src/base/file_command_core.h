@@ -59,6 +59,28 @@ private:
     std::wstring targetPath_;
     RenameEvidence expected_{};
 };
+// R07-8: isolated native primitive, NOT connected to the UI or an Undo
+// command. Caller must independently verify a live one-shot owner ticket.
+// Failed native calls may leave uncertain state; only CommittedVerified
+// confirms the observed postcondition. Never overwrite an occupied name.
+enum class RenameRestoreWriteStatus {
+    RejectedReceipt,
+    RejectedPaths,
+    OriginalOccupiedOrUnknown,
+    TargetChangedOrUnavailable,
+    AccessUnavailable,
+    NativeCallFailedUnknownState,
+    CommittedUnverified,
+    CommittedVerified
+};
+struct RenameRestoreWriteResult {
+    RenameRestoreWriteStatus status=RenameRestoreWriteStatus::RejectedReceipt;
+    DWORD error=ERROR_INVALID_PARAMETER;
+    bool nativeCallAttempted=false;
+};
+RenameRestoreWriteResult restoreRenameNoReplace(
+    std::wstring const& originalPath,Result const& renamed) noexcept;
+
 bool validLeaf(std::wstring const& name) noexcept;
 bool validTextDocumentLeaf(std::wstring const& name) noexcept;
 bool validMarkdownDocumentLeaf(std::wstring const& name) noexcept;
