@@ -13,6 +13,9 @@
 #include <thread>
 #include <mutex>
 #include <condition_variable>
+#include <deque>
+#include <atomic>
+#include <memory>
 namespace fs=std::filesystem;
 using Controller=fxfile::previewops::FileOperationController;
 using Candidate=Controller::RenameRestoreCandidate;
@@ -63,6 +66,31 @@ static bool same(FILE_ID_INFO const& a,FILE_ID_INFO const& b) {
     return a.VolumeSerialNumber==b.VolumeSerialNumber&&
            std::memcmp(a.FileId.Identifier,b.FileId.Identifier,16)==0;
 }
+// Test-owned substitute for a WinUI dispatcher queue. The Post closure
+// owns this queue so detached workers never depend on a stack-only sink.
+struct AsyncUiQueue final : std::enable_shared_from_this<AsyncUiQueue> {
+    std::mutex mutex;
+    std::condition_variable cv;
+    std::deque<Controller::UiTask> pending;
+    Controller::Post poster(){
+        return [self=shared_from_this()](Controller::UiTask task){
+            std::lock_guard<std::mutex> lock(self->mutex);
+            self->pending.push_back(std::move(task));
+            self->cv.notify_all();
+            return true;
+        };
+    }
+    std::optional<Controller::UiTask> popFor(
+        std::chrono::milliseconds timeout){
+        std::unique_lock<std::mutex> lock(mutex);
+        if(!cv.wait_for(lock,timeout,[&]{return !pending.empty();}))
+            return std::nullopt;
+        auto fn=std::move(pending.front());
+        pending.pop_front();
+        return fn;
+    }
+};
+
 struct Fixture {
     Controller ctrl;
     Context ctx{};
