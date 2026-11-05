@@ -8,6 +8,9 @@
 #include <vector>
 #include <shobjidl.h>
 #pragma comment(lib,"ole32.lib")
+#if defined(FLY_R07_RESTORE_RACE_NATIVE_TEST)
+extern "C" void FlyR07RestoreRaceHook(unsigned stage) noexcept;
+#endif
 namespace fxfile::filecommand {
 namespace {
 // R07-2: read-only evidence for a regular file on a fixed local drive.
@@ -636,6 +639,33 @@ RenameRestoreWriteResult restoreRenameNoReplace(
   info->FileNameLength=nameBytes;
   std::memcpy(info->FileName,leaf.data(),nameBytes);
   info->FileName[leaf.size()]=L'\0';
+
+#if defined(FLY_R07_RESTORE_RACE_NATIVE_TEST)
+  // Test-only deterministic contention point; never built into flyExplorer.
+  FlyR07RestoreRaceHook(1u);
+#endif
+  // R07-17: a parent can move or an original name can be occupied after the
+  // earlier observation and before this native call. Recheck as late as
+  // possible, while keeping the original opened parent and target handles.
+  // This narrows the race but is NOT an atomic parent lock or Undo authority.
+  if(!parentStillVisible()||!safeRenameEvidenceParent(original)||
+     !safeRenameEvidenceParent(target)){
+   outcome.status=RenameRestoreWriteStatus::RejectedPaths;
+   return outcome;
+  }
+  const DWORD finalAttrs=::GetFileAttributesW(original.c_str());
+  const DWORD finalError=finalAttrs==INVALID_FILE_ATTRIBUTES?
+   ::GetLastError():ERROR_ALREADY_EXISTS;
+  if(finalAttrs!=INVALID_FILE_ATTRIBUTES||finalError!=ERROR_FILE_NOT_FOUND){
+   outcome.status=RenameRestoreWriteStatus::OriginalOccupiedOrUnknown;
+   outcome.error=finalError;
+   return outcome;
+  }
+#if defined(FLY_R07_RESTORE_RACE_NATIVE_TEST)
+  // This second fixture-only point tests the OS's actual atomic no-replace
+  // guarantee AFTER our final path check. No production code executes it.
+  FlyR07RestoreRaceHook(2u);
+#endif
 
   // This is the sole mutation, with no overwrite, rollback or retry.
   // A failed or pending native call does not prove unchanged file state.
