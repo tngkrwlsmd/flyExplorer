@@ -72,7 +72,15 @@
 
 후보 조회는 **파일시스템 작업이 없는 데이터 조회**다. 실제 Undo 실행과 원본 경로 예약을 허용하지 않는다. UI에서 탭 이동을 즉시 알려 후보를 무효화하는 통지는 **아직 연결되지 않았으며**, 미조회 사이의 탭 이동·재진입을 감지할 수 있다고 주장하지 않는다. 향후 복원 작업은 *파일 자체의 열린 DELETE 권한 핸들과 실제 128비트 식별자 재확인, 동일 부모 식별자 재확인, 현재 이름 충돌 원자적 거부, 외부 변경 시 거부, 성공 후 재검증*의 별도 안전 계약을 갖추어야 한다. 기존 R07-5 `RenameTargetLease`의 읽기 전용 핸들은 이름 복원을 수행할 수 없고 부모 DELETE 공유 방식도 원본 이름을 예약하지 않는다.
 
-새 `tests/winui/test_r07_rename_owner_contract.py`는 자료 발급 조건과 거절·무효화 계약을 소스로 검사한다. 실제 Python 테스트 실행, C++/WinUI 빌드, GUI, 파일 복원은 **NOT TESTED / NOT IMPLEMENTED**이다. 이전 R07-5의 [69/69 네이티브 수용](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41955278343)을 이 새 코드의 수용으로 확대하지 않는다.
+새 `tests/winui/test_r07_rename_owner_contract.py`는 자료 발급 조건과 거절·무효화 계약을 소스로 검사한다. [Windows VM #41958774791](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41958774791)의 정확한 소스 `67d9ba35be3fb10d1ed466fa8a854772453be26f`에서 R07 Python 소스 계약 **26/26 PASS**(신규 R07-6 4건 포함)와 소유 체크아웃 정리를 확인했다. C++/WinUI 빌드, GUI, 실제 파일 복원은 **NOT TESTED / NOT IMPLEMENTED**이다. 이전 R07-5의 [69/69 네이티브 수용](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41955278343)을 이 새 코드의 수용으로 확대하지 않는다.
+
+## R07-7 구현: 소유권 후보의 단일 인출 (2026-11-05)
+
+`FileOperationController::takeRenameRestoreCandidate`는 성공한 Rename에서 남긴 임시 후보를 요청한 현재 컨텍스트·ticket과 비교하고, mutex를 유지한 채 **후보를 반환하기 전에 컨트롤러의 원본 저장분을 즉시 폐기한다**. 별개 호출이 같은 소유권 후보를 두 번 획득하지 않도록 한다. 메모리 이동 중 오류가 발생해도 후보를 폐기하며, 소유권 불일치가 있으면 값을 반환하지 않는다. 외부 호출자가 이미 받은 값을 별도로 복사하거나 소유권이 바뀐 뒤 재사용하는 일까지 이 메서드로 봉쇄하는 것은 아니다.
+
+이것은 단지 **일회성 메모리 인출 계약**이다. `RenameTargetLease`의 R07-5 읽기 핸들 및 `inspectRenameRestore` 순간 관측과 마찬가지로 원래 이름의 원자적 무덮어쓰기·파일 변경 보호·실제 작업 소유권의 미래 유효성을 증명하지 않는다. 파일을 복원하는 API, 삭제 권한 핸들, `SetFileInformationByHandle`, 복원 승인, GUI Ctrl+Z/Redo는 추가하지 않는다.
+
+새 R07-7 소스 계약은 `tests/winui/test_r07_rename_owner_contract.py`에서 한번 인출·mutex 범위·반환 전 폐기·파일 변이 미도입을 검사한다. **새 변경의 Python 실제 실행, C++/WinUI 빌드, GUI/실제 Undo는 NOT TESTED**다. 기존 R07-6 26/26 통과는 이전 SHA에만 유효하다.
 
 ## 후속 필수 단계 (순서 변경 금지)
 
