@@ -342,6 +342,11 @@ namespace winrt::FlyExplorer::implementation
         // WindowTab, pane, PaneTab, route and visible folder. It remains
         // disconnected from any user Undo command.
         FileOperationController::RestoreCallback FileOperationRestoreCallback();
+        // R07-23C: the only WinUI composition boundary for an already-taken
+        // restore candidate. It remains private and is not a user Undo command.
+        FileOperationController::StartStatus StartTakenRenameRestoreForCurrentOwner(
+            FileOperationController::RenameRestoreCandidate taken,
+            FileOperationController::Context liveContext);
         bool RestoreCompletionContextCurrent(
             FileOperationController::Context const& origin) const;
         void OnRenameRestoreCompleted(
