@@ -57,15 +57,16 @@
 
 - **원래 파일명은 원자적으로 예약하지 않는다.** 동일 부모에 새 파일을 만드는 경합은 가능하므로 복원 실행을 승인하지 않는다. 조상 디렉터리 경합은 재검증 시 발견할 수 있어도 모든 경합을 차단하는 것은 아니다.
 - UI·Undo/Redo·Ctrl+Z·세션 v4·실제 파일 복원 또는 데이터 변경 명령은 연결하지 않는다.
-- 소유 Windows 네이티브 검증 69건 중 최초 실행은 **67 PASS / 2 FAIL**이었다([#41951610572](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41951610572)). 두 실패는 부모 DELETE 접근이 언제나 차단된다는 부정확한 가정을 드러냈다. 이후 테스트는 파일 보존·현재 동일성 재확인과 비승인 원칙을 요구하도록 수정했다. 수정본의 실제 Windows 네이티브 재실행은 **NOT CHECKED**이며, 69건 성공으로 단정하지 않는다.
+- 소유 Windows 네이티브 검증 69건 중 최초 실행은 **67 PASS / 2 FAIL**이었다([#41951610572](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41951610572)). 두 실패는 부모 DELETE 접근이 언제나 차단된다는 부정확한 가정을 드러냈다. 이후 테스트는 파일 보존·현재 동일성 재확인과 비승인 원칙을 요구하도록 수정했다. 수정본은 후속 [Windows VM #41955278343](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41955278343)에서 정확한 소스 `33c7d1d0625a2b653c63f87159bbd59b050e924b`로 **R07 소스 22/22, 네이티브 컴파일 및 테스트 소유 파일 69/69 PASS**를 확인했다. 과거 실패 기록은 보존하며 원자적 Undo 안전성으로 확대하지 않는다.
 
-## 후속 필수 단계 (순서 변경 금지)### R07-5 보완: 유지 중인 대상 파일 메타데이터 재확인 (2026-11-05)
+### R07-5 보완: 유지 중인 대상 파일 메타데이터 재확인 (2026-11-05)
 
 `RenameTargetLease::recheck`는 저장된 파일 ID와 열린 핸들의 ID만 비교하던 단계에서, 유지 중인 **동일 대상 핸들**의 `FileAttributeTagInfo`·`FileIdInfo`·`FileStandardInfo`·`FileBasicInfo`를 통해 파일 유형, 128비트 ID, 삭제 대기, 하드 링크 수, 파일 크기, 마지막 수정 시각을 다시 검사하도록 강화했다. 그다음 현재 경로로 읽은 파일 정보도 기존 R07-2 증거와 비교하며 원래 이름의 비점유를 따로 관측한다. 서로 다른 시점의 조회가 원자적 파일 복원 권한을 만들지는 않는다.
 
-기존 부모 DELETE 공유 차단 가정을 완화한 테스트·문서 수정과 이번 메타데이터 보강은 실제 Windows 빌드 및 네이티브 실행이 **NOT TESTED**다. 기존 [#41951610572](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41951610572)의 **67/69** 실패 이력은 그대로 보존한다. 파일 복원용 DELETE 권한 획득, 경합 없는 원본 이름 예약, `SetFileInformationByHandle` 기반 복원, 작업 소유권·Ctrl+Z·Redo는 구현하지 않았다.
+기존 부모 DELETE 공유 차단 가정을 완화한 테스트와 이번 메타데이터 보강은 [Windows VM #41955278343](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41955278343)에서 정확한 소스의 **22/22 소스 계약·M21 x64 Release 네이티브 컴파일·69/69 소유 파일 검사 PASS**로 확인됐다. 기존 [#41951610572](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41951610572)의 **67/69** 실패 이력은 그대로 보존한다. 앱 전체 WinUI 빌드·GUI·픽셀은 이번에는 검증하지 않았다. 파일 복원용 DELETE 권한 획득, 경합 없는 원본 이름 예약, `SetFileInformationByHandle` 기반 복원, 작업 소유권·Ctrl+Z·Redo는 구현하지 않았다.
 
 
+## 후속 필수 단계 (순서 변경 금지)
 
 1. **개별 변경 증거 (R07-2 일부 구현):** 원본·결과의 정확한 단일 항목 식별자(볼륨 식별자와 파일 ID), 재분석 지점 제외, 최종 파일 상태, 실제 생성/이동/복구 성공 정보 등을 worker의 신뢰된 범위에서 수집한다. 이름이나 경로만으로 동일한 파일이라고 간주하지 않는다. 일괄 Copy/Move의 aggregate 완료 수치만으로는 영수증을 발행할 수 없다.
 2. **복원 전 재검증 (R07-3 현재 시점 관측만 구현):** 원본 경로가 비어 있고 되돌릴 대상이 현재도 같은 파일 식별자이며, 외부 변경·충돌·권한 오류가 없는지 재확인한다. 확인과 실행 사이의 경합은 열린 파일 핸들 등 별도 원자적 보호가 필요하다. 미해결이면 **차단**, 임의 덮어쓰기나 원본 삭제 금지.
