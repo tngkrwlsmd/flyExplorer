@@ -1,3 +1,13 @@
+# 2026-11-05 — R07-20 백그라운드 복원 수명·대기열 완료 알림 보호: 네이티브 30/30·WinUI Release PASS
+
+- **구현:** `FileOperationController::startTakenRenameRestoreAsync`는 인출된 Rename 후보·컨텍스트·안전한 UI 전달 함수(`Post`)·완료 콜백을 받아 **별도 C++ 작업 스레드**에서 기존 `executeTakenRenameRestoreOnState`를 실행한다. 기존 동기 메서드는 같은 공유 상태 기반 실행 로직을 호출하도록 분리했다. 작업 스레드는 `FileOperationController*`나 창 객체를 붙잡지 않고 `shared_ptr<SharedState>`를 보유하여 **창 컨트롤러 파괴 이후에도 이미 시작된 네이티브 파일 변경 작업의 수명을 보장**한다. OS 호출을 중단하거나 반복 실행하지 않는다.
+- **알림 소유권:** 파일 I/O 완료 결과는 `RestoreCompletion`에 실제 `RenameRestoreWriteResult` 및 보수적 `RestoreOutcomeClass`로 유지한다. UI 작업 대기열에 넣기 **직전**과 대기열에서 완료 함수를 **실제로 실행하기 직전**에 각각 창 종료 여부·작업 ticket/epoch·탐색 변경 세대(`navigationGeneration`)를 확인한다. 탐색 이동·창 닫기·새 작업으로 소유권이 달라진 결과는 **파일 변경 사실을 수정하지 않고 알림만 폐기**한다. `Post`는 살아 있는 디스패처에 안전하게 전달할 책임이 있는 함수여야 한다. 현재는 GUI에서 실제로 이 API를 호출하지 않는다.
+- **정확한 검증:** 소스 `26b8aaad1922dfde044fc64ea2d68859a9c7c23a`의 [중앙 Windows VM #42044879231](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/42044879231)에서 관련 소스/안전 계약 **24/24 PASS**, 실제 제품 C++ 컨트롤러 및 네이티브 복원 함수 x64 Release 전용 빌드 **PASS**, 기존 22건 + 추가 8건의 **30/30 PASS**, WinUI **x64 Release 제품 빌드 PASS**, EXE SHA-256 `94a43010598211dec7223669e4803433564c6f4108e894f9a819eecd2d4a522a`, 기존 사용자 프로필 불변 및 테스트 소유 작업공간 정리 PASS. Windows VM 요청 슬롯은 유휴 상태로 복구했다.
+- **추가 동작 검증:** 성공한 실제 이름 복원의 완료 알림이 소유된 **가상 UI 작업 대기열**을 통해 한 번 전달되는지, 잘못된 route는 시작 전 거부되는지, 알림이 대기열에 들어간 뒤 탐색 왕복·창 종료가 발생하면 폐기되는지, 네이티브 호출 진행 중 탐색·창 파괴에도 공유 상태를 통해 실제 파일 변경이 끝나며 알림은 폐기되는지, 전달 실패 시 자동 재시도 없이 파일 상태를 유지하는지, 원본 이름 점유 시 `NotAttempted`로 보고되는지 확인했다. 모든 파일 변경은 격리된 테스트 소유 디렉터리 안에서만 수행됐다.
+- **미검증·정책 경계:** 테스트 대기열은 실제 WinUI `DispatcherQueue`가 **아니다**. 실제 창의 디스패처 객체가 종료될 때 `Post`가 안전하게 실패하는지, 이벤트 큐와 창 파괴 순서·서로 다른 창/탭 결과 귀속, UI 프레임 응답성, 실제 GUI 입력/픽셀, 일반 사용자 파일 Undo/Redo·Ctrl+Z 및 외부 파일 시스템 경합은 **NOT TESTED / NOT IMPLEMENTED**다. 기존 완료 콜백이 창 객체를 무효 상태로 포획하지 않도록 하는 UI 측 안전 전달 구현은 별도 단계가 필요하다.
+
+---
+
 # 2026-11-05 — R07-19 복원 네이티브 I/O 중 UI 비차단·중복 완료 차단: 실제 22/22·Release PASS
 
 - **제품 변경:** `FileOperationController::executeTakenRenameRestore`는 소유권 후보를 mutex 아래에서 단 한 번 소비하고 `busy/restoreInFlight`를 설정한 뒤, 실제 Windows 이름 복원 I/O 전에 mutex를 해제한다. 따라서 탐색·창 닫기는 느린 네이티브 호출 동안 컨트롤러 잠금에 막히지 않으며, 새 파일 작업과 이전 ticket의 늦은 완료 통지는 복원 중 수용되지 않는다. 완료 결과는 네이티브 시도 여부를 기준으로 미시도·확정 성공·시도 후 불확실로 보수적으로 분류한다.
