@@ -1,3 +1,13 @@
+## 2026-11-05 — R07-12 네이티브 클래스 10은 부모 바인딩과 충돌 거부를 별도 테스트에서 확인
+
+기존 Win32 `SetFileInformationByHandle(FileRenameInfo/Ex)` + 유지된 부모 디렉터리 핸들은 오류 87로 실패했고, NULL 루트는 파일을 프로그램 작업 폴더로 잘못 옮겼다. 원래 Windows 파일 위치를 보존할 독립적 대안으로 **NT API 클래스 10**을 테스트 전용 파일에만 도입한 정확한 SHA `c25c004e28bcd2c080f46fe6e80c05e9b884409c`의 [첫 #41990259769](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41990259769)에서 진단 로그가 Python 예외 출력 길이에 의해 잘려 결론을 읽을 수 없었다. 사용자가 볼 수 있는 결과는 여전히 M21 75/77 실패였다.
+
+검사 래퍼의 이스케이프 줄바꿈을 정규화하고 진단 결과를 별도 짧은 줄에 출력하도록 수정한 정확한 소스 `015ce211714c2880aeb752ece9c9bf459fe9f8a0`의 [#41992215529](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41992215529)에서 **`available=1 parent=1 status=0x00000000 same_parent=1 collision_status=0xC0000035 collision_preserved=1`**을 읽었다. 별도 테스트의 변경 전후 파일 ID와 기존 이름 충돌 후 바이트 보존을 확인했다. 이 시점의 실제 제품 코드는 아직 구 Win32 API를 사용했으므로 **기존 두 복원 실패와 전체 M21 75/77 FAIL은 보존한다.**
+
+이 근거를 이용해 독립 제품 복원 원시 함수의 이름 변경 호출을 네이티브 클래스 10으로 교체했다. 정확한 변경 소스 `ff3ef1b4d3584744b1b6096f10b7e459c3d09cc1`의 [#41992876059](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41992876059)에서는 관련 Python 소스 계약 **9/9 PASS**, 체크아웃 정리만 확인했다. **새 제품 함수의 C++ 컴파일·실제 M21 77건·GUI는 아직 수행하지 않았다.**
+
+**재발 방지:** 진단이 필요한 native fixture의 출력은 예외 직렬화나 원격 로그의 길이에 묻히지 않도록 짧은 줄에 별도 출력한다. 분리된 테스트용 원시 API 성공을 실제 제품 함수 합격으로 확대하지 않는다. 네이티브 경로는 NT 버전별 지원과 파일·부모 이동 경합에 대해 후속 시험이 필요하고, 기본 파일을 덮어쓰는 우회나 UI Undo 자동 활성화를 금지한다.
+
 ## 2026-11-05 — R07-10 NULL 루트 이름 변경의 실행 폴더 오이동
 
 **최초 두 접근:** 유지된 부모 핸들을 `FILE_RENAME_INFO.RootDirectory`에 넣은 `FileRenameInfo`와 `FileRenameInfoEx`는 모두 실제 Windows VM에서 `ERROR_INVALID_PARAMETER(87)`로 실패했다. 동일 폴더·같은 소스 핸들·단순 파일명·덮어쓰기 플래그 0을 유지하면서 **루트 핸들만 NULL로 교체**한 소스 `c1ab5b2cbbaa554afa621e4e6cdf1fb663e44a9e`의 [#41987547104](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41987547104)에서는 네이티브 호출 성공(`error=0`)으로 달라졌지만, 원래 폴더에서 파일이 사라지고 다시 발견되지 않았다. M21 x64 Release 컴파일 PASS, R07 소스 35/35 PASS, 네이티브 **75/77 FAIL**. **성공 반환과 올바른 폴더 이동은 별개의 검증 대상**이다.
