@@ -82,6 +82,18 @@
 
 새 R07-7 소스 계약은 `tests/winui/test_r07_rename_owner_contract.py`에서 한번 인출·mutex 범위·반환 전 폐기·파일 변이 미도입을 검사한다. 정확한 소스 SHA `15251587b3e22b655a3bd0b67ad7dd76584ad925`의 [Windows VM #41959646943](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41959646943)에서 **신규 R07-7 Python 소스 계약 5/5 PASS**, 전용 체크아웃 정리 PASS를 확인했다. C++/WinUI 빌드·GUI·실제 Undo는 **NOT TESTED**다. 기존 R07-6 26/26 통과는 별도의 이전 SHA에서 검증한 결과다.
 
+## R07-19: 복원 중 UI 소유권 알림 비차단·완료 통지 재수용 차단 (2026-11-05)
+
+기존 R07-18은 컨트롤러의 동일 잠금을 네이티브 파일 변경 전체에 걸쳐 보유했기 때문에 운영체제 I/O가 지연되면 **탭·폴더 탐색 무효화와 창 종료를 알리는 컨트롤러 메서드도 대기**할 수 있었다. R07-19의 현행 `executeTakenRenameRestore`는 원본의 ticket/epoch·창/패널/폴더 탭/route·원본/대상·파일 ID·수정 시각을 **잠금 안에서 대조하고 일회용 소유권을 영구 소비**, 호출용 경로·증거를 **자체 값으로 복사**한다. 그 자리에서 `busy=true`와 별도의 `restoreInFlight=true`를 설정하고 잠금을 해제한 **후** 안전한 `restoreRenameNoReplace`를 실행한다. 실제 네이티브 작업이 끝난 뒤에는 잠금 안에서 현재 epoch·닫기 상태를 확인하고 실행 중 표시를 정리한다.
+
+이 계약에서 **복원이 시작되기 전**의 탐색·닫기 알림은 후보를 거부한다. 반면 **복원 소유권을 이미 소비하여 네이티브 호출이 시작된 뒤**의 탐색 변경이나 닫기는 더 이상 컨트롤러 잠금에 막히지 않지만, 시작된 운영체제의 복원은 취소하거나 롤백하지 않는다. 새 파일/전송 작업은 진행 중 `Busy`를 반환하고, 동일 epoch의 과거 파일/전송 완료 통지를 다시 수용하지 않도록 `restoreInFlight`를 확인한다. 결과적으로 “화면에서 떠났으므로 파일 변경이 없었다”는 판단은 허용되지 않는다.
+
+미래 UI 표시를 위한 순수 분류 `classifyRestoreOutcome`는 `status`와 `nativeCallAttempted`를 함께 확인하여 **`NotAttempted`(네이티브 호출 전에 거부)**, **`VerifiedCommitted`(네이티브 호출 및 사후 복원 검증 확인)**, **`UncertainAfterAttempt`(네이티브 시도 뒤 실패·사후 미검증·모순된 상태)**로 구분한다. 네이티브 호출이 있었거나 상태가 모순되는 경우를 무변경/실패로 확정하지 않고, 무조건 재시도하지 않는다. 이 분류는 아직 사용자용 메시지나 Undo/Redo·Ctrl+Z로 연결되지 않았다.
+
+**검증:** 정확한 소스 `3a2f99674e2c7747d22014e84f19259a636e319d`의 [Windows VM #42040643673](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/42040643673)에서 관련 소스 계약 **21/21 PASS**, 실제 제품 컨트롤러·네이티브 파일 변경 코드의 테스트 소유 파일 **22/22 PASS**, WinUI **x64 Release 빌드 PASS**, 사용자 설정 불변·작업공간 정리 PASS를 확인했다. 테스트 전용 지연점은 실제 NT 이름 변경 직전에만 설치됐고, 호출을 중단한 동안 탐색 변경·닫기·busy 조회·중복 완료 통지 거부와 복원 결과를 확인했다. 앞선 [#42039485831](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/42039485831)은 20/20 동작·제품 Release PASS였지만 완료 통지 중복 방어 이전 소스이므로 최종 수용 근거는 후속 실행이다.
+
+**남은 검증 경계:** 테스트는 GUI의 실제 입력·렌더링·프레임 속도를 측정하지 않았으며, 창/작업 스레드 수명과 결과 디스패치가 사용자 인터페이스에 연결된 것도 아니다. 컨트롤러 잠금 해제는 OS 파일 경합 전체를 제거하지 않는다. 부모 폴더 이동/삭제, 외부 프로세스에 의한 이름 재점유, 장기 장애·전원 중단, 사용자 파일 Undo 및 반환 상태 메시지는 여전히 **NOT TESTED**이다.
+
 ## R07-18: 단회 소유권을 네이티브 복원에 연결한 격리 실행 경계 (2026-11-05)
 
 `FileOperationController::executeTakenRenameRestore(candidate,liveContext)`는 **새로운 worker 전용 API**다. 인출한 Rename 후보를 원본 작업의 ticket/epoch, 창·패널·폴더 탭·route·가시 폴더, 대상 파일 ID·볼륨·크기·수정 시각과 비교한 뒤 **컨트롤러 잠금 아래에서 영구 소비**한다. 일치한 경우에만 `filecommand::restoreRenameNoReplace`를 호출하고, 잠금은 반환 때까지 유지한다. 같은 컨트롤러에 대한 새 작업·탭 탐색 무효화·창 닫기는 이 호출과 직렬화되며, 한 후보의 중복 네이티브 호출은 허용되지 않는다. 읽기 전용 재확인 `recheckAndRetireRenameRestoreCandidate`와 해당 실행 API는 같은 후보를 중복 사용할 수 없다. **OS 파일 I/O 동안 컨트롤러 잠금을 보유하므로 반드시 UI 스레드 밖에서만 호출**해야 하며, GUI Undo/Redo·Ctrl+Z·세션 v4·사용자 작업에 아직 연결하지 않았다.
