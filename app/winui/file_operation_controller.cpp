@@ -1,4 +1,6 @@
+#if !defined(FLY_R07_OWNER_NATIVE_CONTRACT)
 #include "pch.h"
+#endif
 #include "file_operation_controller.h"
 #include <algorithm>
 #include <filesystem>
