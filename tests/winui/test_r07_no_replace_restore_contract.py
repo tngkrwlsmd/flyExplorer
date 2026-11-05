@@ -83,7 +83,7 @@ class R07NoReplaceRestoreContract(unittest.TestCase):
             "originalError!=ERROR_FILE_NOT_FOUND",
             "info->ReplaceIfExists=FALSE;",
             "info->Flags=0;",
-            "info->RootDirectory=nullptr;",
+            "info->RootDirectory=parent.h;",
             "info->FileNameLength=nameBytes;",
             "std::memcpy(info->FileName,leaf.data(),nameBytes);",
             "item.h,FileRenameInfoEx,info",
@@ -116,14 +116,16 @@ class R07NoReplaceRestoreContract(unittest.TestCase):
             "readDirectoryId(parent.h,retainedParent)",
             "sameDirectoryId(retainedParent,visible)",
             "parentStillVisible()",
-            "info->RootDirectory=nullptr;",
+            "info->RootDirectory=parent.h;",
             "info->Flags=0;",
             "info->FileNameLength=nameBytes;",
             "std::memcpy(info->FileName,leaf.data(),nameBytes);",
         ):
             with self.subTest(token=token):
                 self.assertIn(token, body)
-        self.assertNotIn("info->RootDirectory=parent.h;", body)
+        # A NULL root with a bare leaf was observed redirecting the owned
+        # file into the process working directory (Windows VM R07-10).
+        self.assertNotIn("info->RootDirectory=nullptr;", body)
         self.assertNotIn("std::memcpy(info->FileName,original", body)
         self.assertNotIn("std::memcpy(info->FileName,target", body)
         self.assertLess(body.index("parentStillVisible()"),
