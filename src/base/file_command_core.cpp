@@ -74,6 +74,19 @@ bool sameRenameEvidence(
   before.fileSize==after.fileSize&&
   before.lastWriteTime==after.lastWriteTime;
 }
+// Compare opened directory identities, never path spelling alone.
+bool readDirectoryId(HANDLE handle,FILE_ID_INFO& id) noexcept {
+ FILE_ATTRIBUTE_TAG_INFO tag{};
+ return handle!=INVALID_HANDLE_VALUE&&
+  ::GetFileInformationByHandleEx(handle,FileAttributeTagInfo,&tag,sizeof(tag))&&
+  (tag.FileAttributes&FILE_ATTRIBUTE_DIRECTORY)&&
+  !(tag.FileAttributes&FILE_ATTRIBUTE_REPARSE_POINT)&&
+  ::GetFileInformationByHandleEx(handle,FileIdInfo,&id,sizeof(id));
+}
+bool sameDirectoryId(FILE_ID_INFO const& a,FILE_ID_INFO const& b) noexcept {
+ return a.VolumeSerialNumber==b.VolumeSerialNumber&&
+  std::equal(a.FileId.Identifier,a.FileId.Identifier+16,b.FileId.Identifier);
+}
 } // namespace
 
 RenameRestoreObservation inspectRenameRestore(
@@ -127,6 +140,11 @@ void RenameTargetLease::reset() noexcept {
   ::CloseHandle(handle_);
   handle_=INVALID_HANDLE_VALUE;
  }
+ if(parentHandle_!=INVALID_HANDLE_VALUE){
+  ::CloseHandle(parentHandle_);
+  parentHandle_=INVALID_HANDLE_VALUE;
+ }
+ parentId_=FILE_ID_INFO{};
  originalPath_.clear();
  targetPath_.clear();
  expected_=RenameEvidence{};
@@ -141,6 +159,21 @@ RenameRestoreObservation RenameTargetLease::begin(
   // temporarily owned by a local variable.
   std::wstring originalCopy(originalPath);
   std::wstring targetCopy(renamed.target);
+  auto const parent=std::filesystem::path(originalCopy).parent_path();
+  // Hold the original parent directory; deny DELETE sharing so that its
+  // own rename/delete cannot silently retarget the original path.
+  // This does NOT reserve the original filename.
+  HANDLE const acquiredParent=::CreateFileW(
+   parent.c_str(),FILE_READ_ATTRIBUTES,FILE_SHARE_READ|FILE_SHARE_WRITE,
+   nullptr,OPEN_EXISTING,
+   FILE_FLAG_BACKUP_SEMANTICS|FILE_FLAG_OPEN_REPARSE_POINT,nullptr);
+  if(acquiredParent==INVALID_HANDLE_VALUE)
+   return RenameRestoreObservation::UnsafePaths;
+  parentHandle_=acquiredParent;
+  if(!readDirectoryId(parentHandle_,parentId_)){
+   reset();
+   return RenameRestoreObservation::UnsafePaths;
+  }
   // FILE_READ_DATA makes Windows sharing checks cover pre-existing writers;
   // FILE_SHARE_READ denies new write/delete/rename opens for this target.
   // No DELETE right and no mutating API is used by this guard.
@@ -148,8 +181,10 @@ RenameRestoreObservation RenameTargetLease::begin(
    targetCopy.c_str(),FILE_READ_DATA|FILE_READ_ATTRIBUTES,
    FILE_SHARE_READ,nullptr,OPEN_EXISTING,
    FILE_FLAG_OPEN_REPARSE_POINT,nullptr);
-  if(acquired==INVALID_HANDLE_VALUE)
+  if(acquired==INVALID_HANDLE_VALUE){
+   reset();
    return RenameRestoreObservation::TargetChangedOrUnavailable;
+  }
   handle_=acquired;
   originalPath_.swap(originalCopy);
   targetPath_.swap(targetCopy);
@@ -163,7 +198,8 @@ RenameRestoreObservation RenameTargetLease::begin(
  }
 }
 RenameRestoreObservation RenameTargetLease::recheck() const noexcept {
- if(handle_==INVALID_HANDLE_VALUE||!expected_.verified)
+ if(handle_==INVALID_HANDLE_VALUE||
+    parentHandle_==INVALID_HANDLE_VALUE||!expected_.verified)
   return RenameRestoreObservation::UnverifiedReceipt;
  try{
   std::filesystem::path const original(originalPath_);
@@ -177,6 +213,23 @@ RenameRestoreObservation RenameTargetLease::recheck() const noexcept {
      !validLeaf(target.filename().native())||
      !safeRenameEvidenceParent(original)||
      !safeRenameEvidenceParent(target))
+   return RenameRestoreObservation::UnsafePaths;
+  // Ancestors may have moved: compare the held directory to today's path.
+  FILE_ID_INFO lockedParent{},visibleParent{};
+  if(!readDirectoryId(parentHandle_,lockedParent)||
+     !sameDirectoryId(parentId_,lockedParent))
+   return RenameRestoreObservation::UnsafePaths;
+  HANDLE const currentParent=::CreateFileW(
+   original.parent_path().c_str(),FILE_READ_ATTRIBUTES,
+   FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE,
+   nullptr,OPEN_EXISTING,
+   FILE_FLAG_BACKUP_SEMANTICS|FILE_FLAG_OPEN_REPARSE_POINT,nullptr);
+  if(currentParent==INVALID_HANDLE_VALUE)
+   return RenameRestoreObservation::UnsafePaths;
+  bool const sameParent=readDirectoryId(currentParent,visibleParent)&&
+   sameDirectoryId(parentId_,visibleParent);
+  bool const parentClosed=::CloseHandle(currentParent)!=FALSE;
+  if(!sameParent||!parentClosed)
    return RenameRestoreObservation::UnsafePaths;
   int const comparison=::CompareStringOrdinal(
    original.c_str(),-1,target.c_str(),-1,TRUE);
