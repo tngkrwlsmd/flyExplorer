@@ -55,6 +55,8 @@ bool MainWindow::RestoreCompletionContextCurrent(
     for(std::size_t i=0;i<mWorkspace.count();++i){
         auto const& state=mWorkspace.state(i);
         if(state.identity!=origin.windowTabIdentity)continue;
+        // A completion from an inactive pane must not update its old tab.
+        if(state.model.activePane!=origin.side)return false;
         auto const& pane=state.model.panes[static_cast<std::size_t>(origin.side)];
         if(pane.active!=origin.tab||origin.tab>=pane.tabs.size()||
            origin.tab>=pane.pending.size()||pane.pending[origin.tab]||
