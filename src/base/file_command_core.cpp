@@ -2,7 +2,10 @@
 #include "file_command_core.h"
 #include <filesystem>
 #include <algorithm>
+#include <cstddef>
+#include <cstring>
 #include <cwctype>
+#include <vector>
 #include <shobjidl.h>
 #pragma comment(lib,"ole32.lib")
 namespace fxfile::filecommand {
@@ -484,5 +487,167 @@ Result execute(Request const& task) noexcept{
   }else result.error=::GetLastError();
  }catch(...){result.error=ERROR_INVALID_PARAMETER;}
  return result;
+}
+
+ 
+// R07-8: isolated native primitive. No UI caller, Undo shortcut or session
+// integration exists. Caller must separately validate a live owner ticket.
+RenameRestoreWriteResult restoreRenameNoReplace(
+ std::wstring const& originalPath,Result const& renamed) noexcept {
+ RenameRestoreWriteResult outcome{};
+ bool nativeSucceeded=false;
+ try{
+  const auto first=inspectRenameRestore(originalPath,renamed);
+  if(first!=RenameRestoreObservation::MatchingSnapshotOnly){
+   switch(first){
+    case RenameRestoreObservation::UnverifiedReceipt:
+     outcome.status=RenameRestoreWriteStatus::RejectedReceipt;break;
+    case RenameRestoreObservation::UnsafePaths:
+     outcome.status=RenameRestoreWriteStatus::RejectedPaths;break;
+    case RenameRestoreObservation::OriginalOccupiedOrUnknown:
+     outcome.status=RenameRestoreWriteStatus::OriginalOccupiedOrUnknown;break;
+    case RenameRestoreObservation::TargetChangedOrUnavailable:
+     outcome.status=RenameRestoreWriteStatus::TargetChangedOrUnavailable;break;
+    default:outcome.status=RenameRestoreWriteStatus::RejectedPaths;break;
+   }
+   return outcome;
+  }
+  const std::filesystem::path original(originalPath);
+  const std::filesystem::path target(renamed.target);
+  const auto parentPath=original.parent_path();
+  const std::wstring leaf=original.filename().native();
+  if(!validLeaf(leaf)||parentPath!=target.parent_path()||
+     !safeRenameEvidenceParent(original)||!safeRenameEvidenceParent(target)){
+   outcome.status=RenameRestoreWriteStatus::RejectedPaths;
+   return outcome;
+  }
+  struct OwnedHandle final {
+   HANDLE h=INVALID_HANDLE_VALUE;
+   explicit OwnedHandle(HANDLE value) noexcept:h(value){}
+   ~OwnedHandle() noexcept {if(h!=INVALID_HANDLE_VALUE)::CloseHandle(h);}
+   OwnedHandle(OwnedHandle const&)=delete;
+   OwnedHandle& operator=(OwnedHandle const&)=delete;
+  };
+  // RootDirectory identifies the held parent, rather than a path looked
+  // up during the rename. Directory DELETE exclusion is not guaranteed.
+  OwnedHandle parent(::CreateFileW(
+   parentPath.c_str(),FILE_READ_ATTRIBUTES|FILE_TRAVERSE,
+   FILE_SHARE_READ|FILE_SHARE_WRITE,nullptr,OPEN_EXISTING,
+   FILE_FLAG_BACKUP_SEMANTICS|FILE_FLAG_OPEN_REPARSE_POINT,nullptr));
+  if(parent.h==INVALID_HANDLE_VALUE){
+   outcome.status=RenameRestoreWriteStatus::AccessUnavailable;
+   outcome.error=::GetLastError();return outcome;
+  }
+  FILE_ID_INFO retainedParent{};
+  if(!readDirectoryId(parent.h,retainedParent)){
+   outcome.status=RenameRestoreWriteStatus::RejectedPaths;return outcome;
+  }
+  // R07-5's READ-only lease is not reusable for this: DELETE access must
+  // be obtained separately, while FILE_SHARE_READ excludes new writers.
+  OwnedHandle item(::CreateFileW(
+   target.c_str(),DELETE|FILE_READ_DATA|FILE_READ_ATTRIBUTES,
+   FILE_SHARE_READ,nullptr,OPEN_EXISTING,
+   FILE_FLAG_OPEN_REPARSE_POINT,nullptr));
+  if(item.h==INVALID_HANDLE_VALUE){
+   outcome.status=RenameRestoreWriteStatus::AccessUnavailable;
+   outcome.error=::GetLastError();return outcome;
+  }
+  auto parentStillVisible=[&]() noexcept {
+   FILE_ID_INFO held{},visible{};
+   if(!readDirectoryId(parent.h,held)||
+      !sameDirectoryId(retainedParent,held))return false;
+   OwnedHandle check(::CreateFileW(
+    parentPath.c_str(),FILE_READ_ATTRIBUTES,
+    FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE,nullptr,OPEN_EXISTING,
+    FILE_FLAG_BACKUP_SEMANTICS|FILE_FLAG_OPEN_REPARSE_POINT,nullptr));
+   return check.h!=INVALID_HANDLE_VALUE&&
+    readDirectoryId(check.h,visible)&&
+    sameDirectoryId(retainedParent,visible);
+  };
+  FILE_ATTRIBUTE_TAG_INFO tag{};
+  FILE_ID_INFO id{};
+  FILE_STANDARD_INFO standard{};
+  FILE_BASIC_INFO basic{};
+  const bool heldSame=
+   ::GetFileInformationByHandleEx(
+    item.h,FileAttributeTagInfo,&tag,sizeof(tag))&&
+   !(tag.FileAttributes&(FILE_ATTRIBUTE_DIRECTORY|FILE_ATTRIBUTE_REPARSE_POINT))&&
+   ::GetFileInformationByHandleEx(
+    item.h,FileIdInfo,&id,sizeof(id))&&
+   id.VolumeSerialNumber==renamed.renameEvidence.volumeSerial&&
+   std::equal(renamed.renameEvidence.fileId.begin(),
+              renamed.renameEvidence.fileId.end(),id.FileId.Identifier)&&
+   ::GetFileInformationByHandleEx(
+    item.h,FileStandardInfo,&standard,sizeof(standard))&&
+   !standard.Directory&&!standard.DeletePending&&
+   standard.NumberOfLinks==1&&standard.EndOfFile.QuadPart>=0&&
+   static_cast<std::uint64_t>(standard.EndOfFile.QuadPart)==
+    renamed.renameEvidence.fileSize&&
+   ::GetFileInformationByHandleEx(
+    item.h,FileBasicInfo,&basic,sizeof(basic))&&
+   basic.LastWriteTime.QuadPart==renamed.renameEvidence.lastWriteTime;
+  if(!parentStillVisible()||!safeRenameEvidenceParent(original)){
+   outcome.status=RenameRestoreWriteStatus::RejectedPaths;return outcome;
+  }
+  RenameEvidence visible{};
+  if(!heldSame||!readRenameEvidence(target,visible)||
+     !sameRenameEvidence(renamed.renameEvidence,visible)){
+   outcome.status=RenameRestoreWriteStatus::TargetChangedOrUnavailable;
+   return outcome;
+  }
+  // This absent-name test is not an atomic reservation. The native call
+  // itself must fail if an external process creates the name meanwhile.
+  const DWORD originalAttrs=::GetFileAttributesW(original.c_str());
+  const DWORD originalError=originalAttrs==INVALID_FILE_ATTRIBUTES?
+   ::GetLastError():ERROR_ALREADY_EXISTS;
+  if(originalAttrs!=INVALID_FILE_ATTRIBUTES||
+     originalError!=ERROR_FILE_NOT_FOUND){
+   outcome.status=RenameRestoreWriteStatus::OriginalOccupiedOrUnknown;
+   outcome.error=originalError;return outcome;
+  }
+  // FileRenameInfo + FALSE is the documented no-overwrite form. No
+  // FILE_RENAME_FLAG_REPLACE_IF_EXISTS or MOVEFILE_REPLACE_EXISTING.
+  const DWORD nameBytes=static_cast<DWORD>(leaf.size()*sizeof(wchar_t));
+  std::vector<unsigned char> buffer(
+   sizeof(FILE_RENAME_INFO)+(leaf.size()+1)*sizeof(wchar_t),0);
+  auto* info=reinterpret_cast<FILE_RENAME_INFO*>(buffer.data());
+  info->ReplaceIfExists=FALSE;
+  info->RootDirectory=parent.h;
+  info->FileNameLength=nameBytes;
+  std::memcpy(info->FileName,leaf.data(),nameBytes);
+  info->FileName[leaf.size()]=L'\0';
+  // The sole mutation. Never retry, overwrite, remove, or automatically
+  // roll back; even a failed syscall cannot certify a pristine state.
+  outcome.nativeCallAttempted=true;
+  if(!::SetFileInformationByHandle(
+       item.h,FileRenameInfo,info,static_cast<DWORD>(buffer.size()))){
+   outcome.status=RenameRestoreWriteStatus::NativeCallFailedUnknownState;
+   outcome.error=::GetLastError();return outcome;
+  }
+  nativeSucceeded=true;
+  outcome.status=RenameRestoreWriteStatus::CommittedUnverified;
+  outcome.error=ERROR_SUCCESS;
+  // Success from the OS is distinct from verified visible postconditions.
+  // Do not attempt rollback if a parent moves or a later observation fails.
+  const DWORD oldTargetAttrs=::GetFileAttributesW(target.c_str());
+  const DWORD oldTargetError=oldTargetAttrs==INVALID_FILE_ATTRIBUTES?
+   ::GetLastError():ERROR_ALREADY_EXISTS;
+  RenameEvidence restored{};
+  if(parentStillVisible()&&safeRenameEvidenceParent(original)&&
+     readRenameEvidence(original,restored)&&
+     sameRenameEvidence(renamed.renameEvidence,restored)&&
+     oldTargetAttrs==INVALID_FILE_ATTRIBUTES&&
+     oldTargetError==ERROR_FILE_NOT_FOUND)
+   outcome.status=RenameRestoreWriteStatus::CommittedVerified;
+  return outcome;
+ }catch(...){
+  outcome.status=nativeSucceeded?
+   RenameRestoreWriteStatus::CommittedUnverified:
+   outcome.nativeCallAttempted?
+    RenameRestoreWriteStatus::NativeCallFailedUnknownState:
+    RenameRestoreWriteStatus::RejectedPaths;
+  outcome.error=ERROR_NOT_ENOUGH_MEMORY;
+  return outcome;
+ }
 }
 }
