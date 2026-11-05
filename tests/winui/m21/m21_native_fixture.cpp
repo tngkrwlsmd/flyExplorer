@@ -483,12 +483,20 @@ int wmain(int argc,wchar_t**argv){
       std::memcmp(restoredBefore.FileId.Identifier,
                   restoredAfter.FileId.Identifier,16)==0;
   if(restored.status!=WriteStatus::CommittedVerified){
-   std::printf("M21_DEBUG_R07_RESTORE status=%u error=%lu attempted=%d orig=%d target=%d identity=%d bytes=%d\\n",
+   // Test-owned checkout only: isolate whether the relative name resolved
+   // against the process CWD instead of the opened file's parent.
+   const auto cwdLeaf=std::filesystem::current_path()/restoreOriginal.filename();
+   FILE_ID_INFO cwdId{};
+   const bool cwdMatchesFile=readId(cwdLeaf,cwdId)&&
+       restoredBefore.VolumeSerialNumber==cwdId.VolumeSerialNumber&&
+       std::memcmp(restoredBefore.FileId.Identifier,cwdId.FileId.Identifier,16)==0;
+   std::printf("M21_DEBUG_R07_RESTORE status=%u error=%lu attempted=%d orig=%d target=%d identity=%d bytes=%d cwd_id_match=%d\\n",
      static_cast<unsigned>(restored.status),static_cast<unsigned long>(restored.error),
      static_cast<int>(restored.nativeCallAttempted),
      static_cast<int>(std::filesystem::exists(restoreOriginal)),
      static_cast<int>(std::filesystem::exists(restoreTarget)),
-     static_cast<int>(identityKept),static_cast<int>(restoredBytes==ownedBytes));
+     static_cast<int>(identityKept),static_cast<int>(restoredBytes==ownedBytes),
+     static_cast<int>(cwdMatchesFile));
   }
   chk(restored.status==WriteStatus::CommittedVerified&&
       restored.nativeCallAttempted&&restored.error==ERROR_SUCCESS&&
