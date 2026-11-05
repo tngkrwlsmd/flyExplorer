@@ -82,6 +82,14 @@
 
 새 R07-7 소스 계약은 `tests/winui/test_r07_rename_owner_contract.py`에서 한번 인출·mutex 범위·반환 전 폐기·파일 변이 미도입을 검사한다. 정확한 소스 SHA `15251587b3e22b655a3bd0b67ad7dd76584ad925`의 [Windows VM #41959646943](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41959646943)에서 **신규 R07-7 Python 소스 계약 5/5 PASS**, 전용 체크아웃 정리 PASS를 확인했다. C++/WinUI 빌드·GUI·실제 Undo는 **NOT TESTED**다. 기존 R07-6 26/26 통과는 별도의 이전 SHA에서 검증한 결과다.
 
+## R07-18: 단회 소유권을 네이티브 복원에 연결한 격리 실행 경계 (2026-11-05)
+
+`FileOperationController::executeTakenRenameRestore(candidate,liveContext)`는 **새로운 worker 전용 API**다. 인출한 Rename 후보를 원본 작업의 ticket/epoch, 창·패널·폴더 탭·route·가시 폴더, 대상 파일 ID·볼륨·크기·수정 시각과 비교한 뒤 **컨트롤러 잠금 아래에서 영구 소비**한다. 일치한 경우에만 `filecommand::restoreRenameNoReplace`를 호출하고, 잠금은 반환 때까지 유지한다. 같은 컨트롤러에 대한 새 작업·탭 탐색 무효화·창 닫기는 이 호출과 직렬화되며, 한 후보의 중복 네이티브 호출은 허용되지 않는다. 읽기 전용 재확인 `recheckAndRetireRenameRestoreCandidate`와 해당 실행 API는 같은 후보를 중복 사용할 수 없다. **OS 파일 I/O 동안 컨트롤러 잠금을 보유하므로 반드시 UI 스레드 밖에서만 호출**해야 하며, GUI Undo/Redo·Ctrl+Z·세션 v4·사용자 작업에 아직 연결하지 않았다.
+
+정확한 소스 `37f566dca823dae13f9cb54ea48f289433d4761c`, [Windows VM #42036519845](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/42036519845): 관련 소스/안전 계약 **24/24 PASS**, 실제 테스트 소유 파일에서 수행된 컨트롤러+네이티브 **13/13 PASS**, WinUI x64 Release 제품 빌드 **PASS**. 실제 RenameSelected 성공 작업에서 영수증을 받고 이를 복원까지 전달한 뒤 바이트와 128비트 파일 ID를 확인했다. 재사용, 읽기 전용 소비 뒤 실행, ticket/원본/대상/파일 ID 위조, 다른 route, 탐색 왕복, 창 종료, 원래 경로 충돌, 두 실행자의 동시 요청을 거부했다. 사용자 설정 불변과 자체 테스트 공간 정리 PASS. 처음 [#42036224625](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/42036224625)은 이전 계약에서 컨트롤러의 격리 호출까지 금지한 탓에 23/24로 중단됐으며 테스트 계약을 수정한 후속 실행만 수용한다.
+
+**안전 제한:** 이 잠금은 **프로세스 내부 컨트롤러 상태**만 보호한다. UI 모델의 변경과 그 알림 사이에는 간격이 있을 수 있고, 외부 프로세스의 파일·부모 경로 변경은 여전히 운영체제 파일 공유·무덮어쓰기 호출·재검증에 의존한다. 특히 네이티브 호출 **진행 중** UI 탐색/종료 알림이 지연되는 실사용 경합 및 UI가 올바르게 반응하는지는 테스트하지 않았다. native-call 실패의 상태 불확실성을 임의로 성공/무변경으로 축소하거나, 반환이 확인되지 않은 호출을 무조건 재시도하지 않는다. 사용자에게 실행 취소를 표시하는 별도의 승인으로 해석하지 않는다.
+
 ## R07-17: 복원 네이티브 호출 직전의 결정적 경합 주입 (2026-11-05)
 
 `restoreRenameNoReplace`는 열린 부모 및 대상 파일 핸들을 유지하면서 네이티브 단일 무덮어쓰기 호출 직전에 부모 디렉터리의 **현재 경로 동일성·안전 경로·원본 이름의 부재를 추가 재확인**한다. `FLY_R07_RESTORE_RACE_NATIVE_TEST`를 정의한 **격리 네이티브 테스트 빌드**에서만 최종 검증 전과 직후에 파일 시스템 개입을 주입하고, 실제 WinUI 제품에서는 해당 개입 경로가 컴파일되지 않는다.
