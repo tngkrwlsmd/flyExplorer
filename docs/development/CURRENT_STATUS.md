@@ -1,7 +1,8 @@
-# 2026-11-05 — R07-7 이름 변경 영수증 단일 인출 경계: 소스 반영, 실행 검증 대기
+# 2026-11-05 — R07-7 이름 변경 영수증 단일 인출 경계: 전용 Python 소스 5/5 PASS
 
 - **새 변경:** `FileOperationController::takeRenameRestoreCandidate`가 기존 임시 후보의 ticket/창·패널·탭·route·표시 경로 일치를 mutex 아래 확인하고, 일치할 경우 후보를 **반환하면서 동일 lock 내부에서 원본 저장분을 즉시 폐기**한다. 여러 호출자가 동시에 접근해도 같은 컨트롤러에서 후보를 두 번 인출하지 못하도록 했다. 불일치·닫힘·바쁨·대기 작업은 계속 거부한다. 예외 시에도 후보를 폐기해 안전하게 실패한다.
-- **중요한 한계:** 한 번 인출한 값 자체는 복사·보유될 수 있으며 파일 상태나 현재 작업 소유권의 지속성을 보장하지 않는다. 원래 파일명은 예약되지 않으며 **Undo 권한·복원 실행·UI·세션 저장을 추가하지 않았다**. 이번 새 코드와 계약의 실제 소스 검사는 아래 R07-6 검증과 구별해 **NOT TESTED**로 유지한다.
+- **중요한 한계:** 한 번 인출한 값 자체는 복사·보유될 수 있으며 파일 상태나 현재 작업 소유권의 지속성을 보장하지 않는다. 원래 파일명은 예약되지 않으며 **Undo 권한·복원 실행·UI·세션 저장을 추가하지 않았다**. 새 R07-7의 전용 Python 소스 계약만 [Windows VM #41959646943](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41959646943)에서 **5/5 PASS**로 확인했다. **C++ 제품 빌드·GUI·실제 파일 복원은 NOT TESTED**다.
+- **정확한 R07-7 검증:** 소스 `15251587b3e22b655a3bd0b67ad7dd76584ad925`에 대해 [Windows VM #41959646943](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41959646943)은 최종 **SUCCESS**, 소유권 후보 인출 전용 5/5 PASS, 정확한 SHA 및 소유 임시 체크아웃 정리 PASS를 기록했다. R07-7 새 Python 계약은 기존 26건과 별개이며 C++ 빌드 증거가 아니다.
 - **기존 검증 완료:** 직전 소스 `67d9ba35be3fb10d1ed466fa8a854772453be26f`의 [Windows VM #41958774791](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41958774791)에서 R07 관련 Python 소스 계약 **26/26 PASS**(R07-6 신규 4건 포함), 정확한 SHA 검사·소유 체크아웃 정리 PASS를 확인했다. 이는 C++ 컴파일/앱 전체 빌드·GUI/실제 Undo 실행 증거가 아니다.
 
 ---
@@ -10,7 +11,7 @@
 
 - **신규 코드:** `app/winui/file_operation_controller.h/.cpp`의 기존 `ticket`/창 탭 ID/패널/폴더 탭/route/표시 경로를 재사용해, 검증된 파일 ID가 있고 성공으로 **수용된 단일 Rename 완료**에 대해서만 `RenameRestoreCandidate`를 세션 메모리에 한 건 보존한다. 실패·실패한 컨텍스트/티켓·중복 수용에는 발급하지 않는다. 읽기 전용 조회에서 현재 소유권을 비교하며 불일치를 관측하면 후보를 폐기한다. 새로운 파일 명령·전송 요청 및 창 종료는 후보를 무효화한다. `epoch` 최대값의 번호 재사용도 거부한다.
 - **노출·변경 경계:** 이 후보는 Undo 실행 권한이 아닌 **소유권이 일치하는 관측 데이터**다. `MainWindow`·키보드·세션 v4 연결과 파일 복원·쓰기/삭제·원래 이름 원자적 예약은 **없다**. 탭 이동을 UI에서 즉시 알려 후보를 폐기하는 연결 역시 없다. 조회가 없던 사이의 탭 이동을 감지했다고 주장하지 않는다.
-- **검증 경계:** 신규 `test_r07_rename_owner_contract.py`에 후보 발급/거절, 작업·종료 무효화, 조회 시 소유권 불일치 폐기, 복원 코드 미도입을 검사하도록 소스 계약을 추가했다. R07-6 구현 소스는 후속 [Windows VM #41958774791](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41958774791)에서 **R07 소스 26/26 PASS**로 확인했다. 새 R07-7 변경의 실제 검사와 WinUI/네이티브 빌드·Windows GUI·실제 Undo는 **NOT TESTED**다. 이전 R07-5 정확한 소스 SHA의 22/22 및 69/69 Windows 네이티브 수용 이력은 유지하되 이 새 controller 기능의 수용에 확대하지 않는다.
+- **검증 경계:** 신규 `test_r07_rename_owner_contract.py`에 후보 발급/거절, 작업·종료 무효화, 조회 시 소유권 불일치 폐기, 복원 코드 미도입을 검사하도록 소스 계약을 추가했다. R07-6 구현 소스는 후속 [Windows VM #41958774791](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41958774791)에서 **R07 소스 26/26 PASS**로 확인했다. 새 R07-7 변경의 Python 소스 계약은 상단 #41959646943에서 **5/5 PASS**로 확인했다. WinUI/네이티브 빌드·Windows GUI·실제 Undo는 이번 실행에서 **NOT TESTED**다. 이전 R07-5 정확한 소스 SHA의 22/22 및 69/69 Windows 네이티브 수용 이력은 유지하되 이 새 controller 기능의 수용에 확대하지 않는다.
 
 ---
 
