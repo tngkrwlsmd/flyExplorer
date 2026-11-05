@@ -82,6 +82,12 @@
 
 새 R07-7 소스 계약은 `tests/winui/test_r07_rename_owner_contract.py`에서 한번 인출·mutex 범위·반환 전 폐기·파일 변이 미도입을 검사한다. 정확한 소스 SHA `15251587b3e22b655a3bd0b67ad7dd76584ad925`의 [Windows VM #41959646943](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/41959646943)에서 **신규 R07-7 Python 소스 계약 5/5 PASS**, 전용 체크아웃 정리 PASS를 확인했다. C++/WinUI 빌드·GUI·실제 Undo는 **NOT TESTED**다. 기존 R07-6 26/26 통과는 별도의 이전 SHA에서 검증한 결과다.
 
+## R07-21A: 실제 WinUI 작업 대기열에서 닫힌 창 콜백 폐기 (2026-11-05)
+
+`MainWindow::FileOperationUiPost()`는 실제 WinUI `DispatcherQueue`를 통해 `FileOperationController::UiTask`를 등록하되, worker가 `MainWindow`의 COM 객체를 직접 해석하거나 강하게 붙잡지 않는다. 큐에 등록된 함수가 UI 스레드에서 실행될 때 `get_weak()`로 받은 창 참조를 해석하고 `mClosing`을 확인하여 유효할 때에만 UI 완료 콜백을 호출한다. `TryEnqueue` 실패는 false로 보고한다. 이 안전 전달은 기존 M21 파일 작업에 실제 적용됐으며, 복원 API에는 **향후 안전한 `Post` 인수로 사용 가능하도록 준비된 단계**일 뿐 실제 Undo 명령 연결은 아니다.
+
+정확한 코드 `50d2e7f87fa8e27d949aae7440b78d30149be203`, [Windows VM #42052008690](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/42052008690): 관련 소스 **7/7 PASS**, WinUI x64 Release 컴파일·실행 파일 생성 **PASS**. 선행 [#42051238274](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/42051238274)는 반환형 네임스페이스 표기 오류(C2143/C4430)로 Release FAIL이었고, 수정 후 재검증했다. 실제 GUI에서 창을 닫아보는 동작, 화면 갱신·프레임, `RestoreCompletion`의 개별 창/탭 귀속, 사용자용 Ctrl+Z·Undo/Redo는 **NOT TESTED / NOT CONNECTED**다. R07-20의 컨트롤러 작업 번호·탐색 세대 2단계 검사는 그대로 유지하며, 이 UI 약한 참조 검사만으로 복원 소유권을 승인하지 않는다.
+
 ## R07-20: 비동기 복원 완료 알림의 창 수명 보호 (2026-11-05)
 
 `startTakenRenameRestoreAsync`는 기존 단회 복원 실행을 **공유 내부 상태만 포획한 별도 스레드**에서 수행한다. 컨트롤러 객체가 파괴돼도 이미 시작된 네이티브 복원을 취소하거나 재시도하지 않는다. 완료 결과는 원래 `status`·`nativeCallAttempted`와 보수적 결과 분류를 그대로 보존한다.
