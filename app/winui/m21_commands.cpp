@@ -48,6 +48,20 @@ fxfile::previewops::FileOperationController::RestoreCallback MainWindow::FileOpe
         if(auto ui=weak.get())ui->OnRenameRestoreCompleted(std::move(completion));
     };
 }
+fxfile::previewops::FileOperationController::StartStatus
+MainWindow::StartTakenRenameRestoreForCurrentOwner(
+ FileOperationController::RenameRestoreCandidate taken,
+ FileOperationController::Context liveContext){
+    // Refuse before consuming the candidate if the visible owner already
+    // changed. The controller repeats its own ticket/context checks.
+    if(!RestoreCompletionContextCurrent(liveContext))
+        return FileOperationController::StartStatus::StaleConfirmation;
+    auto post=FileOperationUiPost();
+    auto completion=FileOperationRestoreCallback();
+    return mFileOperations.startTakenRenameRestoreAsync(
+        std::move(taken),std::move(liveContext),
+        std::move(post),std::move(completion));
+}
 bool MainWindow::RestoreCompletionContextCurrent(
  FileOperationController::Context const& origin) const{
     if(mClosing||origin.side<0||origin.side>1||
