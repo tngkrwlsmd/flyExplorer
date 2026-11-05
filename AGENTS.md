@@ -12,6 +12,37 @@ tngkrwlsmd/universal-agent-docs; update that core atomically rather than
 hand-editing individual generic files. Project facts belong in
 .agent-policy/PROJECT.md, while flyExplorer-specific overrides belong here.
 
+## GitHub 및 개발 기록 한국어 우선 원칙 (2026-11-05, 사용자 지시)
+
+flyExplorer의 GitHub 저장소를 사용자가 한국어로 쉽게 확인할 수 있도록,
+**앞으로 새로 만들거나 수정하는 사용자에게 보이는 개발·운영 기록은 한국어를 기본 언어로 사용한다.**
+이 규칙은 새 작업·후속 작업·자동 실행 요청에도 적용한다.
+
+- **저장소 소개:** GitHub About의 설명, README와 사용자용 안내, 릴리스 설명,
+  프로젝트 작업 현황과 개발 문서는 기본적으로 자연스러운 한국어로 작성한다.
+- **이슈 및 PR:** 제목·본문·체크리스트·검증 결과·진행 상황·댓글을 한국어로 작성한다.
+  새로 만드는 이슈/PR 라벨의 사용자용 이름과 설명도 가능한 범위에서 한국어로 한다.
+  기존의 PR 생략 및 안전한 `main` 직접 반영 규칙은 그대로 유지한다.
+- **커밋:** 커밋 제목과 본문을 한국어로 작성하여 GitHub 커밋 목록과
+  해당 커밋으로 표시되는 Actions 실행 제목도 한국어로 읽히게 한다.
+  필요한 경우 `feat:`, `fix:`, `test:`, `docs:`, `ci:` 같은
+  기존 기술적 분류 접두사는 유지하되 뒤의 설명은 한국어로 쓴다.
+- **GitHub Actions:** 새로 작성하거나 관련 작업에서 수정하는 워크플로의
+  표시 이름(`name`), 실행 제목(`run-name`), 잡과 단계의 표시 이름,
+  실행 결과 요약·검증 보고 문구를 한국어로 작성한다.
+  flyExplorer 작업을 대신 수행하는 `personal-control-plane`의 실행 요청
+  커밋 제목과 사람이 읽는 결과 설명에도 한국어를 사용한다.
+  다만 그 저장소의 자체 지침과 기존 실행 체계·권한·검증 안전 규칙을 우선 보호한다.
+- **예외:** 소스 코드 식별자, GitHub API 필드·이벤트명, 고정 상태값,
+  파일 경로, 명령어, 기계 판독용 로그 표식, 외부 제품·라이브러리 명칭 등은
+  정확성과 호환성이 중요한 경우 원문을 유지한다. 사용자에게 보이는 설명은
+  그 의미를 한국어로 풀어 쓴다. 테스트·CI에서 비교하는 고정 문자열을
+  번역해 동작을 깨뜨리지 않는다.
+- **범위:** 이 지침은 **향후 작성·수정되는 항목**에 우선 적용한다.
+  이미 종료된 이슈, 과거 커밋/Actions 로그, 기존 워크플로 전체를
+  언어 변경만을 위해 일괄 수정하거나 재실행하지 않는다.
+  기존 항목을 별도로 정리할 때에도 이 한국어 원칙을 적용한다.
+
 ## New-chat infrastructure checkpoint (2026-11-04)
 
 Start development from live `flyExplorer/main`, current instructions, relevant status and accepted evidence; never treat an earlier conversation as a live status check. For runner/device, remote CI, GitHub administration or external release tasks, **also read current `tngkrwlsmd/personal-control-plane/AGENTS.md` and `docs/TARGETS.md` first**, including their new-chat preflight. The old `windows-vm-control` repository name redirects to `personal-control-plane`; it is not an independent active control plane.
