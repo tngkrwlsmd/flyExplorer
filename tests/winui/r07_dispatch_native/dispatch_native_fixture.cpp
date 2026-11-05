@@ -98,13 +98,14 @@ struct Fixture {
     FILE_ID_INFO id{};
     Controller::FileCommandCompletion acceptedCompletion{};
     bool ready=false;
-    Fixture(fs::path const& root,wchar_t const* name){
+    Fixture(fs::path const& root,wchar_t const* name,
+            std::uint64_t windowIdentity=501){
         dir=root/name; original=dir/L"source.txt";target=dir/L"after.txt";
         if(!fs::create_directory(dir))return;
         {std::ofstream f(original,std::ios::binary);
          f<<kBytes;if(!f.good())return;}
         if(!getId(original,id))return;
-        ctx.windowTabIdentity=501;ctx.side=0;ctx.tab=1;ctx.route=91;
+        ctx.windowTabIdentity=windowIdentity;ctx.side=0;ctx.tab=1;ctx.route=91;
         ctx.visibleFolder=dir.native();ctx.visibleShellFolder=dir.native();
         fxfile::filecommand::Request req{};
         req.kind=fxfile::filecommand::Kind::RenameSelected;
@@ -585,6 +586,95 @@ int wmain(int argc,wchar_t** argv){
               !got->value().result.nativeCallAttempted&&
               read(f.original)==kCollision&&read(f.target)==kBytes,
               "async_occupied_original_reports_no_native_attempt");
+    }
+    // R07-23: a claimed rename belongs to exactly one original WindowTab,
+    // pane, PaneTab, route and folder. A bad start must not mutate anything.
+    auto wrongOwner=[&](wchar_t const* name,char const* label,
+        std::function<void(Context&)> modify){
+        Fixture f(owned,name);
+        auto claim=f.ready?f.take():std::nullopt;
+        if(!claim){check(false,label);return;}
+        auto context=f.ctx;
+        modify(context);
+        auto q=std::make_shared<AsyncUiQueue>();
+        auto called=std::make_shared<std::atomic<int>>(0);
+        auto result=f.ctrl.startTakenRenameRestoreAsync(
+            *claim,context,q->poster(),
+            [called](Controller::RestoreCompletion){++*called;});
+        bool queued=false;
+        {
+            std::lock_guard<std::mutex> lock(q->mutex);
+            queued=!q->pending.empty();
+        }
+        check(result==Controller::StartStatus::StaleConfirmation&&
+              !queued&&called->load()==0&&!f.ctrl.busy()&&f.unchanged(),
+              label);
+    };
+    wrongOwner(L"async-wrong-window","async_foreign_window_not_started",
+        [](Context& x){++x.windowTabIdentity;});
+    wrongOwner(L"async-wrong-pane","async_foreign_pane_not_started",
+        [](Context& x){x.side=1;});
+    wrongOwner(L"async-wrong-tab","async_foreign_panetab_not_started",
+        [](Context& x){++x.tab;});
+    wrongOwner(L"async-wrong-route","async_foreign_route_not_started",
+        [](Context& x){++x.route;});
+    wrongOwner(L"async-wrong-folder","async_foreign_folder_not_started",
+        [](Context& x){x.visibleFolder+=L"-changed";});
+    wrongOwner(L"async-wrong-shell-folder","async_foreign_shell_folder_not_started",
+        [](Context& x){x.visibleShellFolder+=L"-changed";});
+    {
+        Fixture a(owned,L"async-queue-window-a",701);
+        Fixture b(owned,L"async-queue-window-b",702);
+        auto ca=a.ready?a.take():std::nullopt;
+        auto cb=b.ready?b.take():std::nullopt;
+        auto qa=std::make_shared<AsyncUiQueue>();
+        auto qb=std::make_shared<AsyncUiQueue>();
+        auto oa=std::make_shared<std::optional<Controller::RestoreCompletion>>();
+        auto ob=std::make_shared<std::optional<Controller::RestoreCompletion>>();
+        auto sa=ca?a.ctrl.startTakenRenameRestoreAsync(
+            *ca,a.ctx,qa->poster(),[oa](Controller::RestoreCompletion x){
+                *oa=std::move(x);
+            }):Controller::StartStatus::StaleConfirmation;
+        auto sb=cb?b.ctrl.startTakenRenameRestoreAsync(
+            *cb,b.ctx,qb->poster(),[ob](Controller::RestoreCompletion x){
+                *ob=std::move(x);
+            }):Controller::StartStatus::StaleConfirmation;
+        auto ta=qa->popFor(std::chrono::milliseconds(4500));
+        auto tb=qb->popFor(std::chrono::milliseconds(4500));
+        if(tb)(*tb)();
+        if(ta)(*ta)();
+        check(ca&&cb&&ta&&tb&&sa==Controller::StartStatus::Started&&
+              sb==Controller::StartStatus::Started&&oa->has_value()&&
+              ob->has_value()&&oa->value().ticket==ca->ticket&&
+              ob->value().ticket==cb->ticket&&
+              oa->value().context.windowTabIdentity==701&&
+              ob->value().context.windowTabIdentity==702&&
+              oa->value().outcome==
+                Controller::RestoreOutcomeClass::VerifiedCommitted&&
+              ob->value().outcome==
+                Controller::RestoreOutcomeClass::VerifiedCommitted&&
+              a.restored()&&b.restored(),
+              "async_separate_windows_cannot_exchange_queued_results");
+    }
+    {
+        Fixture f(owned,L"async-queue-replayed",703);
+        auto claim=f.ready?f.take():std::nullopt;
+        auto q=std::make_shared<AsyncUiQueue>();
+        auto count=std::make_shared<std::atomic<int>>(0);
+        auto status=claim?f.ctrl.startTakenRenameRestoreAsync(
+            *claim,f.ctx,q->poster(),
+            [count](Controller::RestoreCompletion){++*count;})
+            :Controller::StartStatus::StaleConfirmation;
+        auto task=q->popFor(std::chrono::milliseconds(4500));
+        if(task){
+            auto copied=*task;
+            (*task)();
+            copied(); // faulty host invokes a copied queued task again
+            (*task)();
+        }
+        check(claim&&task&&status==Controller::StartStatus::Started&&
+              f.restored()&&count->load()==1,
+              "async_duplicate_queued_task_delivers_callback_once");
     }
     std::printf("R07_DISPATCH_NATIVE_SUMMARY %d passed, %d failed.\n",pass,fail);
     return fail?1:0;
