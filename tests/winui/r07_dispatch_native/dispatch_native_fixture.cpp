@@ -68,6 +68,7 @@ struct Fixture {
     Context ctx{};
     fs::path dir,original,target;
     FILE_ID_INFO id{};
+    Controller::FileCommandCompletion acceptedCompletion{};
     bool ready=false;
     Fixture(fs::path const& root,wchar_t const* name){
         dir=root/name; original=dir/L"source.txt";target=dir/L"after.txt";
@@ -98,6 +99,7 @@ struct Fixture {
            value.originalRenameSource!=original.native()||
            ctrl.acceptFileCommand(value,ctx)!=
                Controller::CommandDisposition::Succeeded)return;
+        acceptedCompletion=value;
         FILE_ID_INFO after{};
         ready=!fs::exists(original)&&fs::exists(target)&&
               getId(target,after)&&same(id,after)&&read(target)==kBytes;
@@ -227,6 +229,8 @@ int wmain(int argc,wchar_t** argv){
         if(!c){
             check(false,"inflight_navigation_returns_before_native");
             check(false,"inflight_new_file_command_remains_busy");
+            check(false,"inflight_duplicate_file_completion_rejected");
+            check(false,"inflight_duplicate_transfer_completion_rejected");
         }else{
             NativePause pause{};
             gNativePause=&pause;
@@ -254,11 +258,25 @@ int wmain(int argc,wchar_t** argv){
                     req,f.ctx,[](Controller::UiTask){return true;},
                     [](Controller::FileCommandCompletion){});
             });
+            auto duplicateFile=std::async(std::launch::async,[&]{
+                return f.ctrl.acceptFileCommand(f.acceptedCompletion,f.ctx);
+            });
+            auto duplicateTransfer=std::async(std::launch::async,[&]{
+                Controller::TransferCompletion fake{};
+                fake.ticket=f.acceptedCompletion.ticket;
+                fake.context=f.ctx;
+                fake.report.error=ERROR_SUCCESS;
+                return f.ctrl.acceptTransfer(fake,f.ctx);
+            });
             const bool quickNav=navigation.wait_for(
                 std::chrono::milliseconds(750))==std::future_status::ready;
             const bool quickBusy=checkBusy.wait_for(
                 std::chrono::milliseconds(750))==std::future_status::ready;
             const bool quickRequest=request.wait_for(
+                std::chrono::milliseconds(750))==std::future_status::ready;
+            const bool quickFile=duplicateFile.wait_for(
+                std::chrono::milliseconds(750))==std::future_status::ready;
+            const bool quickTransfer=duplicateTransfer.wait_for(
                 std::chrono::milliseconds(750))==std::future_status::ready;
             {
                 std::lock_guard<std::mutex> lock(pause.mutex);
@@ -268,6 +286,8 @@ int wmain(int argc,wchar_t** argv){
             navigation.get();
             const bool wasBusy=checkBusy.get();
             const auto start=request.get();
+            const auto duplicateFileResult=duplicateFile.get();
+            const auto duplicateTransferResult=duplicateTransfer.get();
             const auto out=worker.get();
             gNativePause=nullptr;
             check(entered&&quickNav&&out.status==Status::CommittedVerified&&
@@ -276,6 +296,12 @@ int wmain(int argc,wchar_t** argv){
             check(quickBusy&&quickRequest&&wasBusy&&
                   start==Controller::StartStatus::Busy,
                   "inflight_new_file_command_remains_busy");
+            check(quickFile&&
+                  duplicateFileResult==Controller::CommandDisposition::Ignored,
+                  "inflight_duplicate_file_completion_rejected");
+            check(quickTransfer&&
+                  duplicateTransferResult==Controller::TransferDisposition::Ignored,
+                  "inflight_duplicate_transfer_completion_rejected");
         }
     }
     {
