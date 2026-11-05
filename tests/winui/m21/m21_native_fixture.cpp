@@ -383,6 +383,116 @@ int wmain(int argc,wchar_t**argv){
      std::filesystem::file_size(dstRename)==15&&
      !std::filesystem::exists(srcRename),
      "r07_preflight_rejects_external_content_change");
+
+ // R07-8: exercise the isolated restore primitive ONLY on these fixture-owned
+ // files. It has no UI/ticket caller; the native result is not Undo acceptance.
+ {
+  using WriteStatus=filecommand::RenameRestoreWriteStatus;
+  const auto restoreOriginal=dir/L"r07-복원-원본.txt";
+  const auto restoreTarget=dir/L"r07-복원-변경.txt";
+  const std::string ownedBytes="r07-only-test-payload";
+  { std::ofstream out(restoreOriginal,std::ios::binary);
+    out.write(ownedBytes.data(),static_cast<std::streamsize>(ownedBytes.size())); }
+  filecommand::Request restoreReq{};
+  restoreReq.kind=filecommand::Kind::RenameSelected;
+  restoreReq.parent=dir.native();
+  restoreReq.source=restoreOriginal.native();
+  restoreReq.name=restoreTarget.filename().native();
+  const auto receipt=filecommand::execute(restoreReq);
+  FILE_ID_INFO restoredBefore{},restoredAfter{};
+  const bool originalRenamed=receipt.error==ERROR_SUCCESS&&
+      receipt.renameEvidence.verified&&
+      readId(restoreTarget,restoredBefore)&&
+      !std::filesystem::exists(restoreOriginal)&&
+      std::filesystem::exists(restoreTarget);
+  chk(originalRenamed,"r07_restore_owned_verified_rename_receipt");
+
+  auto missingProof=receipt;
+  missingProof.renameEvidence.verified=false;
+  const auto rejectedUnverified=filecommand::restoreRenameNoReplace(
+      restoreOriginal.native(),missingProof);
+  chk(rejectedUnverified.status==WriteStatus::RejectedReceipt&&
+      !rejectedUnverified.nativeCallAttempted&&
+      !std::filesystem::exists(restoreOriginal)&&
+      std::filesystem::exists(restoreTarget),
+      "r07_restore_rejects_unverified_receipt_without_mutation");
+
+  auto forgedProof=receipt;
+  forgedProof.renameEvidence.fileId[0]^=1;
+  const auto rejectedId=filecommand::restoreRenameNoReplace(
+      restoreOriginal.native(),forgedProof);
+  chk(rejectedId.status==WriteStatus::TargetChangedOrUnavailable&&
+      !rejectedId.nativeCallAttempted&&
+      !std::filesystem::exists(restoreOriginal)&&
+      std::filesystem::exists(restoreTarget),
+      "r07_restore_rejects_forged_file_id_without_mutation");
+
+  auto missingTarget=receipt;
+  missingTarget.target=(dir/L"r07-복원-없는파일.txt").native();
+  const auto rejectedMissing=filecommand::restoreRenameNoReplace(
+      restoreOriginal.native(),missingTarget);
+  chk(rejectedMissing.status==WriteStatus::TargetChangedOrUnavailable&&
+      !rejectedMissing.nativeCallAttempted&&
+      !std::filesystem::exists(restoreOriginal)&&
+      std::filesystem::exists(restoreTarget),
+      "r07_restore_rejects_missing_target_without_mutation");
+
+  const std::string occupiedBytes="collision-owned-payload";
+  { std::ofstream occupied(restoreOriginal,std::ios::binary);
+    occupied.write(occupiedBytes.data(),
+                   static_cast<std::streamsize>(occupiedBytes.size())); }
+  const auto rejectedCollision=filecommand::restoreRenameNoReplace(
+      restoreOriginal.native(),receipt);
+  std::string retainedCollision{};
+  { std::ifstream original(restoreOriginal,std::ios::binary);
+    retainedCollision.assign(std::istreambuf_iterator<char>(original),{}); }
+  chk(rejectedCollision.status==WriteStatus::OriginalOccupiedOrUnknown&&
+      !rejectedCollision.nativeCallAttempted&&
+      retainedCollision==occupiedBytes&&std::filesystem::exists(restoreTarget),
+      "r07_restore_rejects_original_collision_preserves_bytes");
+  std::filesystem::remove(restoreOriginal); // fixture-owned collision only
+
+  const HANDLE priorWriter=::CreateFileW(
+      restoreTarget.c_str(),FILE_WRITE_DATA,
+      FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE,
+      nullptr,OPEN_EXISTING,FILE_FLAG_OPEN_REPARSE_POINT,nullptr);
+  bool writerRejected=priorWriter!=INVALID_HANDLE_VALUE;
+  if(writerRejected){
+   const auto rejectedWriter=filecommand::restoreRenameNoReplace(
+       restoreOriginal.native(),receipt);
+   writerRejected=rejectedWriter.status==WriteStatus::AccessUnavailable&&
+       !rejectedWriter.nativeCallAttempted;
+   ::CloseHandle(priorWriter);
+  }
+  chk(writerRejected&&std::filesystem::exists(restoreTarget)&&
+      !std::filesystem::exists(restoreOriginal),
+      "r07_restore_rejects_preexisting_writer_without_mutation");
+
+  const auto restored=filecommand::restoreRenameNoReplace(
+      restoreOriginal.native(),receipt);
+  std::string restoredBytes{};
+  if(std::filesystem::exists(restoreOriginal)){
+   std::ifstream original(restoreOriginal,std::ios::binary);
+   restoredBytes.assign(std::istreambuf_iterator<char>(original),{});
+  }
+  const bool identityKept=readId(restoreOriginal,restoredAfter)&&
+      restoredBefore.VolumeSerialNumber==restoredAfter.VolumeSerialNumber&&
+      std::memcmp(restoredBefore.FileId.Identifier,
+                  restoredAfter.FileId.Identifier,16)==0;
+  chk(restored.status==WriteStatus::CommittedVerified&&
+      restored.nativeCallAttempted&&restored.error==ERROR_SUCCESS&&
+      identityKept&&restoredBytes==ownedBytes&&
+      !std::filesystem::exists(restoreTarget),
+      "r07_restore_owned_no_replace_commits_exact_file");
+
+  const auto replay=filecommand::restoreRenameNoReplace(
+      restoreOriginal.native(),receipt);
+  chk(replay.status==WriteStatus::OriginalOccupiedOrUnknown&&
+      !replay.nativeCallAttempted&&
+      std::filesystem::exists(restoreOriginal)&&
+      !std::filesystem::exists(restoreTarget)&&restoredBytes==ownedBytes,
+      "r07_restore_replay_rejected_and_original_preserved");
+ }
  req.kind=filecommand::Kind::CreateTextFile;
  req.source.clear();
  req.name=L"메모.md";
