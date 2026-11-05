@@ -1,4 +1,4 @@
-"""R07-6: transient accepted-rename owner lookup, never Undo authority."""
+"""R07-6/7: accepted-rename owner candidate is taken once, never Undo authority."""
 from pathlib import Path
 import unittest
 
@@ -19,7 +19,7 @@ class R07RenameOwnerContract(unittest.TestCase):
             "Context context{}",
             "std::wstring originalPath{}",
             "fxfile::filecommand::Result renamed{}",
-            "std::optional<RenameRestoreCandidate> renameRestoreCandidate(",
+            "std::optional<RenameRestoreCandidate> takeRenameRestoreCandidate(",
         ):
             with self.subTest(marker=marker):
                 self.assertIn(marker, header)
@@ -28,12 +28,12 @@ class R07RenameOwnerContract(unittest.TestCase):
         self.assertNotIn("RedoFile(", controller)
         self.assertNotIn("RenameTargetLease", controller)
         self.assertNotIn("SetFileInformationByHandle", controller)
-        self.assertNotIn("renameRestoreCandidate(", read("app/winui/m22_transfers.cpp"))
+        self.assertNotIn("takeRenameRestoreCandidate(", read("app/winui/m22_transfers.cpp"))
 
     def test_only_current_successful_verified_rename_is_recorded(self):
         cpp = read("app/winui/file_operation_controller.cpp")
         body = cpp.split("FileOperationController::acceptFileCommand(", 1)[1].split(
-            "FileOperationController::renameRestoreCandidate(", 1
+            "FileOperationController::takeRenameRestoreCandidate(", 1
         )[0]
         for marker in (
             "state_->closing||completion.ticket!=state_->epoch",
@@ -86,7 +86,7 @@ class R07RenameOwnerContract(unittest.TestCase):
 
     def test_lookup_rejects_and_discards_wrong_owner_or_ticket(self):
         cpp = read("app/winui/file_operation_controller.cpp")
-        body = cpp.split("FileOperationController::renameRestoreCandidate(", 1)[1]
+        body = cpp.split("FileOperationController::takeRenameRestoreCandidate(", 1)[1]
         for marker in (
             "std::lock_guard<std::mutex> lock(state_->mutex)",
             "state_->closing||state_->busy||state_->pending",
@@ -100,10 +100,32 @@ class R07RenameOwnerContract(unittest.TestCase):
             with self.subTest(marker=marker):
                 self.assertIn(marker, body)
         self.assertLess(body.index("state_->renameCandidate.reset();"),
-                        body.index("return state_->renameCandidate;"))
+                        body.index("return taken;"))
         for forbidden in ("CreateFileW(", "MoveFileW(", "MoveFileExW(",
                           "DeleteFileW(", "SetFileInformationByHandle("):
             self.assertNotIn(forbidden, body)
+
+
+    def test_claim_consumes_candidate_under_lock_without_filesystem_work(self):
+        header = read("app/winui/file_operation_controller.h")
+        cpp = read("app/winui/file_operation_controller.cpp")
+        body = cpp.split("FileOperationController::takeRenameRestoreCandidate(", 1)[1]
+        self.assertIn("takeRenameRestoreCandidate(", header)
+        self.assertNotIn("renameRestoreCandidate(", header)
+        self.assertIn("std::lock_guard<std::mutex> lock(state_->mutex)", body)
+        self.assertIn("auto taken=std::move(state_->renameCandidate);", body)
+        self.assertIn("state_->renameCandidate.reset();", body)
+        self.assertIn("return taken;", body)
+        self.assertIn("catch(...)", body)
+        self.assertLess(body.index("auto taken=std::move(state_->renameCandidate);"),
+                        body.index("return taken;"))
+        self.assertLess(body.index("state_->renameCandidate.reset();",
+                                   body.index("auto taken=std::move(state_->renameCandidate);")),
+                        body.index("return taken;"))
+        self.assertNotIn("return state_->renameCandidate;", body)
+        self.assertNotIn("CreateFileW(", body)
+        self.assertNotIn("MoveFileW(", body)
+        self.assertNotIn("SetFileInformationByHandle(", body)
 
 
 if __name__ == "__main__":
