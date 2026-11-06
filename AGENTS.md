@@ -52,6 +52,13 @@ Start development from live `flyExplorer/main`, current instructions, relevant s
 - For a requested GitHub Release, verify exact source SHA, required CI, the **target repository's** tag-triggered release flow, published assets and final post-release verification. Keep this separate from a flyExplorer product Release build.
 - Report `NOT CHECKED`/`QUEUED`/`OFFLINE`/`PUBLISHED`/`VERIFIED` accurately; cancel stale queued probes and restore their slots. This preflight does **not** authorize additional product build/GUI checks, data changes or tools the user has excluded.
 
+## ChatGPT 전담 개발과 이벤트 전달 역할 분리 (2026-11-06 사용자 채택)
+
+- 목표 구조: `personal-control-plane`이 작업 요청·완료 이벤트·실행 상태·중복 방지를 관리하고, 일반 ChatGPT 개발 실행이 최신 `flyExplorer/main`, `AGENTS.md`, 개발 계획 및 실제 검증 근거를 읽어 다음 미완료 단위의 분석·구현·검증 판단·GitHub 반영을 직접 수행한다. 개발 연속성은 이전 대화의 존재가 아니라 저장소 상태와 명시적 작업 ID/근거로 유지한다.
+- Work 또는 Codex를 이벤트 전달에 사용하더라도 **전달 전용**이다. 수신한 작업 요청/결과의 원문과 식별자·정확한 SHA·출처 링크를 변경하거나 개발 지시를 새로 만들어내지 않고 ChatGPT 개발 실행으로 넘기는 역할만 허용한다. Work·Codex에 개발 단위 선정, 소스 수정, 코드 리뷰, 빌드·테스트, Git 커밋·병합을 위임하지 않는다. 이 조항은 `chatgpt-codex-connector`의 사용 승인으로 해석할 수 없다.
+- **현재 기술적 미검증 경계:** 지원되는 GitHub PR 이벤트가 Work 작업을 시작하는 공식 경로는 존재하지만, Work/Codex가 내용을 전달하여 **일반 ChatGPT의 새 개발 실행을 자동 시작**하는 공식·실동작 경로는 아직 확인되지 않았다. 이 전달 경로가 실제 왕복 시험으로 검증되기 전에는 자동 재개가 가동 중이라고 보고하거나, 미검증 이벤트/PR을 반복 생성하거나, 개발을 Work/Codex로 대신 수행하지 않는다. 실패 시에는 해당 경계를 BLOCKED/NOT VERIFIED로 기록한다.
+- 개발 실행이 실제로 시작된 경우에는 기존 최신 HEAD·중복 작업·승인된 Windows VM 검증·사용자 데이터 보호·정확한 SHA 수용 및 임시 브랜치 정리 규칙을 모두 적용한다. 이벤트만으로 새로운 검증·배포 권한이 생기지 않는다.
+
 ## PR 조건부 허용과 chatgpt-codex-connector 금지 (2026-11-06 사용자 지시)
 
 - PR 자체는 금지하지 않는다. 독립 검토, 격리 통합, 실제로 필요한 GitHub 이벤트 전달 등 구체적인 목적이 있을 때 조건부로 생성·사용할 수 있다. 기존처럼 안전성과 필요한 검증을 확인한 독립 변경은 PR을 기다리지 않고 `main`에 직접 반영할 수 있다. 의례적으로 PR을 생성하거나 별도 PR 대기를 필수 관문으로 만들지 않는다.
@@ -109,9 +116,9 @@ Do not restore discontinued source or keep history-only utilities in the
 active tree. Maintain the current application, its own contracts and actual
 third-party NuGet and asset notices.
 
-## Codex 작업 범위와 사용량 절약
+## ChatGPT 개발 작업 범위와 검증 비용 절약
 
-Codex 사용량을 절약하면서 요청된 변경을 안전하게 완료한다. 이 절은
+불필요한 탐색과 검증 사용량을 줄이면서 요청된 변경을 안전하게 완료한다. 이 절은
 작업 범위와 검증 비용의 기본 원칙이며, 아래의 필수 현재 상태 확인,
 Windows 검증, 데이터 보호 및 시각적 QA 요구사항을 생략하는 근거가 아니다.
 
@@ -211,7 +218,8 @@ acceptance only for new symptoms or a new evidenced bottleneck. If no justified
 executable unit remains, report the decision/blocker instead of expanding scope.
 The register defines completion and stop conditions.
 
-Use Work cloud development and the approved central `windows-vm` path; do not
+Use normal ChatGPT development execution and the approved central `windows-vm`
+path; Work/Codex are relay-only under the user-adopted role split above. Do not
 access personal PCs/local desktops, use RDC, or use `chatgpt-codex-connector`.
 Documentation-only planning does not require Windows execution/build/GUI.
 Preserve existing exclusions, user-data protections and separate GUI/pixel gates.
