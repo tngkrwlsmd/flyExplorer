@@ -52,11 +52,12 @@ class NativeDispatchContract(unittest.TestCase):
         self.assertIn("all_pre_native_rejections_classified_not_attempted",fixture)
         self.assertIn("inflight_duplicate_file_completion_rejected",fixture)
         self.assertIn("inflight_duplicate_transfer_completion_rejected",fixture)
+        self.assertIn("file_command_post_rejected_releases_busy",fixture)
         controller=read("app/winui/file_operation_controller.cpp")
         self.assertIn("!state_->busy||state_->restoreInFlight",controller)
         self.assertIn("state_->restoreInFlight)\n        return TransferDisposition::Ignored;",controller)
         wrapper=read("tests/winui/r07_dispatch_native/test_native.py")
-        self.assertIn("R07_DISPATCH_NATIVE_SUMMARY 38 passed, 0 failed.",wrapper)
+        self.assertIn("R07_DISPATCH_NATIVE_SUMMARY 39 passed, 0 failed.",wrapper)
         self.assertIn("assert_legacy_profile_unchanged(real,original)",wrapper)
         self.assertIn("shutil.rmtree(owned)",wrapper)
 if __name__=="__main__":
