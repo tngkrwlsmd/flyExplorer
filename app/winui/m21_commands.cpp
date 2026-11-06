@@ -404,6 +404,29 @@ void MainWindow::OnFileCommandCompleted(
  using Disposition=FileOperationController::CommandDisposition;
  const auto disposition=mFileOperations.acceptFileCommand(
      completion,FileOperationContext(completion.context.side));
+#if defined(FLYEXPLORER_R07_OWNED_RUNTIME_TEST)
+ // Record an early controller rejection only for the exact test-owned rename.
+ // Normal builds contain none of this path and no user file is inspected.
+ if(disposition!=Disposition::Succeeded){
+     auto expectedOriginal=readOwnedR07Environment(
+         L"FLYEXPLORER_R07_OWNED_ORIGINAL");
+     auto expectedTarget=readOwnedR07Environment(
+         L"FLYEXPLORER_R07_OWNED_TARGET");
+     auto trace=readOwnedR07Environment(L"FLYEXPLORER_R07_OWNED_TRACE");
+     if(expectedOriginal&&expectedTarget&&trace&&
+        ownedR07PathUnderTemp(*expectedOriginal)&&
+        ownedR07PathUnderTemp(*expectedTarget)&&
+        ownedR07PathUnderTemp(*trace)&&
+        ownedR07PathEqual(*expectedOriginal,completion.originalRenameSource)&&
+        ownedR07PathEqual(*expectedTarget,completion.result.target)){
+         const char* stage=disposition==Disposition::Ignored?
+             "DISPOSITION_IGNORED\n":
+             disposition==Disposition::StaleContext?
+             "DISPOSITION_STALE\n":"DISPOSITION_FAILED\n";
+         writeOwnedR07Trace(*trace,stage,true);
+     }
+ }
+#endif
  if(disposition==Disposition::Ignored)return;
  const bool originActive=completion.context.windowTabIdentity==
                          ActiveWindowTab().identity;
