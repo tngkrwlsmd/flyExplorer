@@ -676,6 +676,48 @@ int wmain(int argc,wchar_t** argv){
               f.restored()&&count->load()==1,
               "async_duplicate_queued_task_delivers_callback_once");
     }
+    // R07-23E: an actual file command can finish after the UI queue refuses
+    // delivery. This must release busy without calling a UI completion or
+    // reissuing the mutation. The disposable fixture owns both file paths.
+    {
+        const auto dir=owned/L"file-command-post-rejected";
+        const bool made=fs::create_directory(dir);
+        const auto original=dir/L"source.txt",target=dir/L"after.txt";
+        if(made){
+            std::ofstream out(original,std::ios::binary);
+            out<<kBytes;
+        }
+        FILE_ID_INFO before{},after{};
+        const bool sourceReady=made&&getId(original,before);
+        Controller controller;
+        Context context{};
+        context.windowTabIdentity=801;
+        context.side=0;
+        context.tab=0;
+        context.route=92;
+        context.visibleFolder=dir.native();
+        context.visibleShellFolder=dir.native();
+        fxfile::filecommand::Request request{};
+        request.kind=fxfile::filecommand::Kind::RenameSelected;
+        request.parent=dir.native();
+        request.source=original.native();
+        request.name=target.filename().native();
+        auto postCalls=std::make_shared<std::atomic<int>>(0);
+        auto callbackCalls=std::make_shared<std::atomic<int>>(0);
+        const auto started=sourceReady?controller.startFileCommand(
+            std::move(request),context,
+            [postCalls](Controller::UiTask){++*postCalls;return false;},
+            [callbackCalls](Controller::FileCommandCompletion){
+                ++*callbackCalls;
+            }):Controller::StartStatus::InvalidVisibleContext;
+        for(int i=0;i<500&&(postCalls->load()==0||controller.busy());++i)
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        check(sourceReady&&started==Controller::StartStatus::Started&&
+              postCalls->load()==1&&callbackCalls->load()==0&&
+              !controller.busy()&&!fs::exists(original)&&
+              getId(target,after)&&same(before,after)&&read(target)==kBytes,
+              "file_command_post_rejected_releases_busy");
+    }
     std::printf("R07_DISPATCH_NATIVE_SUMMARY %d passed, %d failed.\n",pass,fail);
     return fail?1:0;
 }
