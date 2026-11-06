@@ -22,7 +22,7 @@ flyExplorer의 GitHub 저장소를 사용자가 한국어로 쉽게 확인할 �
   프로젝트 작업 현황과 개발 문서는 기본적으로 자연스러운 한국어로 작성한다.
 - **이슈 및 PR:** 제목·본문·체크리스트·검증 결과·진행 상황·댓글을 한국어로 작성한다.
   새로 만드는 이슈/PR 라벨의 사용자용 이름과 설명도 가능한 범위에서 한국어로 한다.
-  기존의 PR 생략 및 안전한 `main` 직접 반영 규칙은 그대로 유지한다.
+  안전한 `main` 직접 반영을 기본으로 하되, 2026-11-06 조건부 PR 허용 지침을 적용한다.
 - **커밋:** 커밋 제목과 본문을 한국어로 작성하여 GitHub 커밋 목록과
   해당 커밋으로 표시되는 Actions 실행 제목도 한국어로 읽히게 한다.
   필요한 경우 `feat:`, `fix:`, `test:`, `docs:`, `ci:` 같은
@@ -51,6 +51,13 @@ Start development from live `flyExplorer/main`, current instructions, relevant s
 - Before declaring a GitHub task impossible, check the connector's precise capabilities **and** available approved control-plane Remote Shell/`gh` paths, including actual authentication. RDC is not the default fallback; do not prematurely delegate executable Git steps to the user.
 - For a requested GitHub Release, verify exact source SHA, required CI, the **target repository's** tag-triggered release flow, published assets and final post-release verification. Keep this separate from a flyExplorer product Release build.
 - Report `NOT CHECKED`/`QUEUED`/`OFFLINE`/`PUBLISHED`/`VERIFIED` accurately; cancel stale queued probes and restore their slots. This preflight does **not** authorize additional product build/GUI checks, data changes or tools the user has excluded.
+
+## PR 조건부 허용과 chatgpt-codex-connector 금지 (2026-11-06 사용자 지시)
+
+- PR 자체는 금지하지 않는다. 독립 검토, 격리 통합, 실제로 필요한 GitHub 이벤트 전달 등 구체적인 목적이 있을 때 조건부로 생성·사용할 수 있다. 기존처럼 안전성과 필요한 검증을 확인한 독립 변경은 PR을 기다리지 않고 `main`에 직접 반영할 수 있다. 의례적으로 PR을 생성하거나 별도 PR 대기를 필수 관문으로 만들지 않는다.
+- PR 생성·수정·댓글 등으로 이벤트를 발생시키기 전에 해당 저장소의 자동 Codex 리뷰 및 `chatgpt-codex-connector` 개입 가능성을 확인한다. 자동 개입을 차단했거나 해당 PR에 개입하지 않음이 확인되지 않으면 이벤트 전달용 PR을 생성·작동시키지 않는다. 저장소 지침을 기록하는 것만으로 GitHub 앱·자동 리뷰 설정이 비활성화됐다고 간주하지 않는다.
+- `chatgpt-codex-connector`는 개발, 코드 검토, 테스트, GitHub/PR 작업, 작업 재개 및 자동화에 사용하지 않는다. 해당 작업에서 사용자가 이 제한을 명시적으로 해제하지 않는 한 일반적인 PR 허용·GitHub 작업 지시를 사용 승인으로 해석하지 않는다. 일반 GitHub 연결 도구, GitHub API, 승인된 `personal-control-plane` 실행 경로는 이 금지의 대상이 아니다.
+- PR은 개발·검증·이벤트 전달 수단일 뿐, 이벤트를 통해 이 ChatGPT 대화가 자동으로 깨어난다고 가정하지 않는다. 실제 지원 트리거와 실행 결과를 별도로 확인하고, 완료 후 불필요한 임시 PR·브랜치는 기존 보존·정리 원칙을 따른다.
 
 ## User-directed direct-main and live comparison rule (2026-10-31)
 
