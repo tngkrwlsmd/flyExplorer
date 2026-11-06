@@ -440,34 +440,46 @@ void MainWindow::OnFileCommandCompleted(
  fileBar()->EndNameEdit();
  mPendingNameEdit.reset();
 #if defined(FLYEXPLORER_R07_OWNED_RUNTIME_TEST)
- if(completion.kind==fxfile::filecommand::Kind::RenameSelected&&
-    completion.result.error==ERROR_SUCCESS&&
-    completion.result.renameEvidence.verified){
+ {
      auto expectedOriginal=readOwnedR07Environment(
          L"FLYEXPLORER_R07_OWNED_ORIGINAL");
      auto expectedTarget=readOwnedR07Environment(
          L"FLYEXPLORER_R07_OWNED_TARGET");
      auto trace=readOwnedR07Environment(L"FLYEXPLORER_R07_OWNED_TRACE");
+     // A diagnostic trace is permitted only after all three paths have passed
+     // the same process-local TEMP boundary as the actual restore entry.
      if(expectedOriginal&&expectedTarget&&trace&&
         ownedR07PathUnderTemp(*expectedOriginal)&&
         ownedR07PathUnderTemp(*expectedTarget)&&
-        ownedR07PathUnderTemp(*trace)&&
-        ownedR07PathEqual(*expectedOriginal,completion.originalRenameSource)&&
-        ownedR07PathEqual(*expectedTarget,completion.result.target)&&
-        writeOwnedR07Trace(*trace,"BEGIN\n",true)){
-         mOwnedR07RestoreRuntimeActive=true;
-         mOwnedR07RestoreTracePath=*trace;
-         const auto restore=StartPendingRenameRestoreForCurrentOwner(
-             completion.context);
-         if(restore==FileOperationController::StartStatus::Started){
-             writeOwnedR07Trace(*trace,"STARTED\n",false);
-             SetFileButtonsBusy(true,false);
-             StatusText().Text(L"테스트 소유 이름 복원 동작을 확인하는 중입니다...");
-             return;
+        ownedR07PathUnderTemp(*trace)){
+         const char* rejected=
+             completion.kind!=fxfile::filecommand::Kind::RenameSelected?
+                 "REJECT_KIND\n":
+             completion.result.error!=ERROR_SUCCESS?"REJECT_ERROR\n":
+             !completion.result.renameEvidence.verified?
+                 "REJECT_RENAME_EVIDENCE\n":
+             !ownedR07PathEqual(
+                 *expectedOriginal,completion.originalRenameSource)?
+                 "REJECT_ORIGINAL_PATH\n":
+             !ownedR07PathEqual(*expectedTarget,completion.result.target)?
+                 "REJECT_TARGET_PATH\n":nullptr;
+         if(rejected){
+             writeOwnedR07Trace(*trace,rejected,true);
+         }else if(writeOwnedR07Trace(*trace,"BEGIN\n",true)){
+             mOwnedR07RestoreRuntimeActive=true;
+             mOwnedR07RestoreTracePath=*trace;
+             const auto restore=StartPendingRenameRestoreForCurrentOwner(
+                 completion.context);
+             if(restore==FileOperationController::StartStatus::Started){
+                 writeOwnedR07Trace(*trace,"STARTED\n",false);
+                 SetFileButtonsBusy(true,false);
+                 StatusText().Text(L"테스트 소유 이름 복원 동작을 확인하는 중입니다...");
+                 return;
+             }
+             writeOwnedR07Trace(*trace,"START_REJECTED\n",false);
+             mOwnedR07RestoreRuntimeActive=false;
+             mOwnedR07RestoreTracePath.clear();
          }
-         writeOwnedR07Trace(*trace,"START_REJECTED\n",false);
-         mOwnedR07RestoreRuntimeActive=false;
-         mOwnedR07RestoreTracePath.clear();
      }
  }
 #endif

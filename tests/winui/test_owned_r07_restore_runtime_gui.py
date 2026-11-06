@@ -157,14 +157,32 @@ def run(config: str = "Release") -> None:
         assert owned_foreground(process.pid)
         send_keys("{ENTER}")
 
-        wait_until(
-            lambda: trace.is_file()
-            and trace.read_text(encoding="ascii", errors="strict").endswith(
-                "COMPLETE_VERIFIED\n"
-            ),
-            "owned restore did not reach verified DispatcherQueue completion",
-            seconds=24, interval=.2,
-        )
+        try:
+            wait_until(
+                lambda: trace.is_file()
+                and trace.read_text(encoding="ascii", errors="strict").endswith(
+                    "COMPLETE_VERIFIED\n"
+                ),
+                "owned restore did not reach verified DispatcherQueue completion",
+                seconds=24, interval=.2,
+            )
+        except AssertionError as error:
+            trace_text = (
+                trace.read_text(encoding="ascii", errors="replace")
+                if trace.is_file() else "<missing>"
+            )
+            print(
+                "R07_OWNED_RUNTIME_DIAGNOSTIC="
+                f"trace={trace_text!r};"
+                f"original={original.exists()};target={target.exists()};"
+                f"editor={editor.get_value()!r}",
+                flush=True,
+            )
+            raise AssertionError(
+                "owned restore did not reach verified DispatcherQueue "
+                f"completion; trace={trace_text!r};"
+                f"original={original.exists()};target={target.exists()}"
+            ) from error
         lines = trace.read_text(encoding="ascii", errors="strict").splitlines()
         assert lines == ["BEGIN", "STARTED", "COMPLETE_VERIFIED"], lines
         wait_until(
