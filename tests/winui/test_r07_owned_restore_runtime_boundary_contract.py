@@ -59,6 +59,16 @@ class OwnedRestoreRuntimeBoundaryContract(unittest.TestCase):
         self.assertIn("FILE_ATTRIBUTE_REPARSE_POINT", source)
         self.assertIn("FILE_SHARE_READ|FILE_SHARE_WRITE", source)
 
+    def test_owned_gui_temp_environment_matches_win32_temp_path(self):
+        source = read("tests/winui/test_owned_r07_restore_runtime_gui.py")
+        self.assertIn(
+            'for key in ("APPDATA", "LOCALAPPDATA", "TEMP"):', source
+        )
+        self.assertIn('profile["TMP"] = profile["TEMP"]', source)
+        self.assertIn('assert profile["TMP"] == profile["TEMP"]', source)
+        self.assertIn('fixture = Path(tempfile.mkdtemp(', source)
+        self.assertIn('prefix="fixture-", dir=profile["TEMP"]', source)
+
     def test_only_guarded_accepted_rename_calls_private_restore(self):
         source = read("app/winui/m21_commands.cpp")
         call = source.rindex("StartPendingRenameRestoreForCurrentOwner(")

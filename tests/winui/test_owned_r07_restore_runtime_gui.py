@@ -63,10 +63,14 @@ def run(config: str = "Release") -> None:
     assert not base.is_symlink()
     owned = Path(tempfile.mkdtemp(prefix="r07-runtime-", dir=base)).resolve()
     profile = {}
-    for key in ("APPDATA", "LOCALAPPDATA", "TEMP", "TMP"):
+    for key in ("APPDATA", "LOCALAPPDATA", "TEMP"):
         directory = owned / key.lower()
         directory.mkdir()
         profile[key] = str(directory)
+    # GetTempPathW resolves TMP before TEMP. Keep both in the same test-owned
+    # directory so the product's fail-closed temporary-path guards are valid.
+    profile["TMP"] = profile["TEMP"]
+    assert profile["TMP"] == profile["TEMP"]
     fixture = Path(tempfile.mkdtemp(
         prefix="fixture-", dir=profile["TEMP"]
     )).resolve()
