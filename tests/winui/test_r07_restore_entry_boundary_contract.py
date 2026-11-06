@@ -23,9 +23,17 @@ class RestoreEntryBoundaryContract(unittest.TestCase):
 
     def test_composition_has_no_user_command_call_site(self):
         source = SOURCE.read_text(encoding="utf-8-sig")
-        # A declaration and a single method definition are permitted; no
-        # call from a toolbar, menu, keyboard or file-command handler.
-        self.assertEqual(len(re.findall(r"\b" + NAME + r"\s*\(", source)), 1)
+        # The definition plus one call compiled only into the explicit
+        # owned-runtime validation binary are permitted. Normal builds and
+        # all user command surfaces contain no call site.
+        self.assertEqual(len(re.findall(r"\b" + NAME + r"\s*\(", source)), 2)
+        call = source.rindex(NAME + "(")
+        guard = source.rfind(
+            "#if defined(FLYEXPLORER_R07_OWNED_RUNTIME_TEST)", 0, call
+        )
+        end = source.find("#endif", call)
+        self.assertGreater(guard, 0)
+        self.assertGreater(end, call)
         body = source.split("MainWindow::" + NAME + "(", 1)[1].split(
             "bool MainWindow::RestoreCompletionContextCurrent(", 1
         )[0]

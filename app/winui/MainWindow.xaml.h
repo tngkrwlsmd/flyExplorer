@@ -347,6 +347,12 @@ namespace winrt::FlyExplorer::implementation
         // It remains private and is not a user Undo command.
         FileOperationController::StartStatus StartPendingRenameRestoreForCurrentOwner(
             FileOperationController::Context liveContext);
+#if defined(FLYEXPLORER_R07_OWNED_RUNTIME_TEST)
+        // Compiled only into an explicitly requested owned-validation binary.
+        // Normal product builds have neither this state nor its environment path.
+        bool mOwnedR07RestoreRuntimeActive=false;
+        std::wstring mOwnedR07RestoreTracePath{};
+#endif
         bool RestoreCompletionContextCurrent(
             FileOperationController::Context const& origin) const;
         void OnRenameRestoreCompleted(

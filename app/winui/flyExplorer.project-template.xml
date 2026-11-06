@@ -87,6 +87,13 @@
       <AdditionalOptions>%(AdditionalOptions) /bigobj /utf-8</AdditionalOptions>
     </ClCompile>
   </ItemDefinitionGroup>
+  <!-- R07-23E-A: compile the owned runtime entry only for an explicitly
+       requested validation binary. Normal Debug/Release builds contain no hook. -->
+  <ItemDefinitionGroup Condition="'$(FlyExplorerR07OwnedRuntimeTest)'=='true'">
+    <ClCompile>
+      <PreprocessorDefinitions>FLYEXPLORER_R07_OWNED_RUNTIME_TEST;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+  </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)'=='Debug'">
     <ClCompile>
       <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>

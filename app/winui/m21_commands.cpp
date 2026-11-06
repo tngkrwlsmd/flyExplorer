@@ -22,6 +22,70 @@ hstring koreanError(DWORD code){
                           std::to_wstring(code));
  }
 }
+#if defined(FLYEXPLORER_R07_OWNED_RUNTIME_TEST)
+std::optional<std::wstring> readOwnedR07Environment(wchar_t const* name){
+    const DWORD length=::GetEnvironmentVariableW(name,nullptr,0);
+    if(length<2||length>32768)return std::nullopt;
+    std::wstring value(length,L'\0');
+    const DWORD written=::GetEnvironmentVariableW(
+        name,value.data(),static_cast<DWORD>(value.size()));
+    if(!written||written>=value.size())return std::nullopt;
+    value.resize(written);
+    return value;
+}
+std::optional<std::wstring> fullOwnedR07Path(std::wstring const& value){
+    if(value.empty())return std::nullopt;
+    const DWORD length=::GetFullPathNameW(value.c_str(),0,nullptr,nullptr);
+    if(length<2||length>32768)return std::nullopt;
+    std::wstring full(length,L'\0');
+    const DWORD written=::GetFullPathNameW(
+        value.c_str(),static_cast<DWORD>(full.size()),full.data(),nullptr);
+    if(!written||written>=full.size())return std::nullopt;
+    full.resize(written);
+    return std::filesystem::path(full).lexically_normal().wstring();
+}
+bool ownedR07PathUnderTemp(std::wstring const& value){
+    wchar_t rawTemp[MAX_PATH+1]{};
+    const DWORD count=::GetTempPathW(MAX_PATH+1,rawTemp);
+    if(!count||count>MAX_PATH)return false;
+    auto path=fullOwnedR07Path(value);
+    auto temp=fullOwnedR07Path(rawTemp);
+    if(!path||!temp)return false;
+    std::wstring prefix=*temp;
+    if(!prefix.empty()&&prefix.back()!=L'\\')prefix.push_back(L'\\');
+    if(path->size()<=prefix.size())return false;
+    return ::CompareStringOrdinal(
+        path->data(),static_cast<int>(prefix.size()),
+        prefix.data(),static_cast<int>(prefix.size()),TRUE)==CSTR_EQUAL;
+}
+bool ownedR07PathEqual(std::wstring const& left,std::wstring const& right){
+    return ::CompareStringOrdinal(
+        left.c_str(),static_cast<int>(left.size()),
+        right.c_str(),static_cast<int>(right.size()),TRUE)==CSTR_EQUAL;
+}
+bool writeOwnedR07Trace(
+ std::wstring const& path,char const* text,bool create){
+    const DWORD disposition=create?CREATE_NEW:OPEN_EXISTING;
+    struct OwnedHandle final {
+        HANDLE value=INVALID_HANDLE_VALUE;
+        ~OwnedHandle(){if(value!=INVALID_HANDLE_VALUE)::CloseHandle(value);}
+    } file{::CreateFileW(
+        path.c_str(),FILE_APPEND_DATA|FILE_READ_ATTRIBUTES,FILE_SHARE_READ,
+        nullptr,disposition,FILE_ATTRIBUTE_NORMAL|FILE_FLAG_OPEN_REPARSE_POINT,
+        nullptr)};
+    if(file.value==INVALID_HANDLE_VALUE)return false;
+    FILE_ATTRIBUTE_TAG_INFO attributes{};
+    if(!::GetFileInformationByHandleEx(
+           file.value,FileAttributeTagInfo,&attributes,sizeof(attributes))||
+       (attributes.FileAttributes&
+        (FILE_ATTRIBUTE_DIRECTORY|FILE_ATTRIBUTE_REPARSE_POINT))!=0)
+        return false;
+    const DWORD length=static_cast<DWORD>(std::strlen(text));
+    DWORD written=0;
+    return ::WriteFile(file.value,text,length,&written,nullptr)&&written==length&&
+           ::FlushFileBuffers(file.value);
+}
+#endif
 }
 fxfile::previewops::FileOperationController::Post MainWindow::FileOperationUiPost(){
     // The queue is obtained on the UI thread. TryEnqueue may be called by
@@ -105,6 +169,25 @@ void MainWindow::OnRenameRestoreCompleted(
     }
     if(ActiveWindowTab().identity==completion.context.windowTabIdentity)
         StatusText().Text(hstring(notice));
+#if defined(FLYEXPLORER_R07_OWNED_RUNTIME_TEST)
+    if(mOwnedR07RestoreRuntimeActive){
+        auto trace=std::move(mOwnedR07RestoreTracePath);
+        mOwnedR07RestoreTracePath.clear();
+        mOwnedR07RestoreRuntimeActive=false;
+        const char* outcome=completion.outcome==Outcome::VerifiedCommitted?
+            "COMPLETE_VERIFIED\n":
+            completion.outcome==Outcome::UncertainAfterAttempt?
+            "COMPLETE_UNCERTAIN\n":"COMPLETE_NOT_ATTEMPTED\n";
+        if(!trace.empty())writeOwnedR07Trace(trace,outcome,false);
+        SetFileButtonsBusy(false,false);
+        const int side=completion.context.side;
+        auto const& pane=ActiveWindowTab().model.panes[side];
+        QueuePidl(side,
+          fxfile::shellnav::Location(
+              pane.tabs[pane.active].snapshot().folder),
+          fxfile::shellnav::NavigationAction::Refresh);
+    }
+#endif
 }
 void MainWindow::OnCreateFolder(
  IInspectable const&,RoutedEventArgs const&){
@@ -356,6 +439,38 @@ void MainWindow::OnFileCommandCompleted(
  if(disposition!=Disposition::Succeeded)return;
  fileBar()->EndNameEdit();
  mPendingNameEdit.reset();
+#if defined(FLYEXPLORER_R07_OWNED_RUNTIME_TEST)
+ if(completion.kind==fxfile::filecommand::Kind::RenameSelected&&
+    completion.result.error==ERROR_SUCCESS&&
+    completion.result.renameEvidence.verified){
+     auto expectedOriginal=readOwnedR07Environment(
+         L"FLYEXPLORER_R07_OWNED_ORIGINAL");
+     auto expectedTarget=readOwnedR07Environment(
+         L"FLYEXPLORER_R07_OWNED_TARGET");
+     auto trace=readOwnedR07Environment(L"FLYEXPLORER_R07_OWNED_TRACE");
+     if(expectedOriginal&&expectedTarget&&trace&&
+        ownedR07PathUnderTemp(*expectedOriginal)&&
+        ownedR07PathUnderTemp(*expectedTarget)&&
+        ownedR07PathUnderTemp(*trace)&&
+        ownedR07PathEqual(*expectedOriginal,completion.originalRenameSource)&&
+        ownedR07PathEqual(*expectedTarget,completion.result.target)&&
+        writeOwnedR07Trace(*trace,"BEGIN\n",true)){
+         mOwnedR07RestoreRuntimeActive=true;
+         mOwnedR07RestoreTracePath=*trace;
+         const auto restore=StartPendingRenameRestoreForCurrentOwner(
+             completion.context);
+         if(restore==FileOperationController::StartStatus::Started){
+             writeOwnedR07Trace(*trace,"STARTED\n",false);
+             SetFileButtonsBusy(true,false);
+             StatusText().Text(L"테스트 소유 이름 복원 동작을 확인하는 중입니다...");
+             return;
+         }
+         writeOwnedR07Trace(*trace,"START_REJECTED\n",false);
+         mOwnedR07RestoreRuntimeActive=false;
+         mOwnedR07RestoreTracePath.clear();
+     }
+ }
+#endif
  const std::wstring message=
      completion.kind==fxfile::filecommand::Kind::CreateFolder?
      L"새 폴더를 만들었습니다.":

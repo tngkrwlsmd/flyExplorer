@@ -4,6 +4,8 @@ rem Canonical flyExplorer WinUI 3 product build.
 set "CONFIG=%~1"
 if "%CONFIG%"=="" set "CONFIG=Debug"
 if /I not "%CONFIG%"=="Debug" if /I not "%CONFIG%"=="Release" exit /b 2
+set "R07_OWNED_RUNTIME_PROPERTY="
+if "%FLYEXPLORER_R07_OWNED_RUNTIME_BUILD%"=="1" set "R07_OWNED_RUNTIME_PROPERTY=/p:FlyExplorerR07OwnedRuntimeTest=true"
 set "HERE=%~dp0"
 set "ROOT=%HERE%..\..\"
 set "MSBUILD="
@@ -27,11 +29,11 @@ rem Generated binaries/intermediates/cache live outside app/winui source.
 set "NUGET_PACKAGES=%CACHE%\packages"
 set "NUGET_HTTP_CACHE_PATH=%CACHE%\http"
 set "NUGET_PLUGINS_CACHE_PATH=%CACHE%\plugins"
-"%MSBUILD%" "%HERE%flyExplorer.vcxproj" /nologo /t:Restore "/p:Configuration=%CONFIG%" /p:Platform=x64 "/p:BaseIntermediateOutputPath=%APP_OBJ%/" "/p:RestoreConfigFile=%HERE%NuGet.Config" "/p:RestorePackagesPath=%NUGET_PACKAGES%" /v:minimal
+"%MSBUILD%" "%HERE%flyExplorer.vcxproj" /nologo /t:Restore "/p:Configuration=%CONFIG%" /p:Platform=x64 "/p:BaseIntermediateOutputPath=%APP_OBJ%/" "/p:RestoreConfigFile=%HERE%NuGet.Config" "/p:RestorePackagesPath=%NUGET_PACKAGES%" %R07_OWNED_RUNTIME_PROPERTY% /v:minimal
 if errorlevel 1 exit /b 6
 python -X utf8 "%ROOT%tools\winui\verify_restore.py" "%APP_OBJ%\project.assets.json" "%NUGET_PACKAGES%"
 if errorlevel 1 exit /b 15
-"%MSBUILD%" "%HERE%flyExplorer.vcxproj" /nologo /t:Build "/p:Configuration=%CONFIG%" /p:Platform=x64 "/p:BaseIntermediateOutputPath=%APP_OBJ%/" "/p:OutDir=%APP_OUT%/" "/p:IntDir=%APP_OBJ%/" "/p:GeneratedFilesDir=%APP_OBJ%/Generated Files/" "/p:NuGetTargetMoniker=native%%2CVersion=v0.0" "/p:_NuGetTargetFallbackMoniker=" "/p:NuGetRuntimeIdentifier=" /m:2 /v:minimal
+"%MSBUILD%" "%HERE%flyExplorer.vcxproj" /nologo /t:Build "/p:Configuration=%CONFIG%" /p:Platform=x64 "/p:BaseIntermediateOutputPath=%APP_OBJ%/" "/p:OutDir=%APP_OUT%/" "/p:IntDir=%APP_OBJ%/" "/p:GeneratedFilesDir=%APP_OBJ%/Generated Files/" "/p:NuGetTargetMoniker=native%%2CVersion=v0.0" "/p:_NuGetTargetFallbackMoniker=" "/p:NuGetRuntimeIdentifier=" %R07_OWNED_RUNTIME_PROPERTY% /m:2 /v:minimal
 if errorlevel 1 exit /b 7
 set "HELPER=%OUT%\helper\%CONFIG%\FlyShellIsolationHelper.exe"
 set "DEST=%APP_OUT%"
