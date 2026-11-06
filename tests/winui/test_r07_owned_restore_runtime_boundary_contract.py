@@ -40,6 +40,12 @@ class OwnedRestoreRuntimeBoundaryContract(unittest.TestCase):
             "FLYEXPLORER_R07_OWNED_ORIGINAL",
             "FLYEXPLORER_R07_OWNED_TARGET",
             "FLYEXPLORER_R07_OWNED_TRACE",
+            "FLYEXPLORER_R07_OWNED_DELIVERY_TRACE",
+            "POST_CALLED\\n",
+            "POST_ACCEPTED\\n",
+            "UI_TASK_ENTERED\\n",
+            "UI_TASK_DISPATCH\\n",
+            "ON_FILE_COMPLETION\\n",
             "ownedR07PathUnderTemp(*expectedOriginal)",
             "ownedR07PathUnderTemp(*expectedTarget)",
             "ownedR07PathUnderTemp(*trace)",
@@ -51,6 +57,7 @@ class OwnedRestoreRuntimeBoundaryContract(unittest.TestCase):
         self.assertIn("CREATE_NEW:OPEN_EXISTING", source)
         self.assertIn("FILE_FLAG_OPEN_REPARSE_POINT", source)
         self.assertIn("FILE_ATTRIBUTE_REPARSE_POINT", source)
+        self.assertIn("FILE_SHARE_READ|FILE_SHARE_WRITE", source)
 
     def test_only_guarded_accepted_rename_calls_private_restore(self):
         source = read("app/winui/m21_commands.cpp")

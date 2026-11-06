@@ -73,6 +73,7 @@ def run(config: str = "Release") -> None:
     original = fixture / "OwnedBefore.txt"
     target = fixture / "OwnedAfter.txt"
     trace = Path(profile["TEMP"]) / "r07-restore-trace.txt"
+    delivery_trace = Path(profile["TEMP"]) / "r07-delivery-trace.txt"
     payload = b"r07 owned runtime bytes must survive rename and restore\n"
     original.write_bytes(payload)
     before_identity = file_identity(original)
@@ -82,6 +83,7 @@ def run(config: str = "Release") -> None:
         "FLYEXPLORER_R07_OWNED_ORIGINAL": str(original),
         "FLYEXPLORER_R07_OWNED_TARGET": str(target),
         "FLYEXPLORER_R07_OWNED_TRACE": str(trace),
+        "FLYEXPLORER_R07_OWNED_DELIVERY_TRACE": str(delivery_trace),
     }
     process = None
     hwnd = None
@@ -171,9 +173,13 @@ def run(config: str = "Release") -> None:
                 trace.read_text(encoding="ascii", errors="replace")
                 if trace.is_file() else "<missing>"
             )
+            delivery_text = (
+                delivery_trace.read_text(encoding="ascii", errors="replace")
+                if delivery_trace.is_file() else "<missing>"
+            )
             print(
                 "R07_OWNED_RUNTIME_DIAGNOSTIC="
-                f"trace={trace_text!r};"
+                f"trace={trace_text!r};delivery={delivery_text!r};"
                 f"original={original.exists()};target={target.exists()};"
                 f"editor={editor.get_value()!r}",
                 flush=True,
@@ -185,6 +191,22 @@ def run(config: str = "Release") -> None:
             ) from error
         lines = trace.read_text(encoding="ascii", errors="strict").splitlines()
         assert lines == ["BEGIN", "STARTED", "COMPLETE_VERIFIED"], lines
+        delivery_lines = delivery_trace.read_text(
+            encoding="ascii", errors="strict"
+        ).splitlines()
+        assert delivery_lines.count("POST_CALLED") == 1, delivery_lines
+        assert delivery_lines.count("POST_ACCEPTED") == 1, delivery_lines
+        assert delivery_lines.count("UI_TASK_ENTERED") == 1, delivery_lines
+        assert delivery_lines.count("UI_TASK_DISPATCH") == 1, delivery_lines
+        assert delivery_lines.count("ON_FILE_COMPLETION") == 1, delivery_lines
+        assert len(delivery_lines) == 5, delivery_lines
+        assert delivery_lines[0] == "POST_CALLED", delivery_lines
+        assert delivery_lines.index("UI_TASK_ENTERED") < delivery_lines.index(
+            "UI_TASK_DISPATCH"
+        ), delivery_lines
+        assert delivery_lines.index("UI_TASK_DISPATCH") < delivery_lines.index(
+            "ON_FILE_COMPLETION"
+        ), delivery_lines
         wait_until(
             lambda: original.is_file() and not target.exists(),
             "owned file was not restored to the original name",
@@ -195,6 +217,7 @@ def run(config: str = "Release") -> None:
         assert not target.exists()
         print("R07_OWNED_RUNTIME_RENAME_RESTORE_VERIFIED=PASS", flush=True)
         print("R07_OWNED_RUNTIME_TRACE_EXACTLY_ONCE=PASS", flush=True)
+        print("R07_OWNED_RUNTIME_DELIVERY_TRACE=PASS", flush=True)
         print("R07_OWNED_RUNTIME_FILE_ID_AND_BYTES_PRESERVED=PASS", flush=True)
         passed = True
     finally:

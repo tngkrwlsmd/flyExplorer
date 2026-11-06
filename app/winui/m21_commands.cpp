@@ -70,7 +70,8 @@ bool writeOwnedR07Trace(
         HANDLE value=INVALID_HANDLE_VALUE;
         ~OwnedHandle(){if(value!=INVALID_HANDLE_VALUE)::CloseHandle(value);}
     } file{::CreateFileW(
-        path.c_str(),FILE_APPEND_DATA|FILE_READ_ATTRIBUTES,FILE_SHARE_READ,
+        path.c_str(),FILE_APPEND_DATA|FILE_READ_ATTRIBUTES,
+        FILE_SHARE_READ|FILE_SHARE_WRITE,
         nullptr,disposition,FILE_ATTRIBUTE_NORMAL|FILE_FLAG_OPEN_REPARSE_POINT,
         nullptr)};
     if(file.value==INVALID_HANDLE_VALUE)return false;
@@ -92,6 +93,52 @@ fxfile::previewops::FileOperationController::Post MainWindow::FileOperationUiPos
     // a worker, but the weak window MUST only be resolved by the UI queue.
     auto dispatch=DispatcherQueue();
     auto weak=get_weak();
+#if defined(FLYEXPLORER_R07_OWNED_RUNTIME_TEST)
+    std::wstring deliveryTrace;
+    if(auto candidate=readOwnedR07Environment(
+           L"FLYEXPLORER_R07_OWNED_DELIVERY_TRACE");
+       candidate&&ownedR07PathUnderTemp(*candidate)&&
+       ::GetFileAttributesW(candidate->c_str())==INVALID_FILE_ATTRIBUTES&&
+       ::GetLastError()==ERROR_FILE_NOT_FOUND)
+        deliveryTrace=*candidate;
+    return [dispatch,weak,deliveryTrace=std::move(deliveryTrace)](
+            FileOperationController::UiTask task) mutable {
+        if(!deliveryTrace.empty())
+            writeOwnedR07Trace(deliveryTrace,"POST_CALLED\n",true);
+        if(!dispatch||!task){
+            if(!deliveryTrace.empty())
+                writeOwnedR07Trace(deliveryTrace,"POST_REJECTED\n",false);
+            return false;
+        }
+        try{
+            const bool queued=dispatch.TryEnqueue(
+                [weak,task=std::move(task),deliveryTrace]() mutable {
+                    if(!deliveryTrace.empty())
+                        writeOwnedR07Trace(
+                            deliveryTrace,"UI_TASK_ENTERED\n",false);
+                    // The window may have been closed after TryEnqueue
+                    // succeeded. Suppress all post-close UI callbacks.
+                    if(auto ui=weak.get()){
+                        if(!ui->mClosing){
+                            if(!deliveryTrace.empty())
+                                writeOwnedR07Trace(
+                                    deliveryTrace,"UI_TASK_DISPATCH\n",false);
+                            task();
+                        }
+                    }
+                });
+            if(!deliveryTrace.empty())
+                writeOwnedR07Trace(
+                    deliveryTrace,queued?"POST_ACCEPTED\n":"POST_REJECTED\n",
+                    false);
+            return queued;
+        }catch(...){
+            if(!deliveryTrace.empty())
+                writeOwnedR07Trace(deliveryTrace,"POST_EXCEPTION\n",false);
+            return false;
+        }
+    };
+#else
     return [dispatch,weak](FileOperationController::UiTask task) mutable {
         if(!dispatch||!task)return false;
         try{
@@ -105,6 +152,7 @@ fxfile::previewops::FileOperationController::Post MainWindow::FileOperationUiPos
                 });
         }catch(...){return false;}
     };
+#endif
 }
 fxfile::previewops::FileOperationController::RestoreCallback MainWindow::FileOperationRestoreCallback(){
     auto weak=get_weak();
@@ -401,6 +449,13 @@ void MainWindow::ExecuteFileCommand(fxfile::filecommand::Kind kind){
 }
 void MainWindow::OnFileCommandCompleted(
  FileOperationController::FileCommandCompletion completion){
+#if defined(FLYEXPLORER_R07_OWNED_RUNTIME_TEST)
+ if(auto deliveryTrace=readOwnedR07Environment(
+        L"FLYEXPLORER_R07_OWNED_DELIVERY_TRACE");
+    deliveryTrace&&ownedR07PathUnderTemp(*deliveryTrace))
+     writeOwnedR07Trace(
+         *deliveryTrace,"ON_FILE_COMPLETION\n",false);
+#endif
  using Disposition=FileOperationController::CommandDisposition;
  const auto disposition=mFileOperations.acceptFileCommand(
      completion,FileOperationContext(completion.context.side));
