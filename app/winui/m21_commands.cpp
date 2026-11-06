@@ -458,8 +458,7 @@ void MainWindow::OnFileCommandCompleted(
              completion.result.error!=ERROR_SUCCESS?"REJECT_ERROR\n":
              !completion.result.renameEvidence.verified?
                  "REJECT_RENAME_EVIDENCE\n":
-             !ownedR07PathEqual(
-                 *expectedOriginal,completion.originalRenameSource)?
+             !ownedR07PathEqual(*expectedOriginal,completion.originalRenameSource)?
                  "REJECT_ORIGINAL_PATH\n":
              !ownedR07PathEqual(*expectedTarget,completion.result.target)?
                  "REJECT_TARGET_PATH\n":nullptr;
