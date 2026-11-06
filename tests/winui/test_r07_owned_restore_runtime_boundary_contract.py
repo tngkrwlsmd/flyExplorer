@@ -86,6 +86,42 @@ class OwnedRestoreRuntimeBoundaryContract(unittest.TestCase):
         self.assertNotIn("OnUndo", source)
         self.assertNotIn("OnRedo", source)
 
+    def test_post_failure_releases_only_its_own_busy_ticket(self):
+        """큐 등록 실패가 UI 완료 콜백 없이도 해당 작업의 busy를 해제한다."""
+        controller = read("app/winui/file_operation_controller.cpp")
+        worker = controller.split(
+            "FileOperationController::StartStatus FileOperationController::startFileCommand(", 1
+        )[1].split("FileOperationController::CommandDisposition", 1)[0]
+        self.assertIn("posted=post([", worker)
+        self.assertIn("if(!posted){", worker)
+        failure = worker.split("if(!posted){", 1)[1].split("}).detach();", 1)[0]
+        self.assertIn("std::lock_guard<std::mutex> lock(shared->mutex)", failure)
+        self.assertIn("if(shared->epoch==ticket)shared->busy=false;", failure)
+        self.assertNotIn("completion(std::move(value))", failure)
+
+    def test_delivery_trace_separates_enqueue_from_ui_execution(self):
+        """테스트 빌드에서만 등록 결과·UI 진입·실제 전달을 구별한다."""
+        source = read("app/winui/m21_commands.cpp")
+        post = source.split(
+            "FileOperationController::Post MainWindow::FileOperationUiPost(){", 1
+        )[1].split(
+            "FileOperationController::RestoreCallback MainWindow::FileOperationRestoreCallback(){", 1
+        )[0]
+        owned, normal = post.split("#else", 1)
+        for marker in (
+            '"POST_CALLED\\n"', '"POST_REJECTED\\n"',
+            '"POST_ACCEPTED\\n"', '"POST_EXCEPTION\\n"',
+            '"UI_TASK_ENTERED\\n"', '"UI_TASK_DISPATCH\\n"',
+        ):
+            self.assertIn(marker, owned)
+            self.assertNotIn(marker, normal)
+        self.assertLess(owned.index('"UI_TASK_ENTERED\\n"'),
+                        owned.index('"UI_TASK_DISPATCH\\n"'))
+        self.assertLess(owned.index("if(auto ui=weak.get())"),
+                        owned.index('"UI_TASK_DISPATCH\\n"'))
+        self.assertIn("if(!ui->mClosing)", owned)
+        self.assertIn("return queued;", owned)
+
     def test_runtime_completion_is_traced_once_before_owned_refresh(self):
         source = read("app/winui/m21_commands.cpp")
         callback = source.split(
