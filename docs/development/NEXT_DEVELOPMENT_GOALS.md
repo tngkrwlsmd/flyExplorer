@@ -1,3 +1,16 @@
+# 2026-11-06 — 다음 단위: R07-23E worker Post → OnFileCommandCompleted 전달 분리
+
+R07-23E의 실제 F2 Rename은 세 중앙 실행에서 대상 파일 생성까지 완료됐지만, 테스트 전용 trace와 `acceptFileCommand` 이후 계측이 모두 없었다. 따라서 watcher stale이나 private 복원 자체를 다시 시험하지 않는다.
+
+다음 한 단위는 일반 제품에 훅을 넣지 않는 명시적 소유 런타임 빌드에서만 다음 두 사실을 분리한다.
+
+1. 파일 작업 worker의 `FileOperationUiPost` 호출이 true/false 중 무엇을 반환했는지, 그리고 false라면 controller busy 해제가 수행됐는지 기록한다.
+2. true라면 DispatcherQueue에 들어간 `UiTask`가 실제 UI 스레드에서 실행돼 `OnFileCommandCompleted`에 진입했는지 정확히 한 번 기록한다.
+
+소유 TEMP의 정확한 원본/대상/trace 경계, 일반 Release 문자열 미포함, 사용자 설정·클립보드·휴지통·외부 전송 금지는 유지한다. 이 계측에서 최초 경계를 확인하기 전 동일 F2→복원 GUI를 반복하거나 사용자 Undo/Redo에 연결하지 않는다. 완료 기준은 변경 소스 계약, 테스트 전용 Windows Release, 실제 소유 GUI의 전달 단계 표식, fixture/설정 보존 및 사용 슬롯 idle 정리다.
+
+---
+
 # flyExplorer 향후 작업 전체 정리
 
 기준: **2026-10-31 실제 Windows 탐색기 대조**. 상세 요구사항과 범위는

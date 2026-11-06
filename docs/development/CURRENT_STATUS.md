@@ -1,3 +1,12 @@
+# 2026-11-06 — R07-23E 실제 Rename 완료 뒤 UI completion 전달 경계 미도달
+
+- **반영된 검증 경계:** `87267e12be47b782f781671c45d5b69ef7f32736`~`52631e9ab9612146961e1abb312a157b3e292e96`은 명시적 `FlyExplorerR07OwnedRuntimeTest` 빌드에서만 활성화되는 소유 런타임 진입과 최초 거절 단계 계측을 추가했다. 일반 Release에는 매크로·환경 진입·trace 문자열이 포함되지 않으며 사용자 Undo/Redo·Ctrl+Z·메뉴·세션에는 연결하지 않았다.
+- **통과 근거:** 일반 Release 격리 확인 [#42141076080](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/42141076080)에서 관련 소스 21/21, GUI Python 컴파일, 일반 WinUI Release, 전용 문자열 미포함, EXE SHA-256 `ded808c8409eb8ac9810833e7fc9757e32d60c1c5b34e5872e9daac92804a665`, 소유 정리 PASS. 변경 후 소스 계약은 [#42144517962](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/42144517962) 및 [#42145287796](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/42145287796)에서 PASS. 각 중앙 실행의 테스트 전용 WinUI x64 Release도 PASS했으며 IPDB/IOBJ 부재로 27,323함수 전체 생성됐다.
+- **실제 GUI 실패 보존:** [#42143079176](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/42143079176), [#42144555422](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/42144555422), [#42145343421](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/42145343421)에서 소유 TEMP 파일의 실제 F2 Rename은 완료돼 원본 없음/대상 있음이 확인됐지만 private 복원 trace는 생성되지 않았다. 마지막 실행은 `acceptFileCommand` 직후의 `Ignored/Stale/Failed` 계측도 생성하지 못했으므로 watcher stale 추정은 근거가 아니며, 현재 최초 미도달 경계는 파일 작업 worker의 `Post`부터 실제 `OnFileCommandCompleted` 진입 전까지다. fixture·레거시 설정 보존/정리는 PASS.
+- **판정/한계:** 자동 복원·DispatcherQueue 완료·단회 콜백·원본 바이트/파일 ID 보존은 **FAIL/NOT VERIFIED**이며 R07-23E 전체 수용이 아니다. 실패 증거를 보존하고 동일 GUI는 반복하지 않는다. 다음은 사용자 파일을 건드리지 않는 소유 빌드에서 worker `Post` 반환값과 UI task 진입을 한 번만 계측해 전달 실패와 실행 지연을 구분하는 일이다. 상세는 [R07_OWNED_RESTORE_RUNTIME_20261106.md](R07_OWNED_RESTORE_RUNTIME_20261106.md)를 따른다.
+
+---
+
 # 2026-11-06 — R07-23D WinUI 복원 후보의 단일 소유 인출 경계: 소스 17/17·Release PASS
 
 - **제품 변경:** 제품 커밋 `659d7b112d3557b7c2ee1966b7760519fa3c1a97`과 `4c4557e2847ed6e1d89ca663f3471294d38cfa81`에서 private WinUI 조합 메서드를 `StartPendingRenameRestoreForCurrentOwner(Context)`로 바꿨다. 호출자가 이미 인출한 후보를 넘기지 않고, 현재 소유 컨텍스트를 먼저 확인한 뒤 컨트롤러의 `takeRenameRestoreCandidate`로 후보를 한 번만 소비하고 즉시 기존 비동기 복원에 이동한다. 따라서 외부 호출자가 인출 후보를 복사·재사용하거나 잘못된 후보를 조합 경계에 주입할 수 있는 내부 API 면적을 줄였다. 실제 DispatcherQueue Post·약한 창 완료 콜백과 기존 ticket/탐색 세대·활성 패널 검사는 유지한다.
