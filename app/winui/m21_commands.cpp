@@ -244,6 +244,42 @@ MainWindow::StartPendingRenameRestoreForCurrentOwner(
 #endif
     return status;
 }
+#if defined(FLYEXPLORER_R07_OWNED_RUNTIME_TEST)
+void MainWindow::ResumeOwnedR07RestoreAfterRefresh(
+ int side,std::size_t tab,std::uint64_t request,bool settled){
+    if(!mOwnedR07RestoreWaitingContext||
+       request!=mOwnedR07RestoreWaitingRequest||
+       side!=mOwnedR07RestoreWaitingContext->side||
+       tab!=mOwnedR07RestoreWaitingContext->tab)return;
+    // Consume the exact pending request once, including failed settlements.
+    auto context=std::move(*mOwnedR07RestoreWaitingContext);
+    mOwnedR07RestoreWaitingContext.reset();
+    mOwnedR07RestoreWaitingRequest=0;
+    auto trace=[this](char const* stage){
+        if(!mOwnedR07RestoreTracePath.empty()&&
+           ownedR07PathUnderTemp(mOwnedR07RestoreTracePath))
+            writeOwnedR07Trace(mOwnedR07RestoreTracePath,stage,false);
+    };
+    if(!mOwnedR07RestoreRuntimeActive||!settled||
+       !RestoreCompletionContextCurrent(context)){
+        trace("START_NAV_SETTLE_REJECTED\n");
+        mOwnedR07RestoreRuntimeActive=false;
+        mOwnedR07RestoreTracePath.clear();
+        return;
+    }
+    const auto status=StartPendingRenameRestoreForCurrentOwner(
+        std::move(context));
+    if(status==FileOperationController::StartStatus::Started){
+        trace("STARTED\n");
+        SetFileButtonsBusy(true,false);
+        StatusText().Text(L"테스트 소유 이름 복원 동작을 확인하는 중입니다...");
+        return;
+    }
+    trace("START_REJECTED\n");
+    mOwnedR07RestoreRuntimeActive=false;
+    mOwnedR07RestoreTracePath.clear();
+}
+#endif
 bool MainWindow::RestoreCompletionContextCurrent(
  FileOperationController::Context const& origin) const{
     // WindowWorkspaceController deliberately gives the first live WindowTab
@@ -646,6 +682,31 @@ void MainWindow::OnFileCommandCompleted(
          }else if(writeOwnedR07Trace(*trace,"BEGIN\n",true)){
              mOwnedR07RestoreRuntimeActive=true;
              mOwnedR07RestoreTracePath=*trace;
+             // The watcher can start a refresh after the accepted F2 rename.
+             // Wait only for that exact same-owner request to settle; never
+             // bypass the existing navigation/ownership or candidate guards.
+             const auto& owner=completion.context;
+             if(!mClosing&&owner.side>=0&&owner.side<=1&&owner.route&&
+                ActiveWindowTab().identity==owner.windowTabIdentity&&
+                ActiveWindowTab().model.activePane==owner.side){
+                 auto const& pane=ActiveWindowTab().model.panes[
+                     static_cast<std::size_t>(owner.side)];
+                 if(pane.active==owner.tab&&
+                    owner.tab<pane.tabs.size()&&
+                    owner.tab<pane.pending.size()&&
+                    owner.tab<pane.routeIds.size()&&
+                    owner.tab<pane.filesystemPaths.size()&&
+                    pane.pending[owner.tab]!=0&&
+                    pane.routeIds[owner.tab]==owner.route&&
+                    pane.filesystemPaths[owner.tab]==owner.visibleFolder&&
+                    pane.tabs[owner.tab].snapshot().parsingName==
+                        owner.visibleShellFolder){
+                     mOwnedR07RestoreWaitingContext=owner;
+                     mOwnedR07RestoreWaitingRequest=pane.pending[owner.tab];
+                     writeOwnedR07Trace(*trace,"WAIT_NAV_REFRESH\n",false);
+                     return;
+                 }
+             }
              const auto restore=StartPendingRenameRestoreForCurrentOwner(
                  completion.context);
              if(restore==FileOperationController::StartStatus::Started){
