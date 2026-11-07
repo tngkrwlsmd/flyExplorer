@@ -1,4 +1,12 @@
-# 2026-11-06 — 다음 단위: R07-23E worker Post → OnFileCommandCompleted 전달 분리
+# 2026-11-07 — R07-23E 정상 소유 런타임 집중 수용, 확대 연결 금지
+
+**현재 우선순위 판단:** 정확한 소스 `19101f3baf9a6f4012f3e933ec3bf2d46280de25`에서 [중앙 Windows #42366071785](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/42366071785)의 테스트 전용 WinUI x64 Release와 소유 TEMP F2 Rename→private 복원, DispatcherQueue 완료·단회 추적·바이트/파일 ID 보존·기존 설정 불변이 **PASS**했다. [영향 소스 #42366517090](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/42366517090)에서 계약 **11/11 PASS**했다. 직전 [#42362156652](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/42362156652)의 첫 거절 원인인 `START_CONTEXT_NAV_PENDING`은 정확한 동일 소유 Refresh 요청 완료를 기다린 뒤 원래 소유권을 재검사하는 테스트 전용 수정으로 해결한 범위에서 확인됐다. **이전 worker Post→UI 전달 추적 작업은 반복하지 않는다.**
+
+**남은 미검증 경계:** 이번 빌드는 테스트 전용이므로 새로운 일반 Release의 진단 문자열 미포함 재검증, 창 종료·WindowTab/패널/PaneTab·route 변경과 복원 대기 경합의 추가 실제 GUI, `Post=false`의 실제 UI busy 해제, 실패한 복원 분기 및 시각적 픽셀 결과를 수용한 것으로 확대하지 않는다. 사용자용 Undo/Redo·Ctrl+Z·개인 파일 복원·영속 이력은 계속 비활성화한다. 추가 작업은 별도의 사용자 승인·새 근거가 있을 때에만 선택하고 자동 후속 실행하지 않는다.
+
+---
+
+## 과거 계획(2026-11-06, G25 집중 검증으로 충족): R07-23E worker Post → OnFileCommandCompleted 전달 분리
 
 R07-23E의 실제 F2 Rename은 세 중앙 실행에서 대상 파일 생성까지 완료됐지만, 테스트 전용 trace와 `acceptFileCommand` 이후 계측이 모두 없었다. 따라서 watcher stale이나 private 복원 자체를 다시 시험하지 않는다.
 
