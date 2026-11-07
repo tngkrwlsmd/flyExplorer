@@ -1,3 +1,12 @@
+# 2026-11-07 — R07-23E 소유 TEMP WinUI 이름 변경·private 복원 집중 검증 PASS (G25, 한정 수용)
+
+- **최초 실패 확정:** 정확한 이전 소스 `5dbe6434de896436f05c5c6e20722485a7436396`의 [중앙 Windows CI #42362156652](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/42362156652)에서 worker `Post=true`, UI `OnFileCommandCompleted` 진입은 확인됐으나, 실제 복원 시작 전에 `START_CONTEXT_NOT_CURRENT`/`START_CONTEXT_NAV_PENDING`으로 거절됐다. 기본 WindowTab identity 0 허용 수정은 이미 포함돼 있었고, 기존 소유권·탐색 대기 거부는 약화하지 않았다.
+- **G25 최소 수정:** 정확한 제품·테스트 소스 `19101f3baf9a6f4012f3e933ec3bf2d46280de25`에 명시적 `FLYEXPLORER_R07_OWNED_RUNTIME_TEST` 빌드에서만 적용되는 단회 대기 경계를 추가했다. 테스트 소유 Rename 성공 직후 같은 WindowTab·활성 패널·PaneTab·route·표시 파일시스템/Shell 폴더의 **기존 pending Refresh 요청 번호**를 기억하고, 정확한 요청이 성공적으로 종료된 경우에만 원래 컨텍스트와 컨트롤러 후보 소유권을 다시 검사해 복원을 시작한다. 잘못된 요청·실패·창/탭/경로 변경은 거절하며 사용자 Undo/Redo·Ctrl+Z를 연결하지 않는다.
+- **실제 검증:** [중앙 Windows CI #42366071785](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/42366071785)에서 테스트 전용 WinUI x64 Release 빌드, 소유 TEMP의 F2 Rename→private 복원, 결과 기록 정확히 한 번, DispatcherQueue 완료, 원본 바이트·파일 ID 보존, fixture 정리 및 기존 사용자 설정 불변 **PASS**. [Windows 소스 계약 #42366517090](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/42366517090)에서 영향받은 계약 **11/11 PASS**, 전용 체크아웃 정리 PASS. 작업용 임시 브랜치는 `main`과 SHA 일치 및 열린 PR 없음 확인 후 삭제하고, 제어 저장소 원격 실행 슬롯도 idle 복구했다.
+- **수용 범위와 미검증:** R07-23E는 **해당 테스트 소유 정상 경로에 한하여 수용**한다. 일반 Release의 새 변경분에 대한 테스트 표식 바이너리 미포함 검사는 이번 G25에서 별도로 실행하지 않았다. 창 종료·탭/패널 전환 중 별도 GUI 경합, 실패한 native 복원 분기, 비정상 `Post=false`의 실제 GUI busy 해제, 화면 픽셀, 사용자 파일 복원·Undo/Redo는 NOT TESTED/NOT CONNECTED다. 이미 검증한 worker 전달이나 다른 기능을 이 이유만으로 재실행하지 않는다.
+
+---
+
 # 2026-11-06 — R07-23E 실제 Rename 완료 뒤 UI completion 전달 경계 미도달
 
 - **반영된 검증 경계:** `87267e12be47b782f781671c45d5b69ef7f32736`~`52631e9ab9612146961e1abb312a157b3e292e96`은 명시적 `FlyExplorerR07OwnedRuntimeTest` 빌드에서만 활성화되는 소유 런타임 진입과 최초 거절 단계 계측을 추가했다. 일반 Release에는 매크로·환경 진입·trace 문자열이 포함되지 않으며 사용자 Undo/Redo·Ctrl+Z·메뉴·세션에는 연결하지 않았다.
