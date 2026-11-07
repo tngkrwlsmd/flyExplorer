@@ -352,6 +352,12 @@ namespace winrt::FlyExplorer::implementation
         // Normal product builds have neither this state nor its environment path.
         bool mOwnedR07RestoreRuntimeActive=false;
         std::wstring mOwnedR07RestoreTracePath{};
+        // One test-owned rename may wait for its exact in-flight Shell refresh.
+        // No timer, user command, or personal-file retry is enabled.
+        std::optional<FileOperationController::Context> mOwnedR07RestoreWaitingContext{};
+        std::uint64_t mOwnedR07RestoreWaitingRequest=0;
+        void ResumeOwnedR07RestoreAfterRefresh(int side,std::size_t tab,
+            std::uint64_t request,bool settled);
 #endif
         bool RestoreCompletionContextCurrent(
             FileOperationController::Context const& origin) const;
