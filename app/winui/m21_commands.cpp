@@ -426,13 +426,43 @@ void MainWindow::ExecuteFileCommand(fxfile::filecommand::Kind kind){
      }
      request.source=mPendingNameEdit->source;
  }
+#if defined(FLYEXPLORER_R07_OWNED_RUNTIME_TEST)
+ // Independent worker trace for the exact test-owned F2 rename only.
+ FileOperationController::FileCommandWorkerTrace workerTrace{};
+ if(kind==fxfile::filecommand::Kind::RenameSelected){
+     auto expectedOriginal=readOwnedR07Environment(
+         L"FLYEXPLORER_R07_OWNED_ORIGINAL");
+     auto expectedTarget=readOwnedR07Environment(
+         L"FLYEXPLORER_R07_OWNED_TARGET");
+     auto candidate=readOwnedR07Environment(
+         L"FLYEXPLORER_R07_OWNED_WORKER_TRACE");
+     if(expectedOriginal&&expectedTarget&&candidate&&
+        ownedR07PathUnderTemp(*expectedOriginal)&&
+        ownedR07PathUnderTemp(*expectedTarget)&&
+        ownedR07PathUnderTemp(*candidate)&&
+        ownedR07PathEqual(*expectedOriginal,request.source)&&
+        ownedR07PathEqual(*expectedTarget,
+            (std::filesystem::path(request.parent)/request.name).wstring())&&
+        ::GetFileAttributesW(candidate->c_str())==INVALID_FILE_ATTRIBUTES&&
+        ::GetLastError()==ERROR_FILE_NOT_FOUND){
+         workerTrace=[path=*candidate](char const* stage){
+             writeOwnedR07Trace(path,stage,
+                 std::strcmp(stage,"WORKER_POST_PENDING\n")==0);
+         };
+     }
+ }
+#endif
  auto post=FileOperationUiPost();
  auto weak=get_weak();
  const auto status=mFileOperations.startFileCommand(
      std::move(request),FileOperationContext(side),std::move(post),
      [weak](FileOperationController::FileCommandCompletion completion){
          if(auto ui=weak.get())ui->OnFileCommandCompleted(std::move(completion));
-     });
+     }
+#if defined(FLYEXPLORER_R07_OWNED_RUNTIME_TEST)
+     ,std::move(workerTrace)
+#endif
+     );
  if(status==FileOperationController::StartStatus::Started){
      // Do not reassert an earlier failure after this new command finishes.
      ActiveWindowTab().fileOperationNotice.clear();
