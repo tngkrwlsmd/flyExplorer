@@ -106,6 +106,8 @@ int main(){
  assert(insideScope(L"C:/",L"C:\\Child\\match.txt",true));
  assert(indexSql(false,L"file:C:/O'Brien/",L"report").find(
      L"WHERE DIRECTORY='file:C:/O''Brien/'")!=std::wstring::npos);
+ assert(indexSql(true,L"file:C:/O'Brien/",L"report").find(
+     L"WHERE SCOPE='file:C:/O''Brien/'")!=std::wstring::npos);
  assert(indexSql(true,L"file:C:/Owned/",L"a'b").find(
      L"WHERE SCOPE='file:C:/Owned/' AND System.FileName LIKE '%a''b%'")!=std::wstring::npos);
  fxfile::previewsearch::SearchController::Context a{},b{};
