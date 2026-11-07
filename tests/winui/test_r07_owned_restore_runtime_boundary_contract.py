@@ -147,6 +147,28 @@ class OwnedRestoreRuntimeBoundaryContract(unittest.TestCase):
             'worker_lines == ["WORKER_POST_PENDING", "WORKER_POST_TRUE"]', gui
         )
 
+    def test_restore_start_rejection_is_only_test_owned_trace(self):
+        source = read("app/winui/m21_commands.cpp")
+        start = source.split(
+            "MainWindow::StartPendingRenameRestoreForCurrentOwner(", 1
+        )[1].split("bool MainWindow::RestoreCompletionContextCurrent(", 1)[0]
+        self.assertIn(
+            "#if defined(FLYEXPLORER_R07_OWNED_RUNTIME_TEST)", start
+        )
+        for stage in (
+            "START_CONTEXT_NOT_CURRENT",
+            "START_CANDIDATE_UNAVAILABLE",
+            "START_ASYNC_BUSY",
+            "START_ASYNC_STALE",
+            "START_ASYNC_THREAD_FAILURE",
+        ):
+            self.assertIn(stage, start)
+        self.assertIn("if(!RestoreCompletionContextCurrent(liveContext))", start)
+        self.assertIn("if(!taken){", start)
+        self.assertIn("startTakenRenameRestoreAsync(", start)
+        self.assertIn("traceStartReject", start)
+        self.assertNotIn("restoreRenameNoReplace(", start)
+
     def test_runtime_completion_is_traced_once_before_owned_refresh(self):
         source = read("app/winui/m21_commands.cpp")
         callback = source.split(
