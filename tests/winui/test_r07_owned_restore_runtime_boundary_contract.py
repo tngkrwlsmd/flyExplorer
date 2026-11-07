@@ -169,6 +169,51 @@ class OwnedRestoreRuntimeBoundaryContract(unittest.TestCase):
         self.assertIn("traceStartReject", start)
         self.assertNotIn("restoreRenameNoReplace(", start)
 
+    def test_owned_restore_context_rejection_reports_exact_guard(self):
+        """실기 소유권 거부를 테스트 빌드에서만 분류하고 실제 차단은 보존한다."""
+        source = read("app/winui/m21_commands.cpp")
+        start = source.split(
+            "MainWindow::StartPendingRenameRestoreForCurrentOwner(", 1
+        )[1].split("bool MainWindow::RestoreCompletionContextCurrent(", 1)[0]
+        self.assertIn("if(!RestoreCompletionContextCurrent(liveContext)){", start)
+        diagnostic = start.split("START_CONTEXT_NOT_CURRENT", 1)[1].split(
+            "#endif", 1
+        )[0]
+        for stage in (
+            "START_CONTEXT_CLOSING",
+            "START_CONTEXT_INVALID_ORIGIN",
+            "START_CONTEXT_INACTIVE_PANE",
+            "START_CONTEXT_OTHER_TAB",
+            "START_CONTEXT_MISSING_TAB",
+            "START_CONTEXT_MISSING_PENDING",
+            "START_CONTEXT_NAV_PENDING",
+            "START_CONTEXT_MISSING_ROUTE",
+            "START_CONTEXT_ROUTE_CHANGED",
+            "START_CONTEXT_MISSING_PATH",
+            "START_CONTEXT_FOLDER_CHANGED",
+            "START_CONTEXT_SHELL_CHANGED",
+            "START_CONTEXT_WINDOW_TAB_MISSING",
+        ):
+            self.assertIn(stage, diagnostic)
+        self.assertIn("traceStartReject(reason)", diagnostic)
+        self.assertIn(
+            "return FileOperationController::StartStatus::StaleConfirmation;",
+            start.split("traceStartReject(reason)", 1)[1],
+        )
+        guard = source.split(
+            "bool MainWindow::RestoreCompletionContextCurrent(", 1
+        )[1].split("void MainWindow::OnRenameRestoreCompleted(", 1)[0]
+        for safety in (
+            "if(mClosing||origin.side<0||origin.side>1||",
+            "!origin.windowTabIdentity||!origin.route",
+            "state.model.activePane!=origin.side",
+            "pane.pending[origin.tab]",
+            "pane.routeIds[origin.tab]!=origin.route",
+            "pane.filesystemPaths[origin.tab]!=origin.visibleFolder",
+            "origin.visibleShellFolder",
+        ):
+            self.assertIn(safety, guard)
+
     def test_runtime_completion_is_traced_once_before_owned_refresh(self):
         source = read("app/winui/m21_commands.cpp")
         callback = source.split(
