@@ -96,7 +96,8 @@ class OwnedRestoreRuntimeBoundaryContract(unittest.TestCase):
         self.assertIn("if(!posted){", worker)
         failure = worker.split("if(!posted){", 1)[1].split("}).detach();", 1)[0]
         self.assertIn("std::lock_guard<std::mutex> lock(shared->mutex)", failure)
-        self.assertIn("if(shared->epoch==ticket)shared->busy=false;", failure)
+        self.assertIn("if(shared->epoch==ticket){", failure)
+        self.assertIn("shared->busy=false;", failure)
         self.assertNotIn("completion(std::move(value))", failure)
 
     def test_delivery_trace_separates_enqueue_from_ui_execution(self):
