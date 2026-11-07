@@ -500,19 +500,29 @@ void MainWindow::OpenRecentActivityFilePath(std::wstring const& path){
             return live.tab==context.tab&&live.route==context.route&&
                    live.visibleFolder==context.visibleFolder;
         },
-        [weak,path](Open::Result result){
-            if(auto ui=weak.get()){
-                if(result==Open::Result::Opened){
-                    ui->mRecentActivity.recordFile(path);
-                    if(ui->RecentActivityPanel().Visibility()==Visibility::Visible)
-                        ui->RefreshRecentActivityPanel();
-                    if(ui->HomeOverviewPanel().Visibility()==Visibility::Visible)
-                        ui->RefreshHomeOverview();
-                }
-                ui->StatusText().Text(result==Open::Result::Opened?
-                    L"기본 앱으로 최근 파일을 열었습니다.":
-                    L"최근 파일을 열 수 없습니다. 파일 위치나 연결 앱을 확인하세요.");
+        [weak,path,context](Open::Result result){
+            auto ui=weak.get();
+            if(!ui||ui->mClosing)return;
+            // An accepted open still belongs in opted-in history, even if
+            // the user navigated away while the external app was starting.
+            if(result==Open::Result::Opened)
+                ui->mRecentActivity.recordFile(path);
+            // Do not repaint a different WindowTab/pane/route with an old
+            // completion. The request's preflight alone is not sufficient.
+            if(ui->ActiveWindowTab().identity!=context.windowTabIdentity||
+               ui->ActiveWindowTab().model.activePane!=context.side)return;
+            const auto live=ui->FileOperationContext(context.side);
+            if(live.tab!=context.tab||live.route!=context.route||
+               live.visibleFolder!=context.visibleFolder)return;
+            if(result==Open::Result::Opened){
+                if(ui->RecentActivityPanel().Visibility()==Visibility::Visible)
+                    ui->RefreshRecentActivityPanel();
+                if(ui->HomeOverviewPanel().Visibility()==Visibility::Visible)
+                    ui->RefreshHomeOverview();
             }
+            ui->StatusText().Text(result==Open::Result::Opened?
+                L"기본 앱으로 최근 파일을 열었습니다.":
+                L"최근 파일을 열 수 없습니다. 파일 위치나 연결 앱을 확인하세요.");
         });
     if(start==Open::Start::Started)
         StatusText().Text(L"선택한 최근 파일을 기본 앱으로 여는 중입니다.");
