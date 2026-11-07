@@ -82,6 +82,10 @@ public:
     using Post=std::function<bool(UiTask)>;
     using TransferCallback=std::function<void(TransferCompletion)>;
     using FileCommandCallback=std::function<void(FileCommandCompletion)>;
+#if defined(FLYEXPLORER_R07_OWNED_RUNTIME_TEST)
+    // Worker-only observation for the explicitly owned runtime test binary.
+    using FileCommandWorkerTrace=std::function<void(char const*)>;
+#endif
 
     FileOperationController();
     ~FileOperationController();
@@ -119,7 +123,11 @@ public:
 
     StartStatus startFileCommand(
         fxfile::filecommand::Request request,Context context,
-        Post post,FileCommandCallback completion);
+        Post post,FileCommandCallback completion
+#if defined(FLYEXPLORER_R07_OWNED_RUNTIME_TEST)
+        ,FileCommandWorkerTrace workerTrace={}
+#endif
+        );
     CommandDisposition acceptFileCommand(
         FileCommandCompletion const& completion,Context const& liveContext);
 
