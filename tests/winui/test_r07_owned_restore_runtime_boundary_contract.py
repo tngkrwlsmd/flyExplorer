@@ -122,6 +122,30 @@ class OwnedRestoreRuntimeBoundaryContract(unittest.TestCase):
         self.assertIn("if(!ui->mClosing)", owned)
         self.assertIn("return queued;", owned)
 
+    def test_test_only_worker_result_and_busy_release_trace(self):
+        """Worker Post return and ticket busy release are independent of UI."""
+        header = read("app/winui/file_operation_controller.h")
+        controller = read("app/winui/file_operation_controller.cpp")
+        commands = read("app/winui/m21_commands.cpp")
+        gui = read("tests/winui/test_owned_r07_restore_runtime_gui.py")
+        self.assertIn("using FileCommandWorkerTrace=", header)
+        self.assertIn("FLYEXPLORER_R07_OWNED_WORKER_TRACE", commands)
+        self.assertIn("ownedR07PathUnderTemp(*candidate)", commands)
+        self.assertIn("ownedR07PathEqual(*expectedOriginal,request.source)", commands)
+        self.assertIn("std::move(workerTrace)", commands)
+        for stage in (
+            "WORKER_POST_PENDING", "WORKER_POST_TRUE", "WORKER_POST_FALSE",
+            "WORKER_BUSY_RELEASED", "WORKER_BUSY_NOT_RELEASED",
+            "WORKER_POST_EXCEPTION",
+        ):
+            self.assertIn(stage, controller)
+        self.assertIn("if(shared->epoch==ticket)", controller)
+        self.assertIn("released=true;", controller)
+        self.assertIn('b"WORKER_POST_PENDING" in exe.read_bytes()', gui)
+        self.assertIn(
+            'worker_lines == ["WORKER_POST_PENDING", "WORKER_POST_TRUE"]', gui
+        )
+
     def test_runtime_completion_is_traced_once_before_owned_refresh(self):
         source = read("app/winui/m21_commands.cpp")
         callback = source.split(
