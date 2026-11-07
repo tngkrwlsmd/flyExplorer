@@ -58,6 +58,10 @@ def run(config: str = "Release") -> None:
     assert config == "Release"
     exe = app_exe(config)
     assert exe.is_file(), f"Product app is not built: {exe}"
+    assert b"WORKER_POST_PENDING" in exe.read_bytes(), (
+        "owned-runtime worker instrumentation is absent from the binary; "
+        "do not repeat the previously uninstrumented F2 GUI"
+    )
     original_root, original_settings = snapshot_legacy_profile()
     base = ROOT / "logs" / "r07-owned-restore-runtime"
     base.mkdir(parents=True, exist_ok=True)
@@ -79,6 +83,7 @@ def run(config: str = "Release") -> None:
     target = fixture / "OwnedAfter.txt"
     trace = Path(profile["TEMP"]) / "r07-restore-trace.txt"
     delivery_trace = Path(profile["TEMP"]) / "r07-delivery-trace.txt"
+    worker_trace = Path(profile["TEMP"]) / "r07-worker-trace.txt"
     payload = b"r07 owned runtime bytes must survive rename and restore\n"
     original.write_bytes(payload)
     before_identity = file_identity(original)
@@ -89,6 +94,7 @@ def run(config: str = "Release") -> None:
         "FLYEXPLORER_R07_OWNED_TARGET": str(target),
         "FLYEXPLORER_R07_OWNED_TRACE": str(trace),
         "FLYEXPLORER_R07_OWNED_DELIVERY_TRACE": str(delivery_trace),
+        "FLYEXPLORER_R07_OWNED_WORKER_TRACE": str(worker_trace),
     }
     process = None
     hwnd = None
@@ -182,13 +188,17 @@ def run(config: str = "Release") -> None:
                 delivery_trace.read_text(encoding="ascii", errors="replace")
                 if delivery_trace.is_file() else "<missing>"
             )
+            worker_text = (
+                worker_trace.read_text(encoding="ascii", errors="replace")
+                if worker_trace.is_file() else "<missing>"
+            )
             boundary = observed_delivery_boundary(
                 delivery_text.splitlines() if delivery_trace.is_file() else None
             )
             print(
                 "R07_OWNED_RUNTIME_DIAGNOSTIC="
                 f"boundary={boundary};trace={trace_text!r};"
-                f"delivery={delivery_text!r};"
+                f"delivery={delivery_text!r};worker={worker_text!r};"
                 f"original={original.exists()};target={target.exists()};"
                 f"editor={editor.get_value()!r}",
                 flush=True,
@@ -196,11 +206,15 @@ def run(config: str = "Release") -> None:
             raise AssertionError(
                 "owned restore did not reach verified DispatcherQueue "
                 f"completion; boundary={boundary};trace={trace_text!r};"
-                f"delivery={delivery_text!r};"
+                f"delivery={delivery_text!r};worker={worker_text!r};"
                 f"original={original.exists()};target={target.exists()}"
             ) from error
         lines = trace.read_text(encoding="ascii", errors="strict").splitlines()
         assert lines == ["BEGIN", "STARTED", "COMPLETE_VERIFIED"], lines
+        worker_lines = worker_trace.read_text(
+            encoding="ascii", errors="strict"
+        ).splitlines()
+        assert worker_lines == ["WORKER_POST_PENDING", "WORKER_POST_TRUE"], worker_lines
         delivery_lines = delivery_trace.read_text(
             encoding="ascii", errors="strict"
         ).splitlines()
@@ -228,6 +242,7 @@ def run(config: str = "Release") -> None:
         print("R07_OWNED_RUNTIME_RENAME_RESTORE_VERIFIED=PASS", flush=True)
         print("R07_OWNED_RUNTIME_TRACE_EXACTLY_ONCE=PASS", flush=True)
         print("R07_OWNED_RUNTIME_DELIVERY_TRACE=PASS", flush=True)
+        print("R07_OWNED_RUNTIME_WORKER_POST_TRUE=PASS", flush=True)
         print("R07_OWNED_RUNTIME_FILE_ID_AND_BYTES_PRESERVED=PASS", flush=True)
         passed = True
     finally:
