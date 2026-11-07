@@ -66,6 +66,13 @@ Start development from live `flyExplorer/main`, current instructions, relevant s
 - `chatgpt-codex-connector`는 개발, 코드 검토, 테스트, GitHub/PR 작업, 작업 재개 및 자동화에 사용하지 않는다. 해당 작업에서 사용자가 이 제한을 명시적으로 해제하지 않는 한 일반적인 PR 허용·GitHub 작업 지시를 사용 승인으로 해석하지 않는다. 일반 GitHub 연결 도구, GitHub API, 승인된 `personal-control-plane` 실행 경로는 이 금지의 대상이 아니다.
 - PR은 개발·검증·이벤트 전달 수단일 뿐, 이벤트를 통해 이 ChatGPT 대화가 자동으로 깨어난다고 가정하지 않는다. 실제 지원 트리거와 실행 결과를 별도로 확인하고, 완료 후 불필요한 임시 PR·브랜치는 기존 보존·정리 원칙을 따른다.
 
+## Git reference hygiene (user instruction, 2026-11-07)
+
+- `main` is the default development target. Create a short-lived branch only when isolation is genuinely necessary; after its accepted changes are on `main`, remove the completed branch promptly after verifying the exact head SHA. Do not retain finished branches as permanent work history.
+- **Do not create tags, including `branch-archive-*`, backup/retirement tags, or lightweight tag substitutes for branches, without the user's explicit request for that exact tag/release.** A branch-cleanup request does not authorize creating archival tags. The generic upstream release-tag examples do not override this flyExplorer-specific rule.
+- Before deleting a branch, check whether it contains unique unfinished work or an open PR; preserve genuine in-progress work until integrated or explicitly discarded. Do not touch `main`, other repositories, or unrelated protected evidence.
+- For reference cleanup, record inspected SHA and final ref counts, and verify post-deletion state. Avoid new cleanup branches, tags, or ceremonial PRs.
+
 ## User-directed direct-main and live comparison rule (2026-10-31)
 
 The user explicitly directs: when scoped review and actual use show no material
