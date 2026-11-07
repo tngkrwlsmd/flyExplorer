@@ -204,8 +204,8 @@ class OwnedRestoreRuntimeBoundaryContract(unittest.TestCase):
             "bool MainWindow::RestoreCompletionContextCurrent(", 1
         )[1].split("void MainWindow::OnRenameRestoreCompleted(", 1)[0]
         for safety in (
-            "if(mClosing||origin.side<0||origin.side>1||",
-            "!origin.windowTabIdentity||!origin.route",
+            "if(mClosing||origin.side<0||origin.side>1||!origin.route",
+            "state.identity!=origin.windowTabIdentity",
             "state.model.activePane!=origin.side",
             "pane.pending[origin.tab]",
             "pane.routeIds[origin.tab]!=origin.route",
@@ -213,6 +213,14 @@ class OwnedRestoreRuntimeBoundaryContract(unittest.TestCase):
             "origin.visibleShellFolder",
         ):
             self.assertIn(safety, guard)
+        self.assertNotIn("!origin.windowTabIdentity", guard)
+        self.assertNotIn("!liveContext.windowTabIdentity", start)
+        workspace = read("app/winui/window_workspace_controller.cpp")
+        self.assertIn("states_.emplace_back(0);", workspace)
+        # Initial route is still nonzero even for the identity-0 WindowTab.
+        model = read("src/base/explorer_ui_state.cpp")
+        self.assertIn("nextRoute_=routeBase+1;", model)
+        self.assertIn("pane.routeIds.push_back(nextRoute_++);", model)
 
     def test_runtime_completion_is_traced_once_before_owned_refresh(self):
         source = read("app/winui/m21_commands.cpp")
