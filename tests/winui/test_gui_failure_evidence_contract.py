@@ -173,6 +173,24 @@ class GuiFailureEvidenceContract(unittest.TestCase):
                 (non_startup / "panes.json").read_text(encoding="utf-8"))
             self.assertNotIn("sampled_transitions", unrelated["Startup"])
 
+    def test_large_owned_directory_is_bounded_and_sorted(self):
+        with TemporaryDirectory() as root:
+            owned = Path(root) / "shell-owned-bounded"
+            left = owned / "Left"
+            left.mkdir(parents=True)
+            for index in range(75):
+                (left / f"owned-{index:03d}.txt").write_bytes(b"x")
+            result = _disk_rows(left, owned)
+            self.assertTrue(result["truncated"])
+            self.assertEqual(70, len(result["items"]))
+            self.assertEqual("owned-000.txt", result["items"][0]["name"])
+            self.assertEqual("owned-069.txt", result["items"][-1]["name"])
+            for index in range(5):
+                (left / f"owned-{index:03d}.txt").unlink()
+            result = _disk_rows(left, owned)
+            self.assertEqual(70, len(result["items"]))
+            self.assertFalse(result["truncated"])
+
     def test_refuses_unowned_directory_and_skips_symlinks(self):
         with TemporaryDirectory() as root:
             base = Path(root) / "phase6-winui"

@@ -6,6 +6,7 @@ are eligible. Collection errors must never hide the original GUI failure.
 """
 from __future__ import annotations
 
+import heapq
 import json
 import os
 import re
@@ -44,9 +45,12 @@ def _disk_rows(directory: Path, owned: Path):
         return {"error": "not a test-owned directory"}
     items = []
     try:
-        for child in sorted(directory.iterdir(), key=lambda p: p.name.casefold()):
-            if len(items) >= MAX_ENTRIES:
-                break
+        # Scan the owned directory once; keep at most one extra name to
+        # report truncation without materializing every entry in memory.
+        candidates = heapq.nsmallest(
+            MAX_ENTRIES + 1, directory.iterdir(),
+            key=lambda p: p.name.casefold())
+        for child in candidates[:MAX_ENTRIES]:
             if child.is_symlink():
                 items.append({"name": _short(child.name), "kind": "symlink-skipped"})
                 continue
@@ -54,7 +58,7 @@ def _disk_rows(directory: Path, owned: Path):
             items.append({"name": _short(child.name),
                           "kind": "directory" if child.is_dir() else "file",
                           "bytes": st.st_size if child.is_file() else None})
-        return {"items": items, "truncated": len(list(directory.iterdir())) > MAX_ENTRIES}
+        return {"items": items, "truncated": len(candidates) > MAX_ENTRIES}
     except (OSError, PermissionError) as exc:
         return {"error_type": type(exc).__name__}
 
