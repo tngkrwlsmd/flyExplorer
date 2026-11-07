@@ -1753,6 +1753,15 @@ namespace winrt::FlyExplorer::implementation
             TraceG01OwnedStartup("RESULT_IGNORED");
             return;
         }
+#if defined(FLYEXPLORER_R07_OWNED_RUNTIME_TEST)
+        // accept() has settled this exact native request. Only a successful
+        // same-tab Refresh may resume the test-owned rename restore; all
+        // other settlements are consumed as a fail-closed rejection.
+        ResumeOwnedR07RestoreAfterRefresh(
+            completed.side,completed.tab,completed.request,
+            completed.active&&completed.action==Action::Refresh&&
+            (completed.kind==Kind::Applied||completed.kind==Kind::NoChange));
+#endif
         if(completed.side==0){
             switch(completed.kind){
             case Kind::Applied:TraceG01OwnedStartup("LEFT_APPLIED");break;
