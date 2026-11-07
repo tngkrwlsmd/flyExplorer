@@ -181,8 +181,7 @@ MainWindow::StartPendingRenameRestoreForCurrentOwner(
         // Never change liveContext, relax a condition, or consume a candidate.
         char const* reason="START_CONTEXT_UNCLASSIFIED\n";
         if(mClosing)reason="START_CONTEXT_CLOSING\n";
-        else if(liveContext.side<0||liveContext.side>1||
-                !liveContext.windowTabIdentity||!liveContext.route)
+        else if(liveContext.side<0||liveContext.side>1||!liveContext.route)
             reason="START_CONTEXT_INVALID_ORIGIN\n";
         else {
             bool found=false;
@@ -247,8 +246,10 @@ MainWindow::StartPendingRenameRestoreForCurrentOwner(
 }
 bool MainWindow::RestoreCompletionContextCurrent(
  FileOperationController::Context const& origin) const{
-    if(mClosing||origin.side<0||origin.side>1||
-       !origin.windowTabIdentity||!origin.route)return false;
+    // WindowWorkspaceController deliberately gives the first live WindowTab
+    // identity 0. Only the route must be nonzero; the exact window identity
+    // (including 0) is still matched against a live workspace state below.
+    if(mClosing||origin.side<0||origin.side>1||!origin.route)return false;
     for(std::size_t i=0;i<mWorkspace.count();++i){
         auto const& state=mWorkspace.state(i);
         if(state.identity!=origin.windowTabIdentity)continue;
