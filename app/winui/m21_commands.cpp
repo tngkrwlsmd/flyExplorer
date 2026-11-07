@@ -165,15 +165,42 @@ MainWindow::StartPendingRenameRestoreForCurrentOwner(
  FileOperationController::Context liveContext){
     // Refuse before consuming the candidate if the visible owner already
     // changed. The controller repeats its own ticket/context checks.
-    if(!RestoreCompletionContextCurrent(liveContext))
+#if defined(FLYEXPLORER_R07_OWNED_RUNTIME_TEST)
+    // Test-only stages: reject before moving/consuming an unverified claim.
+    auto traceStartReject=[this](char const* stage){
+        if(mOwnedR07RestoreRuntimeActive&&
+           !mOwnedR07RestoreTracePath.empty()&&
+           ownedR07PathUnderTemp(mOwnedR07RestoreTracePath))
+            writeOwnedR07Trace(mOwnedR07RestoreTracePath,stage,false);
+    };
+#endif
+    if(!RestoreCompletionContextCurrent(liveContext)){
+#if defined(FLYEXPLORER_R07_OWNED_RUNTIME_TEST)
+        traceStartReject("START_CONTEXT_NOT_CURRENT\n");
+#endif
         return FileOperationController::StartStatus::StaleConfirmation;
+    }
     auto post=FileOperationUiPost();
     auto completion=FileOperationRestoreCallback();
     auto taken=mFileOperations.takeRenameRestoreCandidate(liveContext);
-    if(!taken)return FileOperationController::StartStatus::StaleConfirmation;
-    return mFileOperations.startTakenRenameRestoreAsync(
+    if(!taken){
+#if defined(FLYEXPLORER_R07_OWNED_RUNTIME_TEST)
+        traceStartReject("START_CANDIDATE_UNAVAILABLE\n");
+#endif
+        return FileOperationController::StartStatus::StaleConfirmation;
+    }
+    const auto status=mFileOperations.startTakenRenameRestoreAsync(
         std::move(*taken),std::move(liveContext),
         std::move(post),std::move(completion));
+#if defined(FLYEXPLORER_R07_OWNED_RUNTIME_TEST)
+    if(status!=FileOperationController::StartStatus::Started){
+        traceStartReject(status==FileOperationController::StartStatus::Busy?
+            "START_ASYNC_BUSY\n":
+            status==FileOperationController::StartStatus::StaleConfirmation?
+            "START_ASYNC_STALE\n":"START_ASYNC_THREAD_FAILURE\n");
+    }
+#endif
+    return status;
 }
 bool MainWindow::RestoreCompletionContextCurrent(
  FileOperationController::Context const& origin) const{
