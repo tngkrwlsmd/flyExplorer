@@ -222,14 +222,25 @@ per-tab presentation extension is explicitly chosen. Additional PX17 templates,
 PX08 Share and later candidates are not automatically adopted by a generic
 continue request. After a changed performance unit is accepted, reopen its older
 acceptance only for new symptoms or a new evidenced bottleneck. If no justified
-executable unit remains, report the decision/blocker instead of expanding scope.
-The register defines completion and stop conditions.
+executable unit remains, **do not declare development complete yet**. First apply the
+Windows 11 Explorer re-comparison gate below. That gate identifies evidence-based
+new requirements; it does not waive any approval, data-safety or test exclusions.
+The register defines completion and stop conditions after this gate.
 
 Use normal ChatGPT development execution and the approved central `windows-vm`
 path; Work/Codex are relay-only under the user-adopted role split above. Do not
 access personal PCs/local desktops, use RDC, or use `chatgpt-codex-connector`.
 Documentation-only planning does not require Windows execution/build/GUI.
 Preserve existing exclusions, user-data protections and separate GUI/pixel gates.
+
+### 미완료 작업 소진 시 Windows 11 탐색기 실기 재대조 (2026-11-07 사용자 지시)
+
+- **발동 조건:** `flyExplorer/main`의 최신 코드, 최근 커밋, `CURRENT_STATUS.md`, `NEXT_DEVELOPMENT_GOALS.md`, 기존 수용 증거를 대조한 뒤 **실행 가능한 미완료 개발·결함 수정·필수 검증 단위가 정말로 없다고 판단한 경우**에만 시행한다. 현재 진행 중인 작업이나 이미 명시된 미완료 단위가 있으면 먼저 이어서 처리한다. 과거 대화의 '할 일 없음' 판단만으로 발동하지 않는다.
+- **종료 판단 전 필수 단계:** 문서만 재검토하거나 2026-10-31 대조 결과만 재사용해 Windows 11 탐색기와 동등하다고 선언하지 않는다. 승인된 `personal-control-plane` Windows VM에서 **그 시점의 실제 Windows 11 파일 탐색기와 최신 flyExplorer 제품을 직접 실행**하여 동일한 테스트 소유 폴더·파일로 비교한다. OS/Explorer 버전, flyExplorer의 정확한 소스 SHA·실행 파일, 테마·DPI·창 크기와 입력/화면 근거를 남긴다. 실행 환경이 없거나 실기 조작이 불가능하면 `BLOCKED / NOT TESTED`를 명시하고 기능 동등성을 주장하지 않는다.
+- **비교 범위:** 탐색·주소창·뒤로/앞으로·탭·파일 선택, 보기/정렬/그룹, 검색, 컨텍스트 메뉴/키보드 진입, 파일 명령·속성, 주요 보조 창·상태 표시 및 관련 사용성 등 **기존 프로젝트에서 허용된 영역**을 우선 확인한다. 기존 듀얼 패널/2단계 탭의 의도된 차이는 보존하고, G03/G04/G05 제외·G07 중단 및 사용자 데이터/OS 설정/외부 전송 제한은 그대로 지킨다. 무관한 전체 GUI·빌드 회귀를 의례적으로 재실행하거나 개인 Explorer 창·최근 항목·설정을 건드리지 않는다.
+- **차이 판정:** 각 관측을 (1) 실제 누락/오작동, (2) 기존 기능의 다른 진입점·표현, (3) 의도된 제품 차이 또는 승인 제외, (4) Windows 설치·확장·계정 의존, (5) 미관측/미검증으로 구분한다. 소스에서만 추정한 기능, 문서상 구현, 화면만 본 사례를 실동작 PASS로 승격하지 않는다. 이미 수용된 기능은 새로운 실패 증거 없이 반복 개발 과제로 만들지 않는다.
+- **개발 지침 갱신:** 새로 확인된 차이는 정확한 재현 단계·근거·영향·수용 기준과 함께 날짜가 있는 직접 비교 보고서에 기록하고, `docs/development/NEXT_DEVELOPMENT_GOALS.md`의 **앞으로 진행할 작업**에 우선순위와 다음 한 단위로 반영한다. 기존 `EXPLORER_PARITY_REQUIREMENTS.md`, `CURRENT_STATUS.md` 또는 이 `AGENTS.md`의 요구·구현 지침이 최신 실측과 충돌하면 필요한 범위만 수정한다. 기능 하나를 끝내면 최신 `main`과 근거를 다시 대조하여 다음 미완료 단위를 선택한다.
+- **정말로 차이가 없는 경우:** 실제로 비교한 **범위·환경·미관측 부분**과 '추가 실행 가능한 작업 없음' 판단 근거를 기록한 후에만 그 범위에서 종료 보고한다. 모든 Windows 11 Explorer 버전·환경에 대한 완전한 기능 동등성을 주장하지 않는다. 새 비교 항목의 발견은 무제한 기능 구현, 중단된 자동 릴레이 재개 또는 별도의 승인·검증이 필요한 동작에 대한 포괄 허가가 아니다.
 
 ### Explicit user exclusions (2026-10-19)
 
