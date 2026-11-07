@@ -5,8 +5,22 @@ UI 스레드와 worker가 순서가 다른 로그를 쓸 수 있으므로 줄 �
 """
 
 
-def observed_delivery_boundary(lines: list[str]) -> str:
+_STAGES = frozenset({
+    "POST_CALLED", "POST_ACCEPTED", "POST_REJECTED", "POST_EXCEPTION",
+    "UI_TASK_ENTERED", "UI_TASK_DISPATCH", "ON_FILE_COMPLETION",
+})
+
+
+def observed_delivery_boundary(lines: list[str] | None) -> str:
+    if lines is None:
+        return "TRACE_FILE_MISSING"
     observed = set(lines)
+    if any(line and line not in _STAGES for line in observed):
+        return "TRACE_INVALID"
+    if "POST_ACCEPTED" in observed and (
+        "POST_REJECTED" in observed or "POST_EXCEPTION" in observed
+    ):
+        return "POST_RESULT_CONFLICT"
     if "POST_CALLED" not in observed:
         return "POST_NOT_OBSERVED"
     if "POST_EXCEPTION" in observed:

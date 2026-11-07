@@ -182,7 +182,9 @@ def run(config: str = "Release") -> None:
                 delivery_trace.read_text(encoding="ascii", errors="replace")
                 if delivery_trace.is_file() else "<missing>"
             )
-            boundary = observed_delivery_boundary(delivery_text.splitlines())
+            boundary = observed_delivery_boundary(
+                delivery_text.splitlines() if delivery_trace.is_file() else None
+            )
             print(
                 "R07_OWNED_RUNTIME_DIAGNOSTIC="
                 f"boundary={boundary};trace={trace_text!r};"

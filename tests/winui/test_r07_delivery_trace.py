@@ -29,6 +29,21 @@ class R07DeliveryTraceTests(unittest.TestCase):
             with self.subTest(stages=stages):
                 self.assertEqual(observed_delivery_boundary(stages), expected)
 
+    def test_missing_file_is_not_a_missing_post(self):
+        self.assertEqual(observed_delivery_boundary(None), "TRACE_FILE_MISSING")
+        self.assertEqual(observed_delivery_boundary([]), "POST_NOT_OBSERVED")
+
+    def test_invalid_or_conflicting_trace_is_not_a_delivery_failure(self):
+        for stages, expected in (
+            (["POST_CALLED", "NOT_A_STAGE"], "TRACE_INVALID"),
+            (["POST_CALLED", "POST_ACCEPTED", "POST_REJECTED"],
+             "POST_RESULT_CONFLICT"),
+            (["POST_CALLED", "POST_ACCEPTED", "POST_EXCEPTION"],
+             "POST_RESULT_CONFLICT"),
+        ):
+            with self.subTest(stages=stages):
+                self.assertEqual(observed_delivery_boundary(stages), expected)
+
     def test_worker_ui_interleaving_does_not_change_result(self):
         self.assertEqual(observed_delivery_boundary([
             "POST_CALLED", "UI_TASK_ENTERED", "UI_TASK_DISPATCH",
