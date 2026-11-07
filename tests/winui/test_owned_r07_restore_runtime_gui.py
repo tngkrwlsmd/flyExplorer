@@ -20,6 +20,7 @@ import psutil
 from pywinauto import Desktop
 from pywinauto.keyboard import send_keys
 
+from r07_delivery_trace import observed_delivery_boundary
 from paths import ROOT, app_exe
 from profile_guard import (
     assert_legacy_profile_unchanged, snapshot_legacy_profile,
@@ -181,16 +182,19 @@ def run(config: str = "Release") -> None:
                 delivery_trace.read_text(encoding="ascii", errors="replace")
                 if delivery_trace.is_file() else "<missing>"
             )
+            boundary = observed_delivery_boundary(delivery_text.splitlines())
             print(
                 "R07_OWNED_RUNTIME_DIAGNOSTIC="
-                f"trace={trace_text!r};delivery={delivery_text!r};"
+                f"boundary={boundary};trace={trace_text!r};"
+                f"delivery={delivery_text!r};"
                 f"original={original.exists()};target={target.exists()};"
                 f"editor={editor.get_value()!r}",
                 flush=True,
             )
             raise AssertionError(
                 "owned restore did not reach verified DispatcherQueue "
-                f"completion; trace={trace_text!r};"
+                f"completion; boundary={boundary};trace={trace_text!r};"
+                f"delivery={delivery_text!r};"
                 f"original={original.exists()};target={target.exists()}"
             ) from error
         lines = trace.read_text(encoding="ascii", errors="strict").splitlines()
