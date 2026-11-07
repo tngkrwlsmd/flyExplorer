@@ -177,6 +177,49 @@ MainWindow::StartPendingRenameRestoreForCurrentOwner(
     if(!RestoreCompletionContextCurrent(liveContext)){
 #if defined(FLYEXPLORER_R07_OWNED_RUNTIME_TEST)
         traceStartReject("START_CONTEXT_NOT_CURRENT\n");
+        // Diagnostic-only: classify the existing fail-closed owner check.
+        // Never change liveContext, relax a condition, or consume a candidate.
+        char const* reason="START_CONTEXT_UNCLASSIFIED\n";
+        if(mClosing)reason="START_CONTEXT_CLOSING\n";
+        else if(liveContext.side<0||liveContext.side>1||
+                !liveContext.windowTabIdentity||!liveContext.route)
+            reason="START_CONTEXT_INVALID_ORIGIN\n";
+        else {
+            bool found=false;
+            for(std::size_t i=0;i<mWorkspace.count();++i){
+                auto const& state=mWorkspace.state(i);
+                if(state.identity!=liveContext.windowTabIdentity)continue;
+                found=true;
+                if(state.model.activePane!=liveContext.side)
+                    reason="START_CONTEXT_INACTIVE_PANE\n";
+                else {
+                    auto const& pane=state.model.panes[
+                        static_cast<std::size_t>(liveContext.side)];
+                    if(pane.active!=liveContext.tab)
+                        reason="START_CONTEXT_OTHER_TAB\n";
+                    else if(liveContext.tab>=pane.tabs.size())
+                        reason="START_CONTEXT_MISSING_TAB\n";
+                    else if(liveContext.tab>=pane.pending.size())
+                        reason="START_CONTEXT_MISSING_PENDING\n";
+                    else if(pane.pending[liveContext.tab])
+                        reason="START_CONTEXT_NAV_PENDING\n";
+                    else if(liveContext.tab>=pane.routeIds.size())
+                        reason="START_CONTEXT_MISSING_ROUTE\n";
+                    else if(pane.routeIds[liveContext.tab]!=liveContext.route)
+                        reason="START_CONTEXT_ROUTE_CHANGED\n";
+                    else if(liveContext.tab>=pane.filesystemPaths.size())
+                        reason="START_CONTEXT_MISSING_PATH\n";
+                    else if(pane.filesystemPaths[liveContext.tab]!=liveContext.visibleFolder)
+                        reason="START_CONTEXT_FOLDER_CHANGED\n";
+                    else if(pane.tabs[liveContext.tab].snapshot().parsingName!=
+                            liveContext.visibleShellFolder)
+                        reason="START_CONTEXT_SHELL_CHANGED\n";
+                }
+                break;
+            }
+            if(!found)reason="START_CONTEXT_WINDOW_TAB_MISSING\n";
+        }
+        traceStartReject(reason);
 #endif
         return FileOperationController::StartStatus::StaleConfirmation;
     }
