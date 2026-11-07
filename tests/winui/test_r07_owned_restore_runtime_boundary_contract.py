@@ -222,6 +222,47 @@ class OwnedRestoreRuntimeBoundaryContract(unittest.TestCase):
         self.assertIn("nextRoute_=routeBase+1;", model)
         self.assertIn("pane.routeIds.push_back(nextRoute_++);", model)
 
+    def test_owned_refresh_settlement_waits_for_exact_request(self):
+        """Only the exact test-owned refresh may resume the original claim."""
+        header = read("app/winui/MainWindow.xaml.h")
+        commands = read("app/winui/m21_commands.cpp")
+        window = read("app/winui/MainWindow.xaml.cpp")
+        gui = read("tests/winui/test_owned_r07_restore_runtime_gui.py")
+        self.assertIn("mOwnedR07RestoreWaitingContext", header)
+        self.assertIn("mOwnedR07RestoreWaitingRequest", header)
+        self.assertIn("#if defined(FLYEXPLORER_R07_OWNED_RUNTIME_TEST)", header)
+        self.assertIn("pane.pending[owner.tab]!=0", commands)
+        self.assertIn("pane.routeIds[owner.tab]==owner.route", commands)
+        self.assertIn("pane.filesystemPaths[owner.tab]==owner.visibleFolder", commands)
+        self.assertIn("owner.visibleShellFolder", commands)
+        self.assertIn("mOwnedR07RestoreWaitingRequest=pane.pending[owner.tab]", commands)
+        self.assertIn('"WAIT_NAV_REFRESH\\n"', commands)
+        resume = commands.split(
+            "void MainWindow::ResumeOwnedR07RestoreAfterRefresh(", 1
+        )[1].split("bool MainWindow::RestoreCompletionContextCurrent(", 1)[0]
+        for guard in (
+            "request!=mOwnedR07RestoreWaitingRequest",
+            "side!=mOwnedR07RestoreWaitingContext->side",
+            "tab!=mOwnedR07RestoreWaitingContext->tab",
+            "mOwnedR07RestoreWaitingContext.reset();",
+            "!RestoreCompletionContextCurrent(context)",
+            '"START_NAV_SETTLE_REJECTED\\n"',
+            "StartPendingRenameRestoreForCurrentOwner(",
+            '"STARTED\\n"',
+            '"START_REJECTED\\n"',
+        ):
+            self.assertIn(guard, resume)
+        self.assertLess(
+            resume.index("mOwnedR07RestoreWaitingContext.reset();"),
+            resume.index("StartPendingRenameRestoreForCurrentOwner("),
+        )
+        self.assertIn("completed.action==Action::Refresh", window)
+        self.assertIn("completed.kind==Kind::Applied||completed.kind==Kind::NoChange", window)
+        self.assertIn("ResumeOwnedR07RestoreAfterRefresh(", window)
+        self.assertIn('["BEGIN", "WAIT_NAV_REFRESH", "STARTED", "COMPLETE_VERIFIED"]', gui)
+        self.assertNotIn("OnUndo", resume)
+        self.assertNotIn("OnRedo", resume)
+
     def test_runtime_completion_is_traced_once_before_owned_refresh(self):
         source = read("app/winui/m21_commands.cpp")
         callback = source.split(
