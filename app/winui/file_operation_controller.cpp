@@ -422,7 +422,11 @@ FileOperationController::acceptTransfer(
 
 FileOperationController::StartStatus FileOperationController::startFileCommand(
     fxfile::filecommand::Request request,Context context,
-    Post post,FileCommandCallback completion)
+    Post post,FileCommandCallback completion
+#if defined(FLYEXPLORER_R07_OWNED_RUNTIME_TEST)
+    ,FileCommandWorkerTrace workerTrace
+#endif
+    )
 {
     if(!post||!completion)return StartStatus::ThreadStartFailed;
     std::uint64_t ticket=0;
@@ -448,6 +452,9 @@ FileOperationController::StartStatus FileOperationController::startFileCommand(
             shared,ticket,context=std::move(context),
             request=std::move(request),post=std::move(post),
             completion=std::move(completion)
+#if defined(FLYEXPLORER_R07_OWNED_RUNTIME_TEST)
+            ,workerTrace=std::move(workerTrace)
+#endif
         ]() mutable {
             FileCommandCompletion value{};
             value.ticket=ticket;
@@ -462,6 +469,14 @@ FileOperationController::StartStatus FileOperationController::startFileCommand(
             if(value.kind==fxfile::filecommand::Kind::RenameSelected&&
                value.result.error==ERROR_SUCCESS)
                 value.originalRenameSource=std::move(originalRenameSource);
+#if defined(FLYEXPLORER_R07_OWNED_RUNTIME_TEST)
+            // Test-only worker result: independent of WinUI queue instrumentation.
+            auto traceWorker=[&workerTrace](char const* stage) noexcept {
+                if(!workerTrace)return;
+                try{workerTrace(stage);}catch(...){}
+            };
+            traceWorker("WORKER_POST_PENDING\n");
+#endif
             bool posted=false;
             try{
                 posted=post([
@@ -470,12 +485,31 @@ FileOperationController::StartStatus FileOperationController::startFileCommand(
                 ]() mutable {
                     completion(std::move(value));
                 });
-            }catch(...){}
+            }catch(...){
+#if defined(FLYEXPLORER_R07_OWNED_RUNTIME_TEST)
+                traceWorker("WORKER_POST_EXCEPTION\n");
+#endif
+            }
+#if defined(FLYEXPLORER_R07_OWNED_RUNTIME_TEST)
+            traceWorker(posted?"WORKER_POST_TRUE\n":"WORKER_POST_FALSE\n");
+#endif
             if(!posted){
+#if defined(FLYEXPLORER_R07_OWNED_RUNTIME_TEST)
+                bool released=false;
+#endif
                 try{
                     std::lock_guard<std::mutex> lock(shared->mutex);
-                    if(shared->epoch==ticket)shared->busy=false;
+                    if(shared->epoch==ticket){
+                        shared->busy=false;
+#if defined(FLYEXPLORER_R07_OWNED_RUNTIME_TEST)
+                        released=true;
+#endif
+                    }
                 }catch(...){}
+#if defined(FLYEXPLORER_R07_OWNED_RUNTIME_TEST)
+                traceWorker(released?"WORKER_BUSY_RELEASED\n":
+                                     "WORKER_BUSY_NOT_RELEASED\n");
+#endif
             }
         }).detach();
         return StartStatus::Started;
