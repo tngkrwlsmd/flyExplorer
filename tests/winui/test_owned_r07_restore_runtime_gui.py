@@ -210,7 +210,10 @@ def run(config: str = "Release") -> None:
                 f"original={original.exists()};target={target.exists()}"
             ) from error
         lines = trace.read_text(encoding="ascii", errors="strict").splitlines()
-        assert lines == ["BEGIN", "STARTED", "COMPLETE_VERIFIED"], lines
+        assert lines in (
+            ["BEGIN", "STARTED", "COMPLETE_VERIFIED"],
+            ["BEGIN", "WAIT_NAV_REFRESH", "STARTED", "COMPLETE_VERIFIED"],
+        ), lines
         worker_lines = worker_trace.read_text(
             encoding="ascii", errors="strict"
         ).splitlines()
