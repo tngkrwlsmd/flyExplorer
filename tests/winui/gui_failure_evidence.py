@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 import os
 import re
+from itertools import islice
 from pathlib import Path
 import traceback
 from uuid import uuid4
@@ -39,22 +40,28 @@ def _safe_address(value, owned: Path):
     return "[outside test-owned scope]"
 
 
+def _bounded_entries(directory: Path):
+    """Read at most 71 direct test-owned entries, never the entire directory."""
+    with os.scandir(directory) as scan:
+        return list(islice(scan, MAX_ENTRIES + 1))
+
+
 def _disk_rows(directory: Path, owned: Path):
     if not _inside(directory, owned) or not directory.is_dir():
         return {"error": "not a test-owned directory"}
     items = []
     try:
-        for child in sorted(directory.iterdir(), key=lambda p: p.name.casefold()):
-            if len(items) >= MAX_ENTRIES:
-                break
+        candidates = _bounded_entries(directory)
+        # Sort only the bounded sample, not the potentially huge folder.
+        for child in sorted(candidates[:MAX_ENTRIES], key=lambda p: p.name.casefold()):
             if child.is_symlink():
                 items.append({"name": _short(child.name), "kind": "symlink-skipped"})
                 continue
-            st = child.stat()
+            st = child.stat(follow_symlinks=False)
             items.append({"name": _short(child.name),
-                          "kind": "directory" if child.is_dir() else "file",
-                          "bytes": st.st_size if child.is_file() else None})
-        return {"items": items, "truncated": len(list(directory.iterdir())) > MAX_ENTRIES}
+                          "kind": "directory" if child.is_dir(follow_symlinks=False) else "file",
+                          "bytes": st.st_size if child.is_file(follow_symlinks=False) else None})
+        return {"items": items, "truncated": len(candidates) > MAX_ENTRIES}
     except (OSError, PermissionError) as exc:
         return {"error_type": type(exc).__name__}
 
@@ -63,8 +70,11 @@ def _owned_labels(left: Path, right: Path):
     known = {"", "Left", "Right", "Nested", "Secondary"}
     for folder in (left, right):
         try:
-            known.update(child.name for child in folder.iterdir()
-                         if not child.is_symlink())
+            # Labels are only a redaction allowlist; unseen names stay redacted.
+            # Do not enumerate every entry merely to whitelist UIA text.
+            for child in _bounded_entries(folder)[:MAX_ENTRIES]:
+                if not child.is_symlink():
+                    known.add(child.name)
         except OSError:
             pass
     return known
