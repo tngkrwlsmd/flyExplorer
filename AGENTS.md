@@ -12,6 +12,14 @@ tngkrwlsmd/universal-agent-docs; update that core atomically rather than
 hand-editing individual generic files. Project facts belong in
 .agent-policy/PROJECT.md, while flyExplorer-specific overrides belong here.
 
+## 변경 근거·현황 감사와 문서 일관성 (2026-11-11)
+
+- 전체 저장소 검토 결과는 `docs/development/REPOSITORY_REVIEW_20261111.md`에 근거·우선순위·미검증 경계와 함께 기록한다. 해당 보고서는 **2026-11-11의 스냅샷**이며, 이후 작업의 최신 상태 조회를 대신하지 않는다.
+- 구현과 지침이 다르면 실제 `main` 소스·계약 및 정확한 SHA/실행 증거를 먼저 대조한다. 소스에서 확인한 현상, 실제 런타임에서 재현한 결함, 잠재 위험, 의도된 제한 및 단순 제안을 구분한다. 테스트 코드가 있거나 과거 PASS가 있다는 이유로 현재 바이너리·GUI·보안 검증을 완료로 표시하지 않는다.
+- 새 개발 단위의 우선순위는 (1) 사용자 데이터·파일 무결성·소유권 위험, (2) 재현 가능한 현재 결함, (3) 의미 있는 검증 공백, (4) 측정된 성능·유지보수 문제, (5) 선택적 UX 확장의 순으로 판단한다. 기능 변경 전 사용자가 허용한 범위와 `NEXT_DEVELOPMENT_GOALS.md`의 현재 수용 상태를 확인한다.
+- 문서 변경 시 기존 수용 결과와 실패 이력을 소급해서 지우지 않는다. 대형 누적 기록을 본문 중간에서 다시 최신 작업으로 오해하지 않도록, 새 요약을 앞에 두고 완료/미검증/후속 과제를 분리한다. 문서 전용 변경은 변경 문구·경로·계약·충돌을 정적으로 검토하며, 불필요한 제품 빌드/GUI/픽셀 재검증을 실행하지 않는다.
+- 외부 제어 저장소의 경로·대상·스코프는 실행 직전 `personal-control-plane/AGENTS.md`, `docs/TARGETS.md` 및 해당 **실제 워크플로/요청 파일**을 다시 읽어 확정한다. 2026-11-11 확인된 Windows VM Remote Shell 대상은 `vm-control-fjm09og`이고 현재 요청 경로는 `requests/remote-shell/vm-control-fjm09og.json`이다. 이전 문서의 `windows-vm` Remote Shell 별칭과 단일 `requests/remote-shell/request.json`을 새 요청에 재사용하지 않는다. 구조화된 Windows 요청의 `target=windows-vm`은 **별개 계약**이다. 실 Runner 상태·점유 여부는 별도 조회하지 않았다면 UNKNOWN으로 기록한다.
+
 ## GitHub 및 개발 기록 한국어 우선 원칙 (2026-11-05, 사용자 지시)
 
 flyExplorer의 GitHub 저장소를 사용자가 한국어로 쉽게 확인할 수 있도록,
@@ -476,8 +484,9 @@ Runner, enable a privileged source PR trigger, or queue a job targeting
 Use `tngkrwlsmd/personal-control-plane` as the sole Windows VM control path:
 
 - **Development/diagnosis/one-off Git operations:** request through its
-  `requests/remote-shell/request.json` slot (target `windows-vm`) or the
-  explicit central Remote Shell manual dispatch. Before submission read
+  `requests/remote-shell/<target>.json` slot (currently `vm-control-fjm09og`)
+  or the explicit central Remote Shell manual dispatch. Resolve the live
+  target and schema from the control plane before dispatch. Before submission read
   current `main`, check active central Remote Shell/CI jobs and inspect
   the request slot. Never overwrite an active request. Restore the slot
   to its documented idle command after completion.

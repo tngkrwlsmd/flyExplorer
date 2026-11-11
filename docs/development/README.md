@@ -10,6 +10,8 @@ application and its current engineering requirements.
   unverified gaps and product choices; historical plans remain below the current
   summary and do not reopen accepted work. Planning, not authorization.
 - ARCHITECTURE.md — current WinUI/native-core/Shell-isolation architecture.
+- REPOSITORY_REVIEW_20261111.md — dated source/config/docs/operations audit,
+  evidence classification, priority and documentation-only follow-up.
 - AGENT_EFFICIENCY.md — mandatory bounded tool/build/test strategy.
 - VERIFICATION_PROFILE.md — central CI scopes, failure taxonomy, FAST/STANDARD/FINAL profiles and high-cost fixture policy.
 - PRE_DISTRIBUTION_FUNCTIONAL_GATES.md — verified pre-installation functional

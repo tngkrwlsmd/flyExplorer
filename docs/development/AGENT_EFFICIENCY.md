@@ -30,9 +30,14 @@ Prepare the request before reserving Windows VM time:
   40-character `main` SHA and an explicitly selected
   `health`/`source`/`release`/`gui`/`gui-probe` or explicitly reviewed
   `gui-g01-shutdown` diagnostic scope.
-- For central Remote Shell, verify the exact target `windows-vm`,
-  working directory, command quoting, relevant paths/refs and source
-  preflight. Restore its single request file to idle after completion.
+- For central Remote Shell, resolve the actual dedicated target and per-target
+  request path from the live control-plane `docs/TARGETS.md` and workflow.
+  On 2026-11-11 the Windows VM target is `vm-control-fjm09og` and the slot
+  is `requests/remote-shell/vm-control-fjm09og.json`; do not reuse the retired
+  single `request.json` or `windows-vm` Remote Shell alias. Verify working
+  directory, quoting, relevant refs, active-job ownership and preflight;
+  restore only the slot actually used. Structured Windows request targets
+  use a different contract.
 - Validate changed Python import paths/syntax, local source contracts,
   test-owned fixture paths, GUI automation APIs and semantic Markdown
   checks before consuming the VM queue.

@@ -347,7 +347,10 @@ The former source-repository `control/remote-shell` fields
 `expected_main_sha`) belonged to the retired workflow. Do not submit
 them as a replacement for the current central Remote Shell contract.
 The active request slot is maintained in `tngkrwlsmd/personal-control-plane`
-at `requests/remote-shell/request.json`, with target `windows-vm`.
+at `requests/remote-shell/<target>.json` (2026-11-11 VM target
+`vm-control-fjm09og`); resolve live values from `docs/TARGETS.md` and the
+current workflow before dispatch. Structured Windows requests still use
+`target=windows-vm` under their separate protocol.
 
 Independent central CI requires manual `central-flyexplorer-ci.yml`
 dispatch with `project_id=desktop-a`, an exact 40-character SHA reachable
@@ -427,7 +430,8 @@ directly invalidates that fixture's result.
   and independent central CI. Before dispatch read live flyExplorer main,
   recent commits, accepted evidence, active central jobs, and the central
   request lease. Never overwrite active work or queue duplicate requests.
-- Central Remote Shell requests target `windows-vm` and must name the
+- Central Remote Shell requests use the control plane's live dedicated target
+  (2026-11-11 VM target `vm-control-fjm09og`) and must name the
   verified working directory, command and source revision. Restore its
   request slot to idle after completion. Do not recreate the retired
   `control/remote-shell` branch or reuse its old schema.

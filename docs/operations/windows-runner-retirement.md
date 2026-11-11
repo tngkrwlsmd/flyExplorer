@@ -23,7 +23,7 @@ Runner credentials (`.credentials*`, `.runner`, tokens), environment settings, d
 | Windows VM Build `release` | Central Registered Projects CI, `desktop-a`, `release` |
 | Windows VM Build `release-gui` | Central Registered Projects CI, `desktop-a`, `gui` |
 | Windows VM Build `full` | **No exact equivalent**. Debug+Release full-suite acceptance requires a separately approved and explicitly specified central Remote Shell job; a central `gui` PASS does not certify Debug or the old `full` scope. |
-| Remote Windows Task diagnostic/development command | `personal-control-plane` Remote Shell request, target `windows-vm`, against an explicitly checked source ref/working directory |
+| Remote Windows Task diagnostic/development command | `personal-control-plane` per-target Remote Shell request (2026-11-11 Windows VM: `vm-control-fjm09og`), against an explicitly checked source ref/working directory |
 | Remote Windows Task evidence publishing | Existing Git branch `evidence/remote-windows` for historical bounded data; current central GUI failures produce limited private Actions artifacts, retained for one day |
 
 Start a central **manual** CI request with a full 40-character commit SHA that belongs to `flyExplorer/main`. For example, after verifying the current main SHA:
@@ -34,7 +34,7 @@ gh workflow run central-flyexplorer-ci.yml --repo tngkrwlsmd/personal-control-pl
 
 Select `scope=source`, `release`, `gui` or `gui-probe` deliberately. This sends a request to central CI and does **not** assert completion. Observe the central Actions run and the originating commit status; use `gui` for the required final GUI functional gate. The GUI worker needs an unlocked logged-in Windows desktop. Screenshots/pixel acceptance remain a separate gate when UI visuals change.
 
-For one-off Windows machine operations and focused debugging, use `personal-control-plane/requests/remote-shell/request.json` (or the explicit central Remote Shell manual dispatch) with its existing lease, revision and idle-slot restoration rules. Do not re-create a `flyExplorer` Runner, copy a privileged token into this repository, or dispatch source-PR code directly to the SYSTEM service.
+For one-off Windows machine operations and focused debugging, first inspect the current `personal-control-plane/docs/TARGETS.md`, workflow and active run ownership. At the 2026-11-11 review, the Windows VM Remote Shell target is `vm-control-fjm09og`, with slot `personal-control-plane/requests/remote-shell/vm-control-fjm09og.json` (or an explicit matching manual dispatch). This is separate from structured Windows requests, which continue to use `target=windows-vm`. Apply the actual per-target lease, revision and idle restoration rules; do not rely on the retired single-slot file. Do not re-create a `flyExplorer` Runner, copy a privileged token into this repository, or dispatch source-PR code directly to the SYSTEM service.
 
 ## Recheck before retiring anything else
 

@@ -26,16 +26,25 @@ reachable from flyExplorer/main and one scope:
 - `gui`: policy/source, Release build and functional GUI.
 - `gui-probe`: focused diagnostic; **not** final acceptance.
 
+The live central workflow also declares `release-build-only` and individually
+named `gui-*` focused/diagnostic scopes. Do not assume the short core list
+above is exhaustive or that those scopes certify full functional/visual
+acceptance. Confirm the current workflow's input choices and actual steps
+before each dispatch.
+
 There is no exact current central equivalent for the retired
 Debug+Release `full` scope. If it is required, plan and run its gates
 explicitly using central Remote Shell, and retain scope-specific evidence.
 
-**Ad hoc Windows shell:** Use central `requests/remote-shell/request.json`
-with target `windows-vm`, not the retired source `control/remote-shell`
-branch. Verify the live source revision, target, working directory,
-request lease and preflight before submission; restore the slot to idle
-when complete. It has a different request schema from the historical
-`request_mode`/`validation_plan` protocol.
+**Ad hoc Windows shell:** The current control plane uses a per-target Remote
+Shell slot, `requests/remote-shell/<target>.json`. At the 2026-11-11 review,
+the Windows VM target is `vm-control-fjm09og` and its slot is
+`requests/remote-shell/vm-control-fjm09og.json`, **not** the retired
+`request.json` or `windows-vm` Remote Shell alias. Before use, verify
+`personal-control-plane/docs/TARGETS.md`, the live workflow and source
+revision, active-job ownership, working directory and preflight; restore only
+the used slot. Structured Windows requests still use a separate
+`target=windows-vm` contract, not the Remote Shell contract.
 
 ## Failure taxonomy
 
