@@ -108,15 +108,17 @@ try:
         return win.child_window(auto_id=name)
 
     def focus():
+        # Do not reset child keyboard focus on an already-foreground window.
+        # The actual TabItem/ListItem must keep focus for physical key input.
         for _ in range(4):
-            win.set_focus()
-            time.sleep(.12)
             foreground = u.GetForegroundWindow()
             owner = W.DWORD()
             if foreground:
                 u.GetWindowThreadProcessId(foreground, c.byref(owner))
-            if owner.value == process.pid:
+            if foreground == hwnd and owner.value == process.pid:
                 return True
+            win.set_focus()
+            time.sleep(.12)
         raise AssertionError("refusing physical input to a foreign window")
 
     def safe_click(target):
