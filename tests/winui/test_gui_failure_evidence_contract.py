@@ -4,9 +4,14 @@ from __future__ import annotations
 import json
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from types import SimpleNamespace
+from unittest.mock import patch
 import unittest
 
-from gui_failure_evidence import _disk_rows, _safe_address, capture_failure
+from gui_failure_evidence import (
+    MAX_ENTRIES, _disk_rows, _owned_labels, _safe_address, _uia_pane,
+    capture_failure,
+)
 
 
 class MockNode:
@@ -172,6 +177,62 @@ class GuiFailureEvidenceContract(unittest.TestCase):
             unrelated = json.loads(
                 (non_startup / "panes.json").read_text(encoding="utf-8"))
             self.assertNotIn("sampled_transitions", unrelated["Startup"])
+
+    def test_bounded_scandir_for_large_owned_directory_and_redaction(self):
+        # Simulate 20,000 direct children without creating a large fixture.
+        # Any regression that exhausts scandir will consume all 20,000 names.
+        class FakeEntry:
+            def __init__(self, index):
+                self.name = f"owned-{index:05d}.txt"
+
+            def is_symlink(self):
+                return False
+
+            def stat(self, follow_symlinks=True):
+                return SimpleNamespace(st_size=1)
+
+            def is_dir(self, follow_symlinks=True):
+                return False
+
+            def is_file(self, follow_symlinks=True):
+                return True
+
+        class CountingScan:
+            def __init__(self, counter):
+                self.counter = counter
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *_):
+                return False
+
+            def __iter__(self):
+                for index in range(20000):
+                    self.counter.append(1)
+                    yield FakeEntry(index)
+
+        with TemporaryDirectory() as root:
+            owned = Path(root) / "shell-owned-bounded"
+            left, right = owned / "Left", owned / "Right"
+            left.mkdir(parents=True)
+            right.mkdir()
+            visited = []
+            with patch("gui_failure_evidence.os.scandir",
+                       side_effect=lambda *_: CountingScan(visited)):
+                rows = _disk_rows(left, owned)
+                labels = _owned_labels(left, right)
+            self.assertEqual(MAX_ENTRIES, len(rows["items"]))
+            self.assertTrue(rows["truncated"])
+            self.assertEqual("owned-00000.txt", rows["items"][0]["name"])
+            self.assertEqual("owned-00069.txt", rows["items"][-1]["name"])
+            self.assertEqual(3 * (MAX_ENTRIES + 1), len(visited))
+            self.assertLessEqual(len(labels), 5 + 2 * MAX_ENTRIES)
+            self.assertIn("owned-00000.txt", labels)
+            self.assertNotIn("owned-00070.txt", labels)
+            ui = _uia_pane(MockWindow(), "LeftFiles", labels)
+            self.assertEqual("[non-fixture label]", ui["nodes"][1]["name"])
+            self.assertNotIn("Private contents should be hidden", json.dumps(ui))
 
     def test_refuses_unowned_directory_and_skips_symlinks(self):
         with TemporaryDirectory() as root:
