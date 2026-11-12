@@ -372,8 +372,10 @@ class ShortcutSemanticsContract(unittest.TestCase):
         self.assertLess(preview.index(".try_as<TabViewItem>()"),
                         preview.index("(void)target.Focus(FocusState::Keyboard)"))
         for forbidden in ("CloseFolderTab(", "OnPaneTabCloseRequested(",
-                          "Command::SelectTab", "args.Handled(true);\n                    return;\n                }\n                const bool"):
+                          "Command::SelectTab"):
             self.assertNotIn(forbidden, preview)
+        # This guard must not remove the tab's existing close affordance.
+        self.assertIn("item.IsClosable(true)", source)
         gui = (ROOT / "tests" / "winui" / "test_shortcut_gui.py").read_text(
             encoding="utf-8")
         self.assertIn('("{LEFT}", 0)', gui)
