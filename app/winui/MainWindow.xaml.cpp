@@ -303,6 +303,29 @@ namespace winrt::FlyExplorer::implementation
                     }
                 }}),true);
         }
+        // A file-row ListViewItem can mark Tapped as handled before the
+        // pane's XAML Tapped handler observes it. Establish the owning pane on
+        // the routed primary pointer press even for handled child events.
+        // This does not select files or invoke their commands.
+        const auto panePointerOwner=get_weak();
+        for(int side=0;side<2;++side){
+            auto files=side==0?LeftFiles():RightFiles();
+            files.AddHandler(
+                UIElement::PointerPressedEvent(),
+                winrt::box_value(PointerEventHandler{[panePointerOwner,side](
+                    IInspectable const&,
+                    Microsoft::UI::Xaml::Input::PointerRoutedEventArgs const& args){
+                    if(auto ui=panePointerOwner.get()){
+                        if(ui->mClosing)return;
+                        auto view=side==0?ui->LeftFiles():ui->RightFiles();
+                        if(view.Visibility()!=Visibility::Visible)return;
+                        if(!args.GetCurrentPoint(view).Properties().IsLeftButtonPressed())
+                            return;
+                        if(ui->ActiveWindowTab().model.activePane!=side)
+                            ui->ActivatePane(side);
+                    }
+                }}),true);
+        }
         RootShell().AddHandler(
             UIElement::PointerPressedEvent(),
             winrt::box_value(PointerEventHandler{
