@@ -2058,8 +2058,8 @@ namespace winrt::FlyExplorer::implementation
                 (side==0?L"왼쪽 폴더 탭 ":L"오른쪽 폴더 탭 ")+label;
             if(Microsoft::UI::Xaml::Automation::AutomationProperties::
                     GetName(item)!=accessibleName)
-                Microsoft::UI::Xaml::Automation::AutomationProperties::
-                    SetName(item,accessibleName);
+                Microsoft::UI::Xaml::Automation::AutomationProperties::SetName(
+                    item,accessibleName);
         }
         const auto selected=static_cast<int32_t>(pane.active);
         if(view.SelectedIndex()!=selected)view.SelectedIndex(selected);
