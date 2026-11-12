@@ -360,7 +360,12 @@ class ShortcutSemanticsContract(unittest.TestCase):
         for token in (
             "!control&&!shift&&!alt&&!args.Handled()",
             "GetFocusedElement(ui->RootShell().XamlRoot())",
-            ".try_as<TabViewItem>()",
+            ".try_as<DependencyObject>()",
+            "TabViewItem focused{nullptr};",
+            "for(int depth=0;node&&depth<32;++depth)",
+            "node.try_as<TabViewItem>()",
+            "VisualTreeHelper::",
+            "GetParent(node)",
             "if(side==1&&!ui->ActiveWindowTab().model.split)",
             "items.GetAt(tab).as<TabViewItem>()!=focused",
             "key==Windows::System::VirtualKey::Left?-1:1",
@@ -369,8 +374,11 @@ class ShortcutSemanticsContract(unittest.TestCase):
             "args.Handled(true);",
         ):
             self.assertIn(token, preview)
-        self.assertLess(preview.index(".try_as<TabViewItem>()"),
+        self.assertLess(preview.index("node.try_as<TabViewItem>()"),
                         preview.index("(void)target.Focus(FocusState::Keyboard)"))
+        self.assertLess(preview.index("GetParent(node)"),
+                        preview.index("if(focused){"))
+        self.assertIn("if(items.GetAt(tab).as<TabViewItem>()!=focused)", preview)
         for forbidden in ("CloseFolderTab(", "OnPaneTabCloseRequested(",
                           "Command::SelectTab"):
             self.assertNotIn(forbidden, preview)

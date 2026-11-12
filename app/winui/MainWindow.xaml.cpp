@@ -506,18 +506,26 @@ namespace winrt::FlyExplorer::implementation
                 const bool shift=(::GetKeyState(VK_SHIFT)&0x8000)!=0;
                 const bool alt=(::GetKeyState(VK_MENU)&0x8000)!=0;
                 const auto key=args.Key();
-                // The native TabView can route an arrow to the inner
-                // CloseButton, making the next Enter close the selected tab.
-                // Override only unmodified arrows with actual keyboard focus
-                // on an owned pane TabViewItem. All other targets retain their
-                // built-in navigation and closing behavior.
+                // The native TabView may focus its inner CloseButton.
+                // Match the focused element's owning folder TabViewItem
+                // before interpreting plain arrows; never redirect Enter or
+                // capture keyboard input from other controls or tab strips.
                 if(!control&&!shift&&!alt&&!args.Handled()&&
                    (key==Windows::System::VirtualKey::Left||
                     key==Windows::System::VirtualKey::Right)){
                     if(auto ui=nativeWeak.get();ui&&!ui->mClosing){
-                        const auto focused=Microsoft::UI::Xaml::Input::FocusManager::
+                        auto node=Microsoft::UI::Xaml::Input::FocusManager::
                             GetFocusedElement(ui->RootShell().XamlRoot())
-                                .try_as<TabViewItem>();
+                                .try_as<DependencyObject>();
+                        TabViewItem focused{nullptr};
+                        for(int depth=0;node&&depth<32;++depth){
+                            if(auto tab=node.try_as<TabViewItem>()){
+                                focused=tab;
+                                break;
+                            }
+                            node=Microsoft::UI::Xaml::Media::VisualTreeHelper::
+                                GetParent(node);
+                        }
                         if(focused){
                             for(int side=0;side<2;++side){
                                 if(side==1&&!ui->ActiveWindowTab().model.split)

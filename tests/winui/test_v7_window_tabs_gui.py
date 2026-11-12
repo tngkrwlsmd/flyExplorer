@@ -69,7 +69,26 @@ def run(*,win,element,safe_click,focus,eventually,owned,localdata,env,exe):
             add=b;break
     assert add is not None,"TabView add button not exposed to UIA"
     add.click_input();eventually(lambda:len(tabs())==2,"TabView + button did not create window tab",10)
-    eventually(lambda:address()==b_address,"TabView + did not use Explorer-like default location",12)
+    try:
+        eventually(lambda:address()==b_address,
+                   "TabView + did not use Explorer-like default location",12)
+    except AssertionError:
+        # Report only categories/counts from the owned GUI; never print
+        # actual addresses, private file labels, or profile contents.
+        status=element("StatusText").window_text()
+        def count_rows(name):
+            return sum(x.element_info.control_type=="ListItem"
+                       for x in element(name).descendants())
+        print("V7_ADD_TAB_NAVIGATION_DIAGNOSTIC",
+              "TABS",len(tabs()),
+              "LEFT_ROWS",count_rows("LeftFiles"),
+              "RIGHT_ROWS",count_rows("RightFiles"),
+              "ADDRESS_EMPTY",not bool(address()),
+              "ADDRESS_MATCH",address()==b_address,
+              "SHELL_FAILURE","Shell 폴더를 열지 못했습니다" in status,
+              "PENDING","불러오는 중" in status,
+              flush=True)
+        raise
     if os.environ.get("FLY_V7_WINDOW_TABS_SESSION")=="YES":
         # The private session deliberately accepts fixed local filesystem
         # folders only. Seed BOTH durable panes with owned local paths before
