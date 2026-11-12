@@ -226,8 +226,39 @@ try:
         for keys, index in (("{LEFT}{ENTER}", 0), ("{RIGHT}{ENTER}", 1)):
             focus()
             send_keys(keys, pause=.12)
-            eventually(lambda: selected_and_focused(tabs_id, index),
-                       "folder-tab activation lost keyboard focus: " + tabs_id)
+            try:
+                eventually(lambda: selected_and_focused(tabs_id, index),
+                           "folder-tab activation lost keyboard focus: " + tabs_id)
+            except AssertionError:
+                # Failure-only, bounded UIA diagnostics of our private window.
+                # Never print folder labels, file names or arbitrary UI text.
+                peers = pane_tabs(tabs_id)
+                states = []
+                for tab_index, tab in enumerate(peers[:3]):
+                    try:
+                        states.append((
+                            tab_index,
+                            bool(tab.iface_selection_item.CurrentIsSelected),
+                            bool(tab.element_info.element.CurrentHasKeyboardFocus),
+                        ))
+                    except Exception:
+                        states.append((tab_index, "UIA_UNAVAILABLE"))
+                focused = []
+                for peer in win.descendants():
+                    try:
+                        if peer.element_info.element.CurrentHasKeyboardFocus:
+                            focused.append((
+                                peer.element_info.control_type,
+                                peer.element_info.automation_id,
+                            ))
+                            if len(focused) >= 3:
+                                break
+                    except Exception:
+                        continue
+                print("OWNED_PANE_TAB_FOCUS_DIAGNOSTIC",
+                      tabs_id, "target_index", index, "tabs", states,
+                      "focused_control", focused, flush=True)
+                raise
             # Check again after queued Shell publications have had time to run.
             time.sleep(.35)
             assert selected_and_focused(tabs_id, index), tabs_id
