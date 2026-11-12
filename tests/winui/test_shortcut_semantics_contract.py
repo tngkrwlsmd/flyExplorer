@@ -353,6 +353,38 @@ class ShortcutSemanticsContract(unittest.TestCase):
             self.assertIn("void MainWindow::"+name+"(", window)
         self.assertIn("PersistPreferences()", window)
 
+    def test_pane_tab_keyboard_focus_survives_unchanged_header_rebind(self):
+        window = WINDOW.read_text(encoding="utf-8")
+        tabs = window.split("void MainWindow::RefreshTabs(int side)", 1)[1].split(
+            "void MainWindow::ClearFileDetails(int side)", 1)[0]
+        self.assertIn("const auto previousHeader=item.Header();", tabs)
+        self.assertIn("unbox_value_or<hstring>(previousHeader,hstring{})!=label", tabs)
+        self.assertIn("GetName(item)!=accessibleName", tabs)
+        for side, name, end in (
+            (0, "OnLeftTabSelectionChanged", "OnRightTabSelectionChanged"),
+            (1, "OnRightTabSelectionChanged", "OpenSelectedFolder"),
+        ):
+            handler = window.split("void MainWindow::"+name+"(", 1)[1].split(
+                "void MainWindow::"+end+"(", 1)[0]
+            for token in (
+                "const auto originalFocus=selectedTab.FocusState();",
+                "const auto windowIdentity=ActiveWindowTab().identity;",
+                "originalFocus!=FocusState::Unfocused&&!mClosing",
+                "ActiveWindowTab().identity==windowIdentity",
+                "view.SelectedIndex()==static_cast<int32_t>(index)",
+                "view.TabItems().Size()>index",
+                "if(liveTab.FocusState()!=originalFocus)",
+                "(void)liveTab.Focus(originalFocus)",
+            ):
+                self.assertIn(token, handler)
+            self.assertIn("ActiveWindowTab().model.panes["+str(side)+"].active==index", handler)
+            self.assertLess(handler.index("Refresh(L"),
+                            handler.index("(void)liveTab.Focus(originalFocus)"))
+        gui = (ROOT / "tests" / "winui" / "test_shortcut_gui.py").read_text(
+            encoding="utf-8")
+        self.assertIn("folder-tab activation lost keyboard focus", gui)
+        self.assertIn("CurrentHasKeyboardFocus", gui)
+
     def test_full_gui_profile_covers_real_shortcut_keyboard(self):
         orchestrator = compact(
             (ROOT / "tools" / "winui" / "run_checks.py").read_text(
