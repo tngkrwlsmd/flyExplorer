@@ -23,7 +23,24 @@ def run(*,p,win,element,safe_click,focus,eventually,ownedwindows,
     assert left.parent==owned and right.parent==owned
     assert Path(env["LOCALAPPDATA"])==localdata
     def text(key):
-        return element(key).window_text()
+        if key != "SearchCountText":
+            return element(key).window_text()
+        # Search completion auto-reveals the results inside the bounded
+        # ScrollViewer. UIA hides the off-screen count even when the
+        # result is correct; read it by scrolling only the owned panel,
+        # then restore the query editor position for subsequent searches.
+        panel = element("SearchPanel").wrapper_object().iface_scroll
+        if not panel.CurrentVerticallyScrollable:
+            return element(key).window_text()
+        try:
+            for percent in (100, 80, 60, 40, 20, 0):
+                panel.SetScrollPercent(-1, percent)
+                summary = element(key)
+                if summary.exists(timeout=.2) and summary.is_visible():
+                    return summary.window_text()
+            return element(key).window_text()
+        finally:
+            panel.SetScrollPercent(-1, 0)
     def match(key,needle):
         return needle.lower() in text(key).lower()
     def good(fn,why,timeout=10):

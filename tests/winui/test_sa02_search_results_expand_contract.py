@@ -88,6 +88,27 @@ class SearchResultsExpandContract(unittest.TestCase):
         self.assertIn('"Search v2 default file-only literal search failed"', gui)
         self.assertIn('assert search_matches("Report-2026.TXT")', gui)
 
+    def test_m19_search_summary_scrolls_into_owned_view_then_restores_editor(self):
+        gui = source("tests/winui/test_m19_winui_features.py")
+        helper = gui.split("def text(key):", 1)[1].split(
+            "def match(key,needle):", 1)[0]
+        for token in (
+            'if key != "SearchCountText":',
+            'element("SearchPanel").wrapper_object().iface_scroll',
+            "CurrentVerticallyScrollable",
+            "for percent in (100, 80, 60, 40, 20, 0):",
+            "panel.SetScrollPercent(-1, percent)",
+            "summary.exists(timeout=.2) and summary.is_visible()",
+            "return summary.window_text()",
+            "finally:",
+            "panel.SetScrollPercent(-1, 0)",
+        ):
+            self.assertIn(token, helper)
+        self.assertIn('good(lambda:match("SearchCountText","검색 결과 1개")', gui)
+        self.assertIn('good(lambda:search_matches("readme.txt")', gui)
+        self.assertLess(helper.index("return summary.window_text()"),
+                        helper.index("finally:"))
+
     def test_file_panes_retain_minimum_height_with_scrolling(self):
         cpp = source("app/winui/m19_features.cpp")
         sized = cpp.split("void MainWindow::OnSearchPanelSizeChanged(", 1)[1].split(
