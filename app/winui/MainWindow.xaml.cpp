@@ -5000,27 +5000,29 @@ namespace winrt::FlyExplorer::implementation
         // WinUI raises deferred SelectionChanged for programmatic strip
         // rebuilds. Only a DIFFERENT selected tab is user navigation.
         if (static_cast<size_t>(view.SelectedIndex())==pane.active)return;
-        // Only a genuinely focused tab may reclaim keyboard focus after
-        // Refresh rebinds the strip. Never focus a stale workspace/tab.
+        // Keyboard navigation may select the next TabViewItem before that
+        // item's focus state changes. Retain its identity across Refresh.
         const auto index=static_cast<size_t>(view.SelectedIndex());
         const auto selectedTab=view.TabItems().GetAt(
             static_cast<uint32_t>(index)).as<TabViewItem>();
-        const auto originalFocus=selectedTab.FocusState();
         const auto windowIdentity=ActiveWindowTab().identity;
         if(!mWorkspace.dispatch(fxfile::explorerui::Command::SelectTab,0,
                  static_cast<size_t>(view.SelectedIndex())).accepted)return;
         mFileOperations.invalidateRenameOwnerOnNavigation();
         mSearchController.invalidate();
         Refresh(L"왼쪽 탭을 선택했습니다.");
-        if(originalFocus!=FocusState::Unfocused&&!mClosing&&
+        // Restore the selected tab's keyboard focus even when it was not
+        // focused yet at SelectionChanged. Never focus a different workspace,
+        // panel tab or replaced TabViewItem after the synchronous refresh.
+        if(!mClosing&&
            ActiveWindowTab().identity==windowIdentity&&
            ActiveWindowTab().model.panes[0].active==index&&
            view.SelectedIndex()==static_cast<int32_t>(index)&&
            view.TabItems().Size()>index){
             const auto liveTab=view.TabItems().GetAt(
                 static_cast<uint32_t>(index)).as<TabViewItem>();
-            if(liveTab.FocusState()!=originalFocus)
-                (void)liveTab.Focus(originalFocus);
+            if(liveTab==selectedTab)
+                (void)liveTab.Focus(FocusState::Keyboard);
         }
     }
     void MainWindow::OnRightTabSelectionChanged(
@@ -5031,27 +5033,29 @@ namespace winrt::FlyExplorer::implementation
         auto& pane=ActiveWindowTab().model.panes[1];
         if (static_cast<size_t>(view.SelectedIndex())>=pane.tabs.size())return;
         if (static_cast<size_t>(view.SelectedIndex())==pane.active)return;
-        // Only a genuinely focused tab may reclaim keyboard focus after
-        // Refresh rebinds the strip. Never focus a stale workspace/tab.
+        // Keyboard navigation may select the next TabViewItem before that
+        // item's focus state changes. Retain its identity across Refresh.
         const auto index=static_cast<size_t>(view.SelectedIndex());
         const auto selectedTab=view.TabItems().GetAt(
             static_cast<uint32_t>(index)).as<TabViewItem>();
-        const auto originalFocus=selectedTab.FocusState();
         const auto windowIdentity=ActiveWindowTab().identity;
         if(!mWorkspace.dispatch(fxfile::explorerui::Command::SelectTab,1,
                  static_cast<size_t>(view.SelectedIndex())).accepted)return;
         mFileOperations.invalidateRenameOwnerOnNavigation();
         mSearchController.invalidate();
         Refresh(L"오른쪽 탭을 선택했습니다.");
-        if(originalFocus!=FocusState::Unfocused&&!mClosing&&
+        // Restore the selected tab's keyboard focus even when it was not
+        // focused yet at SelectionChanged. Never focus a different workspace,
+        // panel tab or replaced TabViewItem after the synchronous refresh.
+        if(!mClosing&&
            ActiveWindowTab().identity==windowIdentity&&
            ActiveWindowTab().model.panes[1].active==index&&
            view.SelectedIndex()==static_cast<int32_t>(index)&&
            view.TabItems().Size()>index){
             const auto liveTab=view.TabItems().GetAt(
                 static_cast<uint32_t>(index)).as<TabViewItem>();
-            if(liveTab.FocusState()!=originalFocus)
-                (void)liveTab.Focus(originalFocus);
+            if(liveTab==selectedTab)
+                (void)liveTab.Focus(FocusState::Keyboard);
         }
     }
     void MainWindow::OpenSelectedFolder(int side)

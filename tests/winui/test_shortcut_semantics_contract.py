@@ -367,19 +367,19 @@ class ShortcutSemanticsContract(unittest.TestCase):
             handler = window.split("void MainWindow::"+name+"(", 1)[1].split(
                 "void MainWindow::"+end+"(", 1)[0]
             for token in (
-                "const auto originalFocus=selectedTab.FocusState();",
+                "const auto selectedTab=view.TabItems().GetAt(",
                 "const auto windowIdentity=ActiveWindowTab().identity;",
-                "originalFocus!=FocusState::Unfocused&&!mClosing",
+                "if(!mClosing&&",
                 "ActiveWindowTab().identity==windowIdentity",
                 "view.SelectedIndex()==static_cast<int32_t>(index)",
                 "view.TabItems().Size()>index",
-                "if(liveTab.FocusState()!=originalFocus)",
-                "(void)liveTab.Focus(originalFocus)",
+                "if(liveTab==selectedTab)",
+                "(void)liveTab.Focus(FocusState::Keyboard)",
             ):
                 self.assertIn(token, handler)
             self.assertIn("ActiveWindowTab().model.panes["+str(side)+"].active==index", handler)
             self.assertLess(handler.index("Refresh(L"),
-                            handler.index("(void)liveTab.Focus(originalFocus)"))
+                            handler.index("(void)liveTab.Focus(FocusState::Keyboard)"))
         gui = (ROOT / "tests" / "winui" / "test_shortcut_gui.py").read_text(
             encoding="utf-8")
         self.assertIn("folder-tab activation lost keyboard focus", gui)

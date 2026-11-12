@@ -236,10 +236,17 @@ try:
         eventually(lambda: selected_and_focused(tabs_id, 1),
                    "owned second folder tab did not receive keyboard focus: "
                    + tabs_id, 7)
-        for keys, index in (("{LEFT}{ENTER}", 0), ("{RIGHT}{ENTER}", 1)):
+        for keys, index in (("{LEFT}", 0), ("{RIGHT}", 1)):
             focus()
             send_keys(keys, pause=.12)
+            # Reject focus loss before Enter can trigger an unrelated sort
+            # button. Both arrow navigation and Enter activation must pass.
             try:
+                eventually(lambda: selected_and_focused(tabs_id, index),
+                           "folder-tab arrow navigation lost keyboard focus: "
+                           + tabs_id)
+                focus()
+                send_keys("{ENTER}")
                 eventually(lambda: selected_and_focused(tabs_id, index),
                            "folder-tab activation lost keyboard focus: " + tabs_id)
             except AssertionError:
