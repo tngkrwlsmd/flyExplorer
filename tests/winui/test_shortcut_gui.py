@@ -178,12 +178,35 @@ try:
                "owned left file row did not receive keyboard focus", 7)
     focus()
     send_keys("{F5}")
-    eventually(
-        lambda: "폴더 변경 알림을 반영했습니다." in
-                element("StatusText").window_text(),
-        "plain F5 did not complete active-pane refresh",
-        15,
-    )
+    try:
+        eventually(
+            lambda: "폴더 변경 알림을 반영했습니다." in
+                    element("StatusText").window_text(),
+            "plain F5 did not complete active-pane refresh",
+            15,
+        )
+    except AssertionError:
+        # Failure-only evidence: classify live, test-owned UI status without
+        # exposing filenames, full paths, arbitrary control text or profiles.
+        status = element("StatusText").window_text()
+        try:
+            row_focused = bool(left_item.has_keyboard_focus())
+        except Exception:
+            row_focused = False
+        print("OWNED_F5_COMPLETION_DIAGNOSTIC",
+              "REFRESH_NOTICE", "폴더 변경 알림을 반영했습니다." in status,
+              "RECOVERED_NOTICE", "재시도하여 폴더를 불러왔습니다." in status,
+              "SHELL_FAILURE", "Shell 폴더를 열지 못했습니다." in status,
+              "FOLDER_LOADING", "불러오는 중" in status,
+              "INVALID_CURRENT", "새로 고칠 수 없습니다." in status,
+              "LEFT_PANE_ACTIVE", "왼쪽" in element("ActivePaneText").window_text(),
+              "LEFT_ROUTE_OWNED", str(left).casefold() in
+                  element("AddressBox").get_value().casefold(),
+              "OWNED_ROW_FOCUSED", row_focused,
+              "OWNED_WINDOW_FOREGROUND", u.GetForegroundWindow() == hwnd,
+              "APP_ALIVE", process.poll() is None,
+              flush=True)
+        raise
     time.sleep(.5)
     assert source.is_dir()
     assert not (right / source.name).exists(), (

@@ -435,6 +435,24 @@ class ShortcutSemanticsContract(unittest.TestCase):
         self.assertIn('gui_command( focused, configuration, env )', orchestrator)
         self.assertIn('"test_shortcut_gui.py"', orchestrator)
 
+    def test_f5_failure_evidence_preserves_physical_acceptance(self):
+        gui = (ROOT / "tests" / "winui" / "test_shortcut_gui.py").read_text(
+            encoding="utf-8")
+        part = gui.split('send_keys("{F5}")', 1)[1].split("# F6:", 1)[0]
+        self.assertIn('"plain F5 did not complete active-pane refresh"', part)
+        self.assertIn('"폴더 변경 알림을 반영했습니다." in', part)
+        self.assertIn("except AssertionError:", part)
+        self.assertIn("OWNED_F5_COMPLETION_DIAGNOSTIC", part)
+        for marker in ("RECOVERED_NOTICE", "SHELL_FAILURE", "FOLDER_LOADING",
+                       "LEFT_PANE_ACTIVE", "LEFT_ROUTE_OWNED",
+                       "OWNED_ROW_FOCUSED", "OWNED_WINDOW_FOREGROUND",
+                       "APP_ALIVE"):
+            self.assertIn('"' + marker + '"', part)
+        self.assertIn("        raise\n", part)
+        self.assertNotIn("print(status", part)
+        self.assertNotIn("print(str(left)", part)
+        self.assertNotIn("send_keys(\"{F5}\")\n    eventually(", part)
+
     def test_file_operation_shortcuts_do_not_own_f5_or_f6(self):
         transfers = compact(TRANSFERS.read_text(encoding="utf-8"))
         handler = transfers[
