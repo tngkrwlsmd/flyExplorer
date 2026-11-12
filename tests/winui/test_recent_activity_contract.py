@@ -118,6 +118,29 @@ class RecentActivityContracts(unittest.TestCase):
         self.assertIn("if(result==Result::Opened)",transfer)
         self.assertIn("mRecentActivity.recordFile(openedPath)",transfer)
 
+    def test_async_recent_open_completion_is_owned_by_original_workspace(self):
+        code=source("app/winui/m19_features.cpp")
+        completion=code.split("void MainWindow::OpenRecentActivityFilePath(",1)[1].split(
+            "void MainWindow::OnOpenRecentActivityFolder(",1)[0]
+        self.assertIn("[weak,path,context](Open::Result result)",completion)
+        self.assertIn("if(!ui||ui->mClosing)return;",completion)
+        self.assertIn("ui->mRecentActivity.recordFile(path);",completion)
+        for token in (
+            "ui->ActiveWindowTab().identity!=context.windowTabIdentity",
+            "ui->ActiveWindowTab().model.activePane!=context.side",
+            "live.tab!=context.tab",
+            "live.route!=context.route",
+            "live.visibleFolder!=context.visibleFolder",
+        ):
+            self.assertIn(token,completion)
+        self.assertLess(completion.index("live.visibleFolder!=context.visibleFolder"),
+                        completion.index("ui->StatusText().Text(result=="))
+        self.assertLess(completion.index("live.visibleFolder!=context.visibleFolder"),
+                        completion.index("ui->RefreshRecentActivityPanel();"))
+        # Opt-out still prevents a successful late open from recreating history.
+        model=source("app/winui/recent_activity_controller.h")
+        self.assertIn("if(!enabled_||!acceptable(path))return;",model)
+
     def test_explicit_controls_and_existing_async_reopen(self):
         xaml=source("app/winui/MainWindow.xaml")
         header=source("app/winui/MainWindow.xaml.h")
