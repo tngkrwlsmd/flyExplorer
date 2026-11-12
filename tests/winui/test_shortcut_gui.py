@@ -218,11 +218,15 @@ try:
     def pane_tabs(tabs_id):
         return element(tabs_id).descendants(control_type="TabItem")
 
-    def selected_and_focused(tabs_id, index):
+    def focused_tab(tabs_id, index):
         items = pane_tabs(tabs_id)
         return (len(items) == 2
-                and bool(items[index].iface_selection_item.CurrentIsSelected)
                 and bool(items[index].element_info.element.CurrentHasKeyboardFocus))
+
+    def selected_and_focused(tabs_id, index):
+        items = pane_tabs(tabs_id)
+        return (focused_tab(tabs_id, index)
+                and bool(items[index].iface_selection_item.CurrentIsSelected))
 
     for files_id, tabs_id in (("LeftFiles", "LeftTabs"), ("RightFiles", "RightTabs")):
         safe_click(element(files_id))
@@ -242,7 +246,9 @@ try:
             # Reject focus loss before Enter can trigger an unrelated sort
             # button. Both arrow navigation and Enter activation must pass.
             try:
-                eventually(lambda: selected_and_focused(tabs_id, index),
+                # WinUI TabView arrow keys move focus but do not select.
+                # Confirm that Enter will be sent only to the intended tab.
+                eventually(lambda: focused_tab(tabs_id, index),
                            "folder-tab arrow navigation lost keyboard focus: "
                            + tabs_id)
                 focus()
