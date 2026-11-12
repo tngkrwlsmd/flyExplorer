@@ -593,40 +593,66 @@ def run(*,p,win,element,safe_click,focus,eventually,ownedwindows,
                     auto_id="SearchScopeBox").exists(timeout=.25)
             good(open_search_panel,
                  "restarted WinUI advanced-search panel did not open",8)
+            # The restarted window has its own bounded search scroller.
+            # Only navigate controls within this exact owned child, and
+            # never inspect unrelated windows or private profile contents.
+            def restarted_control(key):
+                item=restarted.child_window(auto_id=key)
+                if item.exists(timeout=.15) and item.is_visible():
+                    return item
+                panel=restarted.child_window(auto_id="SearchPanel")
+                scroll=panel.wrapper_object().iface_scroll
+                if scroll.CurrentVerticallyScrollable:
+                    for percent in (100, 80, 60, 40, 20, 0):
+                        scroll.SetScrollPercent(-1, percent)
+                        if item.exists(timeout=.2) and item.is_visible():
+                            return item
+                return None
+            def restarted_value(key):
+                item=restarted_control(key)
+                return item.get_value() if item is not None else ""
+            def restarted_text(key):
+                item=restarted_control(key)
+                return item.window_text() if item is not None else ""
             # WinUI ComboBox virtualizes its popup; closed-combo UIA
             # descendants can be empty even with real Items(). The
             # explicit user-visible count is updated ONLY after the
             # asynchronous native load and Items().Append in the UI.
-            good(lambda:("\uc800\uc7a5 2\uac1c" in restarted.child_window(
-                     auto_id="RecentCountText").window_text()),
+            good(lambda:"저장 2개" in restarted_text("RecentCountText"),
                  "restarted WinUI failed to reload two opted-in scopes",12)
             print("REAL_M19_SEARCH_RESTART_RECENTS_LOADED",2,flush=True)
-            preset_name2=restarted.child_window(auto_id="SearchPresetNameBox")
-            good(lambda:preset_name2.get_value()=="2월 중간 보고서",
+            good(lambda:restarted_value("SearchPresetNameBox")=="2월 중간 보고서",
                  "Search v3 private preset name did not reload",8)
-            restarted.child_window(auto_id="SearchPresetApplyButton").click_input()
+            apply_button=restarted_control("SearchPresetApplyButton")
+            assert apply_button is not None, "owned restarted preset apply is off-screen"
+            apply_button.click_input()
             good(lambda:
-                 restarted.child_window(auto_id="SearchMinSizeBox").get_value()=="7" and
-                 restarted.child_window(auto_id="SearchMaxSizeBox").get_value()=="9" and
-                 restarted.child_window(auto_id="SearchModifiedAfterBox").get_value()=="2026-02-01" and
-                 restarted.child_window(auto_id="SearchModifiedBeforeBox").get_value()=="2026-02-28" and
-                 restarted.child_window(auto_id="SearchContentBox").get_value()=="프리셋(한글|없음)" and
-                 restarted.child_window(auto_id="SearchContentRegexBox").get_toggle_state()==1,
+                 restarted_value("SearchMinSizeBox")=="7" and
+                 restarted_value("SearchMaxSizeBox")=="9" and
+                 restarted_value("SearchModifiedAfterBox")=="2026-02-01" and
+                 restarted_value("SearchModifiedBeforeBox")=="2026-02-28" and
+                 restarted_value("SearchContentBox")=="프리셋(한글|없음)" and
+                 (content_regex:=restarted_control("SearchContentRegexBox"))
+                    is not None and content_regex.get_toggle_state()==1,
                  "saved Search v4/content-regex criteria did not apply after restart",8)
             # The private preset retains search criteria but no folder scope.
             # Explicitly select the synthetic test-owned scope after restart.
-            restarted.child_window(auto_id="SearchScopeBox").set_edit_text(str(left))
-            good(lambda:restarted.child_window(
-                     auto_id="SearchScopeBox").get_value().lower()==str(left).lower(),
+            scope_box=restarted_control("SearchScopeBox")
+            assert scope_box is not None, "owned restarted search scope is off-screen"
+            scope_box.set_edit_text(str(left))
+            good(lambda:restarted_value("SearchScopeBox").lower()==str(left).lower(),
                  "restarted preset search did not select owned scope",8)
-            restarted.child_window(auto_id="SearchRunButton").click_input()
-            good(lambda:"검색 결과 1개" in restarted.child_window(
-                     auto_id="SearchCountText").window_text(),
+            run_button=restarted_control("SearchRunButton")
+            assert run_button is not None, "owned restarted search action is off-screen"
+            run_button.click_input()
+            good(lambda:"검색 결과 1개" in restarted_text("SearchCountText"),
                  "Search v3/content reloaded preset did not execute",14)
             print("REAL_CONTENT_ENCODING_PRESET_RESTART_PASS",True,flush=True)
             print("REAL_CONTENT_SEARCH_PRESET_RESTART_PASS",True,flush=True)
             print("REAL_CONTENT_REGEX_PRESET_RESTART_PASS",True,flush=True)
-            restarted.child_window(auto_id="SearchPresetDeleteButton").click_input()
+            delete_button=restarted_control("SearchPresetDeleteButton")
+            assert delete_button is not None, "owned restarted preset delete is off-screen"
+            delete_button.click_input()
             good(lambda:preset_file.is_file() and
                  preset_file.read_text(encoding="utf-8").strip()=="schema=4",
                  "Search v3/content preset delete did not persist",8)
@@ -643,7 +669,15 @@ def run(*,p,win,element,safe_click,focus,eventually,ownedwindows,
                     raise AssertionError("Owned search restart window failed to close")
             assert restart.returncode==0
 
-        safe_click(element("SearchClearButton"))
+        # The main test-owned search panel may still be scrolled to the
+        # query editor. Expose the clear action before a physical click.
+        owned_scroll=element("SearchPanel").wrapper_object().iface_scroll
+        if owned_scroll.CurrentVerticallyScrollable:
+            owned_scroll.SetScrollPercent(-1, 100)
+        clear_button=element("SearchClearButton")
+        assert clear_button.exists(timeout=2) and clear_button.is_visible(), (
+            "owned recent search clear action is off-screen")
+        safe_click(clear_button)
         good(lambda:recall.is_file() and
              recall.read_text(encoding="utf-16").strip()=="",
              "M1.9 Clear recent did not persist empty preview history",9)

@@ -109,6 +109,36 @@ class SearchResultsExpandContract(unittest.TestCase):
         self.assertLess(helper.index("return summary.window_text()"),
                         helper.index("finally:"))
 
+    def test_restarted_owned_search_controls_follow_bounded_scroll(self):
+        gui = source("tests/winui/test_m19_winui_features.py")
+        child = gui.split("def restarted_control(key):", 1)[1].split(
+            "# WinUI ComboBox virtualizes its popup", 1)[0]
+        for token in (
+            'restarted.child_window(auto_id=key)',
+            'restarted.child_window(auto_id="SearchPanel")',
+            'panel.wrapper_object().iface_scroll',
+            "scroll.CurrentVerticallyScrollable",
+            "for percent in (100, 80, 60, 40, 20, 0):",
+            "scroll.SetScrollPercent(-1, percent)",
+            "item.exists(timeout=.2) and item.is_visible()",
+            "return None",
+            "def restarted_text(key):",
+        ):
+            self.assertIn(token, child)
+        self.assertIn('restarted_text("RecentCountText")', gui)
+        self.assertIn('restarted_value("SearchPresetNameBox")', gui)
+        self.assertIn('restarted_text("SearchCountText")', gui)
+        self.assertIn('restarted_control("SearchPresetApplyButton")', gui)
+        self.assertIn('restarted_control("SearchPresetDeleteButton")', gui)
+        self.assertIn('restarted_control("SearchScopeBox")', gui)
+        self.assertIn('restarted_control("SearchRunButton")', gui)
+        self.assertIn('"restarted WinUI failed to reload two opted-in scopes"',gui)
+        self.assertIn('"saved Search v4/content-regex criteria did not apply after restart"',gui)
+        self.assertIn('"Search v3/content reloaded preset did not execute"',gui)
+        self.assertIn('owned_scroll.SetScrollPercent(-1, 100)', gui)
+        self.assertIn('clear_button.exists(timeout=2) and clear_button.is_visible()',gui)
+        self.assertIn('recall.read_text(encoding="utf-16").strip()==""',gui)
+
     def test_file_panes_retain_minimum_height_with_scrolling(self):
         cpp = source("app/winui/m19_features.cpp")
         sized = cpp.split("void MainWindow::OnSearchPanelSizeChanged(", 1)[1].split(
