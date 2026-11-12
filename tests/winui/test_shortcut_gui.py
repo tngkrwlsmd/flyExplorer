@@ -169,6 +169,13 @@ try:
     assert left_item is not None
     safe_click(left_item)
     left_item.select()
+    # A click/selection is not proof of keyboard focus after WinUI rebinds.
+    # Establish the owned file row as the physical F5 input target.
+    left_item = row("LeftFiles", source.name)
+    assert left_item is not None
+    left_item.set_focus()
+    eventually(lambda: left_item.has_keyboard_focus(),
+               "owned left file row did not receive keyboard focus", 7)
     focus()
     send_keys("{F5}")
     eventually(
@@ -223,6 +230,12 @@ try:
         eventually(lambda: len(pane_tabs(tabs_id)) == 2,
                    "second owned folder tab missing: " + tabs_id)
         safe_click(pane_tabs(tabs_id)[1])
+        # The arrow key is meaningful only after the keyboard focus enters
+        # the TabView strip; clicking to select is not that precondition.
+        pane_tabs(tabs_id)[1].set_focus()
+        eventually(lambda: selected_and_focused(tabs_id, 1),
+                   "owned second folder tab did not receive keyboard focus: "
+                   + tabs_id, 7)
         for keys, index in (("{LEFT}{ENTER}", 0), ("{RIGHT}{ENTER}", 1)):
             focus()
             send_keys(keys, pause=.12)
