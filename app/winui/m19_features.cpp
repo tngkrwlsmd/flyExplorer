@@ -988,6 +988,14 @@ void MainWindow::OnSearchCompleted(
         row.Text(hstring(file));
         items.Append(row);
     }
+    // The results list sits below the bounded 400 px condition scroller.
+    // Bring a completed nonempty result into view without changing focus,
+    // search ownership, persistence, or any canceled/stale completion.
+    if(!completion.result.matches.empty()&&
+       SearchPanel().Visibility()==Visibility::Visible){
+        SearchMatches().UpdateLayout();
+        SearchMatches().StartBringIntoView();
+    }
     auto summary=(completion.result.indexOnly?
         std::wstring(L"Windows 인덱스 결과 "):
         std::wstring(L"검색 결과 "))+

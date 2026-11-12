@@ -47,6 +47,25 @@ class SearchResultsExpandContract(unittest.TestCase):
                           "SearchLocateButton()", "AppWindow().Resize("):
             self.assertNotIn(forbidden, method)
 
+    def test_applied_nonempty_result_is_brought_into_bounded_view(self):
+        cpp = source("app/winui/m19_features.cpp")
+        completed = cpp.split("void MainWindow::OnSearchCompleted(", 1)[1].split(
+            "std::wstring MainWindow::SelectedSearchMatchPath", 1)[0]
+        gate = "if(accepted.disposition!=Disposition::Applied)return;"
+        visible = "SearchPanel().Visibility()==Visibility::Visible"
+        reveal = "SearchMatches().StartBringIntoView();"
+        self.assertIn(gate, completed)
+        self.assertIn("if(!completion.result.matches.empty()&&", completed)
+        self.assertIn(visible, completed)
+        self.assertIn("SearchMatches().UpdateLayout();", completed)
+        self.assertIn(reveal, completed)
+        self.assertLess(completed.index(gate), completed.index(reveal))
+        self.assertLess(completed.index("items.Append(row);"),
+                        completed.index(reveal))
+        self.assertLess(completed.index(visible), completed.index(reveal))
+        # No auto-reveal before accepting a valid search context.
+        self.assertNotIn(reveal, completed[:completed.index(gate)])
+
     def test_file_panes_retain_minimum_height_with_scrolling(self):
         cpp = source("app/winui/m19_features.cpp")
         sized = cpp.split("void MainWindow::OnSearchPanelSizeChanged(", 1)[1].split(
