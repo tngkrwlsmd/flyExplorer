@@ -579,10 +579,28 @@ try:
  ensure_owned_focus()
  # Focus acquisition can rebuild the WinUIA peer after watcher invalidation;
  # resolve the exact owned row again immediately before the physical gesture.
- navitems=eventually(lambda:next((rows for rows in [nested_rows()]
-                                  if len(rows)==1),None),
-                     "native Shell fixture row lost before input",8)
- navitems[0].double_click_input()
+ def native_nested_selected():
+  current=nested_rows()
+  if len(current)!=1:return False
+  ensure_owned_focus()
+  current[0].select()
+  live=nested_rows()
+  return len(live)==1 and live[0].is_selected()
+ eventually(native_nested_selected,
+            "native Shell owned Nested selection did not settle",8)
+ navitems=nested_rows()
+ assert len(navitems)==1 and navitems[0].is_selected(), (
+  "refusing owned double click without selected Nested row")
+ # Keep the physical double-click, but reject an old or offscreen UIA peer.
+ rowrect=navitems[0].rectangle()
+ viewrect=element("LeftFiles").rectangle()
+ x1,x2=max(rowrect.left,viewrect.left),min(rowrect.right,viewrect.right)
+ y1,y2=max(rowrect.top,viewrect.top),min(rowrect.bottom,viewrect.bottom)
+ assert x2-x1>=40 and y2-y1>=12, (
+  "native Shell owned row has no safe visible pointer target")
+ from pywinauto import mouse
+ mouse.double_click(button="left",coords=(x1+min(36,(x2-x1)//3),
+                                            y1+(y2-y1)//2))
  print("OWNED_NATIVE_POINTER_GUARD_PASSED",True,flush=True)
  try:
   eventually(lambda:"Nested" in element("AddressBox").get_value(),

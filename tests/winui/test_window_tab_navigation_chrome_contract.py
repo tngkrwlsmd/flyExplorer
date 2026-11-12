@@ -38,6 +38,33 @@ class WindowTabChromeContract(unittest.TestCase):
         self.assertIn("NewTabButton()",active)
         self.assertIn("CloseTabButton()",active)
 
+    def test_native_owned_shell_pointer_viewport_contract(self):
+        gui=(ROOT/"tests/winui/test_shell_gui.py").read_text(encoding="utf-8")
+        block=gui.split("# A real ListView double click",1)[1].split(
+            "def tabnum(side):",1)[0]
+        for guard in (
+            "def native_nested_selected():",
+            "current[0].select()",
+            "len(live)==1 and live[0].is_selected()",
+            "len(navitems)==1 and navitems[0].is_selected()",
+            'element("LeftFiles").rectangle()',
+            "max(rowrect.left,viewrect.left)",
+            "max(rowrect.top,viewrect.top)",
+            "assert x2-x1>=40 and y2-y1>=12",
+            'mouse.double_click(button="left",coords=',
+            '"absolute native PIDL row double click failed"',
+            'safe_click(element("BackButton"))',
+        ):
+            self.assertIn(guard,block)
+        self.assertNotIn("navitems[0].double_click_input()",block)
+        a=block.index("assert len(navitems)==1 and navitems[0].is_selected()")
+        b=block.index("assert x2-x1>=40 and y2-y1>=12")
+        c=block.index('mouse.double_click(button="left",coords=')
+        d=block.index('"absolute native PIDL row double click failed"')
+        self.assertLess(a,b)
+        self.assertLess(b,c)
+        self.assertLess(c,d)
+
     def test_v7_selected_folder_enter_keeps_real_navigation_gate(self):
         gui=(ROOT/"tests/winui/test_v7_window_tabs_gui.py").read_text(
             encoding="utf-8")
