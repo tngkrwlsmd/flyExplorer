@@ -10,6 +10,37 @@ def src(path):
 
 
 class SearchControllerContracts(unittest.TestCase):
+    def test_m19_clear_recent_uses_owned_visible_physical_button(self):
+        gui=src("tests/winui/test_m19_winui_features.py")
+        section=gui.split("# Win.set_focus() can restore",1)[1].split(
+            'good(lambda:"저장 0개"',1)[0]
+        for token in (
+            "focus()",
+            "owned_scroll.SetScrollPercent(-1, 100)",
+            "def owned_clear_visible():",
+            "item.rectangle()",
+            'element("SearchPanel").rectangle()',
+            "box.bottom<=viewport.bottom-2",
+            "good(owned_clear_visible,",
+            "u.GetWindowThreadProcessId(foreground,c.byref(foreground_owner))",
+            "foreground_owner.value==p.pid",
+            "clear_button.click_input()",
+            "M1.9 Clear recent click not acknowledged by owned WinUI",
+            "M1.9 Clear recent action reported persistence failure",
+            'recall.read_text(encoding="utf-16").strip()==""',
+        ):
+            self.assertIn(token,section)
+        self.assertNotIn("safe_click(clear_button)",section)
+        self.assertLess(section.index("focus()"),
+                        section.index("owned_scroll.SetScrollPercent(-1, 100)"))
+        self.assertLess(section.index("owned_scroll.SetScrollPercent(-1, 100)"),
+                        section.index("clear_button.click_input()"))
+        self.assertLess(section.index("good(owned_clear_visible,"),
+                        section.index("clear_button.click_input()"))
+        # Preserve the real file persistence oracle: a UI count alone is not
+        # enough to consider the destructive owned clear action complete.
+        self.assertIn("M1.9 Clear recent did not persist empty preview history",section)
+
     def test_compact_search_preserves_file_panes_and_scrolls_overflow(self):
         import xml.etree.ElementTree as ET
         root = ET.fromstring(src("app/winui/MainWindow.xaml"))

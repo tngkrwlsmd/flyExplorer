@@ -669,15 +669,42 @@ def run(*,p,win,element,safe_click,focus,eventually,ownedwindows,
                     raise AssertionError("Owned search restart window failed to close")
             assert restart.returncode==0
 
-        # The main test-owned search panel may still be scrolled to the
-        # query editor. Expose the clear action before a physical click.
+        # Win.set_focus() can restore the previously focused query editor
+        # and scroll this bounded SearchPanel back to its top. Establish
+        # foreground ownership BEFORE scrolling, then preserve the viewport
+        # through the physical button click (safe_click would focus again).
+        focus()
         owned_scroll=element("SearchPanel").wrapper_object().iface_scroll
         if owned_scroll.CurrentVerticallyScrollable:
             owned_scroll.SetScrollPercent(-1, 100)
+        def owned_clear_visible():
+            item=element("SearchClearButton")
+            if not item.exists(timeout=.2) or not item.is_visible():
+                return False
+            box=item.rectangle()
+            viewport=element("SearchPanel").rectangle()
+            return (box.width()>=32 and box.height()>=16 and
+                    box.left>=viewport.left+2 and
+                    box.right<=viewport.right-2 and
+                    box.top>=viewport.top+2 and
+                    box.bottom<=viewport.bottom-2)
+        good(owned_clear_visible,
+             "M1.9 owned clear action not fully inside visible search panel",8)
         clear_button=element("SearchClearButton")
-        assert clear_button.exists(timeout=2) and clear_button.is_visible(), (
-            "owned recent search clear action is off-screen")
-        safe_click(clear_button)
+        foreground=u.GetForegroundWindow()
+        foreground_owner=W.DWORD()
+        if foreground:
+            u.GetWindowThreadProcessId(foreground,c.byref(foreground_owner))
+        assert foreground_owner.value==p.pid, (
+            "M1.9 refusing physical clear click outside owned app")
+        clear_button.click_input()
+        good(lambda:any(message in element("StatusText").window_text()
+                        for message in (
+                            "최근 검색 위치를 모두 지웠습니다.",
+                            "최근 검색 위치 삭제를 저장하지 못했습니다.")),
+             "M1.9 Clear recent click not acknowledged by owned WinUI",5)
+        assert "최근 검색 위치를 모두 지웠습니다." in element("StatusText").window_text(), (
+            "M1.9 Clear recent action reported persistence failure")
         good(lambda:recall.is_file() and
              recall.read_text(encoding="utf-16").strip()=="",
              "M1.9 Clear recent did not persist empty preview history",9)
