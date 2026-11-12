@@ -22,16 +22,24 @@ def run(*,win,element,safe_click,focus,eventually,owned,localdata,env,exe):
         return [x for x in element("LeftFiles").descendants()
                 if x.element_info.control_type=="ListItem" and "Nested" in x.window_text()]
     eventually(lambda:len(nested_rows())==1,"v7 Nested folder row missing",10)
-    # AddressBox Enter has its own full-suite contract. Here use the actual
-    # folder activation route so this targeted test measures WindowTab-owned
-    # navigation/history rather than keyboard-edit focus timing. Window focus
-    # can replace the UIA row peer after watcher publication, so resolve the
-    # exact owned row again immediately before the physical gesture.
-    focus()
-    rows=eventually(lambda:next((found for found in [nested_rows()]
-                                if len(found)==1),None),
-                    "v7 Nested row lost before physical input",8)
-    rows[0].double_click_input()
+    # The integrated suite already verifies the physical folder double-click
+    # route. V7 must verify WindowTab-owned navigation, not a stale UIA row
+    # rectangle after Shell watcher refresh or sorting. Both the double-tap
+    # and unmodified Enter paths call OpenSelectedFolder(0).
+    def select_owned_nested():
+        current=nested_rows()
+        if len(current)!=1:return False
+        focus()
+        current[0].select()
+        selected=nested_rows()
+        return len(selected)==1 and selected[0].is_selected()
+    eventually(select_owned_nested,
+               "v7 owned Nested row selection did not settle",8)
+    element("LeftFiles").set_focus()
+    selected=nested_rows()
+    assert len(selected)==1 and selected[0].is_selected(), (
+        "v7 rejecting Enter without the owned Nested row selected")
+    send_keys("{ENTER}")
     eventually(lambda:element("BackButton").is_enabled() and
                not any(x.element_info.control_type=="ListItem"
                        for x in element("LeftFiles").descendants()),

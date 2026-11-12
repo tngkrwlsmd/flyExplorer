@@ -38,6 +38,36 @@ class WindowTabChromeContract(unittest.TestCase):
         self.assertIn("NewTabButton()",active)
         self.assertIn("CloseTabButton()",active)
 
+    def test_v7_selected_folder_enter_keeps_real_navigation_gate(self):
+        gui=(ROOT/"tests/winui/test_v7_window_tabs_gui.py").read_text(
+            encoding="utf-8")
+        setup=gui.split("def nested_rows():",1)[1].split(
+            "# Explorer Ctrl+T",1)[0]
+        for token in (
+            "if len(current)!=1:return False",
+            "current[0].select()",
+            "return len(selected)==1 and selected[0].is_selected()",
+            'element("LeftFiles").set_focus()',
+            "assert len(selected)==1 and selected[0].is_selected()",
+            'send_keys("{ENTER}")',
+            '"v7 tab A did not commit navigation to empty Nested folder"',
+        ):
+            self.assertIn(token,setup)
+        self.assertNotIn("double_click_input()",setup)
+        selected=setup.index("assert len(selected)==1 and selected[0].is_selected()")
+        self.assertLess(selected,setup.index('send_keys("{ENTER}")'))
+        self.assertLess(setup.index('send_keys("{ENTER}")'),
+                        setup.index("element(\"BackButton\").is_enabled()"))
+        # Both real GUI gestures enter the same folder-opening command.
+        cpp=(ROOT/"app/winui/MainWindow.xaml.cpp").read_text(
+            encoding="utf-8-sig")
+        mouse=cpp.split("void MainWindow::OnLeftFileDoubleTapped(",1)[1].split(
+            "void MainWindow::OnRightFileDoubleTapped(",1)[0]
+        keyboard=cpp.split("void MainWindow::OnLeftFileKeyDown(",1)[1].split(
+            "void MainWindow::OnRightFileKeyDown(",1)[0]
+        self.assertIn("OpenSelectedFolder(0);",mouse)
+        self.assertIn("OpenSelectedFolder(0);",keyboard)
+
     def test_v7_address_draft_keeps_focus_through_enter(self):
         gui=(ROOT/"tests/winui/test_v7_window_tabs_gui.py").read_text(
             encoding="utf-8")
