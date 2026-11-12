@@ -506,6 +506,43 @@ namespace winrt::FlyExplorer::implementation
                 const bool shift=(::GetKeyState(VK_SHIFT)&0x8000)!=0;
                 const bool alt=(::GetKeyState(VK_MENU)&0x8000)!=0;
                 const auto key=args.Key();
+                // The native TabView can route an arrow to the inner
+                // CloseButton, making the next Enter close the selected tab.
+                // Override only unmodified arrows with actual keyboard focus
+                // on an owned pane TabViewItem. All other targets retain their
+                // built-in navigation and closing behavior.
+                if(!control&&!shift&&!alt&&!args.Handled()&&
+                   (key==Windows::System::VirtualKey::Left||
+                    key==Windows::System::VirtualKey::Right)){
+                    if(auto ui=nativeWeak.get();ui&&!ui->mClosing){
+                        const auto focused=Microsoft::UI::Xaml::Input::FocusManager::
+                            GetFocusedElement(ui->RootShell().XamlRoot())
+                                .try_as<TabViewItem>();
+                        if(focused){
+                            for(int side=0;side<2;++side){
+                                if(side==1&&!ui->ActiveWindowTab().model.split)
+                                    continue;
+                                auto strip=side==0?ui->LeftTabs():ui->RightTabs();
+                                const auto items=strip.TabItems();
+                                const auto count=items.Size();
+                                for(uint32_t tab=0;tab<count;++tab){
+                                    if(items.GetAt(tab).as<TabViewItem>()!=focused)
+                                        continue;
+                                    const auto next=static_cast<int32_t>(tab)+
+                                        (key==Windows::System::VirtualKey::Left?-1:1);
+                                    if(next>=0&&next<static_cast<int32_t>(count)){
+                                        const auto target=items.GetAt(
+                                            static_cast<uint32_t>(next))
+                                                .as<TabViewItem>();
+                                        (void)target.Focus(FocusState::Keyboard);
+                                    }
+                                    args.Handled(true);
+                                    return;
+                                }
+                            }
+                        }
+                    }
+                }
                 const bool addressAlias=!control&&!shift&&
                     ((!alt&&key==Windows::System::VirtualKey::F4)||
                      (alt&&key==Windows::System::VirtualKey::D));

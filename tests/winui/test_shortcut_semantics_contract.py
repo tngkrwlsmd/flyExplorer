@@ -353,6 +353,35 @@ class ShortcutSemanticsContract(unittest.TestCase):
             self.assertIn("void MainWindow::"+name+"(", window)
         self.assertIn("PersistPreferences()", window)
 
+    def test_pane_tab_arrow_focus_is_scoped_and_never_targets_close_button(self):
+        source = WINDOW.read_text(encoding="utf-8")
+        preview = source.split("RootShell().PreviewKeyDown(", 1)[1].split(
+            "const bool addressAlias=", 1)[0]
+        for token in (
+            "!control&&!shift&&!alt&&!args.Handled()",
+            "GetFocusedElement(ui->RootShell().XamlRoot())",
+            ".try_as<TabViewItem>()",
+            "if(side==1&&!ui->ActiveWindowTab().model.split)",
+            "items.GetAt(tab).as<TabViewItem>()!=focused",
+            "key==Windows::System::VirtualKey::Left?-1:1",
+            "next>=0&&next<static_cast<int32_t>(count)",
+            "(void)target.Focus(FocusState::Keyboard)",
+            "args.Handled(true);",
+        ):
+            self.assertIn(token, preview)
+        self.assertLess(preview.index(".try_as<TabViewItem>()"),
+                        preview.index("(void)target.Focus(FocusState::Keyboard)"))
+        for forbidden in ("CloseFolderTab(", "OnPaneTabCloseRequested(",
+                          "Command::SelectTab", "args.Handled(true);\n                    return;\n                }\n                const bool"):
+            self.assertNotIn(forbidden, preview)
+        gui = (ROOT / "tests" / "winui" / "test_shortcut_gui.py").read_text(
+            encoding="utf-8")
+        self.assertIn('("{LEFT}", 0)', gui)
+        self.assertIn('("{RIGHT}", 1)', gui)
+        self.assertIn('eventually(lambda: focused_tab(tabs_id, index)', gui)
+        self.assertIn('send_keys("{ENTER}")', gui)
+        self.assertIn('eventually(lambda: selected_and_focused(tabs_id, index)', gui)
+
     def test_pane_tab_keyboard_focus_survives_unchanged_header_rebind(self):
         window = WINDOW.read_text(encoding="utf-8")
         tabs = window.split("void MainWindow::RefreshTabs(int side)", 1)[1].split(
