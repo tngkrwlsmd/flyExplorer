@@ -38,6 +38,24 @@ class WindowTabChromeContract(unittest.TestCase):
         self.assertIn("NewTabButton()",active)
         self.assertIn("CloseTabButton()",active)
 
+    def test_v7_address_draft_keeps_focus_through_enter(self):
+        gui=(ROOT/"tests/winui/test_v7_window_tabs_gui.py").read_text(
+            encoding="utf-8")
+        visit=gui.split("def visit(side,path,child):",1)[1].split(
+            "# Capture validates",1)[0]
+        self.assertIn('box=element("AddressBox")',visit)
+        self.assertIn("focus()\n            box.set_edit_text(str(path))",visit)
+        draft=visit.index("box.set_edit_text(str(path))")
+        commit=visit.index('box.type_keys("{ENTER}",set_foreground=True)')
+        self.assertLess(draft,commit)
+        self.assertNotIn("focus()",visit[draft:commit])
+        self.assertIn("box.get_value().casefold()==str(path).casefold()",visit)
+        source=(ROOT/"app/winui/MainWindow.xaml.cpp").read_text(
+            encoding="utf-8-sig")
+        lost=source.split("void MainWindow::OnAddressLostFocus(",1)[1].split(
+            "void MainWindow::OnAddressDisplayClicked(",1)[0]
+        self.assertIn("AddressBox().Text(hstring(FriendlyAddress(address)))",lost)
+
     def test_v7_private_session_seeds_inactive_window_panes_before_save(self):
         gui=(ROOT/"tests/winui/test_v7_window_tabs_gui.py").read_text(
             encoding="utf-8")

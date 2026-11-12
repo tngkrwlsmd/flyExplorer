@@ -95,7 +95,13 @@ def run(*,win,element,safe_click,focus,eventually,owned,localdata,env,exe):
         # collapsing B; the hidden right pane must round-trip too.
         def visit(side,path,child):
             focus();safe_click(element("LeftFiles" if side==0 else "RightFiles"))
-            box=element("AddressBox");box.set_edit_text(str(path));focus()
+            box=element("AddressBox")
+            # OnAddressLostFocus restores the committed folder when focus moves.
+            # Keep the owned address draft untouched between setting it and Enter.
+            focus()
+            box.set_edit_text(str(path))
+            assert box.get_value().casefold()==str(path).casefold(), (
+                "v7 session draft changed before physical Enter")
             box.type_keys("{ENTER}",set_foreground=True)
             surface=element("LeftFiles" if side==0 else "RightFiles")
             eventually(lambda:any(child in x.window_text() for x in surface.descendants()),
