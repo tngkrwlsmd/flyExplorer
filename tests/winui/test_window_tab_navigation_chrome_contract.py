@@ -38,6 +38,28 @@ class WindowTabChromeContract(unittest.TestCase):
         self.assertIn("NewTabButton()",active)
         self.assertIn("CloseTabButton()",active)
 
+    def test_v7_private_session_seeds_inactive_window_panes_before_save(self):
+        gui=(ROOT/"tests/winui/test_v7_window_tabs_gui.py").read_text(
+            encoding="utf-8")
+        section=gui.split('if os.environ.get("FLY_V7_WINDOW_TABS_SESSION")=="YES":',1)[1]
+        a=section.index("click_tab(0)")
+        a_right=section.index('visit(1,Path(owned)/"Right","Secondary")')
+        b=section.index("click_tab(1)")
+        b_left=section.index('visit(0,Path(owned)/"Right","Secondary")')
+        b_right=section.index('visit(1,Path(owned)/"Left","Nested")')
+        save=section.index('safe_click(element("SaveSessionButton"))')
+        self.assertLess(a,a_right)
+        self.assertLess(a_right,b)
+        self.assertLess(b,b_left)
+        self.assertLess(b_left,b_right)
+        self.assertLess(b_right,save)
+        self.assertIn('"session tab A left route changed during right seeding"',section)
+        self.assertIn('"session tab B route changed during A local seeding"',section)
+        self.assertIn('profile.is_file() and profile.stat().st_size>=96',section)
+        # Never replace the product's fail-closed local-folder validation.
+        session=(ROOT/"src/base/ui_session.cpp").read_text(encoding="utf-8")
+        self.assertIn('!validPane(tab.panes[0])||!validPane(tab.panes[1])',session)
+
     def test_pane_tab_refresh_preserves_existing_focusable_items(self):
         source=compact((ROOT/"app/winui/MainWindow.xaml.cpp").read_text(encoding="utf-8"))
         refresh=source.split("void MainWindow::RefreshTabs(int side)",1)[1].split(

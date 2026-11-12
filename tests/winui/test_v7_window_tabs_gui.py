@@ -100,6 +100,20 @@ def run(*,win,element,safe_click,focus,eventually,owned,localdata,env,exe):
             surface=element("LeftFiles" if side==0 else "RightFiles")
             eventually(lambda:any(child in x.window_text() for x in surface.descendants()),
                        "v7 session pane did not load owned local path",17)
+        # Capture validates *both* panes in *every* WindowTab, including
+        # inactive tabs. Seed A's right pane with an actual owned local folder
+        # rather than relying on an async/default virtual Shell snapshot.
+        click_tab(0)
+        eventually(lambda:"nested" in address(),
+                   "session tab A left route changed before local seeding",10)
+        visit(1,Path(owned)/"Right","Secondary")
+        safe_click(element("LeftFiles"))
+        eventually(lambda:"nested" in address(),
+                   "session tab A left route changed during right seeding",10)
+        # Return to B with its existing default route and seed both panes.
+        click_tab(1)
+        eventually(lambda:address()==b_address,
+                   "session tab B route changed during A local seeding",10)
         visit(0,Path(owned)/"Right","Secondary")
         visit(1,Path(owned)/"Left","Nested")
         safe_click(element("LeftFiles"))
