@@ -503,9 +503,12 @@ void MainWindow::OpenRecentActivityFilePath(std::wstring const& path){
         [weak,path,context](Open::Result result){
             auto ui=weak.get();
             if(!ui||ui->mClosing)return;
-            // An accepted open still belongs in opted-in history, even if
-            // the user navigated away while the external app was starting.
-            if(result==Open::Result::Opened)
+            // A user removal, clear or opt-out must win over a late open.
+            // Navigating elsewhere alone does not invalidate opted-in history.
+            const auto& recentNow=ui->mRecentActivity.files();
+            const bool historyCurrent=ui->mRecentActivity.enabled()&&
+                std::find(recentNow.begin(),recentNow.end(),path)!=recentNow.end();
+            if(result==Open::Result::Opened&&historyCurrent)
                 ui->mRecentActivity.recordFile(path);
             // Do not repaint a different WindowTab/pane/route with an old
             // completion. The request's preflight alone is not sufficient.
@@ -514,7 +517,7 @@ void MainWindow::OpenRecentActivityFilePath(std::wstring const& path){
             const auto live=ui->FileOperationContext(context.side);
             if(live.tab!=context.tab||live.route!=context.route||
                live.visibleFolder!=context.visibleFolder)return;
-            if(result==Open::Result::Opened){
+            if(result==Open::Result::Opened&&historyCurrent){
                 if(ui->RecentActivityPanel().Visibility()==Visibility::Visible)
                     ui->RefreshRecentActivityPanel();
                 if(ui->HomeOverviewPanel().Visibility()==Visibility::Visible)

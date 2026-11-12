@@ -141,6 +141,28 @@ class RecentActivityContracts(unittest.TestCase):
         model=source("app/winui/recent_activity_controller.h")
         self.assertIn("if(!enabled_||!acceptable(path))return;",model)
 
+    def test_async_recent_open_preserves_explicit_history_removal(self):
+        code=source("app/winui/m19_features.cpp")
+        completion=code.split("void MainWindow::OpenRecentActivityFilePath(",1)[1].split(
+            "void MainWindow::OnOpenRecentActivityFolder(",1)[0]
+        # A successful operation can outlive a user removal or opt-out.
+        # Only an entry still explicitly present may be promoted again.
+        for guard in (
+            "const auto& recentNow=ui->mRecentActivity.files();",
+            "const bool historyCurrent=ui->mRecentActivity.enabled()&&",
+            "std::find(recentNow.begin(),recentNow.end(),path)!=recentNow.end();",
+            "if(result==Open::Result::Opened&&historyCurrent)",
+        ):
+            self.assertIn(guard,completion)
+        self.assertLess(completion.index("const bool historyCurrent="),
+                        completion.index("ui->mRecentActivity.recordFile(path);"))
+        self.assertLess(completion.index("const bool historyCurrent="),
+                        completion.index("ui->RefreshRecentActivityPanel();"))
+        model=source("app/winui/recent_activity_controller.h")
+        self.assertIn("if(!yes)clear();",model)
+        self.assertIn("files_.clear();",model)
+        self.assertIn("files_.erase(it);",model)
+
     def test_explicit_controls_and_existing_async_reopen(self):
         xaml=source("app/winui/MainWindow.xaml")
         header=source("app/winui/MainWindow.xaml.h")
