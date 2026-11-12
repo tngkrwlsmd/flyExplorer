@@ -58,8 +58,25 @@ def run(*,p,win,element,safe_click,focus,eventually,ownedwindows,
             raise AssertionError("Owned M1.9 child failed to close normally")
         assert proc.returncode==0 if hasattr(proc,"returncode") else True
     def search_matches(needle):
-        return any(needle.lower() in row.window_text().lower()
-            for row in element("SearchMatches").descendants())
+        # The bounded SearchPanel scrolls to a completed result. UIA omits
+        # off-screen list/editor peers, so navigate the *owned* panel as a
+        # user would and return to the query editor after inspecting results.
+        panel = element("SearchPanel").wrapper_object().iface_scroll
+        if not panel.CurrentVerticallyScrollable:
+            return any(needle.lower() in row.window_text().lower()
+                       for row in element("SearchMatches").descendants())
+        try:
+            for percent in (100, 80, 60, 40, 20, 0):
+                panel.SetScrollPercent(-1, percent)
+                rows = element("SearchMatches")
+                if rows.exists(timeout=.2) and rows.is_visible():
+                    return any(needle.lower() in row.window_text().lower()
+                               for row in rows.descendants())
+            return False
+        finally:
+            # Preserve next-query access, including after negative matches
+            # and unexpected UIA exceptions; never change search contents.
+            panel.SetScrollPercent(-1, 0)
 
     # Existing M1.8 GUI harness completed its dual-pane/virtual shell
     # regression. Its current RIGHT pane is back at its owned fixture.

@@ -66,6 +66,28 @@ class SearchResultsExpandContract(unittest.TestCase):
         # No auto-reveal before accepting a valid search context.
         self.assertNotIn(reveal, completed[:completed.index(gate)])
 
+    def test_m19_real_gui_scrolls_owned_results_back_to_query_fields(self):
+        gui = source("tests/winui/test_m19_winui_features.py")
+        helper = gui.split("def search_matches(needle):", 1)[1].split(
+            "# Existing M1.8 GUI harness", 1)[0]
+        for token in (
+            'element("SearchPanel").wrapper_object().iface_scroll',
+            "CurrentVerticallyScrollable",
+            "for percent in (100, 80, 60, 40, 20, 0):",
+            "panel.SetScrollPercent(-1, percent)",
+            'rows = element("SearchMatches")',
+            "rows.exists(timeout=.2) and rows.is_visible()",
+            "for row in rows.descendants()",
+            "finally:",
+            "panel.SetScrollPercent(-1, 0)",
+        ):
+            self.assertIn(token, helper)
+        self.assertLess(helper.index("for percent in "),
+                        helper.index("finally:"))
+        self.assertIn('term.set_edit_text("report")', gui)
+        self.assertIn('"Search v2 default file-only literal search failed"', gui)
+        self.assertIn('assert search_matches("Report-2026.TXT")', gui)
+
     def test_file_panes_retain_minimum_height_with_scrolling(self):
         cpp = source("app/winui/m19_features.cpp")
         sized = cpp.split("void MainWindow::OnSearchPanelSizeChanged(", 1)[1].split(
