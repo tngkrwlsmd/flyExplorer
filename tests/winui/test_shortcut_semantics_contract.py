@@ -14,6 +14,40 @@ def compact(text: str) -> str:
 
 
 class ShortcutSemanticsContract(unittest.TestCase):
+    def test_owned_f5_gui_refresh_recognizes_only_accepted_local_completions(self):
+        # Executable static contract: do not import the GUI driver because it
+        # launches a native process on import. Preserve product success wording.
+        import ast
+        gui = (ROOT / "tests/winui/test_shortcut_gui.py").read_text(encoding="utf-8")
+        tree = ast.parse(gui)
+        notice = next(node for node in tree.body
+                      if isinstance(node, ast.Assign)
+                      and any(isinstance(target, ast.Name)
+                              and target.id == "F5_SUCCESS_NOTICES"
+                              for target in node.targets))
+        accepted = ast.literal_eval(notice.value)
+        self.assertEqual(set(accepted), {
+            "폴더 변경 알림을 반영했습니다.",
+            "일시적인 오류 후 재시도하여 폴더를 불러왔습니다.",
+        })
+        self.assertEqual(len(accepted), 2)
+        self.assertNotIn("폴더를 불러오는 중입니다.", accepted)
+        self.assertNotIn("현재 위치를 새로 고칠 수 없습니다.", accepted)
+        self.assertNotIn("Shell 폴더를 열지 못했습니다.", accepted)
+        segment = gui.split("def owned_f5_refresh_completed():", 1)[1].split(
+            "    except AssertionError:", 1)[0]
+        self.assertIn('element("StatusText").window_text() in F5_SUCCESS_NOTICES', segment)
+        self.assertIn("process.poll() is None", segment)
+        self.assertIn('"왼쪽" in element("ActivePaneText").window_text()', segment)
+        self.assertIn('element("AddressBox").get_value().rstrip', segment)
+        self.assertIn('str(left).rstrip', segment)
+        self.assertIn('row("LeftFiles", source.name) is not None', segment)
+        self.assertIn("source.is_dir()", segment)
+        self.assertIn('not (right / source.name).exists()', segment)
+        self.assertIn('eventually(\n            owned_f5_refresh_completed,', segment)
+        self.assertIn('send_keys("{F5}")', gui)
+        self.assertIn("REAL_F5_REFRESH_NO_FILE_MUTATION", gui)
+
     def test_number_shortcuts_use_existing_window_tabs_with_editor_and_bounds_guards(self):
         source = compact(WINDOW.read_text(encoding="utf-8"))
         root = source.split("RootShell().PreviewKeyDown(", 1)[1]

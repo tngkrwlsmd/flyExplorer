@@ -50,6 +50,14 @@ u.GetWindowTextW.argtypes = [W.HWND, W.LPWSTR, c.c_int]
 u.PostMessageW.argtypes = [W.HWND, W.UINT, W.WPARAM, W.LPARAM]
 
 
+# Both messages are successful Shell refresh completions. A bounded helper
+# recovery is not a file operation failure; error/loading notices remain invalid.
+F5_SUCCESS_NOTICES = (
+    "폴더 변경 알림을 반영했습니다.",
+    "일시적인 오류 후 재시도하여 폴더를 불러왔습니다.",
+)
+
+
 def eventually(fn, label, seconds=10):
     scale = 1.5 if os.environ.get("GITHUB_ACTIONS") == "true" else 1.0
     return wait_until(fn, label, seconds=seconds * scale, interval=.13)
@@ -178,10 +186,25 @@ try:
                "owned left file row did not receive keyboard focus", 7)
     focus()
     send_keys("{F5}")
+
+    def owned_f5_refresh_completed():
+        # The helper may recover during this owned refresh. Accept only its
+        # documented successful completion, never a loading/failure footer,
+        # and keep the exact active-pane route and visible fixture check.
+        return (
+            element("StatusText").window_text() in F5_SUCCESS_NOTICES
+            and process.poll() is None
+            and "왼쪽" in element("ActivePaneText").window_text()
+            and element("AddressBox").get_value().rstrip("\\/").casefold()
+                == str(left).rstrip("\\/").casefold()
+            and row("LeftFiles", source.name) is not None
+            and source.is_dir()
+            and not (right / source.name).exists()
+        )
+
     try:
         eventually(
-            lambda: "폴더 변경 알림을 반영했습니다." in
-                    element("StatusText").window_text(),
+            owned_f5_refresh_completed,
             "plain F5 did not complete active-pane refresh",
             15,
         )
