@@ -222,8 +222,18 @@ class GuiHarnessStaticContract(unittest.TestCase):
                       section)
         self.assertIn('if not owned_scroll.CurrentVerticallyScrollable:',
                       section)
-        self.assertIn('for percent in (75, 85, 100, 65, 50):', section)
+        # Never cycle five positions within one poll: each scroll must
+        # settle before the next UIA visibility/clip inspection.
+        self.assertIn('nonlocal clear_scroll_index', section)
+        self.assertIn('clear_scroll_index+=1', section)
         self.assertIn('owned_scroll.SetScrollPercent(-1, percent)', section)
+        self.assertIn('return False', section)
+        self.assertNotIn('for percent in ', section)
+        start = gui.split('def owned_clear_visible():', 1)[0]
+        self.assertIn('clear_scroll_positions=(75, 85, 100, 65, 50)', start)
+        self.assertIn('clear_scroll_index=0', start)
+        self.assertLess(section.index('if fully_inside():'),
+                        section.index('owned_scroll.SetScrollPercent(-1, percent)'))
         for strict in ("box.width()>=32", "box.height()>=16",
                        "box.left>=viewport.left+2",
                        "box.right<=viewport.right-2",

@@ -687,7 +687,13 @@ def run(*,p,win,element,safe_click,focus,eventually,ownedwindows,
         owned_scroll=element("SearchPanel").wrapper_object().iface_scroll
         if owned_scroll.CurrentVerticallyScrollable:
             owned_scroll.SetScrollPercent(-1, 100)
+        # One owned scroll update per existing 130-ms polling interval.
+        # A burst of five positions can outrun WinUI's layout/UIA refresh
+        # and sample only stale rectangles, even for a genuinely visible row.
+        clear_scroll_positions=(75, 85, 100, 65, 50)
+        clear_scroll_index=0
         def owned_clear_visible():
+            nonlocal clear_scroll_index
             panel=element("SearchPanel")
             def fully_inside():
                 item=element("SearchClearButton")
@@ -705,13 +711,12 @@ def run(*,p,win,element,safe_click,focus,eventually,ownedwindows,
             owned_scroll=panel.wrapper_object().iface_scroll
             if not owned_scroll.CurrentVerticallyScrollable:
                 return False
-            # The clear row precedes the results: the bottom-most position
-            # may hide it above the viewport. Bounded deterministic positions
-            # cover both compact and normal owned-window layouts.
-            for percent in (75, 85, 100, 65, 50):
-                owned_scroll.SetScrollPercent(-1, percent)
-                if fully_inside():
-                    return True
+            # Check the new actual rectangle on the NEXT bounded poll,
+            # after WinUI has had a UI/layout frame to settle. This also
+            # preserves the strict clipping oracle: scrolling is not success.
+            percent=clear_scroll_positions[clear_scroll_index % len(clear_scroll_positions)]
+            clear_scroll_index+=1
+            owned_scroll.SetScrollPercent(-1, percent)
             return False
         good(owned_clear_visible,
              "M1.9 owned clear action not fully inside visible search panel",8)
