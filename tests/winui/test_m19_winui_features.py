@@ -678,20 +678,23 @@ def run(*,p,win,element,safe_click,focus,eventually,ownedwindows,
                     raise AssertionError("Owned search restart window failed to close")
             assert restart.returncode==0
 
-        # The restarted child can leave WinUI's parent ScrollViewer at the
-        # query row. Setting the original owned scroller just once is not
-        # enough: a pending layout/focus update can reset its viewport.
-        # Keep strict physical visibility/clip checks, re-positioning only
-        # the owned parent search panel on each bounded polling attempt.
+        # Win.set_focus() can restore the previously focused query editor
+        # and scroll the owned SearchPanel back to its top. Keep the original
+        # required initial scroll/physical-click ordering; a pending layout
+        # update can then reset the viewport, so each bounded poll repositions
+        # ONLY this same test-owned search panel without bypassing visibility.
         focus()
+        owned_scroll=element("SearchPanel").wrapper_object().iface_scroll
+        if owned_scroll.CurrentVerticallyScrollable:
+            owned_scroll.SetScrollPercent(-1, 100)
         def owned_clear_visible():
             panel=element("SearchPanel")
-            viewport=panel.rectangle()
             def fully_inside():
                 item=element("SearchClearButton")
                 if not item.exists(timeout=.2) or not item.is_visible():
                     return False
                 box=item.rectangle()
+                viewport=element("SearchPanel").rectangle()
                 return (box.width()>=32 and box.height()>=16 and
                         box.left>=viewport.left+2 and
                         box.right<=viewport.right-2 and
