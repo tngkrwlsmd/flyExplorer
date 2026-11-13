@@ -148,9 +148,13 @@ def run(*,p,win,element,safe_click,focus,eventually,left,right,localdata,env,exe
     eventually(lambda:element("AddressBox").get_value().rstrip("\\/").lower()==
                       str(left).rstrip("\\/").lower(),
                "left pane did not reactivate after shortcut checks",10)
+    # A physical button begins an anchored edit; Enter commits it.
+    safe_click(element("CreateFolderButton"))
+    eventually(lambda:element("FileNameBox").wrapper_object().is_visible(),
+               "CreateFolderButton did not start owned edit",8)
     chosen=element("FileNameBox")
     chosen.set_edit_text("새 폴더")
-    safe_click(element("CreateFolderButton"))
+    send_keys("{ENTER}")
     created=left/"새 폴더"
     eventually(created.is_dir,"real native command failed creating owned Korean folder",15)
     eventually(lambda:any("새 폴더" in row.window_text()
@@ -158,7 +162,6 @@ def run(*,p,win,element,safe_click,focus,eventually,left,right,localdata,env,exe
                "native isolated Shell watcher failed to refresh new Korean folder",15)
     assert not (right/"새 폴더").exists()
     print("REAL_M21_NATIVE_CREATE_OWNED_KOREAN_FOLDER_AND_INDEPENDENT_WATCH",True,flush=True)
-    chosen.set_edit_text("이름 변경")
     def find_row():
         return next((entry for entry in element("LeftFiles").descendants()
                      if entry.element_info.control_type=="ListItem" and
@@ -179,6 +182,11 @@ def run(*,p,win,element,safe_click,focus,eventually,left,right,localdata,env,exe
     eventually(select_created,
                "owned Korean folder could not be selected after watcher refresh",10)
     safe_click(element("RenameButton"))
+    eventually(lambda:element("FileNameBox").wrapper_object().is_visible(),
+               "RenameButton did not start owned edit",8)
+    chosen=element("FileNameBox")
+    chosen.set_edit_text("이름 변경")
+    send_keys("{ENTER}")
     renamed=left/"이름 변경"
     eventually(lambda:renamed.is_dir() and not created.exists(),
                "real native rename failed on selected owned Korean folder",15)
@@ -193,8 +201,12 @@ def run(*,p,win,element,safe_click,focus,eventually,left,right,localdata,env,exe
     eventually(lambda:"폴더 변경 알림" in element("StatusText").window_text(),
                "rename refresh did not settle before duplicate create",12)
     # A second attempt must never overwrite an existing folder.
-    chosen.set_edit_text("이름 변경")
     safe_click(element("CreateFolderButton"))
+    eventually(lambda:element("FileNameBox").wrapper_object().is_visible(),
+               "duplicate CreateFolderButton did not start owned edit",8)
+    chosen=element("FileNameBox")
+    chosen.set_edit_text("이름 변경")
+    send_keys("{ENTER}")
     eventually(lambda:"이미 존재" in element("StatusText").window_text(),
                "real duplicate native create did not show non-overwrite Korean error",12)
     assert renamed.is_dir() and not (right/"이름 변경").exists()

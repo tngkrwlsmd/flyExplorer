@@ -6,6 +6,25 @@ ROOT=Path(__file__).resolve().parents[2]
 APP=ROOT/"app"/"winui"
 
 class FileCommandFeedbackContract(unittest.TestCase):
+    def test_m21_gui_mouse_commands_begin_edit_before_enter(self):
+        gui=(ROOT/"tests/winui/test_m21_gui.py").read_text(encoding="utf-8")
+        commands=(APP/"m21_commands.cpp").read_text(encoding="utf-8-sig")
+        self.assertIn("BeginFileNameCommand(fxfile::filecommand::Kind::CreateFolder);",commands)
+        self.assertIn("BeginFileNameCommand(fxfile::filecommand::Kind::RenameSelected);",commands)
+        self.assertIn("if(!mPendingNameEdit||mPendingNameEdit->kind!=kind||",commands)
+        self.assertIn("fxfile::nameedit::sameScope(editContext,liveContext)",commands)
+        owned=gui.split("REAL_CREATE_FOLDER_SHORTCUT_ACTIVE_PANE_EQUIVALENCE",1)[1]
+        for marker in ("CreateFolderButton did not start owned edit",
+                       "RenameButton did not start owned edit",
+                       "duplicate CreateFolderButton did not start owned edit"):
+            self.assertIn(marker,owned)
+        self.assertEqual(3,owned.count('send_keys("{ENTER}")'))
+        for name in ("새 폴더", "이름 변경"):
+            self.assertIn('chosen.set_edit_text("'+name+'")',owned)
+        self.assertIn("eventually(created.is_dir",owned)
+        self.assertIn("eventually(lambda:renamed.is_dir() and not created.exists()",owned)
+        self.assertIn('assert renamed.is_dir() and not (right/"이름 변경").exists()',owned)
+
     def test_toolbar_new_item_menu_reuses_anchored_name_edit_commands(self):
         import xml.etree.ElementTree as ET
         xaml=(APP/"FileToolbar.xaml").read_text(encoding="utf-8-sig")
