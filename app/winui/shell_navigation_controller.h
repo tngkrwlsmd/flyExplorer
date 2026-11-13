@@ -45,6 +45,8 @@ public:
         bool recovered=false;
         bool timedOut=false;
         bool networkRequest=false;
+        bool helperExitKnown=false;
+        std::uint32_t helperExitCode=0;
     };
     enum class ChangeDisposition {
         Ignored,

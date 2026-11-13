@@ -38,8 +38,18 @@ class G01NativeStartupPhaseContract(unittest.TestCase):
         names = CPP.split("char const* const kG01StartupPhases[]={", 1)[1].split(
             "};", 1)[0]
         self.assertEqual(list(G01_SHARED_PHASES),
-                         re.findall(r'"([A-Z_]+)"', names))
+                         re.findall(r'"([A-Z_0-9]+)"', names))
         self.assertIn("mShellNavigation->accept(", CPP)
+
+    def test_helper_exit_categories_are_fixed_and_bounded(self):
+        self.assertEqual(31, len(G01_SHARED_PHASES))
+        allowed = ["LEFT_HELPER_EXIT_0", "LEFT_HELPER_EXIT_7",
+                   "LEFT_HELPER_EXIT_NTSTATUS", "LEFT_HELPER_EXIT_OTHER",
+                   "LEFT_HELPER_EXIT_UNKNOWN"]
+        self.assertEqual(allowed, _safe_g01_startup_events(allowed))
+        self.assertEqual([], _safe_g01_startup_events([
+            "LEFT_HELPER_EXIT_8", "LEFT_HELPER_EXIT_C0000005",
+            "LEFT_HELPER_EXIT_PATH", "LEFT_HELPER_EXIT_BAD"]))
 
     def test_shared_page_constructed_before_native_worker_submissions(self):
         ctor = CPP.split("MainWindow::MainWindow()", 1)[1].split(

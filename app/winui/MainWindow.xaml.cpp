@@ -96,7 +96,14 @@ namespace {
         "LEFT_APPLIED","LEFT_FAILED","LEFT_REJECTED",
         "LEFT_EXTENDED","LEFT_NOCHANGE",
         "RIGHT_APPLIED","RIGHT_FAILED","RIGHT_REJECTED",
-        "RIGHT_EXTENDED","RIGHT_NOCHANGE"
+        "RIGHT_EXTENDED","RIGHT_NOCHANGE",
+        // Append-only IDs preserve the original event identities.
+        "LEFT_HELPER_EXIT_0","LEFT_HELPER_EXIT_1",
+        "LEFT_HELPER_EXIT_2","LEFT_HELPER_EXIT_3",
+        "LEFT_HELPER_EXIT_4","LEFT_HELPER_EXIT_5",
+        "LEFT_HELPER_EXIT_6","LEFT_HELPER_EXIT_7",
+        "LEFT_HELPER_EXIT_NTSTATUS","LEFT_HELPER_EXIT_OTHER",
+        "LEFT_HELPER_EXIT_UNKNOWN"
     };
     struct G01StartupPage final {
         LONG magic=0;
@@ -1841,7 +1848,26 @@ namespace winrt::FlyExplorer::implementation
         if(completed.side==0){
             switch(completed.kind){
             case Kind::Applied:TraceG01OwnedStartup("LEFT_APPLIED");break;
-            case Kind::Failed:TraceG01OwnedStartup("LEFT_FAILED",completed.hr);break;
+            case Kind::Failed:{
+                TraceG01OwnedStartup("LEFT_FAILED",completed.hr);
+                // Only the test-owned PID mapping stores this classification.
+                // Keep the original FAILED outcome and bounded retry policy.
+                if(completed.hr==HRESULT_FROM_WIN32(ERROR_BROKEN_PIPE)){
+                    constexpr char const* codes[]={
+                        "LEFT_HELPER_EXIT_0","LEFT_HELPER_EXIT_1",
+                        "LEFT_HELPER_EXIT_2","LEFT_HELPER_EXIT_3",
+                        "LEFT_HELPER_EXIT_4","LEFT_HELPER_EXIT_5",
+                        "LEFT_HELPER_EXIT_6","LEFT_HELPER_EXIT_7"};
+                    auto const* phase=!completed.helperExitKnown?
+                        "LEFT_HELPER_EXIT_UNKNOWN":
+                        completed.helperExitCode<8?
+                        codes[completed.helperExitCode]:
+                        (completed.helperExitCode&0xC0000000u)==0xC0000000u?
+                        "LEFT_HELPER_EXIT_NTSTATUS":"LEFT_HELPER_EXIT_OTHER";
+                    TraceG01OwnedStartup(phase);
+                }
+                break;
+            }
             case Kind::Rejected:TraceG01OwnedStartup("LEFT_REJECTED");break;
             case Kind::Extended:TraceG01OwnedStartup("LEFT_EXTENDED");break;
             case Kind::NoChange:TraceG01OwnedStartup("LEFT_NOCHANGE");break;

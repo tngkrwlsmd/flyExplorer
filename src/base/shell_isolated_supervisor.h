@@ -19,6 +19,9 @@ struct IsolatedResult {
     bool recovered=false;
     bool timedOut=false;
     bool networkRequest=false;
+    // Only the exact child created by this lane; no external PID sampling.
+    bool helperExitKnown=false;
+    std::uint32_t helperExitCode=0;
     std::uint32_t attempts=0;
     std::uint32_t pageOffset=0;
     std::uint32_t pageLimit=0;

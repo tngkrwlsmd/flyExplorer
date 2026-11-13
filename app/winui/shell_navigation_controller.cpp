@@ -168,6 +168,8 @@ ShellNavigationController::Completion ShellNavigationController::accept(
     completed.recovered=result.recovered;
     completed.timedOut=result.timedOut;
     completed.networkRequest=result.networkRequest;
+    completed.helperExitKnown=result.helperExitKnown;
+    completed.helperExitCode=result.helperExitCode;
     completed.hr=result.hr;
     completed.request=result.request;
 

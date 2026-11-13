@@ -384,6 +384,8 @@ namespace {
 struct Attempt {
     HRESULT hr=E_FAIL;
     bool timeout=false,canceled=false;
+    bool helperExitKnown=false;
+    DWORD helperExitCode=0;
     Snapshot snapshot;
     std::wstring path;
 };
@@ -571,7 +573,10 @@ Attempt oneAttempt(
             }
             if(::WaitForSingleObject(childProcess.h,0)==WAIT_OBJECT_0){
                 DWORD exitCode=0;
-                ::GetExitCodeProcess(childProcess.h,&exitCode);
+                if(::GetExitCodeProcess(childProcess.h,&exitCode)){
+                    outcome.helperExitKnown=true;
+                    outcome.helperExitCode=exitCode;
+                }
                 if(expected&&frame.size()==expected&&exitCode==0){
                     outcome.hr=parse(frame,outcome.snapshot,outcome.path);
                     break;
@@ -599,6 +604,17 @@ Attempt oneAttempt(
         }
     }
 cleanup:
+    // Inspect only the same owned child at the broken-pipe boundary. No
+    // waiting, additional retries, process enumeration or user-data access.
+    if(outcome.hr==HRESULT_FROM_WIN32(ERROR_BROKEN_PIPE)&&
+       !outcome.helperExitKnown&&
+       ::WaitForSingleObject(childProcess.h,0)==WAIT_OBJECT_0){
+        DWORD exitCode=0;
+        if(::GetExitCodeProcess(childProcess.h,&exitCode)){
+            outcome.helperExitKnown=true;
+            outcome.helperExitCode=exitCode;
+        }
+    }
     {
         std::lock_guard<std::mutex> lock(lane->mutex);
         // Never close the job while another thread can still refer to it.
@@ -666,6 +682,8 @@ void IsolatedShellSupervisor::runLane(std::shared_ptr<State> st,
                 }
                 result.hr=outcome.hr;
                 result.timedOut=outcome.timeout;
+                result.helperExitKnown=outcome.helperExitKnown;
+                result.helperExitCode=outcome.helperExitCode;
                 if(SUCCEEDED(result.hr)){
                     result.snapshot=std::move(outcome.snapshot);
                     result.snapshot.baseOffset=item.pageOffset;
