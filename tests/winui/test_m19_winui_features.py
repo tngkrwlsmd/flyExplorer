@@ -740,6 +740,15 @@ def run(*,p,win,element,safe_click,focus,eventually,ownedwindows,
              "M1.9 Clear recent did not persist empty preview history",9)
         good(lambda:"저장 0개" in element("RecentCountText").window_text(),
              "Clear recent did not update real WinUI count",6)
+        # The actual clear click leaves the owned ScrollViewer near its
+        # bottom. The scope editor is virtualized offscreen, not cleared.
+        # Restore only the same test-owned panel to the query row BEFORE
+        # reading UIA; preserve the actual active-scope value assertion.
+        if owned_scroll.CurrentVerticallyScrollable:
+            owned_scroll.SetScrollPercent(-1, 0)
+        good(lambda:element("SearchScopeBox").exists(timeout=.2) and
+             element("SearchScopeBox").is_visible(),
+             "M1.9 owned active scope editor did not reappear after clear",6)
         assert str(left).lower() in element("SearchScopeBox").get_value().lower()
         print("REAL_M19_SEARCH_CLEAR_RETAINS_ACTIVE_FULL_SCOPE",True,flush=True)
         print("REAL_M19_SEARCH_CLEAR_PERSISTS_WITHOUT_MUTATING_ACTIVE_SCOPE",

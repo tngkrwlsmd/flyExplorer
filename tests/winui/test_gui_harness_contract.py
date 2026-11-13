@@ -248,6 +248,31 @@ class GuiHarnessStaticContract(unittest.TestCase):
         self.assertNotIn("safe_click(", click)
         self.assertNotIn("focus()", section)
 
+    def test_m19_recent_clear_reveals_owned_scope_without_weakening_persistence(self):
+        gui = (TESTS / "test_m19_winui_features.py").read_text(
+            encoding="utf-8")
+        clear = gui.split("clear_button.click_input()", 1)[1].split(
+            'print("REAL_M19_SEARCH_CLEAR_RETAINS_ACTIVE_FULL_SCOPE"', 1)[0]
+        for marker in (
+            "M1.9 Clear recent click not acknowledged by owned WinUI",
+            "M1.9 Clear recent action reported persistence failure",
+            'recall.read_text(encoding="utf-16").strip()==""',
+            'good(lambda:"저장 0개" in element("RecentCountText").window_text()',
+            "if owned_scroll.CurrentVerticallyScrollable:",
+            "owned_scroll.SetScrollPercent(-1, 0)",
+            'element("SearchScopeBox").exists(timeout=.2)',
+            'element("SearchScopeBox").is_visible()',
+            'str(left).lower() in element("SearchScopeBox").get_value().lower()',
+        ):
+            self.assertIn(marker, clear)
+        self.assertLess(clear.index('recall.read_text(encoding="utf-16")'),
+                        clear.index('owned_scroll.SetScrollPercent(-1, 0)'))
+        self.assertLess(clear.index('owned_scroll.SetScrollPercent(-1, 0)'),
+                        clear.index('element("SearchScopeBox").exists(timeout=.2)'))
+        self.assertLess(clear.index('element("SearchScopeBox").is_visible()'),
+                        clear.index('assert str(left).lower() in element("SearchScopeBox").get_value().lower()'))
+        self.assertNotIn('safe_click(', clear)
+
     def test_integrated_shell_gui_captures_owned_shutdown_stack_on_timeout(self):
         gui = (TESTS / "test_shell_gui.py").read_text(encoding="utf-8")
         self.assertIn("from owned_process_dump import capture_owned_dump", gui)
