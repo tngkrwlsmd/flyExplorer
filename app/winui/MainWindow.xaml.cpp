@@ -110,9 +110,17 @@ namespace {
         G01StartupPage* page=nullptr;
         G01StartupMapping() noexcept {
             wchar_t flag[8]{};
-            if(::GetEnvironmentVariableW(
-                L"FLY_G01_INTEGRATED_STARTUP_ONLY",flag,8)!=3||
-               std::wcscmp(flag,L"YES"))return;
+            const bool dedicated=
+                ::GetEnvironmentVariableW(
+                    L"FLY_G01_INTEGRATED_STARTUP_ONLY",flag,8)==3&&
+                !std::wcscmp(flag,L"YES");
+            // The full synthetic GUI can capture the same fixed PID-owned
+            // phases on failure, without entering the G01-only test flow.
+            const bool ownedGui=
+                ::GetEnvironmentVariableW(
+                    L"FLY_G01_OWNED_TRACE",flag,8)==3&&
+                !std::wcscmp(flag,L"YES");
+            if(!dedicated&&!ownedGui)return;
             wchar_t temp[MAX_PATH]{};
             const DWORD length=::GetTempPathW(MAX_PATH,temp);
             if(!length||length>=MAX_PATH)return;

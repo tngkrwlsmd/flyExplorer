@@ -212,8 +212,9 @@ def labels(win):
  return [e.window_text() for e in win.descendants() if e.window_text()]
 p=None;hwnd=None
 try:
+ # Only this synthetic child opts into bounded, PID-owned startup phases.
  env={**os.environ,"APPDATA":str(appdata),"LOCALAPPDATA":str(localdata),
-      "TEMP":str(temp),"TMP":str(temp)}
+      "TEMP":str(temp),"TMP":str(temp),"FLY_G01_OWNED_TRACE":"YES"}
  owned_block=os.environ.get("FLY_M17_OWNED_HANG")=="YES"
  owned_com=os.environ.get("FLY_M18_OWNED_COM_HANG")=="YES"
  owned_notify=os.environ.get("FLY_M18_OWNED_SHELL_NOTIFY")=="YES"
@@ -892,8 +893,11 @@ except Exception as failure:
  # Evidence errors do not hide the original failure.
  try:
   startup_events = []
-  if G01_INTEGRATED_STARTUP_ONLY and p is not None:
-   # Failure-only, exact child PID: read fixed safe values, no filesystem I/O.
+  if p is not None and (
+      G01_INTEGRATED_STARTUP_ONLY or
+      str(failure)=="UI-independent native core/helper was not active at startup"
+  ):
+   # Failure-only, exact spawned PID; no user paths, attach, or new file I/O.
    startup_events = read_g01_owned_shared_phases(p.pid)
   evidence_dir = capture_failure(base=base, owned=owned, left=left, right=right,
                                  win=locals().get("win"), hwnd=hwnd,

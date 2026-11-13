@@ -22,7 +22,8 @@ class G01NativeStartupPhaseContract(unittest.TestCase):
         helper = CPP.split("constexpr LONG kG01StartupMagic", 1)[1].split(
             "constexpr UINT_PTR kDetailColumnCursorSubclassId", 1)[0]
         for marker in (
-            "FLY_G01_INTEGRATED_STARTUP_ONLY", 'L"shell-owned-"',
+            "FLY_G01_INTEGRATED_STARTUP_ONLY", "FLY_G01_OWNED_TRACE",
+            'if(!dedicated&&!ownedGui)return;', 'L"shell-owned-"',
             'L"\\\\tmp\\\\"', "CreateFileMappingW", "MapViewOfFile",
             "GetCurrentProcessId()", "InterlockedIncrement",
             "InterlockedExchange", "kG01StartupCapacity=64",
@@ -54,7 +55,12 @@ class G01NativeStartupPhaseContract(unittest.TestCase):
         self.assertNotIn("std::wstring location(", helper)
 
     def test_failure_reader_is_exact_pid_and_bounded_without_attach(self):
-        self.assertIn("if G01_INTEGRATED_STARTUP_ONLY and p is not None:", HARNESS)
+        self.assertIn('"FLY_G01_OWNED_TRACE":"YES"', HARNESS)
+        self.assertIn("if p is not None and (", HARNESS)
+        self.assertIn("G01_INTEGRATED_STARTUP_ONLY or", HARNESS)
+        self.assertIn(
+            'str(failure)=="UI-independent native core/helper was not active at startup"',
+            HARNESS)
         self.assertIn("read_g01_owned_shared_phases(p.pid)", HARNESS)
         self.assertIn("startup_events=startup_events", HARNESS)
         for required in (
