@@ -197,6 +197,20 @@ class GuiHarnessStaticContract(unittest.TestCase):
         self.assertIn('L08 native horizontal resize cursor missing on owned handle', gui)
         self.assertIn('SIX_ORIGINAL_MFC_SETTINGS_IDENTICAL', gui)
 
+    def test_m19_search_preset_reset_reveals_the_owned_query_editor(self):
+        gui = (TESTS / "test_m19_winui_features.py").read_text(encoding="utf-8")
+        reset = gui.split("# Restore legacy-default options", 1)[1].split(
+            '"Search v2 option reset did not restore default search"', 1
+        )[0]
+        self.assertIn('target.wrapper_object().select(0)', reset)
+        self.assertIn('owned_search_scroll = element("SearchPanel").wrapper_object().iface_scroll', reset)
+        self.assertIn("if owned_search_scroll.CurrentVerticallyScrollable:", reset)
+        self.assertIn("owned_search_scroll.SetScrollPercent(-1, 0)", reset)
+        self.assertIn('element("SearchTermBox").exists(timeout=.2)', reset)
+        self.assertIn('element("SearchTermBox").is_visible()', reset)
+        self.assertLess(reset.index("owned_search_scroll.SetScrollPercent(-1, 0)"),
+                        reset.index('term.set_edit_text("readme")'))
+
     def test_integrated_shell_gui_captures_owned_shutdown_stack_on_timeout(self):
         gui = (TESTS / "test_shell_gui.py").read_text(encoding="utf-8")
         self.assertIn("from owned_process_dump import capture_owned_dump", gui)

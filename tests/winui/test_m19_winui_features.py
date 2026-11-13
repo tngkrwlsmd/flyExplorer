@@ -534,6 +534,15 @@ def run(*,p,win,element,safe_click,focus,eventually,ownedwindows,
         focus()
         content_encoding.wrapper_object().select(0)
         target.wrapper_object().select(0)
+        # Editing preset options near the bottom can leave the bounded search
+        # ScrollViewer scrolled past the query row. UIA does not expose the
+        # off-screen SearchTermBox until its owned viewport returns to top.
+        owned_search_scroll = element("SearchPanel").wrapper_object().iface_scroll
+        if owned_search_scroll.CurrentVerticallyScrollable:
+            owned_search_scroll.SetScrollPercent(-1, 0)
+        good(lambda:element("SearchTermBox").exists(timeout=.2) and
+             element("SearchTermBox").is_visible(),
+             "M1.9 owned query editor not visible after returning to top",6)
         term.set_edit_text("readme")
         safe_click(element("SearchRunButton"))
         good(lambda:match("SearchCountText","검색 결과 1개"),
