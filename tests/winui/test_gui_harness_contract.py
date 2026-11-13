@@ -211,6 +211,33 @@ class GuiHarnessStaticContract(unittest.TestCase):
         self.assertLess(reset.index("owned_search_scroll.SetScrollPercent(-1, 0)"),
                         reset.index('term.set_edit_text("readme")'))
 
+    def test_m19_recent_clear_recovers_owned_scroll_without_click_bypass(self):
+        gui = (TESTS / "test_m19_winui_features.py").read_text(
+            encoding="utf-8")
+        section = gui.split("def owned_clear_visible():", 1)[1].split(
+            "good(owned_clear_visible,", 1)[0]
+        self.assertIn('panel=element("SearchPanel")', section)
+        self.assertIn('item=element("SearchClearButton")', section)
+        self.assertIn('if not item.exists(timeout=.2) or not item.is_visible():',
+                      section)
+        self.assertIn('if not owned_scroll.CurrentVerticallyScrollable:',
+                      section)
+        self.assertIn('for percent in (75, 85, 100, 65, 50):', section)
+        self.assertIn('owned_scroll.SetScrollPercent(-1, percent)', section)
+        for strict in ("box.width()>=32", "box.height()>=16",
+                       "box.left>=viewport.left+2",
+                       "box.right<=viewport.right-2",
+                       "box.top>=viewport.top+2",
+                       "box.bottom<=viewport.bottom-2"):
+            self.assertIn(strict, section)
+        self.assertLess(gui.index("good(owned_clear_visible,"),
+                        gui.index("clear_button.click_input()"))
+        click = gui.split("good(owned_clear_visible,", 1)[1].split(
+            "clear_button.click_input()", 1)[0]
+        self.assertIn("foreground_owner.value==p.pid", click)
+        self.assertNotIn("safe_click(", click)
+        self.assertNotIn("focus()", section)
+
     def test_integrated_shell_gui_captures_owned_shutdown_stack_on_timeout(self):
         gui = (TESTS / "test_shell_gui.py").read_text(encoding="utf-8")
         self.assertIn("from owned_process_dump import capture_owned_dump", gui)
