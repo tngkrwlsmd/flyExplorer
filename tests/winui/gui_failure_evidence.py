@@ -380,6 +380,14 @@ def capture_failure(*, base: Path, owned: Path, left: Path, right: Path,
                 startup_samples)
             ui["Startup"]["owned_native_events"] = _safe_g01_startup_events(
                 startup_events)
+        elif str(error) in (
+            "native directory watcher did not refresh the real WinUI ListView",
+            "native watcher failed to remove deleted owned file",
+        ):
+            # Fixed, bounded phase IDs and left HRESULT only. Never include
+            # the global status string or a user's file/path contents.
+            ui["Startup"]["owned_native_events"] = _safe_g01_startup_events(
+                startup_events)
         (output / "panes.json").write_text(json.dumps(ui, ensure_ascii=False, indent=2),
                                              encoding="utf-8")
         disk = {"left": {"path": _safe_address(left, owned),

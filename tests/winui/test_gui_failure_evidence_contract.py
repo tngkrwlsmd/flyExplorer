@@ -98,6 +98,31 @@ class GuiFailureEvidenceContract(unittest.TestCase):
             self.assertEqual("copy.txt", files["left"]["items"][0]["name"])
             self.assertNotIn("test fixture", (output / "owned-files.json").read_text("utf-8"))
 
+    def test_watcher_failure_keeps_only_owned_path_free_native_events(self):
+        with TemporaryDirectory() as root:
+            base = Path(root) / "phase6-winui"
+            owned = base / "shell-owned-watcher"
+            left, right = owned / "Left", owned / "Right"
+            left.mkdir(parents=True)
+            right.mkdir()
+            output = capture_failure(
+                base=base, owned=owned, left=left, right=right,
+                win=StartupWindow(str(left), "Shell 폴더를 열지 못했습니다.",
+                                  "활성: 왼쪽"),
+                hwnd=None, pid=None,
+                error=AssertionError(
+                    "native directory watcher did not refresh the real WinUI ListView"),
+                startup_events=["LEFT_APPLIED", "LEFT_FAILED",
+                                "LEFT_HRESULT_8007000D", "private path value"])
+            raw = (output / "panes.json").read_text(encoding="utf-8")
+            startup = json.loads(raw)["Startup"]
+            self.assertEqual(["LEFT_APPLIED", "LEFT_FAILED",
+                              "LEFT_HRESULT_8007000D"],
+                             startup["owned_native_events"])
+            self.assertNotIn("sampled_transitions", startup)
+            self.assertNotIn("private path value", raw)
+            self.assertEqual("shell-failed", startup["status_category"])
+
     def test_startup_categories_have_no_raw_status_or_external_paths(self):
         with TemporaryDirectory() as root:
             base = Path(root) / "phase6-winui"

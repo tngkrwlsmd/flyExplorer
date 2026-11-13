@@ -893,9 +893,16 @@ except Exception as failure:
  # Evidence errors do not hide the original failure.
  try:
   startup_events = []
+  # On a watcher failure, read the same path-free phases from ONLY the
+  # spawned test-owned child; do not retry or inspect unrelated windows.
+  watcher_failure = str(failure) in (
+      "native directory watcher did not refresh the real WinUI ListView",
+      "native watcher failed to remove deleted owned file",
+  )
   if p is not None and (
       G01_INTEGRATED_STARTUP_ONLY or
-      str(failure)=="UI-independent native core/helper was not active at startup"
+      str(failure)=="UI-independent native core/helper was not active at startup" or
+      watcher_failure
   ):
    # Failure-only, exact spawned PID; no user paths, attach, or new file I/O.
    startup_events = read_g01_owned_shared_phases(p.pid)
