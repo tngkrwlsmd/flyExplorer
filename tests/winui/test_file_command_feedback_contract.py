@@ -6,6 +6,28 @@ ROOT=Path(__file__).resolve().parents[2]
 APP=ROOT/"app"/"winui"
 
 class FileCommandFeedbackContract(unittest.TestCase):
+    def test_m21_duplicate_error_follows_owned_rename_ready_state(self):
+        gui=(ROOT/"tests/winui/test_m21_gui.py").read_text(encoding="utf-8")
+        window=(APP/"MainWindow.xaml.cpp").read_text(encoding="utf-8-sig")
+        operations=(APP/"m21_commands.cpp").read_text(encoding="utf-8-sig")
+        region=gui.split("REAL_M21_NATIVE_RENAME_SELECTED_OWNED_KOREAN_FOLDER",1)[1].split(
+            "REAL_M21_DUPLICATE_KOREAN_NAME_BLOCKED_WITH_PREVIOUS_FOLDER_PRESERVED",1)[0]
+        self.assertIn("def rename_ready_for_duplicate():",region)
+        self.assertIn("renamed.is_dir() and not created.exists()",region)
+        self.assertIn('element("CreateFolderButton").is_enabled()',region)
+        self.assertIn('element("AddressBox").get_value()',region)
+        self.assertIn('"이름을 변경했습니다." in element("StatusText").window_text()',region)
+        self.assertNotIn('"폴더 변경 알림" in element("StatusText").window_text()',region)
+        self.assertLess(region.index("eventually(rename_ready_for_duplicate"),
+                        region.index('safe_click(element("CreateFolderButton"))'))
+        self.assertIn('eventually(lambda:"이미 존재" in element("StatusText").window_text()',region)
+        self.assertIn('assert renamed.is_dir() and not (right/"이름 변경").exists()',region)
+        self.assertIn("!pane.pending[pane.active]",window)
+        self.assertIn("CreateFolderButton().IsEnabled(localFolder)",window)
+        self.assertIn("fileOperationNotice.empty()",window)
+        self.assertIn("rememberOrigin(message);",operations)
+        self.assertIn('L"이름을 변경했습니다.";',operations)
+
     def test_m21_gui_mouse_commands_begin_edit_before_enter(self):
         gui=(ROOT/"tests/winui/test_m21_gui.py").read_text(encoding="utf-8")
         commands=(APP/"m21_commands.cpp").read_text(encoding="utf-8-sig")
