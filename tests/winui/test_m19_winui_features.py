@@ -749,7 +749,8 @@ def run(*,p,win,element,safe_click,focus,eventually,ownedwindows,
         good(lambda:element("SearchScopeBox").exists(timeout=.2) and
              element("SearchScopeBox").is_visible(),
              "M1.9 owned active scope editor did not reappear after clear",6)
-        assert str(left).lower() in element("SearchScopeBox").get_value().lower()
+        assert str(left).lower()==element("SearchScopeBox").get_value().lower(), (
+            "M1.9 Clear recent changed the active full scope")
         print("REAL_M19_SEARCH_CLEAR_RETAINS_ACTIVE_FULL_SCOPE",True,flush=True)
         print("REAL_M19_SEARCH_CLEAR_PERSISTS_WITHOUT_MUTATING_ACTIVE_SCOPE",
               True,flush=True)

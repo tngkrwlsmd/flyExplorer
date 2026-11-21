@@ -262,7 +262,7 @@ class GuiHarnessStaticContract(unittest.TestCase):
             "owned_scroll.SetScrollPercent(-1, 0)",
             'element("SearchScopeBox").exists(timeout=.2)',
             'element("SearchScopeBox").is_visible()',
-            'str(left).lower() in element("SearchScopeBox").get_value().lower()',
+            'str(left).lower()==element("SearchScopeBox").get_value().lower()',
         ):
             self.assertIn(marker, clear)
         self.assertLess(clear.index('recall.read_text(encoding="utf-16")'),
@@ -270,8 +270,42 @@ class GuiHarnessStaticContract(unittest.TestCase):
         self.assertLess(clear.index('owned_scroll.SetScrollPercent(-1, 0)'),
                         clear.index('element("SearchScopeBox").exists(timeout=.2)'))
         self.assertLess(clear.index('element("SearchScopeBox").is_visible()'),
-                        clear.index('assert str(left).lower() in element("SearchScopeBox").get_value().lower()'))
+                        clear.index('assert str(left).lower()==element("SearchScopeBox").get_value().lower()'))
         self.assertNotIn('safe_click(', clear)
+
+    def test_m19_recent_clear_scope_oracle_rejects_other_full_paths(self):
+        gui = (TESTS / "test_m19_winui_features.py").read_text(
+            encoding="utf-8")
+        start = gui.index("clear_button.click_input()")
+        end = gui.index('print("REAL_M19_SEARCH_CLEAR_RETAINS_ACTIVE_FULL_SCOPE"')
+        assertions = [node for node in ast.walk(ast.parse(gui))
+                      if isinstance(node, ast.Assert)
+                      and gui.count("\n", 0, start) < node.lineno
+                      <= gui.count("\n", 0, end)
+                      and 'SearchScopeBox' in ast.unparse(node.test)]
+        self.assertEqual(1, len(assertions))
+        # Exercise the actual GUI predicate without importing Windows/UIA.
+        # A path containing the expected root is not that same full scope.
+        predicate = compile(ast.Expression(assertions[0].test),
+                            "M19 clear scope predicate", "eval")
+        expected = r"C:\M19-owned\Left"
+        for value, accepted in (
+            (expected, True), (expected.upper(), True),
+            (expected + "-other", False), (expected + r"\Nested", False),
+            (r"D:\M19-owned\Left", False), (expected[:-1], False), ("", False),
+        ):
+            with self.subTest(scope=value):
+                class ScopeBox:
+                    def get_value(self):
+                        return value
+
+                def element(key):
+                    self.assertEqual("SearchScopeBox", key)
+                    return ScopeBox()
+
+                actual = eval(predicate, {"__builtins__": {"str": str}},
+                              {"left": expected, "element": element})
+                self.assertEqual(accepted, actual)
 
     def test_integrated_shell_gui_captures_owned_shutdown_stack_on_timeout(self):
         gui = (TESTS / "test_shell_gui.py").read_text(encoding="utf-8")

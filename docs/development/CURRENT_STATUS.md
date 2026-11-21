@@ -1,3 +1,25 @@
+# 2026-11-21 — 최신 main 재확인과 M19 전체 검색 경로 보존 판정 강화
+
+- **확인 기준:** 작업 시작 원격 `main`은 `fe8c29ab5b76447f6f47ec4e3ad4a856df0ec0c6`이다. 11월 11일 감사 기준 `6f7fd9e7fcc058400399f4a3b9b104bb469ace97` 이후 38개 커밋이며, 최신 변경은 삭제 뒤 소유 검색 패널 상단 복귀·입력창 재표시 검사다. 아래 날짜별 수용·실패는 해당 시점의 증거로 보존한다.
+- **이번에 재현·수정한 검사 결함:** M19의 삭제 후 검색 범위 검사가 부분 문자열 포함 여부만 비교하여, 합성 경로 `C:\M19-owned\Left-other`와 `C:\M19-owned\Left\Nested`도 `C:\M19-owned\Left` 보존으로 잘못 허용했다. `test_m19_winui_features.py`의 마지막 판정만 대소문자를 무시한 전체 문자열 일치로 강화했다. 소유 패널 스크롤·가시성 대기·정확한 PID 전경·물리 클릭·실제 UTF-16 저장 파일·저장 0개 검사는 유지한다.
+- **실제 로컬 검증:** Python 3.12.14에서 `test_gui_harness_contract`와 `test_search_controller_contract` **27/27 PASS**, 변경 Python 2개 구문·미정의 전역 검사 PASS, `git diff --check` PASS. 새 회귀 검사는 실제 GUI 판정식만 추출해 정상/대소문자 차이/접미사가 붙은 형제/하위 폴더/다른 드라이브/잘린 경로/빈 값 7조건을 실행한다. 수정 전 잘못된 경로 2조건의 거부 실패를 먼저 확인했다. 이는 Windows UIA·제품 실행 성공이 아니다.
+- **중앙 증거의 현재 한계:** 이 날짜의 조회에서 시작 SHA의 commit status는 0건이고, 11월 10일 이후 접근 가능한 중앙 실행 목록에는 flyExplorer 수용 결과가 없었다. [과거 M19 실행 #43428178428](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/43428178428)은 API 404여서 원 로그를 재확인하지 못했다. [기준 커밋의 기록](https://github.com/tngkrwlsmd/flyExplorer/commit/fe8c29ab5b76447f6f47ec4e3ad4a856df0ec0c6)에 남은 삭제 클릭·성공 안내·빈 저장 파일·저장 0개 성공과 마지막 UIA 탐색 실패는 **커밋에 기록된 역사적 증거**로 보존한다. 실행 부재·삭제 원인을 추측하거나 현재 GUI PASS로 바꾸지 않는다.
+- **제품 구현과 수용 구분:** 최근 파일 열기 완료의 WindowTab/패널/PaneTab/route/폴더 보호는 `34aa2c6`, 삭제·옵트아웃 뒤 늦은 완료의 기록 재등록 차단은 `371888a`에 있다. 폴더 탭 포커스, 검색 결과 표시·스크롤, M21 완료 및 F5 복구 관련 후속 구현·검사도 main에 있으나 각 최신 경계의 실제 GUI 수용은 별도 증거가 필요하다. G01 보조 프로세스 종료 분류는 `0273b9d`에 구현돼 있고, 새 실제 실패의 최초 원인·해결 여부는 **NOT VERIFIED**다.
+
+**비기본 브랜치 대조 — 작업 시작 SHA 기준 모두 고유 커밋 1개 / main보다 53개 뒤:**
+
+| 브랜치 | 현재 main과의 의미 차이 | 처리 |
+| --- | --- | --- |
+| `work/f07-recent-open-stale-completion-20261107` (`619e992`) | 완료 UI 소유권 보호는 `34aa2c6`에 반영됐고 `371888a`가 삭제 우선 보호를 추가했다. | 중복 구현·병합하지 않고 보존 |
+| `automation/search-scope-quoted-recursive-20261107` (`7eddea9`) | 재귀 색인 검색 SCOPE의 작은따옴표 회귀 계약이 `09db5bd`에 동일하게 반영됐다. | 중복 적용하지 않고 보존 |
+| `work/gui-failure-bounded-directory-20261107` (`f885801`) | 브랜치는 전체 N개를 순회해 이름순 최소 71개를 보관한다. main의 `d797459`/`dbf5d5d`는 최초 71개만 읽고 그중 최대 70개를 정렬·표시하며 이름 허용목록도 제한한다. | 전체 정렬 의미와 O(N) 순회 비용의 차이. 새 필요 근거 없이 교체·병합하지 않고 보존 |
+
+**미검증·보호 경계:** 이번 변경은 테스트 2개와 현황/계획 문서뿐이며 C++·XAML·빌드 입력·Windows 원격 요청은 바꾸지 않았다. 새 제품 빌드·네이티브 실행·GUI·픽셀 검증 및 실행 파일 SHA-256 확보는 **NOT TESTED**다. Windows 프로세스·개인 파일·프로필·클립보드·OS 설정을 조작하지 않았다. R07 G25 정상 소유 복원 한정 수용을 보존하며 Ctrl+Z/Undo/Redo는 미연결이다. G03~G05 제외, G07 중단, 공개 배포 제외를 유지한다. 이번 작업에서는 PR을 조회·생성하거나 브랜치를 정리하지 않는다.
+
+다음 최우선은 별도 허용된 소유 Windows 환경에서 M19의 삭제 후 상단 복귀·입력창 표시·**전체 경로 일치**를 집중 확인하는 일이다. 정확한 소스와 기존 실행 파일/전체 런타임 해시·소유 fixture·기존 프로필 불변·정상 종료/정리를 확인할 수 없으면 실행하지 않고 미검증으로 남긴다. 전체 통합 GUI를 기본 재실행하지 않는다.
+
+---
+
 # 2026-11-07 — R07-23E 소유 TEMP WinUI 이름 변경·private 복원 집중 검증 PASS (G25, 한정 수용)
 
 - **최초 실패 확정:** 정확한 이전 소스 `5dbe6434de896436f05c5c6e20722485a7436396`의 [중앙 Windows CI #42362156652](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/42362156652)에서 worker `Post=true`, UI `OnFileCommandCompleted` 진입은 확인됐으나, 실제 복원 시작 전에 `START_CONTEXT_NOT_CURRENT`/`START_CONTEXT_NAV_PENDING`으로 거절됐다. 기본 WindowTab identity 0 허용 수정은 이미 포함돼 있었고, 기존 소유권·탐색 대기 거부는 약화하지 않았다.
