@@ -1,3 +1,15 @@
+# 2026-11-21 — 전체 통합 GUI·실제 화면 검토 완료 범위와 다음 경계
+
+정확한 일반 Release 소스 `cb923da7f06d1db3e5130343c42160e51156cfd3`의 [정식 통합 GUI #44872332369](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/44872332369)는 정책·전체 소스·Release·창 탭·단축키·필터·폴더 트리·통합 체인까지 PASS다. [실제 어두운 화면 #44873215288](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/44873215288)과 [유효한 밝은 설정의 화면 #44873428640](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/44873428640) 총 26개를 실제 픽셀로 검토했다. **96 DPI, 1160×680 소유 창의 캡처된 앱 내부 상태에 한정한 수용**이며 OS DPI/접근성/IME/외부 장치 또는 모든 UI 조합을 뜻하지 않는다. 런타임 305개 해시, M19 전체 경로/빈 저장/정상 종료/설정 보존, 자동화 실패와 잘못된 테마 fixture, 증거·정리는 [CURRENT_STATUS.md 최신 절](CURRENT_STATUS.md)을 따른다.
+
+이번 사용자 확대 승인에 따른 통합 GUI/픽셀 작업이 아래의 '이번 범위가 아님' 서술보다 우선한다. 해당 M19 삭제·재시작·조건 세트와 통합 정상 경로를 다시 구현하거나 같은 전체 검사를 기본 반복하지 않는다. 첫 잘못된 Light 묶음은 밝은 테마 수용에서 제외하고 이력만 보존했다. 제품 코드를 바꾸지 않고 수집 코드/fixture만 수정하여 미완료 테마를 재개했다.
+
+**다음 최우선은 G01 과거 실패와 최신 성공의 근거 대조다.** 이번 정상 시작/종료 한 번으로 `0x8007006D` 간헐 원인 해결을 선언하지 않는다. 기존 실패의 정확한 SHA·단계·helper 종료/응답/UI 완료 경계를 먼저 분리하고, 새 실제 재현이 없다면 원인은 NOT VERIFIED로 둔다. R07의 일반 Release 표식 격리·전환 경합·실패/`Post=false`는 독립 미검증 후보다. 이미 통과한 정상 복원·M19·전체 GUI를 자동 반복하지 않는다.
+
+다른 DPI, 고대비/Narrator, 실제 USB/SMB/UNC/매핑 작업 및 중단된 IME는 자동 재개하지 않는다. 사용자 파일·OS 설정·클립보드 변경, Undo/Redo 연결, 공개 배포, PR 및 세 기존 브랜치 임의 처리는 승인 범위에 추가하지 않는다.
+
+---
+
 # 2026-11-21 — M19 삭제 집중 GUI 완료, 다음은 G01 근거 분리
 
 **완료(한정):** `236a240c3106a970b7f229b32153165140ad3b11`의 [Windows VM #44871244054](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/44871244054)에서 소유 최근 위치 두 개의 실제 삭제, 빈 UTF-16 저장·저장 0개, 입력창 재표시·전체 검색 경로 보존, 앱 종료 코드 0, 원본/검사 대상 기존 설정 보존과 fixture 정리를 수용했다. 일반 Release와 전체 런타임 파일별 해시는 재확인했고, 전용 Python 환경·예약 작업·이번 빌드 작업공간 두 개 제거 및 요청 슬롯 idle 복원/읽기 확인도 완료했다. 정확한 실행 파일·해시 목록 SHA-256과 준비 실패는 [CURRENT_STATUS.md의 최신 수용 절](CURRENT_STATUS.md)에 보존한다.

@@ -1,3 +1,24 @@
+# 2026-11-21 — 최신 일반 Release 통합 GUI 및 소유 화면 픽셀 검토
+
+**수용 기준 소스:** `cb923da7f06d1db3e5130343c42160e51156cfd3`. 이번 제품 C++·XAML·테스트 변경은 없으며 아래 결과는 이 SHA의 일반 x64 Release와 명시한 환경에 한정한다. 새 문서 커밋 자체를 새 빌드/GUI 실행으로 표시하지 않는다. 이 절이 아래의 전체 GUI/픽셀 미실행 서술보다 우선하며, 이전 M19 집중 성공과 준비 실패 이력은 보존한다.
+
+- **전체 통합 GUI PASS:** [중앙 VM #44872332369](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/44872332369), 제어 커밋 `c73fec85a53fe47b310336cf09247d52f19dddc6`. 환경·격리 Python·고정 의존성·정책·전체 소스 계약·Release 빌드·정식 `gui --configuration Release`가 모두 종료 코드 0이다. 빌드 257.377초, GUI 206.762초이며 창 탭 18.5초, 단축키 16.3초, 필터 7.4초, 폴더 트리 9.7초, 통합 체인 154.5초를 포함한다. 통합 체인에는 M19 재시작/조건 세트/삭제, V7 세션, M20~M23의 소유 기능 계약이 포함된다. 특정 실행의 정상 시작을 과거 간헐 G01 오류의 원인 해결로 확대하지 않는다.
+- **실제 픽셀 검토 PASS — 캡처 범위 한정:** Windows 빌드 **26300**, 실제 **96 DPI/100%**, 데스크톱 **1280×768**, 소유 창 **1160×680**, 앱 내부 캡처 **1140×664**. [어두운 실제 화면 #44873215288](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/44873215288)과 [교정된 밝은 테마 #44873428640](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/44873428640)의 각 13개, 총 **26개 원본 PNG**를 해시 검증하고 실제 이미지로 검토했다. 테마마다 8종 보기, 보기 메뉴 내부, 폴더 탭, 검색 상단/삭제 버튼/삭제 후 상단을 확인했다. 확인한 앱 내부에서 중대한 겹침·판독 장애를 발견하지 않았다. 창 그림자·앱 밖으로 나간 팝업 부분, 모든 선택/포커스 조합과 다른 환경을 인증하지 않는다. 어두운 묶음은 실제 시스템 Dark 렌더링이며, 밝은 묶음은 명시적 Light 설정과 제품이 저장한 테마도 대조했다.
+- **M19 기능/화면:** 소유 최근 위치 두 개 삭제, 정확히 UTF-16 BOM만 남는 빈 저장, 저장 0개, 검색 입력창 표시, 삭제 전후 전체 경로의 대소문자 무시 완전 일치를 통과했다. 화면에는 긴 입력값의 일부만 표시될 수 있으므로 경로 보존은 입력값 자체로 검사했다. 소유 원본 파일 바이트·기존 프로필 11개 경로(미생성 포함) 보존, 종료 코드 0·정상 종료·fixture 제거를 각 화면 실행에서 확인했다.
+- **자동화/fixture 실패는 제품 결함과 구분:** [첫 수집 #44873046256](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/44873046256)은 13개 캡처 후 닫혀 사라진 SearchPanel에 `is_visible()`을 호출해 실패했다. 부재/숨김/표시 3조건 회귀와 문법 검사 후 어두운 단계만 재개했다. 실제 이미지 검토에서 첫 'Light'도 Dark임을 발견했다. 불완전한 `schema=3` fixture가 기본 시스템 테마로 거절된 것이 원인이므로 첫 Light 묶음은 밝은 테마 수용에서 제외했다. 지원되는 정확한 `schema=2` 및 저장 테마 검사로 Light만 다시 수집했다. 동일 제품 재빌드·전체 GUI 반복·제품 검사 완화는 하지 않았다. 검증 스크립트는 제어 저장소 `scripts/tasks/Invoke-FlyExplorerIntegratedPixels.ps1`, `Test-FlyExplorerIntegratedPixels.py`에 추적한다.
+
+| 정확한 일반 Release 근거 | SHA-256 |
+| --- | --- |
+| `flyExplorer.exe` | `4d66a6c82f82e926f58ce84461853530b1871183b6baab74ed3253641b99211d` |
+| `FlyShellIsolationHelper.exe` | `d6ef43102c34a7757d577447faecee80f7c7f1a667c681fd671f67d260ffabfa` |
+| 전체 **305개** 파일/크기/해시 목록 `runtime-hashes.json` | `8544d96fe6683764f36f8a23b3f7e3000306ddc60b5c717dd86fcd3681ae9af2` |
+
+**정리:** [증거 보존·소유 정리 #44873656022](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/44873656022)에서 전체 런타임 및 수용한 26화면 해시를 다시 대조하고, 실패 이력·원본 PNG·해시 목록·GUI 로그·검토 기록을 비공개 `ci-evidence/5d375e144b8a4215825e6a342f537013`에 보존한 뒤 이번 빌드 작업공간과 격리 Python을 제거했다. 정리 실행 SUCCESS, 런타임 305개/수용 화면 26개 해시 재대조, 약 3.34 GB 작업공간 제거, 임시 작업·제품 프로세스 부재를 확인했다. 종료 후 대기·실행·waiting 0건을 확인하고 자기 소유 요청 슬롯을 idle로 복원했으며 API 읽기 확인도 완료했다.
+
+**남은 경계:** G01 과거 간헐 실패의 최초 원인/종료 코드 분류 효과, R07 실패/경합 경계는 별도 미검증이다. 정상 M19 경로와 이번 통합 GUI는 다시 미완료로 돌리지 않는다. 세 기존 브랜치는 임의 병합·삭제하지 않았다. G03~G05 제외·G07 중단, 사용자 파일 복원/Undo/Redo/Ctrl+Z 미연결, 공개 배포 및 PR 금지를 유지한다.
+
+---
+
 # 2026-11-21 14:31(KST) — M19 최근 검색 기록 삭제 집중 GUI 한정 수용
 
 - **판정:** [소유 Windows VM 실행 #44871244054](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/44871244054)은 **SUCCESS**다. 실제 검증 소스는 `236a240c3106a970b7f229b32153165140ad3b11`, 실행 제어 소스는 `personal-control-plane` `0de755e197b652e605716391df6c9d2c040de5e1`이다. 제품 코드를 바꾸거나 전체 GUI를 반복하지 않았다. 이 절이 아래의 수용 전 미검증·다음 작업 서술보다 우선한다.
