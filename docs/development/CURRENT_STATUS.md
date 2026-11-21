@@ -1,4 +1,30 @@
-# 2026-11-21 — 최신 main 재확인과 M19 전체 검색 경로 보존 판정 강화
+# 2026-11-21 14:31(KST) — M19 최근 검색 기록 삭제 집중 GUI 한정 수용
+
+- **판정:** [소유 Windows VM 실행 #44871244054](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/44871244054)은 **SUCCESS**다. 실제 검증 소스는 `236a240c3106a970b7f229b32153165140ad3b11`, 실행 제어 소스는 `personal-control-plane` `0de755e197b652e605716391df6c9d2c040de5e1`이다. 제품 코드를 바꾸거나 전체 GUI를 반복하지 않았다. 이 절이 아래의 수용 전 미검증·다음 작업 서술보다 우선한다.
+- **검증 방식:** 소유 UTF-16 최근 위치 두 개를 미리 구성하고, 일반 Release의 소유 창 **1160×640**에서 해당 main의 `test_m19_winui_features.py`에 있는 기존 삭제 꼬리 코드만 실행했다. 원래의 패널 스크롤·버튼 전체 가시성·정확한 전경 PID·물리 클릭·저장 파일·저장 0개·입력창 재표시·전체 경로 일치 판정을 유지했다. 앱 생성 전 준비 실패와 구별하여 **실제 제품의 삭제 단계는 한 번** 실행했다.
+- **실제 결과:** `input_reappeared=true`, `whole_scope_preserved=true`, `empty_utf16_history=true`. 삭제 전후 전체 검색 범위는 같은 테스트 소유 `Left` 경로였으며, 기록 파일은 정확히 UTF-16 BOM 두 바이트만 남았다. 원래 저장 0개 UI 검사도 통과했다. 앱 종료 코드 **0**, `normal_exit=true`, 소유 원본 두 파일 바이트 보존, 기존 설정 파일 **11개 경로**의 보존(없던 파일의 미생성 포함), 테스트 fixture 제거를 확인했다. 이는 해당 경로·창 크기의 기능 수용이며 통합 M19 전체·재시작/프리셋 조합·다른 환경을 인증하지 않는다.
+
+**정확한 런타임 근거:** [Release 준비 #44868128736](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/44868128736)은 종료 코드 **0 / SUCCESS**, 일반 Release 런타임 **305개 파일**을 생성했다. GUI 직전 `Use-IsolatedFlyExplorerBuild.ps1 -Mode Verify`로 소스 SHA·일반 Release 구분·전체 파일 목록/크기/개별 해시를 재대조했다. 해시 목록 원본과 보존 사본의 일치도 [#44870279368](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/44870279368)에서 확인했다.
+
+| 항목 | SHA-256 |
+| --- | --- |
+| `flyExplorer.exe` | `2bab502bedc2e81e2f4be69fbb22ced39bdd51528dbc3191d69cb908be6f1b06` |
+| `FlyShellIsolationHelper.exe` | `01c451af0676004398e8d04c968068de93ff3504a648a3610fb2a30a687d6160` |
+| 전체 파일별 해시 목록 `ci-build-manifest.json` | `f8830b28663b361df38e64f99a35e830d26ea8802f44150e70306c5191008fa8` |
+
+**보존할 준비 실패와 최초 경계:**
+
+- [#44867991390](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/44867991390): Git 진행 문구가 PowerShell `NativeCommandError`가 되어 제품 빌드 전에 중단됐다. 출력과 실제 종료 코드를 분리한 후 위 Release 준비에서 성공했다.
+- [#44870279368](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/44870279368): 전역 Pillow **12.3.0**, 저장소 요구 **13.0.0**의 차이로 앱 생성 전에 중단됐다. 전역 설치는 바꾸지 않고 소유 가상환경을 사용했다. [#44870557458](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/44870557458)의 생성 래퍼는 실패로 판정했지만 [읽기 전용 확인 #44870736258](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/44870736258)에서 생성 로그 두 개가 비어 있고 전용 Python·pip가 각각 종료 코드 0으로 실행됨을 확인해 그 환경을 재사용했다. 고정 `pywinauto==0.6.9`, `Pillow==13.0.0`, `psutil==7.2.2`는 이후 실제로 통과했다.
+- [#44870882354](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/44870882354): 앱 생성 전 테스트 파일의 원시 바이트 해시 검사에서 실패했다. [진단 #44871063199](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/44871063199)은 CRLF **765줄**, 정확한 Git blob `722334bfdfba05df81f20dacf25a1f6d89b2ea09`, LF 정규화 SHA-256 `43bccf7f49518f618e08e6de450da6808818b3daabb8fdbd489dafdcf2d63844`를 확인했다. 커밋 원본 해시는 엄격히 검증하고 작업 파일은 줄바꿈만 정규화해 같은 내용인지 대조하도록 제어 저장소 검사를 수정했다. LF/CRLF 허용과 변조·절단 거부 **5/5**, Python 정적 검사 PASS. 제품 판정·가시성·시간 상한은 완화하지 않았다. 실패 파일 세 개는 바이트 해시를 보존해 별도 소유 증거 폴더로 옮겼다. 당시 JSON의 프로필 보존 false는 guard를 만들기 전 미관측 상태이며 프로필 변경을 관측한 결과가 아니다.
+
+**정리·권한 범위:** 성공 실행에서 소유 예약 작업, fixture, 전용 Python 환경과 이번에 만든 빌드 작업공간 두 개를 제거했다. 전역 GUI 패키지 세 개 버전은 준비 전후 일치했다. 작은 매니페스트·결과·준비 실패 증거는 비공개 CI 증거 위치에 보존했다. [요청 슬롯 idle 복원 커밋](https://github.com/tngkrwlsmd/personal-control-plane/commit/b4982ab5d00c95e7eb1ca227856457503e59fcdc) 뒤 정확한 대상/idle 명령을 API로 다시 읽어 확인했으며, 복원 직전 대기·실행·waiting 작업은 모두 0건이었다. PR·브랜치 삭제, 개인 파일·클립보드·OS 표시 설정 변경은 수행하지 않았다.
+
+**한계·다음 단위:** `VISUAL ACCEPTANCE: NOT TESTED`. 이번 기능 수용을 전체 GUI, G01 간헐 실패 해결, M21/V7/최근 파일 열기 수용으로 확대하지 않는다. M19의 이 집중 경로는 완료로 보존하고 다시 실행하지 않는다. 다음 우선 검토는 G01의 기존 최초 실패 증거와 helper 종료/응답/UI 완료 경계이며, 새 Windows 검증 범위는 별도로 확정한다. G03~G05 제외·G07 중단과 사용자용 Undo/Redo·Ctrl+Z 미연결을 유지한다.
+
+---
+
+# 2026-11-21 — 집중 GUI 수용 전 main 분석·판정 강화(이력)
 
 - **확인 기준:** 작업 시작 원격 `main`은 `fe8c29ab5b76447f6f47ec4e3ad4a856df0ec0c6`이다. 11월 11일 감사 기준 `6f7fd9e7fcc058400399f4a3b9b104bb469ace97` 이후 38개 커밋이며, 최신 변경은 삭제 뒤 소유 검색 패널 상단 복귀·입력창 재표시 검사다. 아래 날짜별 수용·실패는 해당 시점의 증거로 보존한다.
 - **이번에 재현·수정한 검사 결함:** M19의 삭제 후 검색 범위 검사가 부분 문자열 포함 여부만 비교하여, 합성 경로 `C:\M19-owned\Left-other`와 `C:\M19-owned\Left\Nested`도 `C:\M19-owned\Left` 보존으로 잘못 허용했다. `test_m19_winui_features.py`의 마지막 판정만 대소문자를 무시한 전체 문자열 일치로 강화했다. 소유 패널 스크롤·가시성 대기·정확한 PID 전경·물리 클릭·실제 UTF-16 저장 파일·저장 0개 검사는 유지한다.
