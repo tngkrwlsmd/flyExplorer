@@ -18,6 +18,8 @@ using namespace fxfile::isolation;
 constexpr DWORD kDeadlineMs=4500;
 constexpr DWORD kMaxAttempts=2;
 constexpr DWORD kPollMs=20;
+// A known broken response only needs a short, bounded natural-exit observation.
+constexpr DWORD kIncompleteEofGraceMs=100;
 constexpr size_t kWireMax=sizeof(Reply)+kMaxBody;
 struct Handle {
     HANDLE h=nullptr;
@@ -528,13 +530,15 @@ Attempt oneAttempt(
         std::vector<unsigned char> frame;
         frame.reserve(4096);
         size_t expected=0;
+        std::optional<ULONGLONG> incompleteEofAt;
         for(;;){
             if(!current(lane,job)){
                 outcome.canceled=true;break;
             }
             if(::GetTickCount64()-started>=kDeadlineMs){
-                outcome.timeout=true;
-                outcome.hr=HRESULT_FROM_WIN32(ERROR_TIMEOUT);
+                outcome.timeout=!incompleteEofAt.has_value();
+                outcome.hr=HRESULT_FROM_WIN32(
+                    incompleteEofAt?ERROR_BROKEN_PIPE:ERROR_TIMEOUT);
                 break;
             }
             DWORD available=0;
@@ -626,10 +630,13 @@ Attempt oneAttempt(
                 outcome.hr=HRESULT_FROM_WIN32(ERROR_BROKEN_PIPE);
                 break;
             }
-            // EOF can precede process signalling. A complete frame still
-            // needs a confirmed zero exit; wait within the existing deadline.
-            // An incomplete frame at EOF remains a broken response.
-            if(!peeked&&(!expected||frame.size()!=expected)){
+            // EOF can precede process signalling. A partial reply is still
+            // broken; briefly observe the exact child's natural exit without
+            // delaying the next attempt for the entire response deadline.
+            const ULONGLONG now=::GetTickCount64();
+            if(!peeked&&(!expected||frame.size()!=expected)&&!incompleteEofAt)
+                incompleteEofAt=now;
+            if(incompleteEofAt&&now-*incompleteEofAt>=kIncompleteEofGraceMs){
                 outcome.hr=HRESULT_FROM_WIN32(ERROR_BROKEN_PIPE);
                 break;
             }
