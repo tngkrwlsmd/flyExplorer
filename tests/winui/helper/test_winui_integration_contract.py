@@ -17,10 +17,28 @@ class RealWinUIIsolationContract(unittest.TestCase):
         self.assertLess(progress,wait)
         for check in ("if(!current(lane,job))", "::GetTickCount64()-started>=kDeadlineMs",
                       "available>kWireMax-frame.size()", "frame.size()>expected",
-                      "if(bad)"):
+                      "outcome.hr=HRESULT_FROM_WIN32(ERROR_INVALID_DATA)"):
             self.assertLess(drain.index(check),progress)
-        self.assertIn("if(!bad&&exitCode==0&&readProgress&&",drain)
-        self.assertIn("outcome.hr=parse(frame,outcome.snapshot,outcome.path);",drain)
+        peek=drain.index("const BOOL peeked=::PeekNamedPipe(")
+        proc=drain.index("const DWORD processState=::WaitForSingleObject(",peek)
+        failed=drain.index("if(processState==WAIT_FAILED)",proc)
+        signalled=drain.index("if(processState==WAIT_OBJECT_0)",failed)
+        self.assertIn("if(error!=ERROR_BROKEN_PIPE)",drain[peek:proc])
+        self.assertIn("break;",drain[failed:signalled])
+        self.assertIn("if(!peeked&&(!expected||frame.size()!=expected))",drain)
+        exited=drain.index("if(!::GetExitCodeProcess(childProcess.h,&exitCode))")
+        known=drain.index("outcome.helperExitKnown=true;",exited)
+        recheck=drain.index("DWORD remaining=0;",known)
+        extra=drain.index("if(expected&&frame.size()==expected){",recheck)
+        parsed=drain.index("outcome.hr=parse(frame,outcome.snapshot,outcome.path);",extra)
+        self.assertLess(exited,known)
+        self.assertLess(known,recheck)
+        self.assertLess(recheck,extra)
+        self.assertLess(extra,parsed)
+        self.assertIn("if(remaining){",drain[recheck:extra])
+        self.assertIn("ERROR_INVALID_DATA",drain[extra:parsed])
+        self.assertIn("if(error!=ERROR_BROKEN_PIPE)",drain[extra:parsed])
+        self.assertIn("break;",drain[exited:known])
 
     def test_two_bounded_native_supervisor_lanes_and_owned_job(self):
         code=read(SRC/"shell_isolated_supervisor.cpp")

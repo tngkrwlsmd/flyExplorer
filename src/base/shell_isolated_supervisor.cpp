@@ -528,7 +528,6 @@ Attempt oneAttempt(
         std::vector<unsigned char> frame;
         frame.reserve(4096);
         size_t expected=0;
-        bool bad=false;
         for(;;){
             if(!current(lane,job)){
                 outcome.canceled=true;break;
@@ -540,15 +539,19 @@ Attempt oneAttempt(
             }
             DWORD available=0;
             bool readProgress=false;
-            if(!::PeekNamedPipe(hostOutRead.h,nullptr,0,nullptr,
-                               &available,nullptr)){
-                if(::WaitForSingleObject(childProcess.h,0)!=WAIT_OBJECT_0){
-                    outcome.hr=HRESULT_FROM_WIN32(ERROR_BROKEN_PIPE);
+            const BOOL peeked=::PeekNamedPipe(hostOutRead.h,nullptr,0,nullptr,
+                                             &available,nullptr);
+            if(!peeked){
+                const DWORD error=::GetLastError();
+                if(error!=ERROR_BROKEN_PIPE){
+                    outcome.hr=HRESULT_FROM_WIN32(error);
+                    if(SUCCEEDED(outcome.hr))outcome.hr=E_FAIL;
                     break;
                 }
             }else if(available){
                 if(available>kWireMax-frame.size()){
-                    bad=true;break;
+                    outcome.hr=HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
+                    break;
                 }
                 const DWORD chunk=std::min<DWORD>(available,65536);
                 const size_t start=frame.size();
@@ -556,7 +559,8 @@ Attempt oneAttempt(
                 DWORD received=0;
                 if(!::ReadFile(hostOutRead.h,frame.data()+start,
                               chunk,&received,nullptr)){
-                    bad=true;break;
+                    outcome.hr=HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
+                    break;
                 }
                 frame.resize(start+received);
                 readProgress=(received!=0);
@@ -566,34 +570,67 @@ Attempt oneAttempt(
                     if(header.magic!=kMagic||header.version!=kVersion||
                        header.bodyBytes>kMaxBody||
                        header.count>kMaxPageEntries ||
-                       (header.flags&~1u)){bad=true;break;}
+                       (header.flags&~1u)){
+                        outcome.hr=HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
+                        break;
+                    }
                     expected=sizeof(Reply)+header.bodyBytes;
                 }
-                if(expected&&frame.size()>expected){bad=true;break;}
-            }
-            if(::WaitForSingleObject(childProcess.h,0)==WAIT_OBJECT_0){
-                DWORD exitCode=0;
-                if(::GetExitCodeProcess(childProcess.h,&exitCode)){
-                    outcome.helperExitKnown=true;
-                    outcome.helperExitCode=exitCode;
-                }
-                if(expected&&frame.size()==expected&&exitCode==0){
-                    outcome.hr=parse(frame,outcome.snapshot,outcome.path);
+                if(expected&&frame.size()>expected){
+                    outcome.hr=HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
                     break;
                 }
-                // Exit is not EOF. A fast helper can finish generating a
-                // large response while the pipe still holds unread bytes.
-                // Continue bounded draining only after positive progress;
-                // an exited helper with an empty pipe and partial reply
-                // is a genuine broken response, never a success.
-                if(!bad&&exitCode==0&&readProgress&&
-                   (!expected||frame.size()<expected))continue;
-                outcome.hr=HRESULT_FROM_WIN32(
-                    bad?ERROR_INVALID_DATA:ERROR_BROKEN_PIPE);
+            }
+            const DWORD processState=::WaitForSingleObject(childProcess.h,0);
+            if(processState==WAIT_FAILED){
+                outcome.hr=HRESULT_FROM_WIN32(::GetLastError());
+                if(SUCCEEDED(outcome.hr))outcome.hr=E_FAIL;
                 break;
             }
-            if(bad){
-                outcome.hr=HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
+            if(processState==WAIT_OBJECT_0){
+                DWORD exitCode=0;
+                if(!::GetExitCodeProcess(childProcess.h,&exitCode)){
+                    outcome.hr=HRESULT_FROM_WIN32(::GetLastError());
+                    if(SUCCEEDED(outcome.hr))outcome.hr=E_FAIL;
+                    break;
+                }
+                outcome.helperExitKnown=true;
+                outcome.helperExitCode=exitCode;
+                if(exitCode==0){
+                    // The earlier peek can precede the child's final write.
+                    // Recheck after exit, including a seemingly complete frame.
+                    // Only buffered bytes justify another bounded drain.
+                    DWORD remaining=0;
+                    if(::PeekNamedPipe(hostOutRead.h,nullptr,0,nullptr,
+                                       &remaining,nullptr)){
+                        if(remaining){
+                            if(expected&&frame.size()==expected){
+                                outcome.hr=HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
+                                break;
+                            }
+                            continue;
+                        }
+                    }else{
+                        const DWORD error=::GetLastError();
+                        if(error!=ERROR_BROKEN_PIPE){
+                            outcome.hr=HRESULT_FROM_WIN32(error);
+                            if(SUCCEEDED(outcome.hr))outcome.hr=E_FAIL;
+                            break;
+                        }
+                    }
+                    if(expected&&frame.size()==expected){
+                        outcome.hr=parse(frame,outcome.snapshot,outcome.path);
+                        break;
+                    }
+                }
+                outcome.hr=HRESULT_FROM_WIN32(ERROR_BROKEN_PIPE);
+                break;
+            }
+            // EOF can precede process signalling. A complete frame still
+            // needs a confirmed zero exit; wait within the existing deadline.
+            // An incomplete frame at EOF remains a broken response.
+            if(!peeked&&(!expected||frame.size()!=expected)){
+                outcome.hr=HRESULT_FROM_WIN32(ERROR_BROKEN_PIPE);
                 break;
             }
             // Drain a producing helper without adding one poll delay per
