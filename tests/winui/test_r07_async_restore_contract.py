@@ -54,6 +54,29 @@ class R07AsyncRestoreContract(unittest.TestCase):
             with self.subTest(test=test):
                 self.assertIn(test,fixture)
 
+    def test_async_start_reserves_before_thread_and_retires_on_failure(self):
+        source=read("app/winui/file_operation_controller.cpp")
+        worker=source.split("FileOperationController::startTakenRenameRestoreAsync(",1)[1].split(
+            "bool FileOperationController::recheckAndRetireRenameRestoreCandidate(",1)[0]
+        for token in ("shared->busy=true;", "shared->restoreInFlight=true;"):
+            self.assertLess(worker.index(token),worker.index("std::thread(["))
+        self.assertIn("shared,taken,liveContext,true",worker)
+        self.assertIn("if(shared->epoch==ticket&&shared->restoreInFlight)",worker)
+        failure=worker.rsplit("}catch(...){",1)[1]
+        self.assertIn("shared->pendingRestoreCheck.reset();",failure)
+        self.assertIn("shared->restoreInFlight=false;",failure)
+        self.assertIn("shared->busy=false;",failure)
+        claim=source.split("FileOperationController::executeTakenRenameRestoreOnState(",1)[1].split(
+            "FileOperationController::executeTakenRenameRestore(",1)[0]
+        self.assertIn("if(asyncReserved)",claim)
+        self.assertIn("}else if(shared->restoreInFlight)",claim)
+        recheck=source.split("bool FileOperationController::recheckAndRetireRenameRestoreCandidate(",1)[1]
+        self.assertLess(recheck.index("if(state_->restoreInFlight)return false;"),
+                        recheck.index("state_->pendingRestoreCheck.reset();"))
+        self.assertIn("#if defined(FLY_R07_RESTORE_RACE_NATIVE_TEST)\n            FlyR07RestoreStartHook();",worker)
+        self.assertNotIn("FLY_R07_RESTORE_RACE_NATIVE_TEST",
+                         read("app/winui/flyExplorer.project-template.xml"))
+
     def test_no_user_command_or_session_wiring(self):
         commands=read("app/winui/m21_commands.cpp")
         self.assertEqual(commands.count("startTakenRenameRestoreAsync("),1)

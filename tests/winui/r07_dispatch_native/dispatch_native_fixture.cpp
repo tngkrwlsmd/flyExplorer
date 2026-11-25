@@ -47,6 +47,35 @@ extern "C" void FlyR07RestoreRaceHook(unsigned stage) noexcept {
     }catch(...){}
 }
 
+// The native-only start hook makes the scheduling gap deterministic. It
+// uses a shared lifetime even if a fixture times out before a worker exits.
+struct StartPause {
+    std::mutex mutex;
+    std::condition_variable cv;
+    unsigned entered=0;
+    bool resume=false;
+    bool wait(unsigned count){
+        std::unique_lock<std::mutex> lock(mutex);
+        return cv.wait_for(lock,std::chrono::seconds(5),
+            [&]{return entered>=count;});
+    }
+    void release(){
+        {std::lock_guard<std::mutex> lock(mutex);resume=true;}
+        cv.notify_all();
+    }
+};
+static std::shared_ptr<StartPause> gStartPause;
+extern "C" void FlyR07RestoreStartHook() noexcept {
+    auto pause=std::atomic_load(&gStartPause);
+    if(!pause)return;
+    try{
+        std::unique_lock<std::mutex> lock(pause->mutex);
+        ++pause->entered;
+        pause->cv.notify_all();
+        pause->cv.wait(lock,[&]{return pause->resume;});
+    }catch(...){}
+}
+
 static constexpr char kBytes[]="r07-18-owned-unique-payload";
 static constexpr char kCollision[]="r07-18-test-occupant";
 static std::string read(fs::path const& p) {
@@ -675,6 +704,84 @@ int wmain(int argc,wchar_t** argv){
         check(claim&&task&&status==Controller::StartStatus::Started&&
               f.restored()&&count->load()==1,
               "async_duplicate_queued_task_delivers_callback_once");
+    }
+    // A paused first worker makes the pre-native claim gap reproducible.
+    {
+        Fixture f(owned,L"async-scheduled-duplicate");
+        auto claim=f.ready?f.take():std::nullopt;
+        auto q=std::make_shared<AsyncUiQueue>();
+        auto count=std::make_shared<std::atomic<int>>(0);
+        auto pause=std::make_shared<StartPause>();
+        std::atomic_store(&gStartPause,pause);
+        auto cb=[count](Controller::RestoreCompletion){++*count;};
+        auto first=claim?f.ctrl.startTakenRenameRestoreAsync(
+            *claim,f.ctx,q->poster(),cb):Controller::StartStatus::StaleConfirmation;
+        const bool entered=pause->wait(1);
+        const bool reserved=f.ctrl.busy();
+        auto second=claim?f.ctrl.startTakenRenameRestoreAsync(
+            *claim,f.ctx,q->poster(),cb):Controller::StartStatus::StaleConfirmation;
+        const bool secondEntered=second!=Controller::StartStatus::Started||pause->wait(2);
+        pause->release();
+        auto task=q->popFor(std::chrono::milliseconds(4500));
+        if(task)(*task)();
+        auto extra=q->popFor(second==Controller::StartStatus::Started?
+            std::chrono::milliseconds(4500):std::chrono::milliseconds(250));
+        if(extra)(*extra)();
+        std::atomic_store(&gStartPause,std::shared_ptr<StartPause>{});
+        check(claim&&entered&&secondEntered&&reserved&&
+              first==Controller::StartStatus::Started&&
+              second==Controller::StartStatus::Busy&&task&&!extra&&
+              count->load()==1&&f.restored()&&!f.ctrl.busy(),
+              "async_scheduled_duplicate_rejected_before_worker_claim");
+    }
+    {
+        Fixture f(owned,L"async-scheduled-claim-protected");
+        auto claim=f.ready?f.take():std::nullopt;
+        auto q=std::make_shared<AsyncUiQueue>();
+        auto got=std::make_shared<std::optional<Controller::RestoreCompletion>>();
+        auto pause=std::make_shared<StartPause>();
+        std::atomic_store(&gStartPause,pause);
+        auto started=claim?f.ctrl.startTakenRenameRestoreAsync(
+            *claim,f.ctx,q->poster(),[got](Controller::RestoreCompletion x){
+                *got=std::move(x);
+            }):Controller::StartStatus::StaleConfirmation;
+        const bool entered=pause->wait(1);
+        const bool retired=claim&&f.ctrl.recheckAndRetireRenameRestoreCandidate(*claim,f.ctx);
+        const auto sync=claim?f.ctrl.executeTakenRenameRestore(*claim,f.ctx):Result{};
+        const bool unchanged=f.unchanged();
+        pause->release();
+        auto task=q->popFor(std::chrono::milliseconds(4500));
+        if(task)(*task)();
+        std::atomic_store(&gStartPause,std::shared_ptr<StartPause>{});
+        check(claim&&entered&&started==Controller::StartStatus::Started&&
+              !retired&&!sync.nativeCallAttempted&&unchanged&&task&&
+              got->has_value()&&got->value().result.nativeCallAttempted&&
+              got->value().outcome==Controller::RestoreOutcomeClass::VerifiedCommitted&&
+              f.restored()&&!f.ctrl.busy(),
+              "async_scheduled_claim_protected_from_sync_retirement");
+    }
+    {
+        Fixture f(owned,L"async-scheduled-navigation");
+        auto claim=f.ready?f.take():std::nullopt;
+        auto q=std::make_shared<AsyncUiQueue>();
+        auto count=std::make_shared<std::atomic<int>>(0);
+        auto pause=std::make_shared<StartPause>();
+        std::atomic_store(&gStartPause,pause);
+        auto started=claim?f.ctrl.startTakenRenameRestoreAsync(
+            *claim,f.ctx,q->poster(),[count](Controller::RestoreCompletion){++*count;})
+            :Controller::StartStatus::StaleConfirmation;
+        const bool entered=pause->wait(1);
+        f.ctrl.invalidateRenameOwnerOnNavigation();
+        const bool stillReserved=f.ctrl.busy();
+        pause->release();
+        for(int i=0;i<500&&f.ctrl.busy();++i)
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        auto late=q->popFor(std::chrono::milliseconds(300));
+        std::atomic_store(&gStartPause,std::shared_ptr<StartPause>{});
+        check(claim&&entered&&started==Controller::StartStatus::Started&&
+              stillReserved&&!f.ctrl.busy()&&!late&&count->load()==0&&
+              f.unchanged()&&!f.take(),
+              "async_scheduled_navigation_releases_reservation_without_mutation");
     }
     // R07-23E: an actual file command can finish after the UI queue refuses
     // delivery. This must release busy without calling a UI completion or

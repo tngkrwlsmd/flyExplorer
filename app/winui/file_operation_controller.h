@@ -189,7 +189,7 @@ private:
     executeTakenRenameRestoreOnState(
         std::shared_ptr<SharedState> const& shared,
         RenameRestoreCandidate const& taken,
-        Context const& liveContext) noexcept;
+        Context const& liveContext,bool asyncReserved=false) noexcept;
 
     static bool sameContext(Context const&,Context const&) noexcept;
     static bool visibleForTransfer(

@@ -11,6 +11,10 @@
 #include <thread>
 #include <utility>
 
+#if defined(FLY_R07_RESTORE_RACE_NATIVE_TEST)
+extern "C" void FlyR07RestoreStartHook() noexcept;
+#endif
+
 namespace fxfile::previewops {
 
 struct FileOperationController::PendingTransfer final {
@@ -621,7 +625,8 @@ FileOperationController::classifyRestoreOutcome(
 fxfile::filecommand::RenameRestoreWriteResult
 FileOperationController::executeTakenRenameRestoreOnState(
     std::shared_ptr<SharedState> const& shared,
-    RenameRestoreCandidate const& taken,Context const& liveContext) noexcept
+    RenameRestoreCandidate const& taken,Context const& liveContext,
+    bool asyncReserved) noexcept
 {
     fxfile::filecommand::RenameRestoreWriteResult denied{};
     std::wstring originalCopy{};
@@ -629,6 +634,18 @@ FileOperationController::executeTakenRenameRestoreOnState(
     try{
         {
             std::lock_guard<std::mutex> lock(shared->mutex);
+            if(asyncReserved){
+                // Only the worker holding the scheduled reservation may
+                // release it; revalidate and claim under this SAME lock.
+                if(shared->closing||shared->epoch!=taken.ticket||
+                   !shared->busy||!shared->restoreInFlight)return denied;
+                shared->busy=false;
+                shared->restoreInFlight=false;
+            }else if(shared->restoreInFlight){
+                // A competing synchronous caller must not retire the
+                // pending claim belonging to the scheduled/active worker.
+                return denied;
+            }
             if(!shared->pendingRestoreCheck)return denied;
             auto const& expected=*shared->pendingRestoreCheck;
             auto const& left=expected.renamed;
@@ -707,6 +724,7 @@ FileOperationController::startTakenRenameRestoreAsync(
     if(!post||!completion)return StartStatus::ThreadStartFailed;
     auto shared=state_;
     std::uint64_t generation=0;
+    const auto ticket=taken.ticket;
     {
         std::lock_guard<std::mutex> lock(shared->mutex);
         if(shared->closing||shared->busy)return StartStatus::Busy;
@@ -715,6 +733,10 @@ FileOperationController::startTakenRenameRestoreAsync(
            !sameContext(taken.context,liveContext))
             return StartStatus::StaleConfirmation;
         generation=shared->navigationGeneration;
+        // Reserve before returning Started or creating the worker. A
+        // duplicate caller must never schedule a second completion.
+        shared->busy=true;
+        shared->restoreInFlight=true;
     }
     try{
         std::thread([
@@ -724,9 +746,12 @@ FileOperationController::startTakenRenameRestoreAsync(
         ]() mutable {
             RestoreCompletion value{};
             value.ticket=taken.ticket;
-            value.context=liveContext;
+#if defined(FLY_R07_RESTORE_RACE_NATIVE_TEST)
+            FlyR07RestoreStartHook();
+#endif
             value.result=executeTakenRenameRestoreOnState(
-                shared,taken,liveContext);
+                shared,taken,liveContext,true);
+            value.context=std::move(liveContext);
             value.outcome=classifyRestoreOutcome(value.result);
 
             // A file mutation may have succeeded even though the owner
@@ -765,6 +790,12 @@ FileOperationController::startTakenRenameRestoreAsync(
         }).detach();
         return StartStatus::Started;
     }catch(...){
+        std::lock_guard<std::mutex> lock(shared->mutex);
+        if(shared->epoch==ticket&&shared->restoreInFlight){
+            shared->pendingRestoreCheck.reset();
+            shared->restoreInFlight=false;
+            shared->busy=false;
+        }
         return StartStatus::ThreadStartFailed;
     }
 }
@@ -774,6 +805,7 @@ bool FileOperationController::recheckAndRetireRenameRestoreCandidate(
 {
     try{
         std::lock_guard<std::mutex> lock(state_->mutex);
+        if(state_->restoreInFlight)return false;
         if(!state_->pendingRestoreCheck)return false;
         auto const& expected=*state_->pendingRestoreCheck;
         auto const& left=expected.renamed;
