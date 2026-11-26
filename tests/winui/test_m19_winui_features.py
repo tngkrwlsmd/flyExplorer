@@ -15,6 +15,34 @@ import subprocess
 import time
 from pywinauto import Desktop
 
+def reveal_search_control(element, eventually, key):
+    """Resolve a real, fully visible control in the owned SearchPanel."""
+    assert key.startswith("Search") and key != "SearchPanel", key
+    positions = iter(range(0, 101, 10))
+
+    def probe():
+        panel = element("SearchPanel")
+        if not panel.exists(timeout=.2) or not panel.is_visible():
+            return False
+        item = element(key)
+        if item.exists(timeout=.2) and item.is_visible():
+            box = item.rectangle()
+            viewport = panel.rectangle()
+            if (box.width() > 0 and box.height() > 0 and
+                    viewport.left <= box.left and box.right <= viewport.right and
+                    viewport.top <= box.top and box.bottom <= viewport.bottom):
+                return item
+        scroll = panel.wrapper_object().iface_scroll
+        if scroll.CurrentVerticallyScrollable:
+            percent = next(positions, None)
+            if percent is not None:
+                scroll.SetScrollPercent(-1, percent)
+        # Recheck on the next poll, after the layout/UIA frame settles.
+        return False
+
+    return eventually(probe, "M1.9 owned search control not fully visible: " + key, 8)
+
+
 def run(*,p,win,element,safe_click,focus,eventually,ownedwindows,
         left,right,inner,owned,localdata,env,exe):
     u=c.windll.user32
@@ -45,6 +73,18 @@ def run(*,p,win,element,safe_click,focus,eventually,ownedwindows,
         return needle.lower() in text(key).lower()
     def good(fn,why,timeout=10):
         return eventually(fn,why,timeout)
+    def search_control(key):
+        return reveal_search_control(element, good, key)
+    def click_search(key):
+        # Focus first: WinUI may scroll the prior focused editor into view.
+        focus()
+        item = search_control(key)
+        foreground = u.GetForegroundWindow()
+        owner = W.DWORD()
+        if foreground:
+            u.GetWindowThreadProcessId(foreground, c.byref(owner))
+        assert owner.value == p.pid, "M1.9 refusing search click outside owned app"
+        item.click_input()
     def children():
         results=[]
         for proc in psutil.process_iter(["pid","ppid","exe","cmdline"]):
@@ -362,33 +402,28 @@ def run(*,p,win,element,safe_click,focus,eventually,ownedwindows,
         print("REAL_SEARCH_V2_INVALID_REGEX_PRESTART_REJECT_PASS",True,flush=True)
 
         # Search v3: bounded AND criteria plus private named query presets.
-        safe_click(regex)
-        min_size=element("SearchMinSizeBox")
-        max_size=element("SearchMaxSizeBox")
-        after=element("SearchModifiedAfterBox")
-        before_date=element("SearchModifiedBeforeBox")
-        preset_name=element("SearchPresetNameBox")
+        click_search("SearchRegexBox")
         preset_file=localdata/"flyExplorer"/"search-presets-v1.txt"
 
-        term.set_edit_text("report")
-        extension.set_edit_text(".txt")
-        min_size.set_edit_text("7")
-        max_size.set_edit_text("9")
-        after.set_edit_text("2026-02-01")
-        before_date.set_edit_text("2026-02-28")
-        safe_click(element("SearchRunButton"))
+        search_control("SearchTermBox").set_edit_text("report")
+        search_control("SearchExtensionBox").set_edit_text(".txt")
+        search_control("SearchMinSizeBox").set_edit_text("7")
+        search_control("SearchMaxSizeBox").set_edit_text("9")
+        search_control("SearchModifiedAfterBox").set_edit_text("2026-02-01")
+        search_control("SearchModifiedBeforeBox").set_edit_text("2026-02-28")
+        click_search("SearchRunButton")
         good(lambda:match("SearchCountText","검색 결과 1개"),
              "Search v3 compound AND criteria did not return one file",14)
         assert search_matches("nested-report.txt")
         print("REAL_SEARCH_V3_NAME_EXTENSION_SIZE_DATE_AND_PASS",True,flush=True)
 
-        term.set_edit_text("")
-        extension.set_edit_text("")
-        min_size.set_edit_text("10")
-        max_size.set_edit_text("13")
-        after.set_edit_text("")
-        before_date.set_edit_text("")
-        safe_click(element("SearchRunButton"))
+        search_control("SearchTermBox").set_edit_text("")
+        search_control("SearchExtensionBox").set_edit_text("")
+        search_control("SearchMinSizeBox").set_edit_text("10")
+        search_control("SearchMaxSizeBox").set_edit_text("13")
+        search_control("SearchModifiedAfterBox").set_edit_text("")
+        search_control("SearchModifiedBeforeBox").set_edit_text("")
+        click_search("SearchRunButton")
         # The full GUI profile also enables M22's test-owned 12,000-byte
         # "큰.txt" fixture, which matches the same 10-13 KiB query.
         expected = 2 if os.environ.get("FLY_M22_OWNED_FEATURES")=="YES" else 1
@@ -399,121 +434,118 @@ def run(*,p,win,element,safe_click,focus,eventually,ownedwindows,
             assert search_matches("큰.txt")
         print("REAL_SEARCH_V3_SIZE_ONLY_EMPTY_TERM_PASS",True,flush=True)
 
-        term.set_edit_text("report")
-        min_size.set_edit_text("20")
-        max_size.set_edit_text("10")
-        safe_click(element("SearchRunButton"))
+        search_control("SearchTermBox").set_edit_text("report")
+        search_control("SearchMinSizeBox").set_edit_text("20")
+        search_control("SearchMaxSizeBox").set_edit_text("10")
+        click_search("SearchRunButton")
         good(lambda:match("SearchCountText","파일 크기 범위가 올바르지 않습니다"),
              "Search v3 invalid size range was not rejected before worker",7)
-        assert element("SearchRunButton").is_enabled()
+        assert search_control("SearchRunButton").is_enabled()
         print("REAL_SEARCH_V3_INVALID_SIZE_PRESTART_REJECT_PASS",True,flush=True)
 
-        min_size.set_edit_text("")
-        max_size.set_edit_text("")
-        after.set_edit_text("2026-02-30")
-        before_date.set_edit_text("")
-        safe_click(element("SearchRunButton"))
+        search_control("SearchMinSizeBox").set_edit_text("")
+        search_control("SearchMaxSizeBox").set_edit_text("")
+        search_control("SearchModifiedAfterBox").set_edit_text("2026-02-30")
+        search_control("SearchModifiedBeforeBox").set_edit_text("")
+        click_search("SearchRunButton")
         good(lambda:match("SearchCountText","수정일 범위가 올바르지 않습니다"),
              "Search v3 invalid date was not rejected before worker",7)
         print("REAL_SEARCH_V3_INVALID_DATE_PRESTART_REJECT_PASS",True,flush=True)
 
         # Bounded literal content search reuses the same worker and case toggle.
-        content_box=element("SearchContentBox")
-        content_encoding=element("SearchContentEncodingBox")
-        term.set_edit_text("")
-        extension.set_edit_text("")
-        min_size.set_edit_text("")
-        max_size.set_edit_text("")
-        after.set_edit_text("")
-        before_date.set_edit_text("")
-        content_box.set_edit_text("needle")
-        safe_click(element("SearchRunButton"))
+        search_control("SearchTermBox").set_edit_text("")
+        search_control("SearchExtensionBox").set_edit_text("")
+        search_control("SearchMinSizeBox").set_edit_text("")
+        search_control("SearchMaxSizeBox").set_edit_text("")
+        search_control("SearchModifiedAfterBox").set_edit_text("")
+        search_control("SearchModifiedBeforeBox").set_edit_text("")
+        search_control("SearchContentBox").set_edit_text("needle")
+        click_search("SearchRunButton")
         good(lambda:match("SearchCountText","검색 결과 1개"),
              "UTF-8 literal content search did not return one owned file",14)
         assert search_matches("content-utf8.txt")
         assert not search_matches("content-binary.bin")
         print("REAL_CONTENT_SEARCH_UTF8_LITERAL_PASS",True,flush=True)
 
-        content_regex=element("SearchContentRegexBox")
-        safe_click(content_regex)
-        content_box.set_edit_text(r"^Alpha\s+Need(Le|Missing)\s+omega$")
-        safe_click(element("SearchRunButton"))
+        click_search("SearchContentRegexBox")
+        search_control("SearchContentBox").set_edit_text(r"^Alpha\s+Need(Le|Missing)\s+omega$")
+        click_search("SearchRunButton")
         good(lambda:match("SearchCountText","검색 결과 1개"),
              "bounded content regex group/alternation did not match",14)
         assert search_matches("content-utf8.txt")
         print("REAL_CONTENT_REGEX_GROUP_ALTERNATION_PASS",True,flush=True)
 
-        content_box.set_edit_text("(?=Alpha)Alpha")
-        safe_click(element("SearchRunButton"))
+        search_control("SearchContentBox").set_edit_text("(?=Alpha)Alpha")
+        click_search("SearchRunButton")
         good(lambda:match("SearchCountText","파일 내용 정규식이 올바르지 않습니다"),
              "unsupported content regex was not rejected before worker",7)
-        assert element("SearchRunButton").is_enabled()
+        assert search_control("SearchRunButton").is_enabled()
         print("REAL_CONTENT_REGEX_INVALID_PRESTART_REJECT_PASS",True,flush=True)
-        safe_click(content_regex)
+        click_search("SearchContentRegexBox")
 
-        content_box.set_edit_text("한글바늘")
-        safe_click(element("SearchRunButton"))
+        search_control("SearchContentBox").set_edit_text("한글바늘")
+        click_search("SearchRunButton")
         good(lambda:match("SearchCountText","검색 결과 1개"),
              "UTF-16 content search did not return one owned file",14)
         assert search_matches("content-utf16.txt")
         print("REAL_CONTENT_SEARCH_UTF16_PASS",True,flush=True)
 
-        content_box.set_edit_text("레거시한글")
-        safe_click(element("SearchRunButton"))
+        search_control("SearchContentBox").set_edit_text("레거시한글")
+        click_search("SearchRunButton")
         good(lambda:match("SearchCountText","검색 결과 0개"),
              "auto UTF unexpectedly decoded CP949 content",14)
         print("REAL_CONTENT_ENCODING_AUTO_UTF_REJECTS_CP949_PASS",True,flush=True)
 
         focus()
-        content_encoding.wrapper_object().select(1)
-        content_box.set_edit_text("레거시한글")
-        safe_click(element("SearchRunButton"))
+        search_control("SearchContentEncodingBox").wrapper_object().select(1)
+        search_control("SearchContentBox").set_edit_text("레거시한글")
+        click_search("SearchRunButton")
         good(lambda:match("SearchCountText","검색 결과 1개"),
              "explicit CP949 content search failed",14)
         assert search_matches("content-cp949.txt")
         print("REAL_CONTENT_ENCODING_CP949_PASS",True,flush=True)
 
         focus()
-        content_encoding.wrapper_object().select(2)
-        content_box.set_edit_text("café")
-        safe_click(element("SearchRunButton"))
+        search_control("SearchContentEncodingBox").wrapper_object().select(2)
+        search_control("SearchContentBox").set_edit_text("café")
+        click_search("SearchRunButton")
         good(lambda:match("SearchCountText","검색 결과 1개"),
              "explicit Windows-1252 content search failed",14)
         assert search_matches("content-1252.txt")
         print("REAL_CONTENT_ENCODING_WINDOWS1252_PASS",True,flush=True)
 
         focus()
-        content_encoding.wrapper_object().select(0)
-        content_box.set_edit_text("한글바늘")
-        safe_click(element("SearchRunButton"))
+        search_control("SearchContentEncodingBox").wrapper_object().select(0)
+        search_control("SearchContentBox").set_edit_text("한글바늘")
+        click_search("SearchRunButton")
         good(lambda:match("SearchCountText","검색 결과 1개"),
              "auto UTF did not restore after legacy codepage checks",14)
         assert search_matches("content-utf16.txt")
         print("REAL_CONTENT_ENCODING_AUTO_UTF_RESTORE_PASS",True,flush=True)
 
         focus()
-        target.wrapper_object().select(1)
-        content_box.set_edit_text("needle")
-        safe_click(element("SearchRunButton"))
+        search_control("SearchTargetBox").wrapper_object().select(1)
+        search_control("SearchContentBox").set_edit_text("needle")
+        click_search("SearchRunButton")
         good(lambda:match("SearchCountText","파일 내용 조건이 올바르지 않습니다"),
              "folder-only content search was not rejected before worker",7)
-        assert element("SearchRunButton").is_enabled()
+        assert search_control("SearchRunButton").is_enabled()
         print("REAL_CONTENT_SEARCH_FOLDER_ONLY_PRESTART_REJECT_PASS",True,flush=True)
         focus()
-        target.wrapper_object().select(0)
+        search_control("SearchTargetBox").wrapper_object().select(0)
 
-        term.set_edit_text("report")
-        extension.set_edit_text(".txt")
-        min_size.set_edit_text("7")
-        max_size.set_edit_text("9")
-        after.set_edit_text("2026-02-01")
-        before_date.set_edit_text("2026-02-28")
-        content_box.set_edit_text(r"프리셋(한글|없음)")
-        safe_click(content_regex)
+        search_control("SearchTermBox").set_edit_text("report")
+        search_control("SearchExtensionBox").set_edit_text(".txt")
+        search_control("SearchMinSizeBox").set_edit_text("7")
+        search_control("SearchMaxSizeBox").set_edit_text("9")
+        search_control("SearchModifiedAfterBox").set_edit_text("2026-02-01")
+        search_control("SearchModifiedBeforeBox").set_edit_text("2026-02-28")
+        search_control("SearchContentBox").set_edit_text(r"프리셋(한글|없음)")
+        click_search("SearchContentRegexBox")
         focus()
-        content_encoding.wrapper_object().select(1)
-        preset_name.set_edit_text("2월 중간 보고서")
-        safe_click(element("SearchPresetSaveButton"))
+        search_control("SearchContentEncodingBox").wrapper_object().select(1)
+        search_control("SearchPresetNameBox").set_edit_text("2월 중간 보고서")
+        click_search("SearchPresetSaveButton")
         good(lambda:preset_file.is_file() and
              "schema=4" in preset_file.read_text(encoding="utf-8") and
              "2월 중간 보고서\treport\t프리셋(한글|없음)\t1\t.txt\t0\t1\t0\t0" in
@@ -524,16 +556,16 @@ def run(*,p,win,element,safe_click,focus,eventually,ownedwindows,
 
         # Restore legacy-default options before continuing existing recent
         # search persistence acceptance.
-        extension.set_edit_text("")
-        min_size.set_edit_text("")
-        max_size.set_edit_text("")
-        after.set_edit_text("")
-        before_date.set_edit_text("")
-        content_box.set_edit_text("")
-        safe_click(content_regex)
+        search_control("SearchExtensionBox").set_edit_text("")
+        search_control("SearchMinSizeBox").set_edit_text("")
+        search_control("SearchMaxSizeBox").set_edit_text("")
+        search_control("SearchModifiedAfterBox").set_edit_text("")
+        search_control("SearchModifiedBeforeBox").set_edit_text("")
+        search_control("SearchContentBox").set_edit_text("")
+        click_search("SearchContentRegexBox")
         focus()
-        content_encoding.wrapper_object().select(0)
-        target.wrapper_object().select(0)
+        search_control("SearchContentEncodingBox").wrapper_object().select(0)
+        search_control("SearchTargetBox").wrapper_object().select(0)
         # Editing preset options near the bottom can leave the bounded search
         # ScrollViewer scrolled past the query row. UIA does not expose the
         # off-screen SearchTermBox until its owned viewport returns to top.
@@ -543,14 +575,14 @@ def run(*,p,win,element,safe_click,focus,eventually,ownedwindows,
         good(lambda:element("SearchTermBox").exists(timeout=.2) and
              element("SearchTermBox").is_visible(),
              "M1.9 owned query editor not visible after returning to top",6)
-        term.set_edit_text("readme")
-        safe_click(element("SearchRunButton"))
+        search_control("SearchTermBox").set_edit_text("readme")
+        click_search("SearchRunButton")
         good(lambda:match("SearchCountText","검색 결과 1개"),
              "Search v2 option reset did not restore default search",12)
 
-        safe_click(element("SearchRememberBox"))
-        assert element("SearchRememberBox").get_toggle_state()==1
-        safe_click(element("SearchRunButton"))
+        click_search("SearchRememberBox")
+        assert search_control("SearchRememberBox").get_toggle_state()==1
+        click_search("SearchRunButton")
         good(recall.is_file,"opt-in recent search persisted no owned profile",12)
         good(lambda:match("SearchCountText","검색 결과 1개"),
              "M1.9 opted-in search did not finish",10)
@@ -560,9 +592,9 @@ def run(*,p,win,element,safe_click,focus,eventually,ownedwindows,
 
         (right/"m19-other-result.txt").write_text(
             "owned matching fixture",encoding="utf-8")
-        scope.set_edit_text(str(right))
-        term.set_edit_text("m19-other-result")
-        safe_click(element("SearchRunButton"))
+        search_control("SearchScopeBox").set_edit_text(str(right))
+        search_control("SearchTermBox").set_edit_text("m19-other-result")
+        click_search("SearchRunButton")
         good(lambda:search_matches("m19-other-result.txt"),
              "second owned folder was not independently searched",14)
         good(lambda:recall.exists() and str(right) in
@@ -572,7 +604,8 @@ def run(*,p,win,element,safe_click,focus,eventually,ownedwindows,
         print("REAL_M19_SEARCH_TWO_OPTED_IN_LOCATIONS_NEWEST_FIRST",True,flush=True)
         saved_recent_sha=hashlib.sha256(recall.read_bytes()).digest()
         focus()
-        recents.wrapper_object().select(1)
+        search_control("SearchRecentBox").wrapper_object().select(1)
+        search_control("SearchScopeBox")
         good(lambda:str(left).lower() in
              element("SearchScopeBox").get_value().lower(),
              "selecting the second recent scope did not update the typed full path",8)

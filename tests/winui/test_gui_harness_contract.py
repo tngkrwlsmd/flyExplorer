@@ -202,14 +202,149 @@ class GuiHarnessStaticContract(unittest.TestCase):
         reset = gui.split("# Restore legacy-default options", 1)[1].split(
             '"Search v2 option reset did not restore default search"', 1
         )[0]
-        self.assertIn('target.wrapper_object().select(0)', reset)
+        self.assertIn('search_control("SearchTargetBox").wrapper_object().select(0)', reset)
         self.assertIn('owned_search_scroll = element("SearchPanel").wrapper_object().iface_scroll', reset)
         self.assertIn("if owned_search_scroll.CurrentVerticallyScrollable:", reset)
         self.assertIn("owned_search_scroll.SetScrollPercent(-1, 0)", reset)
         self.assertIn('element("SearchTermBox").exists(timeout=.2)', reset)
         self.assertIn('element("SearchTermBox").is_visible()', reset)
         self.assertLess(reset.index("owned_search_scroll.SetScrollPercent(-1, 0)"),
-                        reset.index('term.set_edit_text("readme")'))
+                        reset.index('search_control("SearchTermBox").set_edit_text("readme")'))
+
+    def test_m19_owned_search_control_scrolls_and_fails_closed(self):
+        from types import SimpleNamespace
+        gui = (TESTS / "test_m19_winui_features.py").read_text(encoding="utf-8")
+        function = next(node for node in ast.parse(gui).body
+                        if isinstance(node, ast.FunctionDef)
+                        and node.name == "reveal_search_control")
+        namespace = {}
+        exec(compile(ast.Module(body=[function], type_ignores=[]),
+                     "M19 search visibility", "exec"), namespace)
+        reveal_search_control = namespace["reveal_search_control"]
+
+        class Rect:
+            def __init__(self, top=0, bottom=100):
+                self.left, self.right, self.top, self.bottom = 0, 100, top, bottom
+            def width(self): return self.right - self.left
+            def height(self): return self.bottom - self.top
+
+        for case in ("visible", "offscreen", "clipped", "missing", "no-scroll",
+                     "hidden-panel", "wrong-key", "reentry"):
+            with self.subTest(case=case):
+                position = 0
+                pending = None
+                calls = []
+                scroll = SimpleNamespace(CurrentVerticallyScrollable=case != "no-scroll")
+
+                def set_scroll(horizontal, vertical):
+                    nonlocal pending
+                    self.assertEqual(-1, horizontal)
+                    self.assertIsNone(pending, "more than one scroll per poll")
+                    calls.append(vertical)
+                    pending = vertical
+
+                scroll.SetScrollPercent = set_scroll
+
+                class Panel:
+                    def exists(self, timeout): return True
+                    def is_visible(self): return case != "hidden-panel"
+                    def rectangle(self): return Rect()
+                    def wrapper_object(self): return SimpleNamespace(iface_scroll=scroll)
+
+                class Item:
+                    def exists(self, timeout):
+                        return (case not in ("missing", "no-scroll") and
+                                (case != "offscreen" or position >= 60))
+                    def is_visible(self): return True
+                    def rectangle(self):
+                        if case == "clipped" and position < 60:
+                            return Rect(90, 110)
+                        if case == "reentry" and position < 60:
+                            return Rect(110, 130)
+                        return Rect(20, 40)
+
+                panel, item = Panel(), Item()
+
+                def element(key):
+                    self.assertIn(key, ("SearchPanel", "SearchMinSizeBox"))
+                    return panel if key == "SearchPanel" else item
+
+                def eventually(probe, label, timeout):
+                    nonlocal pending, position
+                    self.assertEqual(timeout, 8)
+                    for _ in range(20):
+                        if pending is not None:
+                            position, pending = pending, None
+                        value = probe()
+                        if value:
+                            return value
+                    raise AssertionError(label)
+
+                if case in ("visible", "offscreen", "clipped", "reentry"):
+                    self.assertIs(item, reveal_search_control(
+                        element, eventually, "SearchMinSizeBox"))
+                    self.assertEqual(calls, [] if case == "visible" else list(range(0, 61, 10)))
+                    if case == "reentry":
+                        position = 0
+                        calls.clear()
+                        self.assertIs(item, reveal_search_control(
+                            element, eventually, "SearchMinSizeBox"))
+                        self.assertEqual(calls, list(range(0, 61, 10)))
+                else:
+                    with self.assertRaises(AssertionError):
+                        reveal_search_control(element, eventually,
+                            "LeftFiles" if case == "wrong-key" else "SearchMinSizeBox")
+                    self.assertEqual(calls, list(range(0, 101, 10)) if case == "missing" else [])
+
+        # The observed failing V3 editor and later actions use this real helper.
+        self.assertIn('search_control("SearchMinSizeBox").set_edit_text("7")', gui)
+        self.assertIn('click_search("SearchRunButton")', gui)
+        click = gui.split("def click_search(key):", 1)[1].split("def children():", 1)[0]
+        self.assertLess(click.index("focus()"), click.index("search_control(key)"))
+        self.assertLess(click.index("owner.value == p.pid"), click.index("item.click_input()"))
+
+    def test_m19_search_click_rechecks_foreground_after_scroll(self):
+        from types import SimpleNamespace
+        gui = (TESTS / "test_m19_winui_features.py").read_text(encoding="utf-8")
+        function = next(node for node in ast.walk(ast.parse(gui))
+                        if isinstance(node, ast.FunctionDef) and node.name == "click_search")
+        for foreground, owner in ((51, 42), (51, 77), (0, 0)):
+            with self.subTest(foreground=foreground, owner=owner):
+                events = []
+
+                def focus(): events.append("focus")
+
+                def search_control(key):
+                    self.assertEqual("SearchRunButton", key)
+                    events.append("reveal")
+                    return SimpleNamespace(click_input=lambda: events.append("click"))
+
+                def get_foreground():
+                    events.append("foreground")
+                    return foreground
+
+                def get_owner(hwnd, target):
+                    self.assertEqual(foreground, hwnd)
+                    target.value = owner
+
+                namespace = {
+                    "focus": focus, "search_control": search_control,
+                    "u": SimpleNamespace(GetForegroundWindow=get_foreground,
+                                         GetWindowThreadProcessId=get_owner),
+                    "W": SimpleNamespace(DWORD=lambda: SimpleNamespace(value=0)),
+                    "c": SimpleNamespace(byref=lambda value: value),
+                    "p": SimpleNamespace(pid=42),
+                }
+                exec(compile(ast.Module(body=[function], type_ignores=[]),
+                             "M19 search click", "exec"), namespace)
+                click = namespace["click_search"]
+                if owner == 42:
+                    click("SearchRunButton")
+                    self.assertEqual(["focus", "reveal", "foreground", "click"], events)
+                else:
+                    with self.assertRaisesRegex(AssertionError, "outside owned app"):
+                        click("SearchRunButton")
+                    self.assertEqual(["focus", "reveal", "foreground"], events)
 
     def test_m19_recent_clear_recovers_owned_scroll_without_click_bypass(self):
         gui = (TESTS / "test_m19_winui_features.py").read_text(
