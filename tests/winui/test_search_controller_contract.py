@@ -14,32 +14,58 @@ class SearchControllerContracts(unittest.TestCase):
         gui=src("tests/winui/test_m19_winui_features.py")
         section=gui.split("# Win.set_focus() can restore",1)[1].split(
             'good(lambda:"저장 0개"',1)[0]
+        geometry=gui.split("def clear_search_inside(",1)[1].split(
+            "def reveal_search_control(",1)[0]
+        reveal=gui.split("def reveal_search_control(",1)[1].split(
+            "def owned_search_pointer(",1)[0]
+        hit=gui.split("def owned_search_pointer(",1)[1].split("def run(",1)[0]
+        click=gui.split("    def click_search(key):",1)[1].split("\n    def ",1)[0]
         for token in (
-            "focus()",
-            "owned_scroll.SetScrollPercent(-1, 100)",
-            "def owned_clear_visible():",
-            "item.rectangle()",
-            'element("SearchPanel").rectangle()',
-            "box.bottom<=viewport.bottom-2",
-            "good(owned_clear_visible,",
-            "u.GetWindowThreadProcessId(foreground,c.byref(foreground_owner))",
-            "foreground_owner.value==p.pid",
-            "clear_button.click_input()",
+            "panel.is_visible()", "item.is_visible()", "item.rectangle()",
+            "panel.rectangle()", "box.width() >= 32", "box.height() >= 16",
+            "box.left >= viewport.left + 2", "box.right <= viewport.right - 2",
+            "box.top >= viewport.top + 2", "box.bottom <= viewport.bottom - 2",
+        ):
+            self.assertIn(token,geometry)
+        for token in (
+            'clear = key == "SearchClearButton"', 'inside = clear_search_inside(item, panel)',
+            'if point == last_point:', 'return item, point', 'last_point = point',
+            'scroll.SetScrollPercent(-1, percent)', 'return eventually(probe, label, 8)',
+        ):
+            self.assertIn(token,reveal)
+        for token in (
+            'assert item.element_info.process_id == pid', 'if not item.is_enabled():',
+            'assert owner == pid', 'if info.process_id != pid:',
+            'if info.automation_id == key:', 'if info.automation_id == "SearchPanel":',
+        ):
+            self.assertIn(token,hit)
+        ordered=(
+            'focus()', 'scroll.SetScrollPercent(-1, 100)',
+            'return owned_search_pointer(item, key, p.pid, owner_at,',
+            'item, point = reveal_search_control(element, good, key, pointer)',
+            'assert pointer(item) == point',
+            'u.GetWindowThreadProcessId(foreground, c.byref(owner))',
+            'assert owner.value == p.pid', 'mouse.click(button="left", coords=point)',
+        )
+        self.assertEqual(sorted(click.index(token) for token in ordered),
+                         [click.index(token) for token in ordered])
+        self.assertIn('if key in ("SearchContentRegexBox", "SearchClearButton"):',click)
+        self.assertIn('hwnd = u.WindowFromPoint(W.POINT(*point))',click)
+        self.assertIn('if key == "SearchClearButton" and not clear_search_inside(',click)
+        self.assertIn('Desktop(backend="uia").from_point',click)
+        self.assertIn('M19_RECENT_CLEAR_POINTER_VERIFIED',click)
+        for token in (
+            'click_search("SearchClearButton")',
             "M1.9 Clear recent click not acknowledged by owned WinUI",
             "M1.9 Clear recent action reported persistence failure",
             'recall.read_text(encoding="utf-16").strip()==""',
+            "M1.9 Clear recent did not persist empty preview history",
         ):
             self.assertIn(token,section)
-        self.assertNotIn("safe_click(clear_button)",section)
-        self.assertLess(section.index("focus()"),
-                        section.index("owned_scroll.SetScrollPercent(-1, 100)"))
-        self.assertLess(section.index("owned_scroll.SetScrollPercent(-1, 100)"),
-                        section.index("clear_button.click_input()"))
-        self.assertLess(section.index("good(owned_clear_visible,"),
-                        section.index("clear_button.click_input()"))
-        # Preserve the real file persistence oracle: a UI count alone is not
-        # enough to consider the destructive owned clear action complete.
-        self.assertIn("M1.9 Clear recent did not persist empty preview history",section)
+        self.assertLess(section.index('click_search("SearchClearButton")'),
+                        section.index('recall.read_text(encoding="utf-16").strip()==""'))
+        self.assertNotIn("safe_click(",section)
+        self.assertNotIn("click_input(",section)
 
     def test_compact_search_preserves_file_panes_and_scrolls_overflow(self):
         import xml.etree.ElementTree as ET
