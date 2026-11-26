@@ -43,10 +43,23 @@ if G01_INTEGRATED_STARTUP_ONLY:
               "FLY_F05_VISUAL_CAPTURE","FLY_F04_TREE_ONLY"):
   assert os.environ.get(flag)!="YES",("forbidden G01 side effect",flag)
 
+def assert_normal_r07_release_isolated(exe):
+    # These fixed markers belong only to the opt-in R07 runtime binary.
+    # Scan the exact executable before starting it or creating a fixture.
+    data = exe.read_bytes()
+    for marker in ("WORKER_POST_PENDING", "FLYEXPLORER_R07_OWNED_",
+                   "WAIT_NAV_REFRESH"):
+        if marker.encode("ascii") in data or marker.encode("utf-16-le") in data:
+            raise AssertionError("R07_NORMAL_RELEASE_TEST_MARKER_PRESENT")
+
+
 CONFIG=os.environ.get("FLY_MIGRATION_CONFIGURATION","Debug")
 assert CONFIG in ("Debug","Release")
 EXE=app_exe(CONFIG)
 assert EXE.exists(),EXE
+if CONFIG == "Release":
+ assert_normal_r07_release_isolated(EXE)
+ print("R07_NORMAL_RELEASE_MARKERS_ABSENT=PASS", flush=True)
 base=ROOT/"logs/phase6-winui"
 base.mkdir(parents=True,exist_ok=True)
 owned=Path(tempfile.mkdtemp(prefix="shell-owned-",dir=base))

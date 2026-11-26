@@ -33,6 +33,43 @@ class OwnedRestoreRuntimeBoundaryContract(unittest.TestCase):
             build,
         )
         self.assertEqual(build.count("%R07_OWNED_RUNTIME_PROPERTY%"), 2)
+        default = 'set "R07_OWNED_RUNTIME_PROPERTY=/p:FlyExplorerR07OwnedRuntimeTest=false"'
+        opt_in = ('if "%FLYEXPLORER_R07_OWNED_RUNTIME_BUILD%"=="1" '
+                  'set "R07_OWNED_RUNTIME_PROPERTY=/p:FlyExplorerR07OwnedRuntimeTest=true"')
+        self.assertEqual([default, opt_in], [line for line in build.splitlines()
+                         if 'set "R07_OWNED_RUNTIME_PROPERTY=' in line])
+        for stage in ("/t:Restore", "/t:Build"):
+            calls = [line for line in build.splitlines() if stage in line]
+            self.assertEqual(1, len(calls))
+            self.assertIn("%R07_OWNED_RUNTIME_PROPERTY%", calls[0])
+            self.assertLess(build.index(opt_in), build.index(calls[0]))
+
+    def test_normal_release_rejects_test_runtime_markers_before_launch(self):
+        import ast
+        import tempfile
+        shell = read("tests/winui/test_shell_gui.py")
+        node, = [n for n in ast.parse(shell).body if isinstance(n, ast.FunctionDef)
+                 and n.name == "assert_normal_r07_release_isolated"]
+        ns = {}
+        exec(compile(ast.Module(body=[node], type_ignores=[]), "<R07 guard>", "exec"), ns)
+        check = ns[node.name]
+        self.assertLess(shell.index("assert_normal_r07_release_isolated(EXE)"),
+                        shell.index('owned=Path(tempfile.mkdtemp('))
+        self.assertIn('if CONFIG == "Release":\n assert_normal_r07_release_isolated(EXE)', shell)
+        with tempfile.TemporaryDirectory() as temp:
+            exe = Path(temp) / "owned.exe"
+            with self.assertRaises(FileNotFoundError):
+                check(exe)
+            exe.write_bytes(b"MZ\x00normal-build")
+            check(exe)
+            for marker in ("WORKER_POST_PENDING", "FLYEXPLORER_R07_OWNED_",
+                           "WAIT_NAV_REFRESH"):
+                for encoding in ("ascii", "utf-16-le"):
+                    with self.subTest(marker=marker, encoding=encoding):
+                        exe.write_bytes(b"MZ\x00" + marker.encode(encoding))
+                        with self.assertRaisesRegex(AssertionError,
+                                                    "R07_NORMAL_RELEASE_TEST_MARKER_PRESENT"):
+                            check(exe)
 
     def test_runtime_entry_requires_exact_owned_temp_paths(self):
         source = read("app/winui/m21_commands.cpp")

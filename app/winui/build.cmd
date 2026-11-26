@@ -4,7 +4,7 @@ rem Canonical flyExplorer WinUI 3 product build.
 set "CONFIG=%~1"
 if "%CONFIG%"=="" set "CONFIG=Debug"
 if /I not "%CONFIG%"=="Debug" if /I not "%CONFIG%"=="Release" exit /b 2
-set "R07_OWNED_RUNTIME_PROPERTY="
+set "R07_OWNED_RUNTIME_PROPERTY=/p:FlyExplorerR07OwnedRuntimeTest=false"
 if "%FLYEXPLORER_R07_OWNED_RUNTIME_BUILD%"=="1" set "R07_OWNED_RUNTIME_PROPERTY=/p:FlyExplorerR07OwnedRuntimeTest=true"
 set "HERE=%~dp0"
 set "ROOT=%HERE%..\..\"
