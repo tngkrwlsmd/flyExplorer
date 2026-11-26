@@ -98,6 +98,28 @@ class GuiFailureEvidenceContract(unittest.TestCase):
             self.assertEqual("copy.txt", files["left"]["items"][0]["name"])
             self.assertNotIn("test fixture", (output / "owned-files.json").read_text("utf-8"))
 
+    def test_owned_label_prefix_does_not_allow_untrusted_suffix(self):
+        cases = (
+            ("copy.txt", "copy.txt"),
+            ("copy.txt 1 KB", "copy.txt"),
+            (r"copy.txt C:\Users\synthetic\private-marker", "copy.txt"),
+            ("copy.txt long", "copy.txt long"),
+            (r"copy.txt long C:\Users\synthetic\private-marker",
+             "copy.txt long"),
+            ("copy.txt\nprivate-marker", "copy.txt"),
+            ("copy.txt-other", "[non-fixture label]"),
+            ("", ""),
+        )
+        window = MockWindow()
+        with patch.object(window, "child_window",
+                          return_value=MockSpec(nodes=[MockNode(text)
+                                                       for text, _ in cases])):
+            rows = _uia_pane(window, "LeftFiles",
+                             {"", "copy.txt", "copy.txt long"})
+        self.assertEqual([expected for _, expected in cases],
+                         [node["name"] for node in rows["nodes"]])
+        self.assertNotIn("private-marker", json.dumps(rows))
+
     def test_watcher_failure_keeps_only_owned_path_free_native_events(self):
         with TemporaryDirectory() as root:
             base = Path(root) / "phase6-winui"

@@ -93,10 +93,13 @@ def _uia_pane(win, control_id: str, allowed_names: set[str]):
             info = node.element_info
             label = _short(node.window_text())
             # A WinUI ListItem may include metadata alongside its filename.
-            # Do not export arbitrary shell/user text as an accessible name.
-            if label and not any(label == name or label.startswith(name + " ")
-                                 for name in allowed_names if name):
-                label = "[non-fixture label]"
+            # Preserve only the longest known fixture name, not an untrusted
+            # suffix that happens to start with an allowlisted name.
+            if label:
+                label = max(
+                    (name for name in allowed_names
+                     if name and (label == name or label.startswith(name + " "))),
+                    key=len, default="[non-fixture label]")
             nodes.append({"type": _short(info.control_type),
                           "automation_id": _short(info.automation_id),
                           "name": label})
