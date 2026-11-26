@@ -467,11 +467,46 @@ def run(*,p,win,element,safe_click,focus,eventually,ownedwindows,
         assert not search_matches("content-binary.bin")
         print("REAL_CONTENT_SEARCH_UTF8_LITERAL_PASS",True,flush=True)
 
-        click_search("SearchContentRegexBox")
-        search_control("SearchContentBox").set_edit_text(r"^Alpha\s+Need(Le|Missing)\s+omega$")
-        click_search("SearchRunButton")
-        good(lambda:match("SearchCountText","검색 결과 1개"),
-             "bounded content regex group/alternation did not match",14)
+        # Observe the physical click and exact input independently from the
+        # search result. A stale result must not satisfy the next query.
+        def set_content_regex(wanted):
+            key = "SearchContentRegexBox"
+            previous = search_control(key).wrapper_object().get_toggle_state()
+            assert previous == 1 - wanted, (
+                "M19 content regex unexpected initial toggle", previous, wanted)
+            click_search(key)
+            good(lambda:element(key).wrapper_object().get_toggle_state() == wanted,
+                 f"M19 content regex physical click not acknowledged: {wanted}",5)
+
+        def content_regex_query(pattern, expected, why):
+            key = "SearchContentBox"
+            search_control(key).set_edit_text(pattern)
+            good(lambda:element(key).get_value() == pattern,
+                 "M19 content regex exact input not acknowledged",5)
+            assert search_control("SearchContentRegexBox").wrapper_object().get_toggle_state() == 1, (
+                "M19 content regex toggle not enabled before submission")
+            click_search("SearchRunButton")
+            observed = None
+
+            def expected_count():
+                nonlocal observed
+                observed = text("SearchCountText")
+                return f"검색 결과 {expected}개" in observed
+
+            try:
+                good(expected_count,why,14)
+            except AssertionError as error:
+                raise AssertionError(f"{why}; observed count: {observed!r}") from error
+
+        set_content_regex(1)
+        # The preceding literal query returned one row. Require a different
+        # result first so that the next one-row assertion cannot reuse it.
+        content_regex_query(r"^Alpha\s+Need(Missing|Absent)\s+omega$",0,
+                            "M19 content regex no-match transition failed")
+        assert not search_matches("content-utf8.txt")
+        print("REAL_CONTENT_REGEX_NO_MATCH_TRANSITION_PASS",True,flush=True)
+        content_regex_query(r"^Alpha\s+Need(Le|Missing)\s+omega$",1,
+                            "bounded content regex group/alternation did not match")
         assert search_matches("content-utf8.txt")
         print("REAL_CONTENT_REGEX_GROUP_ALTERNATION_PASS",True,flush=True)
 
@@ -481,7 +516,7 @@ def run(*,p,win,element,safe_click,focus,eventually,ownedwindows,
              "unsupported content regex was not rejected before worker",7)
         assert search_control("SearchRunButton").is_enabled()
         print("REAL_CONTENT_REGEX_INVALID_PRESTART_REJECT_PASS",True,flush=True)
-        click_search("SearchContentRegexBox")
+        set_content_regex(0)
 
         search_control("SearchContentBox").set_edit_text("한글바늘")
         click_search("SearchRunButton")

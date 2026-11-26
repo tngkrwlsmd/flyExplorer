@@ -346,6 +346,89 @@ class GuiHarnessStaticContract(unittest.TestCase):
                         click("SearchRunButton")
                     self.assertEqual(["focus", "reveal", "foreground"], events)
 
+    def test_m19_content_regex_guards_inputs_and_result_transitions(self):
+        from types import SimpleNamespace
+        gui = (TESTS / "test_m19_winui_features.py").read_text(encoding="utf-8")
+        names = {"set_content_regex", "content_regex_query"}
+        functions = [node for node in ast.walk(ast.parse(gui))
+                     if isinstance(node, ast.FunctionDef) and node.name in names]
+        self.assertEqual(names, {node.name for node in functions})
+        code = compile(ast.Module(body=functions, type_ignores=[]),
+                       "M19 content regex contract", "exec")
+
+        def exercise(initial=0, count="검색 결과 1개", *, missed_toggle=False,
+                     missed_edit=False, lost_toggle=False, missed_run=False):
+            state = SimpleNamespace(toggle=initial, value="needle", count=count,
+                                    next_count=None, clicks=[])
+
+            def edit(value):
+                if not missed_edit:
+                    state.value = value
+                if lost_toggle:
+                    state.toggle = 0
+
+            def element(key):
+                self.assertIn(key, ("SearchContentBox", "SearchContentRegexBox"))
+                return SimpleNamespace(set_edit_text=edit, get_value=lambda: state.value,
+                    wrapper_object=lambda: SimpleNamespace(
+                        get_toggle_state=lambda: state.toggle))
+
+            def click(key):
+                state.clicks.append(key)
+                if key == "SearchContentRegexBox" and not missed_toggle:
+                    state.toggle = 1 - state.toggle
+                if key == "SearchRunButton" and not missed_run:
+                    state.count = state.next_count
+
+            def good(predicate, why, timeout):
+                self.assertTrue(predicate(), why)
+
+            def text(key):
+                self.assertEqual("SearchCountText", key)
+                return state.count
+
+            namespace = {"search_control": element, "element": element,
+                         "click_search": click, "good": good, "text": text}
+            exec(code, namespace)
+            return state, namespace["set_content_regex"], namespace["content_regex_query"]
+
+        state, toggle, query = exercise()
+        toggle(1)
+        for expected in (0, 1):
+            state.next_count = f"검색 결과 {expected}개"
+            query(str(expected), expected, "regex result")
+        toggle(0)
+        self.assertEqual(0, state.toggle)
+        self.assertEqual(["SearchContentRegexBox", "SearchRunButton",
+                          "SearchRunButton", "SearchContentRegexBox"], state.clicks)
+        for initial, wanted, missed, error, clicks in (
+                (1, 1, False, "unexpected initial toggle", []),
+                (0, 1, True, "physical click not acknowledged", ["SearchContentRegexBox"]),
+                (1, 0, True, "physical click not acknowledged", ["SearchContentRegexBox"])):
+            with self.subTest(initial=initial, wanted=wanted, missed=missed):
+                state, toggle, _ = exercise(initial, missed_toggle=missed)
+                with self.assertRaisesRegex(AssertionError, error):
+                    toggle(wanted)
+                self.assertEqual(clicks, state.clicks)
+        for options, error in (({"missed_edit": True}, "exact input not acknowledged"),
+                               ({"lost_toggle": True}, "toggle not enabled")):
+            with self.subTest(options=options):
+                state, _, query = exercise(1, **options)
+                with self.assertRaisesRegex(AssertionError, error):
+                    query("new", 0, "regex result")
+                self.assertEqual([], state.clicks)
+        for previous, expected in ((1, 0), (0, 1)):
+            with self.subTest(previous=previous, expected=expected):
+                state, _, query = exercise(1, f"검색 결과 {previous}개", missed_run=True)
+                with self.assertRaisesRegex(AssertionError, f"observed count:.*{previous}개"):
+                    query("new", expected, "regex result")
+                self.assertEqual(["SearchRunButton"], state.clicks)
+
+        no_match = gui.index('content_regex_query(r"^Alpha\\s+Need(Missing|Absent)')
+        match = gui.index('content_regex_query(r"^Alpha\\s+Need(Le|Missing)')
+        self.assertLess(no_match, match)
+        self.assertIn('assert not search_matches("content-utf8.txt")', gui[no_match:match])
+
     def test_m19_recent_clear_recovers_owned_scroll_without_click_bypass(self):
         gui = (TESTS / "test_m19_winui_features.py").read_text(
             encoding="utf-8")
