@@ -198,10 +198,15 @@ class BuildEnvironmentContract(unittest.TestCase):
         import run_checks
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
+            # Windows venv launchers can leave the actual interpreter holding
+            # the inherited log handle after the launcher is killed. Use the
+            # real CPython child for this isolated, dependency-free timeout test.
+            child_python = Path(sys._base_executable)
+            self.assertTrue(child_python.is_file(), "base interpreter unavailable")
             with patch.object(run_checks, "ROOT", root), patch.object(
                     run_checks, "LOGS", root / "logs"):
                 code = run_checks.execute(
-                    "gui-timeout-contract", [sys.executable, "-c", "import time; time.sleep(2)"],
+                    "gui-timeout-contract", [str(child_python), "-c", "import time; time.sleep(2)"],
                     .1, os.environ.copy(), "owned")
             self.assertEqual(124, code)
             body = (root / "logs/owned-gui-timeout-contract.log").read_text("utf-8")
