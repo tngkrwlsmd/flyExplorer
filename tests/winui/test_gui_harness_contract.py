@@ -346,27 +346,33 @@ class GuiHarnessStaticContract(unittest.TestCase):
                         click("SearchRunButton")
                     self.assertEqual(["focus", "reveal", "foreground"], events)
 
-    def test_m19_content_regex_pointer_requires_stable_owned_target(self):
+    def test_m19_search_pointer_requires_stable_owned_target(self):
         from types import SimpleNamespace
         gui = (TESTS / "test_m19_winui_features.py").read_text(encoding="utf-8")
-        names = {"reveal_search_control", "owned_search_pointer", "click_search"}
+        names = {"clear_search_inside", "reveal_search_control",
+                 "owned_search_pointer", "click_search"}
         functions = [node for node in ast.walk(ast.parse(gui))
                      if isinstance(node, ast.FunctionDef) and node.name in names]
         self.assertEqual(names, {node.name for node in functions})
         code = compile(ast.Module(body=functions, type_ignores=[]),
                        "M19 content regex pointer", "exec")
 
-        key = "SearchContentRegexBox"
-        for case in ("direct", "child", "clipped", "moving", "wrong-control",
-                     "foreign-window", "foreign-peer", "disabled", "lost-hit",
-                     "lost-foreground"):
-            with self.subTest(case=case):
+        cases = ("direct", "child", "clipped", "moving", "wrong-control",
+                 "foreign-window", "foreign-peer", "disabled", "lost-hit",
+                 "lost-foreground")
+        scenarios = [(key, case) for key in ("SearchContentRegexBox", "SearchClearButton")
+                     for case in cases]
+        scenarios += [("SearchClearButton", case) for case in
+                      ("margin-recovery", "narrow", "short", "edge", "lost-geometry",
+                       "no-scroll-clipped", "wrap-recovery")]
+        for key, case in scenarios:
+            with self.subTest(key=key, case=case):
                 calls = []
                 state = SimpleNamespace(scroll=0, probes=0, hits=0)
 
                 class Rect:
-                    def __init__(self, top=0, bottom=100):
-                        self.left, self.right, self.top, self.bottom = 0, 100, top, bottom
+                    def __init__(self, top=0, bottom=100, left=0, right=100):
+                        self.left, self.right, self.top, self.bottom = left, right, top, bottom
                     def width(self): return self.right - self.left
                     def height(self): return self.bottom - self.top
 
@@ -380,7 +386,7 @@ class GuiHarnessStaticContract(unittest.TestCase):
                 target = Peer(key)
                 panel_peer = Peer("SearchPanel")
                 other = Peer("SearchScopeBox", parent=panel_peer)
-                scroll = SimpleNamespace(CurrentVerticallyScrollable=True)
+                scroll = SimpleNamespace(CurrentVerticallyScrollable=case != "no-scroll-clipped")
 
                 def set_scroll(horizontal, vertical):
                     self.assertEqual(-1, horizontal)
@@ -402,8 +408,17 @@ class GuiHarnessStaticContract(unittest.TestCase):
                     def is_enabled(self): return case != "disabled"
                     def rectangle(self):
                         if case == "moving" and state.probes == 2:
-                            return Rect(30, 50)
-                        return Rect(20, 40)
+                            return Rect(30, 50, 2, 98)
+                        if case == "narrow":
+                            return Rect(20, 40, 40, 60)
+                        if case == "short":
+                            return Rect(25, 35, 2, 98)
+                        if (case in ("edge", "no-scroll-clipped") or
+                                (case == "margin-recovery" and state.scroll != 75) or
+                                (case == "wrap-recovery" and len([v for v in calls if v[0] == "scroll"]) < 7) or
+                                (case == "lost-geometry" and state.hits >= 2)):
+                            return Rect(20, 40, 1, 99)
+                        return Rect(20, 40, 2, 98)
                     def click_input(self): self_test.fail("unverified wrapper click")
 
                 self_test = self
@@ -427,7 +442,8 @@ class GuiHarnessStaticContract(unittest.TestCase):
                 def peer_at(x, y):
                     state.hits += 1
                     if case == "foreign-peer": return Peer("", 77)
-                    if case == "wrong-control" or (case == "clipped" and state.scroll < 30):
+                    if case == "wrong-control" or (case == "clipped" and
+                            (state.scroll < 30 if key == "SearchContentRegexBox" else state.scroll != 75)):
                         return other
                     if case == "lost-hit" and state.hits >= 3: return other
                     if case == "child": return Peer("", parent=target)
@@ -453,13 +469,16 @@ class GuiHarnessStaticContract(unittest.TestCase):
                              "Desktop": lambda **kw: SimpleNamespace(from_point=peer_at),
                              "mouse": SimpleNamespace(click=mouse_click)}
                 exec(code, namespace)
-                if case in ("direct", "child", "clipped", "moving"):
+                if case in ("direct", "child", "clipped", "moving", "margin-recovery", "wrap-recovery"):
                     namespace["click_search"](key)
                     self.assertEqual([("click", (50, 30))],
                                      [v for v in calls if v[0] == "click"])
                     self.assertGreaterEqual(state.hits, 3)
-                    if case == "clipped":
-                        self.assertIn(("scroll", 30), calls)
+                    if case in ("clipped", "margin-recovery"):
+                        self.assertIn(("scroll", 30 if key == "SearchContentRegexBox" else 75), calls)
+                    if case == "wrap-recovery":
+                        self.assertEqual([100, 75, 85, 100, 65, 50, 75],
+                                         [v[1] for v in calls if v[0] == "scroll"])
                     if case == "moving":
                         self.assertGreaterEqual(state.probes, 4)
                 else:
@@ -552,46 +571,29 @@ class GuiHarnessStaticContract(unittest.TestCase):
         self.assertIn('assert not search_matches("content-utf8.txt")', gui[no_match:match])
 
     def test_m19_recent_clear_recovers_owned_scroll_without_click_bypass(self):
-        gui = (TESTS / "test_m19_winui_features.py").read_text(
-            encoding="utf-8")
-        section = gui.split("def owned_clear_visible():", 1)[1].split(
-            "good(owned_clear_visible,", 1)[0]
-        self.assertIn('panel=element("SearchPanel")', section)
-        self.assertIn('item=element("SearchClearButton")', section)
-        self.assertIn('if not item.exists(timeout=.2) or not item.is_visible():',
-                      section)
-        self.assertIn('if not owned_scroll.CurrentVerticallyScrollable:',
-                      section)
-        # Never cycle five positions within one poll: each scroll must
-        # settle before the next UIA visibility/clip inspection.
-        self.assertIn('nonlocal clear_scroll_index', section)
-        self.assertIn('clear_scroll_index+=1', section)
-        self.assertIn('owned_scroll.SetScrollPercent(-1, percent)', section)
-        self.assertIn('return False', section)
-        self.assertNotIn('for percent in ', section)
-        start = gui.split('def owned_clear_visible():', 1)[0]
-        self.assertIn('clear_scroll_positions=(75, 85, 100, 65, 50)', start)
-        self.assertIn('clear_scroll_index=0', start)
-        self.assertLess(section.index('if fully_inside():'),
-                        section.index('owned_scroll.SetScrollPercent(-1, percent)'))
-        for strict in ("box.width()>=32", "box.height()>=16",
-                       "box.left>=viewport.left+2",
-                       "box.right<=viewport.right-2",
-                       "box.top>=viewport.top+2",
-                       "box.bottom<=viewport.bottom-2"):
-            self.assertIn(strict, section)
-        self.assertLess(gui.index("good(owned_clear_visible,"),
-                        gui.index("clear_button.click_input()"))
-        click = gui.split("good(owned_clear_visible,", 1)[1].split(
-            "clear_button.click_input()", 1)[0]
-        self.assertIn("foreground_owner.value==p.pid", click)
-        self.assertNotIn("safe_click(", click)
-        self.assertNotIn("focus()", section)
+        gui = (TESTS / "test_m19_winui_features.py").read_text(encoding="utf-8")
+        click = gui.split("def click_search(key):", 1)[1].split("def children():", 1)[0]
+        self.assertIn('if key in ("SearchContentRegexBox", "SearchClearButton"):', click)
+        self.assertLess(click.index("focus()"), click.index("scroll.SetScrollPercent(-1, 100)"))
+        self.assertLess(click.index("scroll.SetScrollPercent(-1, 100)"),
+                        click.index("reveal_search_control(element, good, key, pointer)"))
+        self.assertLess(click.index("assert pointer(item) == point"),
+                        click.index('mouse.click(button="left", coords=point)'))
+        self.assertLess(click.index("owner.value == p.pid"),
+                        click.index('mouse.click(button="left", coords=point)'))
+        self.assertIn('M19_RECENT_CLEAR_POINTER_VERIFIED', click)
+        clear = gui.split('click_search("SearchClearButton")', 1)[1].split(
+            'print("REAL_M19_SEARCH_CLEAR_RETAINS_ACTIVE_FULL_SCOPE"', 1)[0]
+        self.assertNotIn("click_input(", clear)
+        self.assertNotIn("safe_click(", clear)
+        self.assertNotIn("focus()", clear)
+        self.assertIn('clear_positions = (75, 85, 100, 65, 50)', gui)
+        self.assertIn('clear_search_inside(item, panel)', gui)
 
     def test_m19_recent_clear_reveals_owned_scope_without_weakening_persistence(self):
         gui = (TESTS / "test_m19_winui_features.py").read_text(
             encoding="utf-8")
-        clear = gui.split("clear_button.click_input()", 1)[1].split(
+        clear = gui.split('click_search("SearchClearButton")', 1)[1].split(
             'print("REAL_M19_SEARCH_CLEAR_RETAINS_ACTIVE_FULL_SCOPE"', 1)[0]
         for marker in (
             "M1.9 Clear recent click not acknowledged by owned WinUI",
@@ -616,7 +618,7 @@ class GuiHarnessStaticContract(unittest.TestCase):
     def test_m19_recent_clear_scope_oracle_rejects_other_full_paths(self):
         gui = (TESTS / "test_m19_winui_features.py").read_text(
             encoding="utf-8")
-        start = gui.index("clear_button.click_input()")
+        start = gui.index('click_search("SearchClearButton")')
         end = gui.index('print("REAL_M19_SEARCH_CLEAR_RETAINS_ACTIVE_FULL_SCOPE"')
         assertions = [node for node in ast.walk(ast.parse(gui))
                       if isinstance(node, ast.Assert)

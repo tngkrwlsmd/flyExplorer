@@ -15,37 +15,61 @@ import subprocess
 import time
 from pywinauto import Desktop, mouse
 
+def clear_search_inside(item, panel):
+    """The clear action retains its stricter visible-button geometry."""
+    if (not panel.exists(timeout=.2) or not panel.is_visible() or
+            not item.exists(timeout=.2) or not item.is_visible()):
+        return False
+    box = item.rectangle()
+    viewport = panel.rectangle()
+    return (box.width() >= 32 and box.height() >= 16 and
+            box.left >= viewport.left + 2 and box.right <= viewport.right - 2 and
+            box.top >= viewport.top + 2 and box.bottom <= viewport.bottom - 2)
+
+
 def reveal_search_control(element, eventually, key, pointer=None):
     """Resolve an owned SearchPanel control, optionally with a stable hit point."""
     assert key.startswith("Search") and key != "SearchPanel", key
     positions = iter(range(0, 101, 10))
+    clear = key == "SearchClearButton"
+    clear_positions = (75, 85, 100, 65, 50)
+    clear_index = 0
     last_point = None
 
     def probe():
-        nonlocal last_point
+        nonlocal last_point, clear_index
         panel = element("SearchPanel")
         if not panel.exists(timeout=.2) or not panel.is_visible():
             last_point = None
             return False
         item = element(key)
-        if item.exists(timeout=.2) and item.is_visible():
-            box = item.rectangle()
-            viewport = panel.rectangle()
-            if (box.width() > 0 and box.height() > 0 and
-                    viewport.left <= box.left and box.right <= viewport.right and
-                    viewport.top <= box.top and box.bottom <= viewport.bottom):
-                if pointer is None:
-                    return item
-                point = pointer(item)
-                if point is not None:
-                    if point == last_point:
-                        return item, point
-                    last_point = point
-                    return False  # Let the layout settle without another scroll.
+        if clear:
+            inside = clear_search_inside(item, panel)
+        else:
+            inside = False
+            if item.exists(timeout=.2) and item.is_visible():
+                box = item.rectangle()
+                viewport = panel.rectangle()
+                inside = (box.width() > 0 and box.height() > 0 and
+                          viewport.left <= box.left and box.right <= viewport.right and
+                          viewport.top <= box.top and box.bottom <= viewport.bottom)
+        if inside:
+            if pointer is None:
+                return item
+            point = pointer(item)
+            if point is not None:
+                if point == last_point:
+                    return item, point
+                last_point = point
+                return False  # Let the layout settle without another scroll.
         last_point = None
         scroll = panel.wrapper_object().iface_scroll
         if scroll.CurrentVerticallyScrollable:
-            percent = next(positions, None)
+            if clear:
+                percent = clear_positions[clear_index % len(clear_positions)]
+                clear_index += 1
+            else:
+                percent = next(positions, None)
             if percent is not None:
                 scroll.SetScrollPercent(-1, percent)
         # Recheck on the next poll, after the layout/UIA frame settles.
@@ -120,10 +144,9 @@ def run(*,p,win,element,safe_click,focus,eventually,ownedwindows,
     def click_search(key):
         # Focus first: WinUI may scroll the prior focused editor into view.
         focus()
-        if key == "SearchContentRegexBox":
-            # The previous exact GUI run clicked an owned window but did not
-            # toggle this checkbox. Require the actual UIA hit, not only the
-            # potentially clipped bounding rectangle or foreground PID.
+        if key in ("SearchContentRegexBox", "SearchClearButton"):
+            # Both exact GUI failures occurred after a rectangle-only click.
+            # Require the actual owned UIA hit for these two actions.
             u.WindowFromPoint.argtypes = [W.POINT]
             u.WindowFromPoint.restype = W.HWND
 
@@ -134,7 +157,15 @@ def run(*,p,win,element,safe_click,focus,eventually,ownedwindows,
                     u.GetWindowThreadProcessId(hwnd, c.byref(owner))
                 return owner.value
 
+            if key == "SearchClearButton":
+                scroll = element("SearchPanel").wrapper_object().iface_scroll
+                if scroll.CurrentVerticallyScrollable:
+                    scroll.SetScrollPercent(-1, 100)
+
             def pointer(item):
+                if key == "SearchClearButton" and not clear_search_inside(
+                        item, element("SearchPanel")):
+                    return None
                 return owned_search_pointer(item, key, p.pid, owner_at,
                                             Desktop(backend="uia").from_point)
 
@@ -147,10 +178,12 @@ def run(*,p,win,element,safe_click,focus,eventually,ownedwindows,
         if foreground:
             u.GetWindowThreadProcessId(foreground, c.byref(owner))
         assert owner.value == p.pid, "M1.9 refusing search click outside owned app"
-        if key == "SearchContentRegexBox":
+        if key in ("SearchContentRegexBox", "SearchClearButton"):
             # Use the verified absolute point, not a second rectangle lookup.
             mouse.click(button="left", coords=point)
-            print("M19_CONTENT_REGEX_POINTER_VERIFIED", key, point, flush=True)
+            marker = ("M19_CONTENT_REGEX_POINTER_VERIFIED" if key == "SearchContentRegexBox"
+                      else "M19_RECENT_CLEAR_POINTER_VERIFIED")
+            print(marker, key, point, flush=True)
         else:
             item.click_input()
     def children():
@@ -814,56 +847,9 @@ def run(*,p,win,element,safe_click,focus,eventually,ownedwindows,
                     raise AssertionError("Owned search restart window failed to close")
             assert restart.returncode==0
 
-        # Win.set_focus() can restore the previously focused query editor
-        # and scroll the owned SearchPanel back to its top. Keep the original
-        # required initial scroll/physical-click ordering; a pending layout
-        # update can then reset the viewport, so each bounded poll repositions
-        # ONLY this same test-owned search panel without bypassing visibility.
-        focus()
-        owned_scroll=element("SearchPanel").wrapper_object().iface_scroll
-        if owned_scroll.CurrentVerticallyScrollable:
-            owned_scroll.SetScrollPercent(-1, 100)
-        # One owned scroll update per existing 130-ms polling interval.
-        # A burst of five positions can outrun WinUI's layout/UIA refresh
-        # and sample only stale rectangles, even for a genuinely visible row.
-        clear_scroll_positions=(75, 85, 100, 65, 50)
-        clear_scroll_index=0
-        def owned_clear_visible():
-            nonlocal clear_scroll_index
-            panel=element("SearchPanel")
-            def fully_inside():
-                item=element("SearchClearButton")
-                if not item.exists(timeout=.2) or not item.is_visible():
-                    return False
-                box=item.rectangle()
-                viewport=element("SearchPanel").rectangle()
-                return (box.width()>=32 and box.height()>=16 and
-                        box.left>=viewport.left+2 and
-                        box.right<=viewport.right-2 and
-                        box.top>=viewport.top+2 and
-                        box.bottom<=viewport.bottom-2)
-            if fully_inside():
-                return True
-            owned_scroll=panel.wrapper_object().iface_scroll
-            if not owned_scroll.CurrentVerticallyScrollable:
-                return False
-            # Check the new actual rectangle on the NEXT bounded poll,
-            # after WinUI has had a UI/layout frame to settle. This also
-            # preserves the strict clipping oracle: scrolling is not success.
-            percent=clear_scroll_positions[clear_scroll_index % len(clear_scroll_positions)]
-            clear_scroll_index+=1
-            owned_scroll.SetScrollPercent(-1, percent)
-            return False
-        good(owned_clear_visible,
-             "M1.9 owned clear action not fully inside visible search panel",8)
-        clear_button=element("SearchClearButton")
-        foreground=u.GetForegroundWindow()
-        foreground_owner=W.DWORD()
-        if foreground:
-            u.GetWindowThreadProcessId(foreground,c.byref(foreground_owner))
-        assert foreground_owner.value==p.pid, (
-            "M1.9 refusing physical clear click outside owned app")
-        clear_button.click_input()
+        # Win.set_focus() can restore the previously focused query editor.
+        # Reuse the verified owned pointer path, retaining strict clear geometry.
+        click_search("SearchClearButton")
         good(lambda:any(message in element("StatusText").window_text()
                         for message in (
                             "최근 검색 위치를 모두 지웠습니다.",
@@ -880,6 +866,7 @@ def run(*,p,win,element,safe_click,focus,eventually,ownedwindows,
         # bottom. The scope editor is virtualized offscreen, not cleared.
         # Restore only the same test-owned panel to the query row BEFORE
         # reading UIA; preserve the actual active-scope value assertion.
+        owned_scroll=element("SearchPanel").wrapper_object().iface_scroll
         if owned_scroll.CurrentVerticallyScrollable:
             owned_scroll.SetScrollPercent(-1, 0)
         good(lambda:element("SearchScopeBox").exists(timeout=.2) and
