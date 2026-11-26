@@ -22,6 +22,13 @@ DEFAULT_RESULT = ROOT / "logs" / "remote-evidence" / "check-result.json"
 _ACTIVE_STAGE = ""
 _RESULT_PATH = DEFAULT_RESULT
 
+# Only the complete CI chain receives the same 1.5x allowance as its
+# owned UIA waits. Reserve time for the harness to unwind before hard kill.
+FULL_GUI_TIMEOUT_SECONDS = 260
+FULL_GUI_CI_TIMEOUT_SECONDS = 390
+FULL_GUI_CLEANUP_RESERVE_SECONDS = 40
+GUI_CHAIN_BUDGET_ENV = "FLY_OWNED_GUI_CHAIN_BUDGET_SECONDS"
+
 PRODUCT_SUITES = {
     "core": [
         "tests/winui/test_arch_contract.py",
@@ -212,6 +219,7 @@ def execute(label, command, timeout, env, tag):
         except subprocess.TimeoutExpired:
             code = 124
             output.write("\nTIMEOUT: bounded local subprocess terminated\n")
+            output.write(f"HARD_TIMEOUT_SECONDS={timeout} CLEANUP_NOT_CONFIRMED\n")
 
     body = path.read_text(encoding="utf-8", errors="replace")
     summary = re.findall(r"Ran \d+ tests.*|^OK(?: \([^\n]*\))?$|^FAILED.*", body, re.M)
@@ -388,6 +396,7 @@ def run_fast(before, head, env, tag):
 def gui_command(area, configuration, env):
     gui_env = env.copy()
     gui_env["FLY_MIGRATION_CONFIGURATION"] = configuration
+    gui_env.pop(GUI_CHAIN_BUDGET_ENV, None)
     for key in OWNED_FLAGS + FAULT_FLAGS + (
         "FLY_V7_WINDOW_TABS_ONLY",
         "FLY_M19_OWNED_FEATURES_ONLY",
@@ -507,7 +516,11 @@ def gui_command(area, configuration, env):
         # Exactly the all-profile startup configuration, without replaying
         # already accepted GUI interactions after initial route observation.
         gui_env["FLY_G01_INTEGRATED_STARTUP_ONLY"] = "YES"
-    return [sys.executable, "-u", str(TESTS / "test_shell_gui.py")], gui_env, 260
+    timeout = FULL_GUI_TIMEOUT_SECONDS
+    if area == "all" and gui_env.get("GITHUB_ACTIONS") == "true":
+        timeout = FULL_GUI_CI_TIMEOUT_SECONDS
+        gui_env[GUI_CHAIN_BUDGET_ENV] = str(timeout - FULL_GUI_CLEANUP_RESERVE_SECONDS)
+    return [sys.executable, "-u", str(TESTS / "test_shell_gui.py")], gui_env, timeout
 
 
 def r06_share_menu_evidence_ok(body: str) -> bool:

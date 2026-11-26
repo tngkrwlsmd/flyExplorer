@@ -128,6 +128,86 @@ class BuildEnvironmentContract(unittest.TestCase):
         )
         self.assertIn("interval=.13", normalized)
 
+    def test_full_ci_gui_budget_preserves_focused_limits_and_cleanup_reserve(self):
+        sys.path.insert(0, str(ROOT / "tools" / "winui"))
+        from run_checks import gui_command, GUI_CHAIN_BUDGET_ENV
+
+        inherited = {GUI_CHAIN_BUDGET_ENV: "999"}
+        for ci in (True, False):
+            env = {**inherited, "GITHUB_ACTIONS": "true" if ci else "false"}
+            for area, expected in (("all", 390 if ci else 260),
+                                   ("startup-integrated", 260), ("search", 260),
+                                   ("core", 260), ("folder-tree", 150)):
+                with self.subTest(ci=ci, area=area):
+                    cmd, child, limit = gui_command(area, "Release", env)
+                    self.assertEqual(expected, limit)
+                    self.assertEqual("test_shell_gui.py", Path(cmd[-1]).name)
+                    if ci and area == "all":
+                        self.assertEqual("350", child[GUI_CHAIN_BUDGET_ENV])
+                        self.assertEqual(40, limit-int(child[GUI_CHAIN_BUDGET_ENV]))
+                        self.assertEqual("YES", child["FLY_EP05_EXPLORER_HANDOFF"])
+                    else:
+                        self.assertNotIn(GUI_CHAIN_BUDGET_ENV, child)
+                    self.assertEqual("999", env[GUI_CHAIN_BUDGET_ENV])
+
+    def test_integrated_gui_deadline_caps_wait_and_refuses_late_success(self):
+        import ast
+        from types import SimpleNamespace
+        gui = (ROOT / "tests/winui/test_shell_gui.py").read_text(encoding="utf-8")
+        functions = [node for node in ast.parse(gui).body
+                     if isinstance(node, ast.FunctionDef)
+                     and node.name in ("remaining_chain_seconds", "eventually")]
+        self.assertEqual(2, len(functions))
+        clock = [10.0]
+        calls = []
+
+        def wait(fn, label, *, seconds, interval):
+            calls.append((seconds, interval))
+            return fn()
+
+        namespace = {"time": SimpleNamespace(monotonic=lambda: clock[0]),
+                     "GUI_TIMEOUT_SCALE": 1.5, "GUI_CHAIN_DEADLINE": None,
+                     "wait_until": wait}
+        exec(compile(ast.Module(body=functions, type_ignores=[]),
+                     "owned GUI deadline", "exec"), namespace)
+        eventually = namespace["eventually"]
+        self.assertEqual("ready", eventually(lambda: "ready", "normal", 8))
+        self.assertEqual((12, .13), calls[-1])
+        namespace["GUI_CHAIN_DEADLINE"] = 40
+        self.assertTrue(eventually(lambda: True, "within budget", 8))
+        self.assertEqual((12, .13), calls[-1])
+        namespace["GUI_CHAIN_DEADLINE"] = 15
+        self.assertTrue(eventually(lambda: True, "remaining budget", 8))
+        self.assertEqual((5, .13), calls[-1])
+        clock[0] = 15
+        with self.assertRaisesRegex(AssertionError, "deadline exhausted"):
+            eventually(lambda: self.fail("expired predicate executed"), "expired", 8)
+        self.assertEqual(3, len(calls))
+        clock[0] = 14
+
+        def late():
+            clock[0] = 16
+            return True
+
+        with self.assertRaisesRegex(AssertionError, "deadline exhausted"):
+            eventually(late, "late success", 8)
+        self.assertEqual((1, .13), calls[-1])
+
+    def test_hard_gui_timeout_is_not_success_or_confirmed_cleanup(self):
+        sys.path.insert(0, str(ROOT / "tools" / "winui"))
+        import run_checks
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            with patch.object(run_checks, "ROOT", root), patch.object(
+                    run_checks, "LOGS", root / "logs"):
+                code = run_checks.execute(
+                    "gui-timeout-contract", [sys.executable, "-c", "import time; time.sleep(2)"],
+                    .1, os.environ.copy(), "owned")
+            self.assertEqual(124, code)
+            body = (root / "logs/owned-gui-timeout-contract.log").read_text("utf-8")
+            self.assertIn("TIMEOUT: bounded local subprocess terminated", body)
+            self.assertIn("HARD_TIMEOUT_SECONDS=0.1 CLEANUP_NOT_CONFIRMED", body)
+
     def test_owned_gui_startup_wait_covers_supervisor_retry_budget(self):
         gui = (ROOT / "tests/winui/test_shell_gui.py").read_text(
             encoding="utf-8"

@@ -13,6 +13,14 @@ from gui_failure_evidence import (capture_failure, _startup_status_category,
                                   read_g01_owned_shared_phases)
 from owned_process_dump import capture_owned_dump
 
+GUI_CHAIN_STARTED=time.monotonic()
+GUI_CHAIN_BUDGET_SECONDS=int(os.environ.get("FLY_OWNED_GUI_CHAIN_BUDGET_SECONDS","0"))
+assert GUI_CHAIN_BUDGET_SECONDS>=0
+GUI_CHAIN_DEADLINE=(GUI_CHAIN_STARTED+GUI_CHAIN_BUDGET_SECONDS
+                    if GUI_CHAIN_BUDGET_SECONDS else None)
+if GUI_CHAIN_DEADLINE is not None:
+ print("OWNED_GUI_CHAIN_BUDGET_SECONDS",GUI_CHAIN_BUDGET_SECONDS,flush=True)
+
 # Read-only original user profile sentinel: the preview has NO permission
 # to use the legacy product's real profile or mutate its settings.
 REAL_CONF,ORIGINAL_PROFILE=snapshot_legacy_profile()
@@ -204,10 +212,25 @@ def ownedwindows(pid):
  u.EnumWindows(cb,0)
  return found
 GUI_TIMEOUT_SCALE=1.5 if os.environ.get("GITHUB_ACTIONS")=="true" else 1.0
+def remaining_chain_seconds(label):
+ if GUI_CHAIN_DEADLINE is None:
+  return None
+ remaining=GUI_CHAIN_DEADLINE-time.monotonic()
+ if remaining<=0:
+  raise AssertionError("owned integrated GUI chain deadline exhausted: "+label)
+ return remaining
 def eventually(fn,label,timeout=8):
- return wait_until(
-  fn, label, seconds=timeout*GUI_TIMEOUT_SCALE, interval=.13
- )
+ seconds=timeout*GUI_TIMEOUT_SCALE
+ remaining=remaining_chain_seconds(label)
+ if remaining is not None:
+  seconds=min(seconds,remaining)
+ result=wait_until(fn,label,seconds=seconds,interval=.13)
+ remaining_chain_seconds(label)
+ return result
+def mark_gui_phase(name,state):
+ print(f"OWNED_GUI_PHASE={name} STATE={state} ELAPSED_SECONDS={time.monotonic()-GUI_CHAIN_STARTED:.1f}",
+       flush=True)
+ remaining_chain_seconds(name)
 def labels(win):
  return [e.window_text() for e in win.descendants() if e.window_text()]
 p=None;hwnd=None
@@ -807,12 +830,14 @@ try:
              "owned compact-window placement did not take effect",5)
   print("M20_OWNED_COMPACT_PRE_M19",str(win.rectangle()),flush=True)
  if os.environ.get("FLY_M19_OWNED_FEATURES")=="YES":
+  mark_gui_phase("M19","START")
   from test_m19_winui_features import run as run_m19
   run_m19(p=p,win=win,element=element,safe_click=safe_click,
           focus=ensure_owned_focus,eventually=eventually,
           ownedwindows=ownedwindows,
           left=left,right=right,inner=inner,
           owned=owned,localdata=localdata,env=env,exe=EXE)
+  mark_gui_phase("M19","DONE")
   if os.environ.get("FLY_M19_OWNED_FEATURES_ONLY")=="YES":
    rect=win.rectangle()
    assert rect.width()>400 and rect.height()>260
@@ -853,33 +878,45 @@ try:
     except Exception as err:
      observed.append((key,type(err).__name__))
    print("M20_PANEL_LAYOUT_PRETEST",str(win.rectangle()),observed,flush=True)
+  mark_gui_phase("M20","START")
   from test_m20_shell_gui import run as m20_run
   m20_run(win=win,element=element,safe_click=safe_click,
           focus=ensure_owned_focus,eventually=eventually,owned=owned)
+  mark_gui_phase("M20","DONE")
  if os.environ.get("FLY_V7_WINDOW_TABS")=="YES":
+  mark_gui_phase("V7","START")
   from test_v7_window_tabs_gui import run as v7_tabs_run
   v7_tabs_run(win=win,element=element,safe_click=safe_click,
               focus=ensure_owned_focus,eventually=eventually,owned=owned,
               localdata=localdata,env=env,exe=EXE)
+  mark_gui_phase("V7","DONE")
  if os.environ.get("FLY_M21_OWNED_FEATURES")=="YES":
+  mark_gui_phase("M21","START")
   from test_m21_gui import run as m21_run
   m21_run(p=p,win=win,element=element,safe_click=safe_click,
           focus=ensure_owned_focus,eventually=eventually,
           left=left,right=right,localdata=localdata,env=env,exe=EXE)
+  mark_gui_phase("M21","DONE")
  if os.environ.get("FLY_M22_OWNED_FEATURES")=="YES":
+  mark_gui_phase("M22","START")
   from test_m22_gui import run as m22_run
   m22_run(win=win,element=element,safe_click=safe_click,
           focus=ensure_owned_focus,eventually=eventually,left=left,right=right)
+  mark_gui_phase("M22","DONE")
  if os.environ.get("FLY_EP05_EXPLORER_HANDOFF")=="YES":
   assert os.environ.get("FLY_M22_OWNED_FEATURES")=="YES"
+  mark_gui_phase("EP05","START")
   from test_ep05_explorer_handoff_gui import run as ep05_run
   ep05_run(win=win,element=element,focus=ensure_owned_focus,
            eventually=eventually,left=left,right=right,owned_pid=p.pid)
+  mark_gui_phase("EP05","DONE")
  if os.environ.get("FLY_M23_OWNED_FEATURES")=="YES":
+  mark_gui_phase("M23","START")
   from test_m23_gui import run as m23_run
   m23_run(win=win,element=element,safe_click=safe_click,
           focus=ensure_owned_focus,eventually=eventually,
           left=left,right=right,localdata=localdata,env=env,exe=EXE)
+  mark_gui_phase("M23","DONE")
  safe_click(element("LeftFiles"))
  rect=win.rectangle()
  assert rect.width()>400 and rect.height()>260
