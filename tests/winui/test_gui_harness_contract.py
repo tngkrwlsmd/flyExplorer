@@ -442,6 +442,81 @@ class GuiHarnessStaticContract(unittest.TestCase):
                               {"left": expected, "element": element})
                 self.assertEqual(accepted, actual)
 
+    def test_virtual_shell_wait_requires_owned_drive_rows_and_stable_route(self):
+        from types import SimpleNamespace
+        gui = (TESTS / "test_shell_gui.py").read_text(encoding="utf-8")
+        evidence = (TESTS / "gui_failure_evidence.py").read_text(encoding="utf-8")
+        funcs = []
+        for source, name in ((gui, "owned_virtual_drive_ready"),
+                             (evidence, "_startup_status_category")):
+            funcs.append(next(node for node in ast.parse(source).body
+                              if isinstance(node, ast.FunctionDef) and node.name == name))
+        namespace = {}
+        exec(compile(ast.Module(body=funcs, type_ignores=[]),
+                     "owned virtual route readiness", "exec"), namespace)
+        ready = namespace["owned_virtual_drive_ready"]
+
+        def peer(kind, pid=42, children=(), visible=True):
+            return SimpleNamespace(
+                element_info=SimpleNamespace(control_type=kind, process_id=pid),
+                descendants=lambda: list(children), is_visible=lambda: visible)
+
+        drive = peer("ListItem", children=[peer("ProgressBar")])
+        local = peer("ListItem", children=[peer("Text")])
+        foreign_row = peer("ListItem", 77, [peer("ProgressBar")])
+        foreign_capacity = peer("ListItem", children=[peer("ProgressBar", 77)])
+        hidden = peer("ListItem", children=[peer("ProgressBar")], visible=False)
+        loaded = "폴더를 불러왔습니다."
+        cases = (
+            ("ready", "오른쪽", "내 PC", loaded, [drive], True),
+            ("recovered", "오른쪽", "내 PC", "응답 지연 후 폴더를 불러왔습니다.", [drive], True),
+            ("empty", "오른쪽", "내 PC", loaded, [], False),
+            ("stale-local", "오른쪽", "내 PC", loaded, [local], False),
+            ("loading", "오른쪽", "내 PC", "폴더를 불러오는 중입니다.", [drive], False),
+            ("failure", "오른쪽", "내 PC", "Shell 폴더를 열지 못했습니다.", [drive], False),
+            ("unknown", "오른쪽", "내 PC", "", [drive], False),
+            ("wrong-pane", "왼쪽", "내 PC", loaded, [drive], False),
+            ("wrong-route", "오른쪽", "other", loaded, [drive], False),
+            ("foreign-row", "오른쪽", "내 PC", loaded, [foreign_row], False),
+            ("foreign-child", "오른쪽", "내 PC", loaded, [foreign_capacity], False),
+            ("hidden-row", "오른쪽", "내 PC", loaded, [hidden], False),
+            ("decorative", "오른쪽", "내 PC", loaded, [peer("ProgressBar")], False),
+        )
+        for name, pane, address, status, rows, expected in cases:
+            with self.subTest(name=name):
+                controls = {
+                    "ActivePaneText": SimpleNamespace(window_text=lambda: pane),
+                    "AddressBox": SimpleNamespace(get_value=lambda: address),
+                    "StatusText": SimpleNamespace(window_text=lambda: status),
+                    "RightFiles": SimpleNamespace(descendants=lambda: rows),
+                }
+                self.assertEqual(expected, ready(controls.__getitem__, 42))
+
+        # A route change while the UIA row tree is being inspected cannot
+        # be promoted to success. A later poll can accept the new valid tree.
+        addresses = iter(("내 PC", "other", "내 PC", "내 PC"))
+        controls["ActivePaneText"] = SimpleNamespace(window_text=lambda: "오른쪽")
+        controls["AddressBox"] = SimpleNamespace(get_value=lambda: next(addresses))
+        controls["StatusText"] = SimpleNamespace(window_text=lambda: loaded)
+        controls["RightFiles"] = SimpleNamespace(descendants=lambda: [drive])
+        self.assertFalse(ready(controls.__getitem__, 42))
+        self.assertTrue(ready(controls.__getitem__, 42))
+
+        controls["AddressBox"] = SimpleNamespace(get_value=lambda: "내 PC")
+        controls["RightFiles"] = SimpleNamespace(descendants=lambda: [])
+        self.assertFalse(ready(controls.__getitem__, 42))
+        controls["RightFiles"] = SimpleNamespace(descendants=lambda: [drive])
+        self.assertTrue(ready(controls.__getitem__, 42))
+
+        virtual = gui.split("# Exercise the ACTUAL native Windows Shell namespace:", 1)[1].split(
+            " if loopback_unc:", 1)[0]
+        self.assertIn('eventually(lambda:owned_virtual_drive_ready(element,p.pid)', virtual)
+        self.assertIn('element("BackButton").is_enabled()', virtual)
+        self.assertIn("and right_helper_ready()", virtual)
+        self.assertIn('REAL_NATIVE_VIRTUAL_SHELL_THIS_PC_PIDL_AND_ENUMERATION', virtual)
+        self.assertIn('REAL_NATIVE_VIRTUAL_TO_LOCAL_SHELL_HISTORY', virtual)
+        self.assertNotIn('assert len(element("RightFiles").descendants())', virtual)
+
     def test_integrated_shell_gui_captures_owned_shutdown_stack_on_timeout(self):
         gui = (TESTS / "test_shell_gui.py").read_text(encoding="utf-8")
         self.assertIn("from owned_process_dump import capture_owned_dump", gui)

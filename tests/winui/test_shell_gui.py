@@ -233,6 +233,26 @@ def mark_gui_phase(name,state):
  remaining_chain_seconds(name)
 def labels(win):
  return [e.window_text() for e in win.descendants() if e.window_text()]
+def owned_virtual_drive_ready(element, owned_pid):
+ # The friendly address can precede the asynchronous UIA row projection.
+ # Require a real system-drive capacity peer in the owned right-pane row,
+ # not old local-folder rows, headers or decorative descendants.
+ def route_ready():
+  return ("오른쪽" in element("ActivePaneText").window_text() and
+          element("AddressBox").get_value()=="내 PC" and
+          _startup_status_category(element("StatusText").window_text())
+          in ("loaded","recovered"))
+ if not route_ready():
+  return False
+ for row in element("RightFiles").descendants():
+  if (row.element_info.control_type!="ListItem" or
+      row.element_info.process_id!=owned_pid or not row.is_visible()):
+   continue
+  if any(peer.element_info.control_type=="ProgressBar" and
+         peer.element_info.process_id==owned_pid
+         for peer in row.descendants()):
+   return route_ready()
+ return False
 p=None;hwnd=None
 try:
  # Only this synthetic child opts into bounded, PID-owned startup phases.
@@ -779,20 +799,32 @@ try:
  virtual.set_edit_text("shell:MyComputerFolder")
  ensure_owned_focus()
  virtual.type_keys("{ENTER}",set_foreground=True)
- eventually(lambda:element("AddressBox").get_value()=="내 PC",
-            "native virtual Shell location not opened")
- assert len(element("RightFiles").descendants())>0,(
-    "Shell virtual folder enumeration unexpectedly empty")
+ virtual_started=time.monotonic()
+ eventually(lambda:owned_virtual_drive_ready(element,p.pid),
+            "native virtual Shell location did not publish owned drive rows",16)
+ print("OWNED_VIRTUAL_SHELL_READY_SECONDS",
+       round(time.monotonic()-virtual_started,2),flush=True)
  safe_click(element("LeftFiles"))
- eventually(lambda:str(left).lower() in element("AddressBox").get_value().lower(),
+ eventually(lambda:str(left).lower() in element("AddressBox").get_value().lower()
+   and any(row.element_info.control_type=="ListItem" and
+           "Nested" in row.window_text()
+           for row in element("LeftFiles").descendants()),
    "virtual Shell location replaced independent left pane")
  print("REAL_NATIVE_VIRTUAL_SHELL_THIS_PC_PIDL_AND_ENUMERATION",True,flush=True)
  # M2.6 shows the friendly label while the native model keeps the PIDL.
  # Verify the virtual location participated in the SAME tab history.
  safe_click(element("RightFiles"))
+ eventually(lambda:"오른쪽" in element("ActivePaneText").window_text()
+            and element("AddressBox").get_value()=="내 PC"
+            and element("BackButton").is_enabled(),
+            "native virtual Shell Back command not ready",12)
  safe_click(element("BackButton"))
- eventually(lambda:str(right).lower() in element("AddressBox").get_value().lower(),
-            "native virtual Shell Back did not recover preceding folder")
+ eventually(lambda:"오른쪽" in element("ActivePaneText").window_text()
+            and str(right).lower()==element("AddressBox").get_value().lower()
+            and _startup_status_category(element("StatusText").window_text())
+                in ("loaded","recovered")
+            and right_helper_ready(),
+            "native virtual Shell Back did not recover preceding folder rows",16)
  print("REAL_NATIVE_VIRTUAL_TO_LOCAL_SHELL_HISTORY",True,flush=True)
  if loopback_unc:
   # Reject a nonexistent loopback share, without configuring SMB or touching
