@@ -10,7 +10,7 @@ import unittest
 
 from gui_failure_evidence import (
     MAX_ENTRIES, _disk_rows, _owned_labels, _safe_address, _uia_pane,
-    capture_failure,
+    capture_failure, _startup_status_category,
 )
 
 
@@ -163,6 +163,23 @@ class GuiFailureEvidenceContract(unittest.TestCase):
             self.assertEqual("empty", startup["address_route"])
             self.assertEqual("left", startup["active_pane"])
             self.assertEqual("loading", startup["status_category"])
+
+    def test_current_and_legacy_recovery_status_codes(self):
+        current = "일시적인 오류 후 재시도하여 폴더를 불러왔습니다."
+        cases = (
+            (current, "recovered"),
+            ("응답 지연 후 폴더를 불러왔습니다.", "recovered"),
+            (current + " C:\\Users\\synthetic\\private", "recovered"),
+            ("일시적인 오류 후 재시도하여 폴더를 불러오는 중입니다.", "other"),
+            ("폴더를 불러오는 중입니다.", "loading"),
+            ("폴더를 불러왔습니다.", "loaded"),
+            ("Shell 폴더를 열지 못했습니다.", "shell-failed"),
+            (None, "unavailable"),
+            ("", "other"),
+        )
+        for value, expected in cases:
+            with self.subTest(expected=expected, value=value):
+                self.assertEqual(expected, _startup_status_category(value))
 
     def test_g01_startup_timeline_is_bounded_and_private(self):
         with TemporaryDirectory() as root:

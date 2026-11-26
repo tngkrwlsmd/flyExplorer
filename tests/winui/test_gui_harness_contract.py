@@ -470,6 +470,12 @@ class GuiHarnessStaticContract(unittest.TestCase):
         cases = (
             ("ready", "오른쪽", "내 PC", loaded, [drive], True),
             ("recovered", "오른쪽", "내 PC", "응답 지연 후 폴더를 불러왔습니다.", [drive], True),
+            ("current-recovered", "오른쪽", "내 PC",
+             "일시적인 오류 후 재시도하여 폴더를 불러왔습니다.", [drive], True),
+            ("current-recovered-empty", "오른쪽", "내 PC",
+             "일시적인 오류 후 재시도하여 폴더를 불러왔습니다.", [], False),
+            ("current-recovery-incomplete", "오른쪽", "내 PC",
+             "일시적인 오류 후 재시도하여 폴더를 불러오는 중입니다.", [drive], False),
             ("empty", "오른쪽", "내 PC", loaded, [], False),
             ("stale-local", "오른쪽", "내 PC", loaded, [local], False),
             ("loading", "오른쪽", "내 PC", "폴더를 불러오는 중입니다.", [drive], False),

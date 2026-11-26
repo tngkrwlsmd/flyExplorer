@@ -145,6 +145,7 @@ def _startup_status_category(value):
         ("독립 Shell 탐색 준비 중", "native-initializing"),
         ("폴더를 불러오는 중입니다.", "loading"),
         ("폴더를 불러왔습니다.", "loaded"),
+        ("일시적인 오류 후 재시도하여 폴더를 불러왔습니다.", "recovered"),
         ("응답 지연 후 폴더를 불러왔습니다.", "recovered"),
         ("Shell 폴더가 4.5초씩 두 번", "helper-timeout"),
         ("Shell 폴더를 열지 못했습니다.", "shell-failed"),
