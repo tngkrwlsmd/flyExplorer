@@ -103,7 +103,14 @@ namespace {
         "LEFT_HELPER_EXIT_4","LEFT_HELPER_EXIT_5",
         "LEFT_HELPER_EXIT_6","LEFT_HELPER_EXIT_7",
         "LEFT_HELPER_EXIT_NTSTATUS","LEFT_HELPER_EXIT_OTHER",
-        "LEFT_HELPER_EXIT_UNKNOWN"
+        "LEFT_HELPER_EXIT_UNKNOWN",
+        "LEFT_RETRY_BROKEN_PIPE","LEFT_RETRY_TIMEOUT",
+        "LEFT_RETRY_HELPER_EXIT_0","LEFT_RETRY_HELPER_EXIT_1",
+        "LEFT_RETRY_HELPER_EXIT_2","LEFT_RETRY_HELPER_EXIT_3",
+        "LEFT_RETRY_HELPER_EXIT_4","LEFT_RETRY_HELPER_EXIT_5",
+        "LEFT_RETRY_HELPER_EXIT_6","LEFT_RETRY_HELPER_EXIT_7",
+        "LEFT_RETRY_HELPER_EXIT_NTSTATUS","LEFT_RETRY_HELPER_EXIT_OTHER",
+        "LEFT_RETRY_HELPER_EXIT_UNKNOWN"
     };
     struct G01StartupPage final {
         LONG magic=0;
@@ -174,6 +181,28 @@ namespace {
         const LONG pos=::InterlockedIncrement(&mapping.page->count);
         if(pos>0&&pos<=kG01StartupCapacity)
             ::InterlockedExchange(&mapping.page->events[pos-1],code);
+    }
+
+    char const* G01OwnedHelperExitPhase(bool retry,bool known,
+                                       std::uint32_t code) noexcept
+    {
+        constexpr char const* phases[2][11]={
+            {"LEFT_HELPER_EXIT_0","LEFT_HELPER_EXIT_1",
+             "LEFT_HELPER_EXIT_2","LEFT_HELPER_EXIT_3",
+             "LEFT_HELPER_EXIT_4","LEFT_HELPER_EXIT_5",
+             "LEFT_HELPER_EXIT_6","LEFT_HELPER_EXIT_7",
+             "LEFT_HELPER_EXIT_NTSTATUS","LEFT_HELPER_EXIT_OTHER",
+             "LEFT_HELPER_EXIT_UNKNOWN"},
+            {"LEFT_RETRY_HELPER_EXIT_0","LEFT_RETRY_HELPER_EXIT_1",
+             "LEFT_RETRY_HELPER_EXIT_2","LEFT_RETRY_HELPER_EXIT_3",
+             "LEFT_RETRY_HELPER_EXIT_4","LEFT_RETRY_HELPER_EXIT_5",
+             "LEFT_RETRY_HELPER_EXIT_6","LEFT_RETRY_HELPER_EXIT_7",
+             "LEFT_RETRY_HELPER_EXIT_NTSTATUS","LEFT_RETRY_HELPER_EXIT_OTHER",
+             "LEFT_RETRY_HELPER_EXIT_UNKNOWN"}
+        };
+        const auto index=!known?10u:code<8?code:
+            (code&0xC0000000u)==0xC0000000u?8u:9u;
+        return phases[retry?1:0][index];
     }
 
     constexpr UINT_PTR kDetailColumnCursorSubclassId=0xF1E08;
@@ -1846,6 +1875,18 @@ namespace winrt::FlyExplorer::implementation
             (completed.kind==Kind::Applied||completed.kind==Kind::NoChange));
 #endif
         if(completed.side==0){
+            // The first retry belongs to this accepted request even when
+            // its fresh helper succeeds. Never use the terminal exit as
+            // the first failure's exit code.
+            if(completed.recovered){
+                if(completed.retryHr==HRESULT_FROM_WIN32(ERROR_BROKEN_PIPE)){
+                    TraceG01OwnedStartup("LEFT_RETRY_BROKEN_PIPE");
+                    TraceG01OwnedStartup(G01OwnedHelperExitPhase(true,
+                        completed.retryHelperExitKnown,completed.retryHelperExitCode));
+                }else if(completed.retryHr==HRESULT_FROM_WIN32(ERROR_TIMEOUT)){
+                    TraceG01OwnedStartup("LEFT_RETRY_TIMEOUT");
+                }
+            }
             switch(completed.kind){
             case Kind::Applied:TraceG01OwnedStartup("LEFT_APPLIED");break;
             case Kind::Failed:{
@@ -1853,18 +1894,8 @@ namespace winrt::FlyExplorer::implementation
                 // Only the test-owned PID mapping stores this classification.
                 // Keep the original FAILED outcome and bounded retry policy.
                 if(completed.hr==HRESULT_FROM_WIN32(ERROR_BROKEN_PIPE)){
-                    constexpr char const* codes[]={
-                        "LEFT_HELPER_EXIT_0","LEFT_HELPER_EXIT_1",
-                        "LEFT_HELPER_EXIT_2","LEFT_HELPER_EXIT_3",
-                        "LEFT_HELPER_EXIT_4","LEFT_HELPER_EXIT_5",
-                        "LEFT_HELPER_EXIT_6","LEFT_HELPER_EXIT_7"};
-                    auto const* phase=!completed.helperExitKnown?
-                        "LEFT_HELPER_EXIT_UNKNOWN":
-                        completed.helperExitCode<8?
-                        codes[completed.helperExitCode]:
-                        (completed.helperExitCode&0xC0000000u)==0xC0000000u?
-                        "LEFT_HELPER_EXIT_NTSTATUS":"LEFT_HELPER_EXIT_OTHER";
-                    TraceG01OwnedStartup(phase);
+                    TraceG01OwnedStartup(G01OwnedHelperExitPhase(false,
+                        completed.helperExitKnown,completed.helperExitCode));
                 }
                 break;
             }

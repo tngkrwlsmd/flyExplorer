@@ -25,6 +25,10 @@ struct IsolatedResult {
     std::uint32_t attempts=0;
     std::uint32_t pageOffset=0;
     std::uint32_t pageLimit=0;
+    // First retry observation is separate from the terminal child result.
+    HRESULT retryHr=S_OK;
+    bool retryHelperExitKnown=false;
+    std::uint32_t retryHelperExitCode=0;
 };
 using IsolatedCallback=std::function<void(IsolatedResult)>;
 class IsolatedShellSupervisor final {

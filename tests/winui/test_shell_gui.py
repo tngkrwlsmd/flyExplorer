@@ -376,6 +376,10 @@ try:
    "native helper committed the owned route but left an error status",
    element("StatusText").window_text())
  print("ACTUAL_CPP_NATIVE_CORE_NULL_CONTRACT_LINKED",True,flush=True)
+ # Read the same fixed owned page once on successful startup, too.
+ # A recovered first failure must not disappear when the fresh helper works.
+ startup_events = read_g01_owned_shared_phases(p.pid)
+ print("G01_OWNED_STARTUP_PHASES", " ".join(startup_events) or "UNAVAILABLE", flush=True)
  if G01_INTEGRATED_STARTUP_ONLY:
   print("G01_INTEGRATED_STARTUP_GUI_PASS=True",flush=True)
   # Unlike the window-manager WM_CLOSE probe, Ctrl+W goes through

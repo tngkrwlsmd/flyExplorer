@@ -722,6 +722,9 @@ void IsolatedShellSupervisor::runLane(std::shared_ptr<State> st,
                 if((outcome.timeout||brokenPipe)&&
                    attempt+1<kMaxAttempts){
                     result.recovered=true;
+                    result.retryHr=outcome.hr;
+                    result.retryHelperExitKnown=outcome.helperExitKnown;
+                    result.retryHelperExitCode=outcome.helperExitCode;
                     continue;
                 }
                 result.hr=outcome.hr;

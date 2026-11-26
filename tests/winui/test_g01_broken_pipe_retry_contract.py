@@ -47,6 +47,38 @@ class G01BrokenPipeRetryContract(unittest.TestCase):
                         lane.index("result.helperExitKnown=outcome.helperExitKnown;"))
         self.assertIn("kMaxAttempts=2;", SUP)
 
+    def test_first_retry_diagnostics_survive_terminal_result(self):
+        header = (ROOT / "src/base/shell_isolated_supervisor.h").read_text(encoding="utf-8")
+        controller = (ROOT / "app/winui/shell_navigation_controller.h").read_text(encoding="utf-8")
+        ui = (ROOT / "app/winui/MainWindow.xaml.cpp").read_text(encoding="utf-8")
+        lane = SUP.split("void IsolatedShellSupervisor::runLane(", 1)[1]
+        retry = lane.split("if((outcome.timeout||brokenPipe)&&", 1)[1].split("continue;", 1)[0]
+        terminal = lane.split("result.hr=outcome.hr;", 1)[1]
+        for field, initial, source in (
+            ("retryHr", "S_OK", "hr"),
+            ("retryHelperExitKnown", "false", "helperExitKnown"),
+            ("retryHelperExitCode", "0", "helperExitCode"),
+        ):
+            self.assertIn(field + "=" + initial + ";", header)
+            self.assertIn(field + "=" + initial + ";", controller)
+            self.assertIn("result." + field + "=outcome." + source + ";", retry)
+            self.assertNotIn("result." + field + "=", terminal)
+            self.assertIn("completed." + field + "=result." + field + ";", NAV)
+        body = ui.split("void MainWindow::OnNativeResult(", 1)[1].split(
+            "// A search locate needs its exact accepted navigation", 1)[0]
+        self.assertLess(body.index("if(completed.kind==Kind::Ignored)"),
+                        body.index("if(completed.recovered)"))
+        self.assertLess(body.index("if(completed.recovered)"),
+                        body.index("case Kind::Applied:"))
+        self.assertIn("completed.retryHr==HRESULT_FROM_WIN32(ERROR_BROKEN_PIPE)", body)
+        self.assertIn("completed.retryHr==HRESULT_FROM_WIN32(ERROR_TIMEOUT)", body)
+        self.assertIn('TraceG01OwnedStartup("LEFT_RETRY_BROKEN_PIPE")', body)
+        self.assertIn('TraceG01OwnedStartup("LEFT_RETRY_TIMEOUT")', body)
+        self.assertIn("G01OwnedHelperExitPhase(true,", body)
+        self.assertIn("completed.retryHelperExitKnown,completed.retryHelperExitCode", body)
+        self.assertIn("G01OwnedHelperExitPhase(false,", body)
+        self.assertIn("completed.helperExitKnown,completed.helperExitCode", body)
+
     def test_stale_request_and_cancel_dont_retry(self):
         lane = SUP.split("void IsolatedShellSupervisor::runLane(", 1)[1]
         retry = lane.index("if((outcome.timeout||brokenPipe)&&")

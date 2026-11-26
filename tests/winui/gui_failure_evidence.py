@@ -193,7 +193,8 @@ _G01_STARTUP_PHASE = re.compile(
     r"APPLIED|FAILED|REJECTED|EXTENDED|NOCHANGE)|"
     r"RESULT_(?:CALLBACK|ENQUEUE_OK|ENQUEUE_REJECTED|IGNORED)|"
     r"LEFT_HRESULT_[89A-F][0-9A-F]{7}|"
-    r"LEFT_HELPER_EXIT_(?:[0-7]|NTSTATUS|OTHER|UNKNOWN))"
+    r"LEFT_(?:RETRY_)?HELPER_EXIT_(?:[0-7]|NTSTATUS|OTHER|UNKNOWN)|"
+    r"LEFT_RETRY_(?:BROKEN_PIPE|TIMEOUT))"
 )
 
 
@@ -215,6 +216,13 @@ G01_SHARED_PHASES = (
     "LEFT_HELPER_EXIT_6", "LEFT_HELPER_EXIT_7",
     "LEFT_HELPER_EXIT_NTSTATUS", "LEFT_HELPER_EXIT_OTHER",
     "LEFT_HELPER_EXIT_UNKNOWN",
+    "LEFT_RETRY_BROKEN_PIPE", "LEFT_RETRY_TIMEOUT",
+    "LEFT_RETRY_HELPER_EXIT_0", "LEFT_RETRY_HELPER_EXIT_1",
+    "LEFT_RETRY_HELPER_EXIT_2", "LEFT_RETRY_HELPER_EXIT_3",
+    "LEFT_RETRY_HELPER_EXIT_4", "LEFT_RETRY_HELPER_EXIT_5",
+    "LEFT_RETRY_HELPER_EXIT_6", "LEFT_RETRY_HELPER_EXIT_7",
+    "LEFT_RETRY_HELPER_EXIT_NTSTATUS", "LEFT_RETRY_HELPER_EXIT_OTHER",
+    "LEFT_RETRY_HELPER_EXIT_UNKNOWN",
 )
 G01_SHARED_FORMAT = "<III64II"
 
@@ -241,7 +249,7 @@ def decode_g01_owned_shared_phases(raw: bytes, child_pid: int) -> list[str]:
 
 
 def read_g01_owned_shared_phases(child_pid: int) -> list[str]:
-    """Failure-only: read one page from this test's exact launched child.
+    """Read one bounded page from this test's exact launched child.
 
     OpenFileMapping is named by the test-owned PID and never attaches a
     debugger, reads unrelated process memory, or enumerates other windows.

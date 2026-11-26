@@ -42,7 +42,7 @@ class G01NativeStartupPhaseContract(unittest.TestCase):
         self.assertIn("mShellNavigation->accept(", CPP)
 
     def test_helper_exit_categories_are_fixed_and_bounded(self):
-        self.assertEqual(31, len(G01_SHARED_PHASES))
+        self.assertEqual(44, len(G01_SHARED_PHASES))
         allowed = ["LEFT_HELPER_EXIT_0", "LEFT_HELPER_EXIT_7",
                    "LEFT_HELPER_EXIT_NTSTATUS", "LEFT_HELPER_EXIT_OTHER",
                    "LEFT_HELPER_EXIT_UNKNOWN"]
@@ -50,6 +50,42 @@ class G01NativeStartupPhaseContract(unittest.TestCase):
         self.assertEqual([], _safe_g01_startup_events([
             "LEFT_HELPER_EXIT_8", "LEFT_HELPER_EXIT_C0000005",
             "LEFT_HELPER_EXIT_PATH", "LEFT_HELPER_EXIT_BAD"]))
+
+    def test_first_retry_phases_append_without_changing_legacy_ids(self):
+        retry = (
+            "LEFT_RETRY_BROKEN_PIPE", "LEFT_RETRY_TIMEOUT",
+            *(f"LEFT_RETRY_HELPER_EXIT_{n}" for n in range(8)),
+            "LEFT_RETRY_HELPER_EXIT_NTSTATUS", "LEFT_RETRY_HELPER_EXIT_OTHER",
+            "LEFT_RETRY_HELPER_EXIT_UNKNOWN",
+        )
+        self.assertEqual("LEFT_HELPER_EXIT_UNKNOWN", G01_SHARED_PHASES[30])
+        self.assertEqual(retry, G01_SHARED_PHASES[31:])
+        # Old and new pages keep the same layout and legacy phase IDs.
+        for reason, category in (
+            ("LEFT_RETRY_BROKEN_PIPE", "LEFT_RETRY_HELPER_EXIT_7"),
+            ("LEFT_RETRY_BROKEN_PIPE", "LEFT_RETRY_HELPER_EXIT_UNKNOWN"),
+            ("LEFT_RETRY_BROKEN_PIPE", "LEFT_RETRY_HELPER_EXIT_0"),
+            ("LEFT_RETRY_TIMEOUT", None),
+        ):
+            for terminal in ("LEFT_APPLIED", "LEFT_FAILED"):
+                events = ["LEFT_SUBMIT_ACCEPTED", "RESULT_CALLBACK", reason]
+                if category:
+                    events.append(category)
+                events.append(terminal)
+                slots = [G01_SHARED_PHASES.index(event)+1 for event in events]
+                raw = struct.pack(G01_SHARED_FORMAT, G01_SHARED_MAGIC, 4102,
+                                  len(slots), *(slots+[0]*(64-len(slots))), 0)
+                self.assertEqual(events, decode_g01_owned_shared_phases(raw, 4102))
+                self.assertEqual([], decode_g01_owned_shared_phases(raw, 4103))
+                self.assertEqual(events, _safe_g01_startup_events(events))
+        self.assertEqual(list(retry), _safe_g01_startup_events(list(retry)))
+        self.assertEqual([], _safe_g01_startup_events([
+            "LEFT_RETRY_HELPER_EXIT_8", "LEFT_RETRY_HELPER_EXIT_C0000005",
+            "LEFT_RETRY_OTHER", "LEFT_RETRY_HELPER_EXIT_PRIVATE"]))
+        success = HARNESS.split('print("ACTUAL_CPP_NATIVE_CORE_NULL_CONTRACT_LINKED"',1)[1]
+        success = success.split("if G01_INTEGRATED_STARTUP_ONLY:",1)[0]
+        self.assertIn("read_g01_owned_shared_phases(p.pid)", success)
+        self.assertIn("G01_OWNED_STARTUP_PHASES", success)
 
     def test_shared_page_constructed_before_native_worker_submissions(self):
         ctor = CPP.split("MainWindow::MainWindow()", 1)[1].split(

@@ -47,6 +47,10 @@ public:
         bool networkRequest=false;
         bool helperExitKnown=false;
         std::uint32_t helperExitCode=0;
+        // First retry observation is separate from the terminal child result.
+        HRESULT retryHr=S_OK;
+        bool retryHelperExitKnown=false;
+        std::uint32_t retryHelperExitCode=0;
     };
     enum class ChangeDisposition {
         Ignored,

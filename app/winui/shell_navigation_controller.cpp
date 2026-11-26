@@ -170,6 +170,9 @@ ShellNavigationController::Completion ShellNavigationController::accept(
     completed.networkRequest=result.networkRequest;
     completed.helperExitKnown=result.helperExitKnown;
     completed.helperExitCode=result.helperExitCode;
+    completed.retryHr=result.retryHr;
+    completed.retryHelperExitKnown=result.retryHelperExitKnown;
+    completed.retryHelperExitCode=result.retryHelperExitCode;
     completed.hr=result.hr;
     completed.request=result.request;
 
