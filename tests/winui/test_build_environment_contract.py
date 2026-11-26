@@ -150,6 +150,70 @@ class BuildEnvironmentContract(unittest.TestCase):
                         self.assertNotIn(GUI_CHAIN_BUDGET_ENV, child)
                     self.assertEqual("999", env[GUI_CHAIN_BUDGET_ENV])
 
+    def test_ci_full_gui_calibration_is_bounded_and_scope_isolated(self):
+        sys.path.insert(0, str(ROOT / "tools" / "winui"))
+        from run_checks import full_gui_ci_timeout, gui_command, GUI_CHAIN_BUDGET_ENV
+
+        for measured, expected in ((None, 390), (0, 390), (64.2, 390),
+                                   (65, 390), (164.8, 928), (195, 940),
+                                   (300, 840), (750, 390)):
+            with self.subTest(measured=measured):
+                self.assertEqual(expected, full_gui_ci_timeout(measured))
+        for invalid in (-1, float("nan"), float("inf"), 750.1, 751):
+            with self.subTest(invalid=invalid), self.assertRaises(ValueError):
+                full_gui_ci_timeout(invalid)
+        key = GUI_CHAIN_BUDGET_ENV
+        for ci in (False, True):
+            env = {key: "9999", "GITHUB_ACTIONS": str(ci).lower()}
+            for area, expected in (("all", 928 if ci else 260),
+                                   ("startup-integrated", 260), ("search", 260),
+                                   ("core", 260), ("folder-tree", 150),
+                                   ("window-tabs", 260), ("shortcuts", 150),
+                                   ("filter-preset", 150)):
+                with self.subTest(ci=ci, area=area):
+                    _, child, limit = gui_command(
+                        area, "Release", env, focused_elapsed_seconds=164.8)
+                    self.assertEqual(expected, limit)
+                    if ci and area == "all":
+                        self.assertEqual(str(limit - 40), child[key])
+                    else:
+                        self.assertNotIn(key, child)
+                    self.assertEqual("9999", env[key])
+
+    def test_full_ci_gui_measures_only_successful_focused_probes(self):
+        from types import SimpleNamespace
+        sys.path.insert(0, str(ROOT / "tools" / "winui"))
+        import run_checks
+
+        focus = {"gui-window-tabs-Release": 59.7, "gui-shortcuts-Release": 39.5,
+                 "gui-filter-preset-Release": 36.3, "gui-folder-tree-Release": 29.3}
+        key = run_checks.GUI_CHAIN_BUDGET_ENV
+        for fail_label, too_slow, expected in (
+                (None, False, 0), ("gui-filter-preset-Release", False, 7),
+                (None, True, 1)):
+            with self.subTest(fail_label=fail_label, too_slow=too_slow):
+                now = [0.0]
+                calls = []
+
+                def run(label, cmd, timeout, env, tag):
+                    calls.append((label, timeout, env.copy()))
+                    now[0] += (751 if too_slow and label == "gui-window-tabs-Release"
+                               else focus.get(label, 1))
+                    return 7 if label == fail_label else 0
+
+                with patch.object(run_checks, "execute", side_effect=run), patch.object(
+                        run_checks, "fail", side_effect=lambda category, rc: rc), patch.object(
+                        run_checks, "time", SimpleNamespace(monotonic=lambda: now[0])):
+                    self.assertEqual(expected, run_checks.run_gui(
+                        "all", "Release", {"GITHUB_ACTIONS": "true", key: "9999"}, "tag"))
+                if expected == 0:
+                    self.assertEqual(6, len(calls))
+                    self.assertEqual(("gui-all-Release", 928), calls[-1][:2])
+                    self.assertEqual("888", calls[-1][2][key])
+                    self.assertTrue(all(key not in x[2] for x in calls[1:-1]))
+                else:
+                    self.assertNotIn("gui-all-Release", [x[0] for x in calls])
+
     def test_integrated_gui_deadline_caps_wait_and_refuses_late_success(self):
         import ast
         from types import SimpleNamespace

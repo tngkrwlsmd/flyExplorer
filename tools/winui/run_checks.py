@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import os
 from pathlib import Path
 import re
@@ -22,11 +23,17 @@ DEFAULT_RESULT = ROOT / "logs" / "remote-evidence" / "check-result.json"
 _ACTIVE_STAGE = ""
 _RESULT_PATH = DEFAULT_RESULT
 
-# Only the complete CI chain receives the same 1.5x allowance as its
-# owned UIA waits. Reserve time for the harness to unwind before hard kill.
+# Only the complete CI chain can use a measured slowdown allowance.
+# #45747093372: four focused GUI probes took 64.2s, the chain 300.4s.
+# #45753475919: focused probes took 164.8s and the chain exhausted 350s.
+# Bound the full GUI stage to 19min for the central 35min worker; preserve
+# the existing 40s cooperative cleanup reserve and per-wait assertions.
 FULL_GUI_TIMEOUT_SECONDS = 260
 FULL_GUI_CI_TIMEOUT_SECONDS = 390
 FULL_GUI_CLEANUP_RESERVE_SECONDS = 40
+FULL_GUI_CI_FOCUSED_REFERENCE_SECONDS = 65
+FULL_GUI_CI_MAX_TIMEOUT_SECONDS = 940
+FULL_GUI_CI_FOCUSED_PLUS_CHAIN_SECONDS = 1140
 GUI_CHAIN_BUDGET_ENV = "FLY_OWNED_GUI_CHAIN_BUDGET_SECONDS"
 
 PRODUCT_SUITES = {
@@ -393,7 +400,24 @@ def run_fast(before, head, env, tag):
     return 0
 
 
-def gui_command(area, configuration, env):
+def full_gui_ci_timeout(focused_elapsed_seconds=None):
+    """Scale only the chain budget from this run's successful focused probes."""
+    if focused_elapsed_seconds is None:
+        return FULL_GUI_CI_TIMEOUT_SECONDS
+    if not math.isfinite(focused_elapsed_seconds) or focused_elapsed_seconds < 0:
+        raise ValueError("invalid focused GUI elapsed time")
+    remaining = (FULL_GUI_CI_FOCUSED_PLUS_CHAIN_SECONDS
+                 - math.ceil(focused_elapsed_seconds))
+    if remaining < FULL_GUI_CI_TIMEOUT_SECONDS:
+        raise ValueError("insufficient bounded GUI stage budget")
+    chain_floor = FULL_GUI_CI_TIMEOUT_SECONDS - FULL_GUI_CLEANUP_RESERVE_SECONDS
+    scaled = math.ceil(chain_floor * max(
+        1.0, focused_elapsed_seconds / FULL_GUI_CI_FOCUSED_REFERENCE_SECONDS))
+    return min(FULL_GUI_CI_MAX_TIMEOUT_SECONDS, remaining,
+               scaled + FULL_GUI_CLEANUP_RESERVE_SECONDS)
+
+
+def gui_command(area, configuration, env, *, focused_elapsed_seconds=None):
     gui_env = env.copy()
     gui_env["FLY_MIGRATION_CONFIGURATION"] = configuration
     gui_env.pop(GUI_CHAIN_BUDGET_ENV, None)
@@ -518,7 +542,7 @@ def gui_command(area, configuration, env):
         gui_env["FLY_G01_INTEGRATED_STARTUP_ONLY"] = "YES"
     timeout = FULL_GUI_TIMEOUT_SECONDS
     if area == "all" and gui_env.get("GITHUB_ACTIONS") == "true":
-        timeout = FULL_GUI_CI_TIMEOUT_SECONDS
+        timeout = full_gui_ci_timeout(focused_elapsed_seconds)
         gui_env[GUI_CHAIN_BUDGET_ENV] = str(timeout - FULL_GUI_CLEANUP_RESERVE_SECONDS)
     return [sys.executable, "-u", str(TESTS / "test_shell_gui.py")], gui_env, timeout
 
@@ -616,7 +640,9 @@ def run_gui(area, configuration, env, tag):
     )
     if dep_rc:
         return fail("HARNESS_DEPENDENCY_FAILURE", dep_rc)
+    focused_elapsed_seconds = None
     if area == "all":
+        focused_started = time.monotonic()
         # Fail early on exact session-history cleanup before long GUI coverage.
         # Keep standalone focused probes independently runnable.
         for focused in ("window-tabs", "shortcuts", "filter-preset"):
@@ -637,7 +663,17 @@ def run_gui(area, configuration, env, tag):
         )
         if rc:
             return fail("GUI_ACCEPTANCE_FAILURE", rc)
-    cmd, gui_env, timeout = gui_command(area, configuration, env)
+        focused_elapsed_seconds = time.monotonic() - focused_started
+    try:
+        cmd, gui_env, timeout = gui_command(
+            area, configuration, env, focused_elapsed_seconds=focused_elapsed_seconds)
+    except ValueError:
+        print("OWNED_GUI_CI_TIMING_BUDGET_UNAVAILABLE", flush=True)
+        return fail("GUI_ACCEPTANCE_FAILURE", 1)
+    if area == "all" and gui_env.get("GITHUB_ACTIONS") == "true":
+        print(f"OWNED_GUI_CI_FOCUSED_SECONDS={focused_elapsed_seconds:.1f} "
+              f"HARD_SECONDS={timeout} CHAIN_SECONDS={gui_env[GUI_CHAIN_BUDGET_ENV]}",
+              flush=True)
     label = f"gui-{area}-{configuration}"
     rc = execute(label, cmd, timeout, gui_env, tag)
     if not rc and area == "startup-integrated":
