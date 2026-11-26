@@ -164,7 +164,8 @@ class BuildEnvironmentContract(unittest.TestCase):
                 full_gui_ci_timeout(invalid)
         key = GUI_CHAIN_BUDGET_ENV
         for ci in (False, True):
-            env = {key: "9999", "GITHUB_ACTIONS": str(ci).lower()}
+            env = {key: "9999", "GITHUB_ACTIONS": str(ci).lower(),
+                   "FLY_OWNED_UIA_REDACTION_PROBE": "YES"}
             for area, expected in (("all", 928 if ci else 260),
                                    ("startup-integrated", 260), ("search", 260),
                                    ("core", 260), ("folder-tree", 150),
@@ -179,6 +180,32 @@ class BuildEnvironmentContract(unittest.TestCase):
                     else:
                         self.assertNotIn(key, child)
                     self.assertEqual("9999", env[key])
+                    if area == "all":
+                        self.assertEqual("YES", child["FLY_OWNED_UIA_REDACTION_PROBE"])
+                    else:
+                        self.assertNotIn("FLY_OWNED_UIA_REDACTION_PROBE", child)
+
+    def test_full_gui_evidence_requires_exact_positive_markers(self):
+        sys.path.insert(0, str(ROOT / "tools" / "winui"))
+        from run_checks import full_gui_evidence_ok
+
+        lines = [
+            "OWNED_GUI_FAILURE_UIA_REDACTION=PASS",
+            "OWNED_WINUI_SHELL_EXIT 0",
+            "OWNED_SYNTHETIC_FIXTURE_REMOVED True",
+            "LEGACY_USER_PROFILE_SENTINEL_UNCHANGED True PRESENT 0",
+            "R07_NORMAL_RELEASE_MARKERS_ABSENT=PASS",
+        ]
+        body = "\n".join(lines)
+        self.assertTrue(full_gui_evidence_ok(body, "Release"))
+        self.assertTrue(full_gui_evidence_ok("\n".join(lines[:-1]), "Debug"))
+        self.assertFalse(full_gui_evidence_ok(body, "Unknown"))
+        for i in range(len(lines)):
+            with self.subTest(missing=i):
+                self.assertFalse(full_gui_evidence_ok(
+                    "\n".join(lines[:i] + lines[i+1:]), "Release"))
+        self.assertFalse(full_gui_evidence_ok(body.replace(lines[0], "prefix " + lines[0]), "Release"))
+        self.assertFalse(full_gui_evidence_ok(body + "\nTraceback (most recent call last)", "Release"))
 
     def test_full_ci_gui_measures_only_successful_focused_probes(self):
         from types import SimpleNamespace
@@ -201,9 +228,17 @@ class BuildEnvironmentContract(unittest.TestCase):
                                else focus.get(label, 1))
                     return 7 if label == fail_label else 0
 
-                with patch.object(run_checks, "execute", side_effect=run), patch.object(
+                with tempfile.TemporaryDirectory() as logs, patch.object(
+                        run_checks, "LOGS", Path(logs)), patch.object(
+                        run_checks, "execute", side_effect=run), patch.object(
                         run_checks, "fail", side_effect=lambda category, rc: rc), patch.object(
                         run_checks, "time", SimpleNamespace(monotonic=lambda: now[0])):
+                    (Path(logs) / "tag-gui-all-Release.log").write_text(
+                        "OWNED_GUI_FAILURE_UIA_REDACTION=PASS\n"
+                        "R07_NORMAL_RELEASE_MARKERS_ABSENT=PASS\n"
+                        "OWNED_WINUI_SHELL_EXIT 0\n"
+                        "LEGACY_USER_PROFILE_SENTINEL_UNCHANGED True PRESENT 0\n"
+                        "OWNED_SYNTHETIC_FIXTURE_REMOVED True\n", encoding="utf-8")
                     self.assertEqual(expected, run_checks.run_gui(
                         "all", "Release", {"GITHUB_ACTIONS": "true", key: "9999"}, "tag"))
                 if expected == 0:

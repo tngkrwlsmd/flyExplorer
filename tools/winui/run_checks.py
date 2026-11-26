@@ -421,6 +421,7 @@ def gui_command(area, configuration, env, *, focused_elapsed_seconds=None):
     gui_env = env.copy()
     gui_env["FLY_MIGRATION_CONFIGURATION"] = configuration
     gui_env.pop(GUI_CHAIN_BUDGET_ENV, None)
+    gui_env.pop("FLY_OWNED_UIA_REDACTION_PROBE", None)
     for key in OWNED_FLAGS + FAULT_FLAGS + (
         "FLY_V7_WINDOW_TABS_ONLY",
         "FLY_M19_OWNED_FEATURES_ONLY",
@@ -536,6 +537,8 @@ def gui_command(area, configuration, env, *, focused_elapsed_seconds=None):
         # Explicit P0 acceptance: only the test-owned synthetic folder
         # can spawn new native Explorer HWNDs. Previous user windows untouched.
         gui_env["FLY_EP05_EXPLORER_HANDOFF"] = "YES"
+    if area == "all":
+        gui_env["FLY_OWNED_UIA_REDACTION_PROBE"] = "YES"
     if area == "startup-integrated":
         # Exactly the all-profile startup configuration, without replaying
         # already accepted GUI interactions after initial route observation.
@@ -624,6 +627,27 @@ def g01_startup_evidence_ok(body: str) -> bool:
     )
 
 
+def full_gui_evidence_ok(body: str, configuration: str) -> bool:
+    """Require the real redaction probe, owned shutdown and Release isolation."""
+    if configuration not in ("Debug", "Release"):
+        return False
+    lines = set(body.splitlines())
+    required = (
+        "OWNED_GUI_FAILURE_UIA_REDACTION=PASS",
+        "OWNED_WINUI_SHELL_EXIT 0",
+        "OWNED_SYNTHETIC_FIXTURE_REMOVED True",
+    )
+    if configuration == "Release":
+        required += ("R07_NORMAL_RELEASE_MARKERS_ABSENT=PASS",)
+    profile_prefix = "LEGACY_USER_PROFILE_SENTINEL_UNCHANGED True PRESENT "
+    return (
+        all(marker in lines for marker in required)
+        and any(line.startswith(profile_prefix) and line[len(profile_prefix):].isdigit()
+                for line in lines)
+        and "Traceback (most recent call last)" not in body
+    )
+
+
 def run_gui(area, configuration, env, tag):
     dep_rc = execute(
         "gui-python-dependencies",
@@ -676,6 +700,21 @@ def run_gui(area, configuration, env, tag):
               flush=True)
     label = f"gui-{area}-{configuration}"
     rc = execute(label, cmd, timeout, gui_env, tag)
+    if not rc and area == "all":
+        try:
+            body = (LOGS / (tag + "-" + label + ".log")).read_text(
+                encoding="utf-8", errors="replace")
+        except OSError:
+            body = ""
+        if full_gui_evidence_ok(body, configuration):
+            # Relay only exact fixed positive markers, never raw UIA text.
+            print("OWNED_GUI_FAILURE_UIA_REDACTION=PASS", flush=True)
+            if configuration == "Release":
+                print("R07_NORMAL_RELEASE_MARKERS_ABSENT=PASS", flush=True)
+            print("OWNED_GUI_EXIT_PROFILE_CLEANUP=PASS", flush=True)
+        else:
+            print("OWNED_FULL_GUI_EVIDENCE_MISSING", flush=True)
+            rc = 1
     if not rc and area == "startup-integrated":
         # A Python early exit is not proof of native startup success.
         # Require the positive marker emitted only after the real left-pane

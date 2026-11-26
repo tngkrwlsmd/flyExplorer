@@ -11,6 +11,7 @@ import unittest
 from gui_failure_evidence import (
     MAX_ENTRIES, _disk_rows, _owned_labels, _safe_address, _uia_pane,
     capture_failure, _startup_status_category,
+    assert_owned_uia_prefix_redaction,
 )
 
 
@@ -119,6 +120,29 @@ class GuiFailureEvidenceContract(unittest.TestCase):
         self.assertEqual([expected for _, expected in cases],
                          [node["name"] for node in rows["nodes"]])
         self.assertNotIn("private-marker", json.dumps(rows))
+
+    def test_live_redaction_probe_requires_observed_raw_suffix_and_clean_result(self):
+        prefix = "owned.txt"
+        name = prefix + " synthetic-private-marker.txt"
+        window = MockWindow()
+        with patch.object(window, "child_window", return_value=MockSpec(
+                nodes=[MockNode(name), MockNode(name + " 1 KB")])):
+            assert_owned_uia_prefix_redaction(window, "LeftFiles", name, prefix)
+            for bad in (
+                    {"present": False, "nodes": []},
+                    {"present": True, "nodes": [{"name": name}]},
+                    {"present": True, "nodes": [{"name": prefix,
+                                               "automation_id": name}]}):
+                with self.subTest(bad=bad), patch(
+                        "gui_failure_evidence._uia_pane", return_value=bad):
+                    with self.assertRaises(AssertionError):
+                        assert_owned_uia_prefix_redaction(window, "LeftFiles", name, prefix)
+        with patch.object(window, "child_window", return_value=MockSpec(
+                nodes=[MockNode(prefix), MockNode("other.txt")])):
+            with self.assertRaisesRegex(AssertionError, "suffix not observed"):
+                assert_owned_uia_prefix_redaction(window, "LeftFiles", name, prefix)
+        with self.assertRaisesRegex(AssertionError, "distinct fixture suffix"):
+            assert_owned_uia_prefix_redaction(window, "LeftFiles", prefix, prefix)
 
     def test_watcher_failure_keeps_only_owned_path_free_native_events(self):
         with TemporaryDirectory() as root:

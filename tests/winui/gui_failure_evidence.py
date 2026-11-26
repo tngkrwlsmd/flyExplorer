@@ -109,6 +109,37 @@ def _uia_pane(win, control_id: str, allowed_names: set[str]):
         return {"error_type": type(exc).__name__, "nodes": []}
 
 
+
+def assert_owned_uia_prefix_redaction(win, control_id, fixture_name, allowed_prefix):
+    """Observe a real fixture label, then test the collector with a reduced allowlist.
+
+    The caller owns the window and fixture. No raw UIA text is emitted.
+    The reduced allowlist models a name omitted from the bounded disk sample.
+    """
+    if not allowed_prefix or not fixture_name.startswith(allowed_prefix + " "):
+        raise AssertionError("UIA redaction probe requires a distinct fixture suffix")
+    suffix = fixture_name[len(allowed_prefix) + 1:]
+    if not suffix:
+        raise AssertionError("UIA redaction probe requires a distinct fixture suffix")
+    spec = win.child_window(auto_id=control_id)
+    if not spec.exists(timeout=0.25):
+        raise AssertionError("UIA redaction probe pane missing")
+    observed = False
+    for node in spec.descendants()[:MAX_UIA_NODES]:
+        raw = _short(node.window_text())
+        if raw == fixture_name or raw.startswith(fixture_name + " "):
+            observed = True
+            break
+    if not observed:
+        raise AssertionError("UIA redaction probe fixture suffix not observed")
+    rows = _uia_pane(win, control_id, {allowed_prefix})
+    if rows.get("present") is not True or not any(
+            node.get("name") == allowed_prefix for node in rows.get("nodes", [])):
+        raise AssertionError("UIA redaction probe did not retain allowed fixture name")
+    if suffix in json.dumps(rows, ensure_ascii=False):
+        raise AssertionError("UIA redaction probe exposed unallowlisted fixture suffix")
+
+
 def _screenshot_app_window(win, hwnd: int, pid: int, destination: Path):
     """Only grab a foreground HWND belonging to the spawned test application."""
     if os.name != "nt" or not win or not hwnd or not pid:

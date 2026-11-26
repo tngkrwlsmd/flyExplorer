@@ -10,7 +10,8 @@ from PIL import ImageGrab
 from profile_guard import (assert_legacy_profile_unchanged, present_count,
                            snapshot_legacy_profile)
 from gui_failure_evidence import (capture_failure, _startup_status_category,
-                                  read_g01_owned_shared_phases)
+                                  read_g01_owned_shared_phases,
+                                  assert_owned_uia_prefix_redaction)
 from owned_process_dump import capture_owned_dump
 
 GUI_CHAIN_STARTED=time.monotonic()
@@ -606,17 +607,25 @@ try:
   # Create a genuinely test-owned file AFTER the per-pane native
   # FindFirstChangeNotification registration has had time to start.
   time.sleep(.35)
-  watcher=left/"native-auto-change-marker.txt"
+  watcher_prefix="native-auto-change-marker.txt"
+  redaction_probe=os.environ.get("FLY_OWNED_UIA_REDACTION_PROBE")=="YES"
+  watcher=left/(watcher_prefix+" FLY038-synthetic-private-marker.txt"
+                if redaction_probe else watcher_prefix)
   watcher.write_text("test-owned only",encoding="utf-8")
-  eventually(lambda:any("native-auto-change-marker.txt" in e.window_text()
+  eventually(lambda:any(watcher.name in e.window_text()
       for e in element("LeftFiles").descendants()),
       "native directory watcher did not refresh the real WinUI ListView",12)
   print("REAL_NATIVE_WATCHER_AUTO_REFRESH_WITHOUT_MANUAL_ACTION",True,flush=True)
+  if redaction_probe:
+   # The exact live UIA row contains a synthetic suffix. Exercise the same
+   # redactor used by failure evidence with an intentionally reduced allowlist.
+   assert_owned_uia_prefix_redaction(win,"LeftFiles",watcher.name,watcher_prefix)
+   print("OWNED_GUI_FAILURE_UIA_REDACTION=PASS",flush=True)
   # A second independent invalidation must remove a vanished item from
   # the real list. The watcher is rearmed/replaced after each snapshot.
   time.sleep(.55)
   watcher.unlink()
-  eventually(lambda:not any("native-auto-change-marker.txt" in e.window_text()
+  eventually(lambda:not any(watcher.name in e.window_text()
       for e in element("LeftFiles").descendants()),
       "native watcher failed to remove deleted owned file",12)
   print("REAL_NATIVE_WATCHER_CREATE_AND_DELETE_AUTO_REFRESH",True,flush=True)
