@@ -346,6 +346,128 @@ class GuiHarnessStaticContract(unittest.TestCase):
                         click("SearchRunButton")
                     self.assertEqual(["focus", "reveal", "foreground"], events)
 
+    def test_m19_content_regex_pointer_requires_stable_owned_target(self):
+        from types import SimpleNamespace
+        gui = (TESTS / "test_m19_winui_features.py").read_text(encoding="utf-8")
+        names = {"reveal_search_control", "owned_search_pointer", "click_search"}
+        functions = [node for node in ast.walk(ast.parse(gui))
+                     if isinstance(node, ast.FunctionDef) and node.name in names]
+        self.assertEqual(names, {node.name for node in functions})
+        code = compile(ast.Module(body=functions, type_ignores=[]),
+                       "M19 content regex pointer", "exec")
+
+        key = "SearchContentRegexBox"
+        for case in ("direct", "child", "clipped", "moving", "wrong-control",
+                     "foreign-window", "foreign-peer", "disabled", "lost-hit",
+                     "lost-foreground"):
+            with self.subTest(case=case):
+                calls = []
+                state = SimpleNamespace(scroll=0, probes=0, hits=0)
+
+                class Rect:
+                    def __init__(self, top=0, bottom=100):
+                        self.left, self.right, self.top, self.bottom = 0, 100, top, bottom
+                    def width(self): return self.right - self.left
+                    def height(self): return self.bottom - self.top
+
+                class Peer:
+                    def __init__(self, automation_id, pid=42, parent=None):
+                        self.element_info = SimpleNamespace(automation_id=automation_id,
+                                                            process_id=pid)
+                        self._parent = parent
+                    def parent(self): return self._parent
+
+                target = Peer(key)
+                panel_peer = Peer("SearchPanel")
+                other = Peer("SearchScopeBox", parent=panel_peer)
+                scroll = SimpleNamespace(CurrentVerticallyScrollable=True)
+
+                def set_scroll(horizontal, vertical):
+                    self.assertEqual(-1, horizontal)
+                    calls.append(("scroll", vertical))
+                    state.scroll = vertical
+
+                scroll.SetScrollPercent = set_scroll
+
+                class Panel:
+                    def exists(self, timeout): return True
+                    def is_visible(self): return True
+                    def rectangle(self): return Rect()
+                    def wrapper_object(self): return SimpleNamespace(iface_scroll=scroll)
+
+                class Item:
+                    element_info = target.element_info
+                    def exists(self, timeout): return True
+                    def is_visible(self): return True
+                    def is_enabled(self): return case != "disabled"
+                    def rectangle(self):
+                        if case == "moving" and state.probes == 2:
+                            return Rect(30, 50)
+                        return Rect(20, 40)
+                    def click_input(self): self_test.fail("unverified wrapper click")
+
+                self_test = self
+                panel, item = Panel(), Item()
+
+                def element(name):
+                    return panel if name == "SearchPanel" else item
+
+                def good(probe, label, timeout):
+                    self.assertEqual(8, timeout)
+                    for _ in range(20):
+                        state.probes += 1
+                        result = probe()
+                        if result:
+                            return result
+                    raise AssertionError(label)
+
+                def window_at(point):
+                    return 77 if case == "foreign-window" else 42
+
+                def peer_at(x, y):
+                    state.hits += 1
+                    if case == "foreign-peer": return Peer("", 77)
+                    if case == "wrong-control" or (case == "clipped" and state.scroll < 30):
+                        return other
+                    if case == "lost-hit" and state.hits >= 3: return other
+                    if case == "child": return Peer("", parent=target)
+                    return target
+
+                def window_owner(hwnd, owner): owner.value = hwnd
+
+                def mouse_click(button, coords):
+                    self.assertEqual("left", button)
+                    calls.append(("click", coords))
+
+                # Function objects support ctypes signature attributes just
+                # like the real user32 calls used by click_search.
+                namespace = {"element": element, "good": good,
+                             "focus": lambda: calls.append(("focus",)),
+                             "p": SimpleNamespace(pid=42),
+                             "u": SimpleNamespace(WindowFromPoint=window_at,
+                                 GetForegroundWindow=lambda: 77 if case == "lost-foreground" else 42,
+                                 GetWindowThreadProcessId=window_owner),
+                             "W": SimpleNamespace(POINT=lambda *p: p, HWND=int,
+                                 DWORD=lambda: SimpleNamespace(value=0)),
+                             "c": SimpleNamespace(byref=lambda v: v),
+                             "Desktop": lambda **kw: SimpleNamespace(from_point=peer_at),
+                             "mouse": SimpleNamespace(click=mouse_click)}
+                exec(code, namespace)
+                if case in ("direct", "child", "clipped", "moving"):
+                    namespace["click_search"](key)
+                    self.assertEqual([("click", (50, 30))],
+                                     [v for v in calls if v[0] == "click"])
+                    self.assertGreaterEqual(state.hits, 3)
+                    if case == "clipped":
+                        self.assertIn(("scroll", 30), calls)
+                    if case == "moving":
+                        self.assertGreaterEqual(state.probes, 4)
+                else:
+                    with self.assertRaisesRegex(AssertionError,
+                            "outside owned app|not stable or not on target|changed before click"):
+                        namespace["click_search"](key)
+                    self.assertFalse(any(v[0] == "click" for v in calls))
+
     def test_m19_content_regex_guards_inputs_and_result_transitions(self):
         from types import SimpleNamespace
         gui = (TESTS / "test_m19_winui_features.py").read_text(encoding="utf-8")

@@ -13,16 +13,19 @@ import os
 import psutil
 import subprocess
 import time
-from pywinauto import Desktop
+from pywinauto import Desktop, mouse
 
-def reveal_search_control(element, eventually, key):
-    """Resolve a real, fully visible control in the owned SearchPanel."""
+def reveal_search_control(element, eventually, key, pointer=None):
+    """Resolve an owned SearchPanel control, optionally with a stable hit point."""
     assert key.startswith("Search") and key != "SearchPanel", key
     positions = iter(range(0, 101, 10))
+    last_point = None
 
     def probe():
+        nonlocal last_point
         panel = element("SearchPanel")
         if not panel.exists(timeout=.2) or not panel.is_visible():
+            last_point = None
             return False
         item = element(key)
         if item.exists(timeout=.2) and item.is_visible():
@@ -31,7 +34,15 @@ def reveal_search_control(element, eventually, key):
             if (box.width() > 0 and box.height() > 0 and
                     viewport.left <= box.left and box.right <= viewport.right and
                     viewport.top <= box.top and box.bottom <= viewport.bottom):
-                return item
+                if pointer is None:
+                    return item
+                point = pointer(item)
+                if point is not None:
+                    if point == last_point:
+                        return item, point
+                    last_point = point
+                    return False  # Let the layout settle without another scroll.
+        last_point = None
         scroll = panel.wrapper_object().iface_scroll
         if scroll.CurrentVerticallyScrollable:
             percent = next(positions, None)
@@ -40,8 +51,39 @@ def reveal_search_control(element, eventually, key):
         # Recheck on the next poll, after the layout/UIA frame settles.
         return False
 
-    return eventually(probe, "M1.9 owned search control not fully visible: " + key, 8)
+    label = "M1.9 owned search control not fully visible: " + key
+    if pointer is not None:
+        label = "M1.9 owned search pointer not stable or not on target: " + key
+    return eventually(probe, label, 8)
 
+
+def owned_search_pointer(item, key, pid, owner_at, peer_at):
+    """Do not mistake a clipped/stale UIA rectangle for a clickable pixel."""
+    assert item.element_info.process_id == pid, "M1.9 search control not owned"
+    if not item.is_enabled():
+        return None
+    box = item.rectangle()
+    if box.width() <= 0 or box.height() <= 0:
+        return None
+    point = ((box.left + box.right)//2, (box.top + box.bottom)//2)
+    owner = owner_at(point)
+    if not owner:
+        return None
+    assert owner == pid, "M1.9 search pointer outside owned app"
+    peer = peer_at(*point)
+    for depth in range(8):
+        if peer is None:
+            return None
+        info = peer.element_info
+        if info.process_id != pid:
+            assert depth != 0, "M1.9 search UIA pointer outside owned app"
+            return None
+        if info.automation_id == key:
+            return point
+        if info.automation_id == "SearchPanel":
+            return None
+        peer = peer.parent()
+    return None
 
 def run(*,p,win,element,safe_click,focus,eventually,ownedwindows,
         left,right,inner,owned,localdata,env,exe):
@@ -78,13 +120,39 @@ def run(*,p,win,element,safe_click,focus,eventually,ownedwindows,
     def click_search(key):
         # Focus first: WinUI may scroll the prior focused editor into view.
         focus()
-        item = search_control(key)
+        if key == "SearchContentRegexBox":
+            # The previous exact GUI run clicked an owned window but did not
+            # toggle this checkbox. Require the actual UIA hit, not only the
+            # potentially clipped bounding rectangle or foreground PID.
+            u.WindowFromPoint.argtypes = [W.POINT]
+            u.WindowFromPoint.restype = W.HWND
+
+            def owner_at(point):
+                hwnd = u.WindowFromPoint(W.POINT(*point))
+                owner = W.DWORD()
+                if hwnd:
+                    u.GetWindowThreadProcessId(hwnd, c.byref(owner))
+                return owner.value
+
+            def pointer(item):
+                return owned_search_pointer(item, key, p.pid, owner_at,
+                                            Desktop(backend="uia").from_point)
+
+            item, point = reveal_search_control(element, good, key, pointer)
+            assert pointer(item) == point, "M1.9 search pointer changed before click"
+        else:
+            item = search_control(key)
         foreground = u.GetForegroundWindow()
         owner = W.DWORD()
         if foreground:
             u.GetWindowThreadProcessId(foreground, c.byref(owner))
         assert owner.value == p.pid, "M1.9 refusing search click outside owned app"
-        item.click_input()
+        if key == "SearchContentRegexBox":
+            # Use the verified absolute point, not a second rectangle lookup.
+            mouse.click(button="left", coords=point)
+            print("M19_CONTENT_REGEX_POINTER_VERIFIED", key, point, flush=True)
+        else:
+            item.click_input()
     def children():
         results=[]
         for proc in psutil.process_iter(["pid","ppid","exe","cmdline"]):
